@@ -1,4 +1,5 @@
 import * as path from "path";
+import * as fs from "fs";
 import {
   App,
   Modal,
@@ -11,7 +12,11 @@ import {
 } from "obsidian";
 import * as CodeMirror from "codemirror";
 
-import { ListObjectsCommand, S3Client } from "@aws-sdk/client-s3";
+import {
+  S3Client,
+  ListObjectsCommand,
+  PutObjectCommand,
+} from "@aws-sdk/client-s3";
 
 interface SaveRemotePluginSettings {
   s3Endpoint: string;
@@ -47,8 +52,9 @@ export default class SaveRemotePlugin extends Plugin {
 
     await this.loadSettings();
 
-
     this.addRibbonIcon("dice", "Save Remote Plugin", async () => {
+      // console.log(this.app.vault.getFiles());
+      // console.log(this.app.vault.getAllLoadedFiles());
       new Notice(`checking connection`);
 
       const s3Client = new S3Client({
@@ -59,21 +65,43 @@ export default class SaveRemotePlugin extends Plugin {
           secretAccessKey: this.settings.s3SecretAccessKey,
         },
       });
-      console.log(s3Client)
 
       try {
-        const data = await s3Client.send(
-          new ListObjectsCommand({
-            Bucket: this.settings.s3BucketName,
-          })
-        );
-        this.cm.replaceRange(
-          getTextToInsert(data),
-          CodeMirror.Pos(this.cm.lastLine())
-        );
-        new Notice("good!");
+        const allFilesAndFolders = this.app.vault.getAllLoadedFiles();
+        for (const fileOrFolder of allFilesAndFolders) {
+          if (fileOrFolder.path === "/") {
+            console.log('ignore "/"');
+          } else if ("children" in fileOrFolder) {
+            // folder
+            console.log(`folder ${fileOrFolder.path}/`);
+            new Notice(`folder ${fileOrFolder.path}/`);
+
+            const results = await s3Client.send(
+              new PutObjectCommand({
+                Bucket: this.settings.s3BucketName,
+                Key: `${fileOrFolder.path}/`,
+                Body: "",
+              })
+            );
+          } else {
+            // file
+            console.log(`file ${fileOrFolder.path}`);
+            const strContent = await this.app.vault.adapter.read(
+              fileOrFolder.path
+            );
+            new Notice(`file ${fileOrFolder.path}`);
+            const results = await s3Client.send(
+              new PutObjectCommand({
+                Bucket: this.settings.s3BucketName,
+                Key: `${fileOrFolder.path}`,
+                Body: strContent,
+              })
+            );
+          }
+        }
       } catch (err) {
         console.log("Error", err);
+        new Notice(`${err}`);
       }
     });
 
