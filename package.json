@@ -1,23 +1,51 @@
 {
-  "name": "obsidian-sample-plugin",
-  "version": "0.12.0",
-  "description": "This is a sample plugin for Obsidian (https://obsidian.md)",
-  "main": "main.js",
+  "name": "obsidian-save-remote",
+  "version": "0.0.1",
+  "description": "This is yet another sync plugin for Obsidian app.",
   "scripts": {
-    "dev": "rollup --config rollup.config.js -w",
-    "build": "rollup --config rollup.config.js --environment BUILD:production"
+    "dev": "parcel watch",
+    "build": "parcel build",
+    "format": "npx prettier --write .",
+    "clean": "npx rimraf main.js"
+  },
+  "source": "main.ts",
+  "targets": {
+    "frontend": {
+      "context": "browser",
+      "outputFormat": "commonjs",
+      "isLibrary": true,
+      "includeNodeModules": {
+        "obsidian": false
+      },
+      "sourceMap": false,
+      "distDir": "."
+    }
   },
   "keywords": [],
   "author": "",
-  "license": "MIT",
+  "license": "Apache-2.0",
   "devDependencies": {
     "@rollup/plugin-commonjs": "^18.0.0",
+    "@rollup/plugin-json": "^4.1.0",
     "@rollup/plugin-node-resolve": "^11.2.1",
     "@rollup/plugin-typescript": "^8.2.1",
     "@types/node": "^14.14.37",
-    "obsidian": "^0.12.0",
-    "rollup": "^2.32.1",
+    "parcel": "^2.0.0",
+    "prettier": "^2.4.1",
     "tslib": "^2.2.0",
-    "typescript": "^4.2.4"
+    "typescript": "^4.4.3",
+    "webdav-server": "^2.6.2"
+  },
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.37.0",
+    "codemirror": "^5.63.1",
+    "rimraf": "^3.0.2",
+    "webdav": "^4.7.0",
+    "webdav-fs": "^4.0.0",
+    "obsidian": "^0.12.0"
+  },
+  "@parcel/transformer-js": {
+    "inlineFS": false,
+    "inlineEnvironment": false
   }
 }

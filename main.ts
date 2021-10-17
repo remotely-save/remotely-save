@@ -1,112 +1,189 @@
-import { App, Modal, Notice, Plugin, PluginSettingTab, Setting } from 'obsidian';
+import * as path from "path";
+import {
+  App,
+  Modal,
+  Notice,
+  Plugin,
+  PluginSettingTab,
+  Setting,
+  request,
+  Platform,
+} from "obsidian";
+import * as CodeMirror from "codemirror";
 
-interface MyPluginSettings {
-	mySetting: string;
+import { ListObjectsCommand, S3Client } from "@aws-sdk/client-s3";
+
+interface SaveRemotePluginSettings {
+  s3Endpoint: string;
+  s3Region: string;
+  s3AccessKeyID: string;
+  s3SecretAccessKey: string;
+  s3BucketName: string;
 }
 
-const DEFAULT_SETTINGS: MyPluginSettings = {
-	mySetting: 'default'
+const DEFAULT_SETTINGS: SaveRemotePluginSettings = {
+  s3Endpoint: "",
+  s3Region: "",
+  s3AccessKeyID: "",
+  s3SecretAccessKey: "",
+  s3BucketName: "",
+};
+
+const ignoreHiddenFiles = (item: string) => {
+  const basename = path.basename(item);
+  return basename === "." || basename[0] !== ".";
+};
+
+const getTextToInsert = (x: any) => {
+  return "\n```json\n" + JSON.stringify(x, null, 2) + "\n```\n";
+};
+
+export default class SaveRemotePlugin extends Plugin {
+  settings: SaveRemotePluginSettings;
+  cm: CodeMirror.Editor;
+
+  async onload() {
+    console.log("loading plugin obsidian-save-remote");
+
+    await this.loadSettings();
+
+
+    this.addRibbonIcon("dice", "Save Remote Plugin", async () => {
+      new Notice(`checking connection`);
+
+      const s3Client = new S3Client({
+        region: this.settings.s3Region,
+        endpoint: this.settings.s3Endpoint,
+        credentials: {
+          accessKeyId: this.settings.s3AccessKeyID,
+          secretAccessKey: this.settings.s3SecretAccessKey,
+        },
+      });
+      console.log(s3Client)
+
+      try {
+        const data = await s3Client.send(
+          new ListObjectsCommand({
+            Bucket: this.settings.s3BucketName,
+          })
+        );
+        this.cm.replaceRange(
+          getTextToInsert(data),
+          CodeMirror.Pos(this.cm.lastLine())
+        );
+        new Notice("good!");
+      } catch (err) {
+        console.log("Error", err);
+      }
+    });
+
+    this.addSettingTab(new SaveRemoteSettingTab(this.app, this));
+
+    this.registerCodeMirror((cm: CodeMirror.Editor) => {
+      this.cm = cm;
+      console.log("codemirror registered.");
+    });
+
+    // this.registerDomEvent(document, "click", (evt: MouseEvent) => {
+    //   console.log("click", evt);
+    // });
+
+    // this.registerInterval(
+    //   window.setInterval(() => console.log("setInterval"), 5 * 60 * 1000)
+    // );
+  }
+
+  onunload() {
+    console.log("unloading plugin obsidian-save-remote");
+  }
+
+  async loadSettings() {
+    this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
+  }
+
+  async saveSettings() {
+    await this.saveData(this.settings);
+  }
 }
 
-export default class MyPlugin extends Plugin {
-	settings: MyPluginSettings;
+class SaveRemoteSettingTab extends PluginSettingTab {
+  plugin: SaveRemotePlugin;
 
-	async onload() {
-		console.log('loading plugin');
+  constructor(app: App, plugin: SaveRemotePlugin) {
+    super(app, plugin);
+    this.plugin = plugin;
+  }
 
-		await this.loadSettings();
+  display(): void {
+    let { containerEl } = this;
 
-		this.addRibbonIcon('dice', 'Sample Plugin', () => {
-			new Notice('This is a notice!');
-		});
+    containerEl.empty();
 
-		this.addStatusBarItem().setText('Status Bar Text');
+    containerEl.createEl("h2", { text: "Settings for Save Remote" });
 
-		this.addCommand({
-			id: 'open-sample-modal',
-			name: 'Open Sample Modal',
-			// callback: () => {
-			// 	console.log('Simple Callback');
-			// },
-			checkCallback: (checking: boolean) => {
-				let leaf = this.app.workspace.activeLeaf;
-				if (leaf) {
-					if (!checking) {
-						new SampleModal(this.app).open();
-					}
-					return true;
-				}
-				return false;
-			}
-		});
+    new Setting(containerEl)
+      .setName("s3Endpoint")
+      .setDesc("s3Endpoint")
+      .addText((text) =>
+        text
+          .setPlaceholder("")
+          .setValue(this.plugin.settings.s3Endpoint)
+          .onChange(async (value) => {
+            this.plugin.settings.s3Endpoint = value;
+            await this.plugin.saveSettings();
+          })
+      );
 
-		this.addSettingTab(new SampleSettingTab(this.app, this));
+    new Setting(containerEl)
+      .setName("s3Region")
+      .setDesc("s3Region")
+      .addText((text) =>
+        text
+          .setPlaceholder("")
+          .setValue(`${this.plugin.settings.s3Region}`)
+          .onChange(async (value) => {
+            this.plugin.settings.s3Region = value;
+            await this.plugin.saveSettings();
+          })
+      );
 
-		this.registerCodeMirror((cm: CodeMirror.Editor) => {
-			console.log('codemirror', cm);
-		});
+    new Setting(containerEl)
+      .setName("s3AccessKeyID")
+      .setDesc("s3AccessKeyID")
+      .addText((text) =>
+        text
+          .setPlaceholder("")
+          .setValue(`${this.plugin.settings.s3AccessKeyID}`)
+          .onChange(async (value) => {
+            this.plugin.settings.s3AccessKeyID = value;
+            await this.plugin.saveSettings();
+          })
+      );
 
-		this.registerDomEvent(document, 'click', (evt: MouseEvent) => {
-			console.log('click', evt);
-		});
+    new Setting(containerEl)
+      .setName("s3SecretAccessKey")
+      .setDesc("s3SecretAccessKey")
+      .addText((text) =>
+        text
+          .setPlaceholder("")
+          .setValue(`${this.plugin.settings.s3SecretAccessKey}`)
+          .onChange(async (value) => {
+            this.plugin.settings.s3SecretAccessKey = value;
+            await this.plugin.saveSettings();
+          })
+      );
 
-		this.registerInterval(window.setInterval(() => console.log('setInterval'), 5 * 60 * 1000));
-	}
-
-	onunload() {
-		console.log('unloading plugin');
-	}
-
-	async loadSettings() {
-		this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
-	}
-
-	async saveSettings() {
-		await this.saveData(this.settings);
-	}
-}
-
-class SampleModal extends Modal {
-	constructor(app: App) {
-		super(app);
-	}
-
-	onOpen() {
-		let {contentEl} = this;
-		contentEl.setText('Woah!');
-	}
-
-	onClose() {
-		let {contentEl} = this;
-		contentEl.empty();
-	}
-}
-
-class SampleSettingTab extends PluginSettingTab {
-	plugin: MyPlugin;
-
-	constructor(app: App, plugin: MyPlugin) {
-		super(app, plugin);
-		this.plugin = plugin;
-	}
-
-	display(): void {
-		let {containerEl} = this;
-
-		containerEl.empty();
-
-		containerEl.createEl('h2', {text: 'Settings for my awesome plugin.'});
-
-		new Setting(containerEl)
-			.setName('Setting #1')
-			.setDesc('It\'s a secret')
-			.addText(text => text
-				.setPlaceholder('Enter your secret')
-				.setValue(this.plugin.settings.mySetting)
-				.onChange(async (value) => {
-					console.log('Secret: ' + value);
-					this.plugin.settings.mySetting = value;
-					await this.plugin.saveSettings();
-				}));
-	}
+    new Setting(containerEl)
+      .setName("s3BucketName")
+      .setDesc("s3BucketName")
+      .addText((text) =>
+        text
+          .setPlaceholder("")
+          .setValue(`${this.plugin.settings.s3BucketName}`)
+          .onChange(async (value) => {
+            this.plugin.settings.s3BucketName = value;
+            await this.plugin.saveSettings();
+          })
+      );
+  }
 }
