@@ -1,5 +1,7 @@
 import * as path from "path";
 import * as fs from "fs";
+import { Buffer } from "buffer";
+import * as mime from 'mime-types';
 import {
   App,
   Modal,
@@ -86,7 +88,7 @@ export default class SaveRemotePlugin extends Plugin {
           } else {
             // file
             console.log(`file ${fileOrFolder.path}`);
-            const strContent = await this.app.vault.adapter.read(
+            const arrContent = await this.app.vault.adapter.readBinary(
               fileOrFolder.path
             );
             new Notice(`file ${fileOrFolder.path}`);
@@ -94,11 +96,13 @@ export default class SaveRemotePlugin extends Plugin {
               new PutObjectCommand({
                 Bucket: this.settings.s3BucketName,
                 Key: `${fileOrFolder.path}`,
-                Body: strContent,
+                Body: Buffer.from(arrContent),
+                ContentType: mime.contentType(`${fileOrFolder.path}`) || undefined
               })
             );
           }
         }
+        new Notice('All upload finished!')
       } catch (err) {
         console.log("Error", err);
         new Notice(`${err}`);

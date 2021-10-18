@@ -38,11 +38,13 @@
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.37.0",
+    "@types/mime-types": "^2.1.1",
     "codemirror": "^5.63.1",
+    "mime-types": "^2.1.33",
+    "obsidian": "^0.12.0",
     "rimraf": "^3.0.2",
     "webdav": "^4.7.0",
-    "webdav-fs": "^4.0.0",
-    "obsidian": "^0.12.0"
+    "webdav-fs": "^4.0.0"
   },
   "@parcel/transformer-js": {
     "inlineFS": false,
