@@ -1,22 +1,17 @@
-import * as path from "path";
-import * as fs from "fs";
+import * as path from 'path';
 import {
   App,
-  Modal,
   Notice,
   Plugin,
   PluginSettingTab,
   Setting,
-  request,
-  Platform,
-} from "obsidian";
-import * as CodeMirror from "codemirror";
+} from 'obsidian';
+import * as CodeMirror from 'codemirror';
 
 import {
   S3Client,
-  ListObjectsCommand,
   PutObjectCommand,
-} from "@aws-sdk/client-s3";
+} from '@aws-sdk/client-s3';
 
 interface SaveRemotePluginSettings {
   s3Endpoint: string;
@@ -27,20 +22,20 @@ interface SaveRemotePluginSettings {
 }
 
 const DEFAULT_SETTINGS: SaveRemotePluginSettings = {
-  s3Endpoint: "",
-  s3Region: "",
-  s3AccessKeyID: "",
-  s3SecretAccessKey: "",
-  s3BucketName: "",
+  s3Endpoint: '',
+  s3Region: '',
+  s3AccessKeyID: '',
+  s3SecretAccessKey: '',
+  s3BucketName: '',
 };
 
 const ignoreHiddenFiles = (item: string) => {
   const basename = path.basename(item);
-  return basename === "." || basename[0] !== ".";
+  return basename === '.' || basename[0] !== '.';
 };
 
 const getTextToInsert = (x: any) => {
-  return "\n```json\n" + JSON.stringify(x, null, 2) + "\n```\n";
+  return '\n```json\n' + JSON.stringify(x, null, 2) + '\n```\n';
 };
 
 export default class SaveRemotePlugin extends Plugin {
@@ -48,11 +43,11 @@ export default class SaveRemotePlugin extends Plugin {
   cm: CodeMirror.Editor;
 
   async onload() {
-    console.log("loading plugin obsidian-save-remote");
+    console.log('loading plugin obsidian-save-remote');
 
     await this.loadSettings();
 
-    this.addRibbonIcon("dice", "Save Remote Plugin", async () => {
+    this.addRibbonIcon('dice', 'Save Remote Plugin', async () => {
       // console.log(this.app.vault.getFiles());
       // console.log(this.app.vault.getAllLoadedFiles());
       new Notice(`checking connection`);
@@ -69,9 +64,9 @@ export default class SaveRemotePlugin extends Plugin {
       try {
         const allFilesAndFolders = this.app.vault.getAllLoadedFiles();
         for (const fileOrFolder of allFilesAndFolders) {
-          if (fileOrFolder.path === "/") {
+          if (fileOrFolder.path === '/') {
             console.log('ignore "/"');
-          } else if ("children" in fileOrFolder) {
+          } else if ('children' in fileOrFolder) {
             // folder
             console.log(`folder ${fileOrFolder.path}/`);
             new Notice(`folder ${fileOrFolder.path}/`);
@@ -80,7 +75,7 @@ export default class SaveRemotePlugin extends Plugin {
               new PutObjectCommand({
                 Bucket: this.settings.s3BucketName,
                 Key: `${fileOrFolder.path}/`,
-                Body: "",
+                Body: '',
               })
             );
           } else {
@@ -100,7 +95,7 @@ export default class SaveRemotePlugin extends Plugin {
           }
         }
       } catch (err) {
-        console.log("Error", err);
+        console.log('Error', err);
         new Notice(`${err}`);
       }
     });
@@ -109,7 +104,7 @@ export default class SaveRemotePlugin extends Plugin {
 
     this.registerCodeMirror((cm: CodeMirror.Editor) => {
       this.cm = cm;
-      console.log("codemirror registered.");
+      console.log('codemirror registered.');
     });
 
     // this.registerDomEvent(document, "click", (evt: MouseEvent) => {
@@ -122,7 +117,7 @@ export default class SaveRemotePlugin extends Plugin {
   }
 
   onunload() {
-    console.log("unloading plugin obsidian-save-remote");
+    console.log('unloading plugin obsidian-save-remote');
   }
 
   async loadSettings() {
@@ -147,14 +142,14 @@ class SaveRemoteSettingTab extends PluginSettingTab {
 
     containerEl.empty();
 
-    containerEl.createEl("h2", { text: "Settings for Save Remote" });
+    containerEl.createEl('h2', { text: 'Settings for Save Remote' });
 
     new Setting(containerEl)
-      .setName("s3Endpoint")
-      .setDesc("s3Endpoint")
+      .setName('s3Endpoint')
+      .setDesc('s3Endpoint')
       .addText((text) =>
         text
-          .setPlaceholder("")
+          .setPlaceholder('')
           .setValue(this.plugin.settings.s3Endpoint)
           .onChange(async (value) => {
             this.plugin.settings.s3Endpoint = value;
@@ -163,11 +158,11 @@ class SaveRemoteSettingTab extends PluginSettingTab {
       );
 
     new Setting(containerEl)
-      .setName("s3Region")
-      .setDesc("s3Region")
+      .setName('s3Region')
+      .setDesc('s3Region')
       .addText((text) =>
         text
-          .setPlaceholder("")
+          .setPlaceholder('')
           .setValue(`${this.plugin.settings.s3Region}`)
           .onChange(async (value) => {
             this.plugin.settings.s3Region = value;
@@ -176,11 +171,11 @@ class SaveRemoteSettingTab extends PluginSettingTab {
       );
 
     new Setting(containerEl)
-      .setName("s3AccessKeyID")
-      .setDesc("s3AccessKeyID")
+      .setName('s3AccessKeyID')
+      .setDesc('s3AccessKeyID')
       .addText((text) =>
         text
-          .setPlaceholder("")
+          .setPlaceholder('')
           .setValue(`${this.plugin.settings.s3AccessKeyID}`)
           .onChange(async (value) => {
             this.plugin.settings.s3AccessKeyID = value;
@@ -189,11 +184,11 @@ class SaveRemoteSettingTab extends PluginSettingTab {
       );
 
     new Setting(containerEl)
-      .setName("s3SecretAccessKey")
-      .setDesc("s3SecretAccessKey")
+      .setName('s3SecretAccessKey')
+      .setDesc('s3SecretAccessKey')
       .addText((text) =>
         text
-          .setPlaceholder("")
+          .setPlaceholder('')
           .setValue(`${this.plugin.settings.s3SecretAccessKey}`)
           .onChange(async (value) => {
             this.plugin.settings.s3SecretAccessKey = value;
@@ -202,11 +197,11 @@ class SaveRemoteSettingTab extends PluginSettingTab {
       );
 
     new Setting(containerEl)
-      .setName("s3BucketName")
-      .setDesc("s3BucketName")
+      .setName('s3BucketName')
+      .setDesc('s3BucketName')
       .addText((text) =>
         text
-          .setPlaceholder("")
+          .setPlaceholder('')
           .setValue(`${this.plugin.settings.s3BucketName}`)
           .onChange(async (value) => {
             this.plugin.settings.s3BucketName = value;

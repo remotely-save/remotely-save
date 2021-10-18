@@ -1,0 +1,1567 @@
+lockfileVersion: 5.3
+
+specifiers:
+  '@aws-sdk/client-s3': ^3.37.0
+  '@rollup/plugin-commonjs': ^18.0.0
+  '@rollup/plugin-json': ^4.1.0
+  '@rollup/plugin-node-resolve': ^11.2.1
+  '@rollup/plugin-typescript': ^8.2.1
+  '@types/node': ^14.14.37
+  codemirror: ^5.63.1
+  obsidian: ^0.12.0
+  prettier: ^2.4.1
+  rimraf: ^3.0.2
+  rollup: ^2.58.0
+  tslib: ^2.2.0
+  typescript: ^4.4.3
+  webdav: ^4.7.0
+  webdav-fs: ^4.0.0
+  webdav-server: ^2.6.2
+
+dependencies:
+  '@aws-sdk/client-s3': registry.npmmirror.com/@aws-sdk/client-s3/3.37.0
+  codemirror: registry.npmmirror.com/codemirror/5.63.3
+  obsidian: registry.npmmirror.com/obsidian/0.12.17
+  webdav: registry.npmmirror.com/webdav/4.7.0
+  webdav-fs: registry.npmmirror.com/webdav-fs/4.0.0
+
+devDependencies:
+  '@rollup/plugin-commonjs': registry.npmmirror.com/@rollup/plugin-commonjs/18.1.0_rollup@2.58.0
+  '@rollup/plugin-json': registry.nlark.com/@rollup/plugin-json/4.1.0_rollup@2.58.0
+  '@rollup/plugin-node-resolve': registry.nlark.com/@rollup/plugin-node-resolve/11.2.1_rollup@2.58.0
+  '@rollup/plugin-typescript': registry.npmmirror.com/@rollup/plugin-typescript/8.3.0_11969cb7979bf76fd37eb17f863ea3c2
+  '@types/node': registry.npmmirror.com/@types/node/14.17.27
+  prettier: registry.nlark.com/prettier/2.4.1
+  rimraf: registry.nlark.com/rimraf/3.0.2
+  rollup: registry.npmmirror.com/rollup/2.58.0
+  tslib: registry.nlark.com/tslib/2.3.1
+  typescript: registry.npmmirror.com/typescript/4.4.4
+  webdav-server: registry.npmmirror.com/webdav-server/2.6.2
+
+packages:
+
+  registry.nlark.com/@rollup/plugin-json/4.1.0_rollup@2.58.0:
+    resolution: {integrity: sha1-VOCYZ65pY8WThE2L16nHGClElvM=, registry: https://registry.npm.taobao.org/, tarball: https://registry.nlark.com/@rollup/plugin-json/download/@rollup/plugin-json-4.1.0.tgz}
+    id: registry.nlark.com/@rollup/plugin-json/4.1.0
+    name: '@rollup/plugin-json'
+    version: 4.1.0
+    peerDependencies:
+      rollup: ^1.20.0 || ^2.0.0
+    dependencies:
+      '@rollup/pluginutils': registry.nlark.com/@rollup/pluginutils/3.1.0_rollup@2.58.0
+      rollup: registry.npmmirror.com/rollup/2.58.0
+    dev: true
+
+  registry.nlark.com/@rollup/plugin-node-resolve/11.2.1_rollup@2.58.0:
+    resolution: {integrity: sha1-gqpZOXopzU4TJIsQbmpKGIA2KmA=, registry: https://registry.npm.taobao.org/, tarball: https://registry.nlark.com/@rollup/plugin-node-resolve/download/@rollup/plugin-node-resolve-11.2.1.tgz}
+    id: registry.nlark.com/@rollup/plugin-node-resolve/11.2.1
+    name: '@rollup/plugin-node-resolve'
+    version: 11.2.1
+    engines: {node: '>= 10.0.0'}
+    peerDependencies:
+      rollup: ^1.20.0||^2.0.0
+    dependencies:
+      '@rollup/pluginutils': registry.nlark.com/@rollup/pluginutils/3.1.0_rollup@2.58.0
+      '@types/resolve': registry.nlark.com/@types/resolve/1.17.1
+      builtin-modules: registry.nlark.com/builtin-modules/3.2.0
+      deepmerge: registry.nlark.com/deepmerge/4.2.2
+      is-module: registry.nlark.com/is-module/1.0.0
+      resolve: registry.nlark.com/resolve/1.20.0
+      rollup: registry.npmmirror.com/rollup/2.58.0
+    dev: true
+
+  registry.nlark.com/@rollup/pluginutils/3.1.0_rollup@2.58.0:
+    resolution: {integrity: sha1-cGtFJO5tyLEDs8mVUz5a1oDAK5s=, registry: https://registry.npm.taobao.org/, tarball: https://registry.nlark.com/@rollup/pluginutils/download/@rollup/pluginutils-3.1.0.tgz}
+    id: registry.nlark.com/@rollup/pluginutils/3.1.0
+    name: '@rollup/pluginutils'
+    version: 3.1.0
+    engines: {node: '>= 8.0.0'}
+    peerDependencies:
+      rollup: ^1.20.0||^2.0.0
+    dependencies:
+      '@types/estree': registry.nlark.com/@types/estree/0.0.39
+      estree-walker: registry.nlark.com/estree-walker/1.0.1
+      picomatch: registry.nlark.com/picomatch/2.3.0
+      rollup: registry.npmmirror.com/rollup/2.58.0
+    dev: true
+
+  registry.nlark.com/@types/estree/0.0.39:
+    resolution: {integrity: sha1-4Xfmme4bjCLSMXTKqnQiZEOJUJ8=, registry: https://registry.npm.taobao.org/, tarball: https://registry.nlark.com/@types/estree/download/@types/estree-0.0.39.tgz}
+    name: '@types/estree'
+    version: 0.0.39
+    dev: true
+
+  registry.nlark.com/@types/estree/0.0.50:
+    resolution: {integrity: sha1-Hgyqk2TT/M0pMcPtlv2+ql1MyoM=, registry: https://registry.npm.taobao.org/, tarball: https://registry.nlark.com/@types/estree/download/@types/estree-0.0.50.tgz}
+    name: '@types/estree'
+    version: 0.0.50
+
+  registry.nlark.com/@types/resolve/1.17.1:
+    resolution: {integrity: sha1-Ov1q2JZ8d+Q3bFmKgt3Vj0bsRdY=, registry: https://registry.npm.taobao.org/, tarball: https://registry.nlark.com/@types/resolve/download/@types/resolve-1.17.1.tgz}
+    name: '@types/resolve'
+    version: 1.17.1
+    dependencies:
+      '@types/node': registry.npmmirror.com/@types/node/14.17.27
+    dev: true
+
+  registry.nlark.com/@types/tern/0.23.4:
+    resolution: {integrity: sha1-A5JusT2+rzrg05DK9wayZDoBJ/s=, registry: https://registry.npm.taobao.org/, tarball: https://registry.nlark.com/@types/tern/download/@types/tern-0.23.4.tgz}
+    name: '@types/tern'
+    version: 0.23.4
+    dependencies:
+      '@types/estree': registry.nlark.com/@types/estree/0.0.50
+    dev: false
+
+  registry.nlark.com/balanced-match/1.0.2:
+    resolution: {integrity: sha1-6D46fj8wCzTLnYf2FfoMvzV2kO4=, registry: https://registry.npm.taobao.org/, tarball: https://registry.nlark.com/balanced-match/download/balanced-match-1.0.2.tgz}
+    name: balanced-match
+    version: 1.0.2
+
+  registry.nlark.com/brace-expansion/1.1.11:
+    resolution: {integrity: sha1-PH/L9SnYcibz0vUrlm/1Jx60Qd0=, registry: https://registry.npm.taobao.org/, tarball: https://registry.nlark.com/brace-expansion/download/brace-expansion-1.1.11.tgz}
+    name: brace-expansion
+    version: 1.1.11
+    dependencies:
+      balanced-match: registry.nlark.com/balanced-match/1.0.2
+      concat-map: registry.nlark.com/concat-map/0.0.1
+
+  registry.nlark.com/builtin-modules/3.2.0:
+    resolution: {integrity: sha1-RdXbmefuXmvE82LgCL+RerUEmIc=, registry: https://registry.npm.taobao.org/, tarball: https://registry.nlark.com/builtin-modules/download/builtin-modules-3.2.0.tgz}
+    name: builtin-modules
+    version: 3.2.0
+    engines: {node: '>=6'}
+    dev: true
+
+  registry.nlark.com/charenc/0.0.2:
+    resolution: {integrity: sha1-wKHS86cJLgN3S/qD8UwPxXkKhmc=, registry: https://registry.npm.taobao.org/, tarball: https://registry.nlark.com/charenc/download/charenc-0.0.2.tgz}
+    name: charenc
+    version: 0.0.2
+    dev: false
+
+  registry.nlark.com/commondir/1.0.1:
+    resolution: {integrity: sha1-3dgA2gxmEnOTzKWVDqloo6rxJTs=, registry: https://registry.npm.taobao.org/, tarball: https://registry.nlark.com/commondir/download/commondir-1.0.1.tgz}
+    name: commondir
+    version: 1.0.1
+    dev: true
+
+  registry.nlark.com/concat-map/0.0.1:
+    resolution: {integrity: sha1-2Klr13/Wjfd5OnMDajug1UBdR3s=, registry: https://registry.npm.taobao.org/, tarball: https://registry.nlark.com/concat-map/download/concat-map-0.0.1.tgz}
+    name: concat-map
+    version: 0.0.1
+
+  registry.nlark.com/crypt/0.0.2:
+    resolution: {integrity: sha1-iNf/fsDfuG9xPch7u0LQRNPmxBs=, registry: https://registry.npm.taobao.org/, tarball: https://registry.nlark.com/crypt/download/crypt-0.0.2.tgz}
+    name: crypt
+    version: 0.0.2
+    dev: false
+
+  registry.nlark.com/deepmerge/4.2.2:
+    resolution: {integrity: sha1-RNLqNnm49NT/ujPwPYZfwee/SVU=, registry: https://registry.npm.taobao.org/, tarball: https://registry.nlark.com/deepmerge/download/deepmerge-4.2.2.tgz}
+    name: deepmerge
+    version: 4.2.2
+    engines: {node: '>=0.10.0'}
+    dev: true
+
+  registry.nlark.com/entities/2.2.0:
+    resolution: {integrity: sha1-CY3JDruD2N/6CJ1VJWs1HTTE2lU=, registry: https://registry.npm.taobao.org/, tarball: https://registry.nlark.com/entities/download/entities-2.2.0.tgz}
+    name: entities
+    version: 2.2.0
+    dev: false
+
+  registry.nlark.com/estree-walker/1.0.1:
+    resolution: {integrity: sha1-MbxdYSyWtwQQa0d+bdXYqhOMtwA=, registry: https://registry.npm.taobao.org/, tarball: https://registry.nlark.com/estree-walker/download/estree-walker-1.0.1.tgz}
+    name: estree-walker
+    version: 1.0.1
+    dev: true
+
+  registry.nlark.com/estree-walker/2.0.2:
+    resolution: {integrity: sha1-UvAQF4wqTBF6d1fP6UKtt9LaTKw=, registry: https://registry.npm.taobao.org/, tarball: https://registry.nlark.com/estree-walker/download/estree-walker-2.0.2.tgz}
+    name: estree-walker
+    version: 2.0.2
+    dev: true
+
+  registry.nlark.com/follow-redirects/1.14.4:
+    resolution: {integrity: sha1-g4/fSKi73XnlLuUfsclOPtmLk3k=, registry: https://registry.npm.taobao.org/, tarball: https://registry.nlark.com/follow-redirects/download/follow-redirects-1.14.4.tgz}
+    name: follow-redirects
+    version: 1.14.4
+    engines: {node: '>=4.0'}
+    dev: false
+
+  registry.nlark.com/fs.realpath/1.0.0:
+    resolution: {integrity: sha1-FQStJSMVjKpA20onh8sBQRmU6k8=, registry: https://registry.npm.taobao.org/, tarball: https://registry.nlark.com/fs.realpath/download/fs.realpath-1.0.0.tgz}
+    name: fs.realpath
+    version: 1.0.0
+    dev: true
+
+  registry.nlark.com/fsevents/2.3.2:
+    resolution: {integrity: sha1-ilJveLj99GI7cJ4Ll1xSwkwC/Ro=, registry: https://registry.npm.taobao.org/, tarball: https://registry.nlark.com/fsevents/download/fsevents-2.3.2.tgz}
+    name: fsevents
+    version: 2.3.2
+    engines: {node: ^8.16.0 || ^10.6.0 || >=11.0.0}
+    requiresBuild: true
+    dev: true
+    optional: true
+
+  registry.nlark.com/function-bind/1.1.1:
+    resolution: {integrity: sha1-pWiZ0+o8m6uHS7l3O3xe3pL0iV0=, registry: https://registry.npm.taobao.org/, tarball: https://registry.nlark.com/function-bind/download/function-bind-1.1.1.tgz}
+    name: function-bind
+    version: 1.1.1
+    dev: true
+
+  registry.nlark.com/has/1.0.3:
+    resolution: {integrity: sha1-ci18v8H2qoJB8W3YFOAR4fQeh5Y=, registry: https://registry.npm.taobao.org/, tarball: https://registry.nlark.com/has/download/has-1.0.3.tgz}
+    name: has
+    version: 1.0.3
+    engines: {node: '>= 0.4.0'}
+    dependencies:
+      function-bind: registry.nlark.com/function-bind/1.1.1
+    dev: true
+
+  registry.nlark.com/he/1.2.0:
+    resolution: {integrity: sha1-hK5l+n6vsWX922FWauFLrwVmTw8=, registry: https://registry.npm.taobao.org/, tarball: https://registry.nlark.com/he/download/he-1.2.0.tgz}
+    name: he
+    version: 1.2.0
+    hasBin: true
+    dev: false
+
+  registry.nlark.com/inflight/1.0.6:
+    resolution: {integrity: sha1-Sb1jMdfQLQwJvJEKEHW6gWW1bfk=, registry: https://registry.npm.taobao.org/, tarball: https://registry.nlark.com/inflight/download/inflight-1.0.6.tgz}
+    name: inflight
+    version: 1.0.6
+    dependencies:
+      once: registry.nlark.com/once/1.4.0
+      wrappy: registry.nlark.com/wrappy/1.0.2
+    dev: true
+
+  registry.nlark.com/inherits/2.0.4:
+    resolution: {integrity: sha1-D6LGT5MpF8NDOg3tVTY6rjdBa3w=, registry: https://registry.npm.taobao.org/, tarball: https://registry.nlark.com/inherits/download/inherits-2.0.4.tgz}
+    name: inherits
+    version: 2.0.4
+    dev: true
+
+  registry.nlark.com/is-buffer/1.1.6:
+    resolution: {integrity: sha1-76ouqdqg16suoTqXsritUf776L4=, registry: https://registry.npm.taobao.org/, tarball: https://registry.nlark.com/is-buffer/download/is-buffer-1.1.6.tgz}
+    name: is-buffer
+    version: 1.1.6
+    dev: false
+
+  registry.nlark.com/is-module/1.0.0:
+    resolution: {integrity: sha1-Mlj7afeMFNW4FdZkM2tM/7ZEFZE=, registry: https://registry.npm.taobao.org/, tarball: https://registry.nlark.com/is-module/download/is-module-1.0.0.tgz}
+    name: is-module
+    version: 1.0.0
+    dev: true
+
+  registry.nlark.com/is-reference/1.2.1:
+    resolution: {integrity: sha1-iy2sCzcfS8mU/eq6nrVC0DAC0Lc=, registry: https://registry.npm.taobao.org/, tarball: https://registry.nlark.com/is-reference/download/is-reference-1.2.1.tgz}
+    name: is-reference
+    version: 1.2.1
+    dependencies:
+      '@types/estree': registry.nlark.com/@types/estree/0.0.50
+    dev: true
+
+  registry.nlark.com/magic-string/0.25.7:
+    resolution: {integrity: sha1-P0l9b9NMZpxnmNy4IfLvMfVEUFE=, registry: https://registry.npm.taobao.org/, tarball: https://registry.nlark.com/magic-string/download/magic-string-0.25.7.tgz}
+    name: magic-string
+    version: 0.25.7
+    dependencies:
+      sourcemap-codec: registry.nlark.com/sourcemap-codec/1.4.8
+    dev: true
+
+  registry.nlark.com/md5/2.3.0:
+    resolution: {integrity: sha1-w9qaaq46MLRreww0m4exENw72k8=, registry: https://registry.npm.taobao.org/, tarball: https://registry.nlark.com/md5/download/md5-2.3.0.tgz}
+    name: md5
+    version: 2.3.0
+    dependencies:
+      charenc: registry.nlark.com/charenc/0.0.2
+      crypt: registry.nlark.com/crypt/0.0.2
+      is-buffer: registry.nlark.com/is-buffer/1.1.6
+    dev: false
+
+  registry.nlark.com/mime-db/1.50.0:
+    resolution: {integrity: sha1-q9SslOmNPA4YUBbGerRdX95AwR8=, registry: https://registry.npm.taobao.org/, tarball: https://registry.nlark.com/mime-db/download/mime-db-1.50.0.tgz?cache=0&sync_timestamp=1631863509328&other_urls=https%3A%2F%2Fregistry.nlark.com%2Fmime-db%2Fdownload%2Fmime-db-1.50.0.tgz}
+    name: mime-db
+    version: 1.50.0
+    engines: {node: '>= 0.6'}
+    dev: true
+
+  registry.nlark.com/minimatch/3.0.4:
+    resolution: {integrity: sha1-UWbihkV/AzBgZL5Ul+jbsMPTIIM=, registry: https://registry.npm.taobao.org/, tarball: https://registry.nlark.com/minimatch/download/minimatch-3.0.4.tgz}
+    name: minimatch
+    version: 3.0.4
+    dependencies:
+      brace-expansion: registry.nlark.com/brace-expansion/1.1.11
+
+  registry.nlark.com/once/1.4.0:
+    resolution: {integrity: sha1-WDsap3WWHUsROsF9nFC6753Xa9E=, registry: https://registry.npm.taobao.org/, tarball: https://registry.nlark.com/once/download/once-1.4.0.tgz}
+    name: once
+    version: 1.4.0
+    dependencies:
+      wrappy: registry.nlark.com/wrappy/1.0.2
+    dev: true
+
+  registry.nlark.com/path-is-absolute/1.0.1:
+    resolution: {integrity: sha1-F0uSaHNVNP+8es5r9TpanhtcX18=, registry: https://registry.npm.taobao.org/, tarball: https://registry.nlark.com/path-is-absolute/download/path-is-absolute-1.0.1.tgz}
+    name: path-is-absolute
+    version: 1.0.1
+    engines: {node: '>=0.10.0'}
+    dev: true
+
+  registry.nlark.com/path-parse/1.0.7:
+    resolution: {integrity: sha1-+8EUtgykKzDZ2vWFjkvWi77bZzU=, registry: https://registry.npm.taobao.org/, tarball: https://registry.nlark.com/path-parse/download/path-parse-1.0.7.tgz}
+    name: path-parse
+    version: 1.0.7
+    dev: true
+
+  registry.nlark.com/picomatch/2.3.0:
+    resolution: {integrity: sha1-8fBh3o9qS/AiiS4tEoI0+5gwKXI=, registry: https://registry.npm.taobao.org/, tarball: https://registry.nlark.com/picomatch/download/picomatch-2.3.0.tgz}
+    name: picomatch
+    version: 2.3.0
+    engines: {node: '>=8.6'}
+    dev: true
+
+  registry.nlark.com/prettier/2.4.1:
+    resolution: {integrity: sha1-Zx4RyJwUpM/Ids5WQQbEpnJsn1w=, registry: https://registry.npm.taobao.org/, tarball: https://registry.nlark.com/prettier/download/prettier-2.4.1.tgz}
+    name: prettier
+    version: 2.4.1
+    engines: {node: '>=10.13.0'}
+    hasBin: true
+    dev: true
+
+  registry.nlark.com/querystringify/2.2.0:
+    resolution: {integrity: sha1-M0WUG0FTy50ILY7uTNogFqmu9/Y=, registry: https://registry.npm.taobao.org/, tarball: https://registry.nlark.com/querystringify/download/querystringify-2.2.0.tgz}
+    name: querystringify
+    version: 2.2.0
+    dev: false
+
+  registry.nlark.com/requires-port/1.0.0:
+    resolution: {integrity: sha1-kl0mAdOaxIXgkc8NpcbmlNw9yv8=, registry: https://registry.npm.taobao.org/, tarball: https://registry.nlark.com/requires-port/download/requires-port-1.0.0.tgz}
+    name: requires-port
+    version: 1.0.0
+    dev: false
+
+  registry.nlark.com/resolve/1.20.0:
+    resolution: {integrity: sha1-YpoBP7P3B1XW8LeTXMHCxTeLGXU=, registry: https://registry.npm.taobao.org/, tarball: https://registry.nlark.com/resolve/download/resolve-1.20.0.tgz?cache=0&sync_timestamp=1631501917799&other_urls=https%3A%2F%2Fregistry.nlark.com%2Fresolve%2Fdownload%2Fresolve-1.20.0.tgz}
+    name: resolve
+    version: 1.20.0
+    dependencies:
+      is-core-module: registry.npmmirror.com/is-core-module/2.8.0
+      path-parse: registry.nlark.com/path-parse/1.0.7
+    dev: true
+
+  registry.nlark.com/rimraf/3.0.2:
+    resolution: {integrity: sha1-8aVAK6YiCtUswSgrrBrjqkn9Bho=, registry: https://registry.npm.taobao.org/, tarball: https://registry.nlark.com/rimraf/download/rimraf-3.0.2.tgz}
+    name: rimraf
+    version: 3.0.2
+    hasBin: true
+    dependencies:
+      glob: registry.npmmirror.com/glob/7.2.0
+    dev: true
+
+  registry.nlark.com/sax/1.2.4:
+    resolution: {integrity: sha1-KBYjTiN4vdxOU1T6tcqold9xANk=, registry: https://registry.npm.taobao.org/, tarball: https://registry.nlark.com/sax/download/sax-1.2.4.tgz}
+    name: sax
+    version: 1.2.4
+    dev: true
+
+  registry.nlark.com/sourcemap-codec/1.4.8:
+    resolution: {integrity: sha1-6oBL2UhXQC5pktBaOO8a41qatMQ=, registry: https://registry.npm.taobao.org/, tarball: https://registry.nlark.com/sourcemap-codec/download/sourcemap-codec-1.4.8.tgz}
+    name: sourcemap-codec
+    version: 1.4.8
+    dev: true
+
+  registry.nlark.com/tslib/1.14.1:
+    resolution: {integrity: sha1-zy04vcNKE0vK8QkcQfZhni9nLQA=, registry: https://registry.npm.taobao.org/, tarball: https://registry.nlark.com/tslib/download/tslib-1.14.1.tgz}
+    name: tslib
+    version: 1.14.1
+    dev: false
+
+  registry.nlark.com/tslib/2.3.1:
+    resolution: {integrity: sha1-6KM1rdXOrlGqJh0ypJAVjvBC7wE=, registry: https://registry.npm.taobao.org/, tarball: https://registry.nlark.com/tslib/download/tslib-2.3.1.tgz}
+    name: tslib
+    version: 2.3.1
+
+  registry.nlark.com/url-join/4.0.1:
+    resolution: {integrity: sha1-tkLiGiZGgI/6F4xMX9o5hE4Szec=, registry: https://registry.npm.taobao.org/, tarball: https://registry.nlark.com/url-join/download/url-join-4.0.1.tgz}
+    name: url-join
+    version: 4.0.1
+    dev: false
+
+  registry.nlark.com/url-parse/1.5.3:
+    resolution: {integrity: sha1-ccEwPTj7Zjmt4YPCmSyMwGht+GI=, registry: https://registry.npm.taobao.org/, tarball: https://registry.nlark.com/url-parse/download/url-parse-1.5.3.tgz}
+    name: url-parse
+    version: 1.5.3
+    dependencies:
+      querystringify: registry.nlark.com/querystringify/2.2.0
+      requires-port: registry.nlark.com/requires-port/1.0.0
+    dev: false
+
+  registry.nlark.com/uuid/8.3.2:
+    resolution: {integrity: sha1-gNW1ztJxu5r2xEXyGhoExgbO++I=, registry: https://registry.npm.taobao.org/, tarball: https://registry.nlark.com/uuid/download/uuid-8.3.2.tgz}
+    name: uuid
+    version: 8.3.2
+    hasBin: true
+    dev: false
+
+  registry.nlark.com/wrappy/1.0.2:
+    resolution: {integrity: sha1-tSQ9jz7BqjXxNkYFvA0QNuMKtp8=, registry: https://registry.npm.taobao.org/, tarball: https://registry.nlark.com/wrappy/download/wrappy-1.0.2.tgz}
+    name: wrappy
+    version: 1.0.2
+    dev: true
+
+  registry.npmmirror.com/@aws-crypto/crc32/1.2.2:
+    resolution: {integrity: sha1-SnWKWW+oyzq0Y/A3p4wspJkv6B8=, registry: https://registry.npm.taobao.org/, tarball: https://registry.npmmirror.com/@aws-crypto/crc32/download/@aws-crypto/crc32-1.2.2.tgz}
+    name: '@aws-crypto/crc32'
+    version: 1.2.2
+    dependencies:
+      '@aws-crypto/util': registry.npmmirror.com/@aws-crypto/util/1.2.2
+      '@aws-sdk/types': registry.npmmirror.com/@aws-sdk/types/3.37.0
+      tslib: registry.nlark.com/tslib/1.14.1
+    dev: false
+
+  registry.npmmirror.com/@aws-crypto/ie11-detection/1.0.0:
+    resolution: {integrity: sha1-06avKbp/FUWPecQdHNjKw5Jecmo=, registry: https://registry.npm.taobao.org/, tarball: https://registry.npmmirror.com/@aws-crypto/ie11-detection/download/@aws-crypto/ie11-detection-1.0.0.tgz}
+    name: '@aws-crypto/ie11-detection'
+    version: 1.0.0
+    dependencies:
+      tslib: registry.nlark.com/tslib/1.14.1
+    dev: false
+
+  registry.npmmirror.com/@aws-crypto/sha256-browser/1.2.2:
+    resolution: {integrity: sha1-AE2Abju64TAEbCWewyeaAtSgtXY=, registry: https://registry.npm.taobao.org/, tarball: https://registry.npmmirror.com/@aws-crypto/sha256-browser/download/@aws-crypto/sha256-browser-1.2.2.tgz}
+    name: '@aws-crypto/sha256-browser'
+    version: 1.2.2
+    dependencies:
+      '@aws-crypto/ie11-detection': registry.npmmirror.com/@aws-crypto/ie11-detection/1.0.0
+      '@aws-crypto/sha256-js': registry.npmmirror.com/@aws-crypto/sha256-js/1.2.2
+      '@aws-crypto/supports-web-crypto': registry.npmmirror.com/@aws-crypto/supports-web-crypto/1.0.0
+      '@aws-crypto/util': registry.npmmirror.com/@aws-crypto/util/1.2.2
+      '@aws-sdk/types': registry.npmmirror.com/@aws-sdk/types/3.37.0
+      '@aws-sdk/util-locate-window': registry.npmmirror.com/@aws-sdk/util-locate-window/3.37.0
+      tslib: registry.nlark.com/tslib/1.14.1
+    dev: false
+
+  registry.npmmirror.com/@aws-crypto/sha256-js/1.2.2:
+    resolution: {integrity: sha1-AqzRof2pKJb8WijsfG4WRkTqMvw=, registry: https://registry.npm.taobao.org/, tarball: https://registry.npmmirror.com/@aws-crypto/sha256-js/download/@aws-crypto/sha256-js-1.2.2.tgz}
+    name: '@aws-crypto/sha256-js'
+    version: 1.2.2
+    dependencies:
+      '@aws-crypto/util': registry.npmmirror.com/@aws-crypto/util/1.2.2
+      '@aws-sdk/types': registry.npmmirror.com/@aws-sdk/types/3.37.0
+      tslib: registry.nlark.com/tslib/1.14.1
+    dev: false
+
+  registry.npmmirror.com/@aws-crypto/supports-web-crypto/1.0.0:
+    resolution: {integrity: sha1-xAkBvBesHodeJI3xaitHrYv9mpM=, registry: https://registry.npm.taobao.org/, tarball: https://registry.npmmirror.com/@aws-crypto/supports-web-crypto/download/@aws-crypto/supports-web-crypto-1.0.0.tgz}
+    name: '@aws-crypto/supports-web-crypto'
+    version: 1.0.0
+    dependencies:
+      tslib: registry.nlark.com/tslib/1.14.1
+    dev: false
+
+  registry.npmmirror.com/@aws-crypto/util/1.2.2:
+    resolution: {integrity: sha1-so94l3MOtlOLIcGL1N4i0OoJADw=, registry: https://registry.npm.taobao.org/, tarball: https://registry.npmmirror.com/@aws-crypto/util/download/@aws-crypto/util-1.2.2.tgz}
+    name: '@aws-crypto/util'
+    version: 1.2.2
+    dependencies:
+      '@aws-sdk/types': registry.npmmirror.com/@aws-sdk/types/3.37.0
+      '@aws-sdk/util-utf8-browser': registry.npmmirror.com/@aws-sdk/util-utf8-browser/3.37.0
+      tslib: registry.nlark.com/tslib/1.14.1
+    dev: false
+
+  registry.npmmirror.com/@aws-sdk/abort-controller/3.37.0:
+    resolution: {integrity: sha1-jHYl5H7njOaAYxiaO5Vx8wP0Clg=, registry: https://registry.npm.taobao.org/, tarball: https://registry.npmmirror.com/@aws-sdk/abort-controller/download/@aws-sdk/abort-controller-3.37.0.tgz}
+    name: '@aws-sdk/abort-controller'
+    version: 3.37.0
+    engines: {node: '>= 10.0.0'}
+    dependencies:
+      '@aws-sdk/types': registry.npmmirror.com/@aws-sdk/types/3.37.0
+      tslib: registry.nlark.com/tslib/2.3.1
+    dev: false
+
+  registry.npmmirror.com/@aws-sdk/chunked-blob-reader-native/3.37.0:
+    resolution: {integrity: sha1-Tcs2JCRjdwefhibeaYuPBVUrnco=, registry: https://registry.npm.taobao.org/, tarball: https://registry.npmmirror.com/@aws-sdk/chunked-blob-reader-native/download/@aws-sdk/chunked-blob-reader-native-3.37.0.tgz}
+    name: '@aws-sdk/chunked-blob-reader-native'
+    version: 3.37.0
+    dependencies:
+      '@aws-sdk/util-base64-browser': registry.npmmirror.com/@aws-sdk/util-base64-browser/3.37.0
+      tslib: registry.nlark.com/tslib/2.3.1
+    dev: false
+
+  registry.npmmirror.com/@aws-sdk/chunked-blob-reader/3.37.0:
+    resolution: {integrity: sha1-hUmt3bid/s/tq1NXHAuSqZUbu88=, registry: https://registry.npm.taobao.org/, tarball: https://registry.npmmirror.com/@aws-sdk/chunked-blob-reader/download/@aws-sdk/chunked-blob-reader-3.37.0.tgz}
+    name: '@aws-sdk/chunked-blob-reader'
+    version: 3.37.0
+    dependencies:
+      tslib: registry.nlark.com/tslib/2.3.1
+    dev: false
+
+  registry.npmmirror.com/@aws-sdk/client-s3/3.37.0:
+    resolution: {integrity: sha1-sArLNy8W2UC9+YYex5kjIYuX9IE=, registry: https://registry.npm.taobao.org/, tarball: https://registry.npmmirror.com/@aws-sdk/client-s3/download/@aws-sdk/client-s3-3.37.0.tgz}
+    name: '@aws-sdk/client-s3'
+    version: 3.37.0
+    engines: {node: '>=10.0.0'}
+    dependencies:
+      '@aws-crypto/sha256-browser': registry.npmmirror.com/@aws-crypto/sha256-browser/1.2.2
+      '@aws-crypto/sha256-js': registry.npmmirror.com/@aws-crypto/sha256-js/1.2.2
+      '@aws-sdk/client-sts': registry.npmmirror.com/@aws-sdk/client-sts/3.37.0
+      '@aws-sdk/config-resolver': registry.npmmirror.com/@aws-sdk/config-resolver/3.37.0
+      '@aws-sdk/credential-provider-node': registry.npmmirror.com/@aws-sdk/credential-provider-node/3.37.0
+      '@aws-sdk/eventstream-serde-browser': registry.npmmirror.com/@aws-sdk/eventstream-serde-browser/3.37.0
+      '@aws-sdk/eventstream-serde-config-resolver': registry.npmmirror.com/@aws-sdk/eventstream-serde-config-resolver/3.37.0
+      '@aws-sdk/eventstream-serde-node': registry.npmmirror.com/@aws-sdk/eventstream-serde-node/3.37.0
+      '@aws-sdk/fetch-http-handler': registry.npmmirror.com/@aws-sdk/fetch-http-handler/3.37.0
+      '@aws-sdk/hash-blob-browser': registry.npmmirror.com/@aws-sdk/hash-blob-browser/3.37.0
+      '@aws-sdk/hash-node': registry.npmmirror.com/@aws-sdk/hash-node/3.37.0
+      '@aws-sdk/hash-stream-node': registry.npmmirror.com/@aws-sdk/hash-stream-node/3.37.0
+      '@aws-sdk/invalid-dependency': registry.npmmirror.com/@aws-sdk/invalid-dependency/3.37.0
+      '@aws-sdk/md5-js': registry.npmmirror.com/@aws-sdk/md5-js/3.37.0
+      '@aws-sdk/middleware-apply-body-checksum': registry.npmmirror.com/@aws-sdk/middleware-apply-body-checksum/3.37.0
+      '@aws-sdk/middleware-bucket-endpoint': registry.npmmirror.com/@aws-sdk/middleware-bucket-endpoint/3.37.0
+      '@aws-sdk/middleware-content-length': registry.npmmirror.com/@aws-sdk/middleware-content-length/3.37.0
+      '@aws-sdk/middleware-expect-continue': registry.npmmirror.com/@aws-sdk/middleware-expect-continue/3.37.0
+      '@aws-sdk/middleware-host-header': registry.npmmirror.com/@aws-sdk/middleware-host-header/3.37.0
+      '@aws-sdk/middleware-location-constraint': registry.npmmirror.com/@aws-sdk/middleware-location-constraint/3.37.0
+      '@aws-sdk/middleware-logger': registry.npmmirror.com/@aws-sdk/middleware-logger/3.37.0
+      '@aws-sdk/middleware-retry': registry.npmmirror.com/@aws-sdk/middleware-retry/3.37.0
+      '@aws-sdk/middleware-sdk-s3': registry.npmmirror.com/@aws-sdk/middleware-sdk-s3/3.37.0
+      '@aws-sdk/middleware-serde': registry.npmmirror.com/@aws-sdk/middleware-serde/3.37.0
+      '@aws-sdk/middleware-signing': registry.npmmirror.com/@aws-sdk/middleware-signing/3.37.0
+      '@aws-sdk/middleware-ssec': registry.npmmirror.com/@aws-sdk/middleware-ssec/3.37.0
+      '@aws-sdk/middleware-stack': registry.npmmirror.com/@aws-sdk/middleware-stack/3.37.0
+      '@aws-sdk/middleware-user-agent': registry.npmmirror.com/@aws-sdk/middleware-user-agent/3.37.0
+      '@aws-sdk/node-config-provider': registry.npmmirror.com/@aws-sdk/node-config-provider/3.37.0
+      '@aws-sdk/node-http-handler': registry.npmmirror.com/@aws-sdk/node-http-handler/3.37.0
+      '@aws-sdk/protocol-http': registry.npmmirror.com/@aws-sdk/protocol-http/3.37.0
+      '@aws-sdk/smithy-client': registry.npmmirror.com/@aws-sdk/smithy-client/3.37.0
+      '@aws-sdk/types': registry.npmmirror.com/@aws-sdk/types/3.37.0
+      '@aws-sdk/url-parser': registry.npmmirror.com/@aws-sdk/url-parser/3.37.0
+      '@aws-sdk/util-base64-browser': registry.npmmirror.com/@aws-sdk/util-base64-browser/3.37.0
+      '@aws-sdk/util-base64-node': registry.npmmirror.com/@aws-sdk/util-base64-node/3.37.0
+      '@aws-sdk/util-body-length-browser': registry.npmmirror.com/@aws-sdk/util-body-length-browser/3.37.0
+      '@aws-sdk/util-body-length-node': registry.npmmirror.com/@aws-sdk/util-body-length-node/3.37.0
+      '@aws-sdk/util-user-agent-browser': registry.npmmirror.com/@aws-sdk/util-user-agent-browser/3.37.0
+      '@aws-sdk/util-user-agent-node': registry.npmmirror.com/@aws-sdk/util-user-agent-node/3.37.0
+      '@aws-sdk/util-utf8-browser': registry.npmmirror.com/@aws-sdk/util-utf8-browser/3.37.0
+      '@aws-sdk/util-utf8-node': registry.npmmirror.com/@aws-sdk/util-utf8-node/3.37.0
+      '@aws-sdk/util-waiter': registry.npmmirror.com/@aws-sdk/util-waiter/3.37.0
+      '@aws-sdk/xml-builder': registry.npmmirror.com/@aws-sdk/xml-builder/3.37.0
+      entities: registry.nlark.com/entities/2.2.0
+      fast-xml-parser: registry.npmmirror.com/fast-xml-parser/3.19.0
+      tslib: registry.nlark.com/tslib/2.3.1
+    transitivePeerDependencies:
+      - '@aws-sdk/signature-v4-crt'
+    dev: false
+
+  registry.npmmirror.com/@aws-sdk/client-sso/3.37.0:
+    resolution: {integrity: sha1-U10gqU6442bHK0HLdh44S7pVOQg=, registry: https://registry.npm.taobao.org/, tarball: https://registry.npmmirror.com/@aws-sdk/client-sso/download/@aws-sdk/client-sso-3.37.0.tgz}
+    name: '@aws-sdk/client-sso'
+    version: 3.37.0
+    engines: {node: '>=10.0.0'}
+    dependencies:
+      '@aws-crypto/sha256-browser': registry.npmmirror.com/@aws-crypto/sha256-browser/1.2.2
+      '@aws-crypto/sha256-js': registry.npmmirror.com/@aws-crypto/sha256-js/1.2.2
+      '@aws-sdk/config-resolver': registry.npmmirror.com/@aws-sdk/config-resolver/3.37.0
+      '@aws-sdk/fetch-http-handler': registry.npmmirror.com/@aws-sdk/fetch-http-handler/3.37.0
+      '@aws-sdk/hash-node': registry.npmmirror.com/@aws-sdk/hash-node/3.37.0
+      '@aws-sdk/invalid-dependency': registry.npmmirror.com/@aws-sdk/invalid-dependency/3.37.0
+      '@aws-sdk/middleware-content-length': registry.npmmirror.com/@aws-sdk/middleware-content-length/3.37.0
+      '@aws-sdk/middleware-host-header': registry.npmmirror.com/@aws-sdk/middleware-host-header/3.37.0
+      '@aws-sdk/middleware-logger': registry.npmmirror.com/@aws-sdk/middleware-logger/3.37.0
+      '@aws-sdk/middleware-retry': registry.npmmirror.com/@aws-sdk/middleware-retry/3.37.0
+      '@aws-sdk/middleware-serde': registry.npmmirror.com/@aws-sdk/middleware-serde/3.37.0
+      '@aws-sdk/middleware-stack': registry.npmmirror.com/@aws-sdk/middleware-stack/3.37.0
+      '@aws-sdk/middleware-user-agent': registry.npmmirror.com/@aws-sdk/middleware-user-agent/3.37.0
+      '@aws-sdk/node-config-provider': registry.npmmirror.com/@aws-sdk/node-config-provider/3.37.0
+      '@aws-sdk/node-http-handler': registry.npmmirror.com/@aws-sdk/node-http-handler/3.37.0
+      '@aws-sdk/protocol-http': registry.npmmirror.com/@aws-sdk/protocol-http/3.37.0
+      '@aws-sdk/smithy-client': registry.npmmirror.com/@aws-sdk/smithy-client/3.37.0
+      '@aws-sdk/types': registry.npmmirror.com/@aws-sdk/types/3.37.0
+      '@aws-sdk/url-parser': registry.npmmirror.com/@aws-sdk/url-parser/3.37.0
+      '@aws-sdk/util-base64-browser': registry.npmmirror.com/@aws-sdk/util-base64-browser/3.37.0
+      '@aws-sdk/util-base64-node': registry.npmmirror.com/@aws-sdk/util-base64-node/3.37.0
+      '@aws-sdk/util-body-length-browser': registry.npmmirror.com/@aws-sdk/util-body-length-browser/3.37.0
+      '@aws-sdk/util-body-length-node': registry.npmmirror.com/@aws-sdk/util-body-length-node/3.37.0
+      '@aws-sdk/util-user-agent-browser': registry.npmmirror.com/@aws-sdk/util-user-agent-browser/3.37.0
+      '@aws-sdk/util-user-agent-node': registry.npmmirror.com/@aws-sdk/util-user-agent-node/3.37.0
+      '@aws-sdk/util-utf8-browser': registry.npmmirror.com/@aws-sdk/util-utf8-browser/3.37.0
+      '@aws-sdk/util-utf8-node': registry.npmmirror.com/@aws-sdk/util-utf8-node/3.37.0
+      tslib: registry.nlark.com/tslib/2.3.1
+    dev: false
+
+  registry.npmmirror.com/@aws-sdk/client-sts/3.37.0:
+    resolution: {integrity: sha1-XJnMpI/sGML0W7rhNyys7KZm8A4=, registry: https://registry.npm.taobao.org/, tarball: https://registry.npmmirror.com/@aws-sdk/client-sts/download/@aws-sdk/client-sts-3.37.0.tgz}
+    name: '@aws-sdk/client-sts'
+    version: 3.37.0
+    engines: {node: '>=10.0.0'}
+    dependencies:
+      '@aws-crypto/sha256-browser': registry.npmmirror.com/@aws-crypto/sha256-browser/1.2.2
+      '@aws-crypto/sha256-js': registry.npmmirror.com/@aws-crypto/sha256-js/1.2.2
+      '@aws-sdk/config-resolver': registry.npmmirror.com/@aws-sdk/config-resolver/3.37.0
+      '@aws-sdk/credential-provider-node': registry.npmmirror.com/@aws-sdk/credential-provider-node/3.37.0
+      '@aws-sdk/fetch-http-handler': registry.npmmirror.com/@aws-sdk/fetch-http-handler/3.37.0
+      '@aws-sdk/hash-node': registry.npmmirror.com/@aws-sdk/hash-node/3.37.0
+      '@aws-sdk/invalid-dependency': registry.npmmirror.com/@aws-sdk/invalid-dependency/3.37.0
+      '@aws-sdk/middleware-content-length': registry.npmmirror.com/@aws-sdk/middleware-content-length/3.37.0
+      '@aws-sdk/middleware-host-header': registry.npmmirror.com/@aws-sdk/middleware-host-header/3.37.0
+      '@aws-sdk/middleware-logger': registry.npmmirror.com/@aws-sdk/middleware-logger/3.37.0
+      '@aws-sdk/middleware-retry': registry.npmmirror.com/@aws-sdk/middleware-retry/3.37.0
+      '@aws-sdk/middleware-sdk-sts': registry.npmmirror.com/@aws-sdk/middleware-sdk-sts/3.37.0
+      '@aws-sdk/middleware-serde': registry.npmmirror.com/@aws-sdk/middleware-serde/3.37.0
+      '@aws-sdk/middleware-signing': registry.npmmirror.com/@aws-sdk/middleware-signing/3.37.0
+      '@aws-sdk/middleware-stack': registry.npmmirror.com/@aws-sdk/middleware-stack/3.37.0
+      '@aws-sdk/middleware-user-agent': registry.npmmirror.com/@aws-sdk/middleware-user-agent/3.37.0
+      '@aws-sdk/node-config-provider': registry.npmmirror.com/@aws-sdk/node-config-provider/3.37.0
+      '@aws-sdk/node-http-handler': registry.npmmirror.com/@aws-sdk/node-http-handler/3.37.0
+      '@aws-sdk/protocol-http': registry.npmmirror.com/@aws-sdk/protocol-http/3.37.0
+      '@aws-sdk/smithy-client': registry.npmmirror.com/@aws-sdk/smithy-client/3.37.0
+      '@aws-sdk/types': registry.npmmirror.com/@aws-sdk/types/3.37.0
+      '@aws-sdk/url-parser': registry.npmmirror.com/@aws-sdk/url-parser/3.37.0
+      '@aws-sdk/util-base64-browser': registry.npmmirror.com/@aws-sdk/util-base64-browser/3.37.0
+      '@aws-sdk/util-base64-node': registry.npmmirror.com/@aws-sdk/util-base64-node/3.37.0
+      '@aws-sdk/util-body-length-browser': registry.npmmirror.com/@aws-sdk/util-body-length-browser/3.37.0
+      '@aws-sdk/util-body-length-node': registry.npmmirror.com/@aws-sdk/util-body-length-node/3.37.0
+      '@aws-sdk/util-user-agent-browser': registry.npmmirror.com/@aws-sdk/util-user-agent-browser/3.37.0
+      '@aws-sdk/util-user-agent-node': registry.npmmirror.com/@aws-sdk/util-user-agent-node/3.37.0
+      '@aws-sdk/util-utf8-browser': registry.npmmirror.com/@aws-sdk/util-utf8-browser/3.37.0
+      '@aws-sdk/util-utf8-node': registry.npmmirror.com/@aws-sdk/util-utf8-node/3.37.0
+      entities: registry.nlark.com/entities/2.2.0
+      fast-xml-parser: registry.npmmirror.com/fast-xml-parser/3.19.0
+      tslib: registry.nlark.com/tslib/2.3.1
+    dev: false
+
+  registry.npmmirror.com/@aws-sdk/config-resolver/3.37.0:
+    resolution: {integrity: sha1-94Ewepu/C7Bi9UHMOzlcQeoieAY=, registry: https://registry.npm.taobao.org/, tarball: https://registry.npmmirror.com/@aws-sdk/config-resolver/download/@aws-sdk/config-resolver-3.37.0.tgz}
+    name: '@aws-sdk/config-resolver'
+    version: 3.37.0
+    engines: {node: '>= 10.0.0'}
+    dependencies:
+      '@aws-sdk/signature-v4': registry.npmmirror.com/@aws-sdk/signature-v4/3.37.0
+      '@aws-sdk/types': registry.npmmirror.com/@aws-sdk/types/3.37.0
+      tslib: registry.nlark.com/tslib/2.3.1
+    dev: false
+
+  registry.npmmirror.com/@aws-sdk/credential-provider-env/3.37.0:
+    resolution: {integrity: sha1-aax3V3WgHvI5aTfiNQqzw5tEBak=, registry: https://registry.npm.taobao.org/, tarball: https://registry.npmmirror.com/@aws-sdk/credential-provider-env/download/@aws-sdk/credential-provider-env-3.37.0.tgz}
+    name: '@aws-sdk/credential-provider-env'
+    version: 3.37.0
+    engines: {node: '>= 10.0.0'}
+    dependencies:
+      '@aws-sdk/property-provider': registry.npmmirror.com/@aws-sdk/property-provider/3.37.0
+      '@aws-sdk/types': registry.npmmirror.com/@aws-sdk/types/3.37.0
+      tslib: registry.nlark.com/tslib/2.3.1
+    dev: false
+
+  registry.npmmirror.com/@aws-sdk/credential-provider-imds/3.37.0:
+    resolution: {integrity: sha1-sXT09z5RJjUWvubdkHwGfd76YlM=, registry: https://registry.npm.taobao.org/, tarball: https://registry.npmmirror.com/@aws-sdk/credential-provider-imds/download/@aws-sdk/credential-provider-imds-3.37.0.tgz}
+    name: '@aws-sdk/credential-provider-imds'
+    version: 3.37.0
+    engines: {node: '>= 10.0.0'}
+    dependencies:
+      '@aws-sdk/node-config-provider': registry.npmmirror.com/@aws-sdk/node-config-provider/3.37.0
+      '@aws-sdk/property-provider': registry.npmmirror.com/@aws-sdk/property-provider/3.37.0
+      '@aws-sdk/types': registry.npmmirror.com/@aws-sdk/types/3.37.0
+      '@aws-sdk/url-parser': registry.npmmirror.com/@aws-sdk/url-parser/3.37.0
+      tslib: registry.nlark.com/tslib/2.3.1
+    dev: false
+
+  registry.npmmirror.com/@aws-sdk/credential-provider-ini/3.37.0:
+    resolution: {integrity: sha1-gZwXUF4NW+6dM9WQ1AYEIwN3vds=, registry: https://registry.npm.taobao.org/, tarball: https://registry.npmmirror.com/@aws-sdk/credential-provider-ini/download/@aws-sdk/credential-provider-ini-3.37.0.tgz}
+    name: '@aws-sdk/credential-provider-ini'
+    version: 3.37.0
+    engines: {node: '>= 10.0.0'}
+    dependencies:
+      '@aws-sdk/credential-provider-env': registry.npmmirror.com/@aws-sdk/credential-provider-env/3.37.0
+      '@aws-sdk/credential-provider-imds': registry.npmmirror.com/@aws-sdk/credential-provider-imds/3.37.0
+      '@aws-sdk/credential-provider-sso': registry.npmmirror.com/@aws-sdk/credential-provider-sso/3.37.0
+      '@aws-sdk/credential-provider-web-identity': registry.npmmirror.com/@aws-sdk/credential-provider-web-identity/3.37.0
+      '@aws-sdk/property-provider': registry.npmmirror.com/@aws-sdk/property-provider/3.37.0
+      '@aws-sdk/shared-ini-file-loader': registry.npmmirror.com/@aws-sdk/shared-ini-file-loader/3.37.0
+      '@aws-sdk/types': registry.npmmirror.com/@aws-sdk/types/3.37.0
+      '@aws-sdk/util-credentials': registry.npmmirror.com/@aws-sdk/util-credentials/3.37.0
+      tslib: registry.nlark.com/tslib/2.3.1
+    dev: false
+
+  registry.npmmirror.com/@aws-sdk/credential-provider-node/3.37.0:
+    resolution: {integrity: sha1-c8vx6Y+kDkxBKJLXBdxLNsh+/I4=, registry: https://registry.npm.taobao.org/, tarball: https://registry.npmmirror.com/@aws-sdk/credential-provider-node/download/@aws-sdk/credential-provider-node-3.37.0.tgz}
+    name: '@aws-sdk/credential-provider-node'
+    version: 3.37.0
+    engines: {node: '>=10.0.0'}
+    dependencies:
+      '@aws-sdk/credential-provider-env': registry.npmmirror.com/@aws-sdk/credential-provider-env/3.37.0
+      '@aws-sdk/credential-provider-imds': registry.npmmirror.com/@aws-sdk/credential-provider-imds/3.37.0
+      '@aws-sdk/credential-provider-ini': registry.npmmirror.com/@aws-sdk/credential-provider-ini/3.37.0
+      '@aws-sdk/credential-provider-process': registry.npmmirror.com/@aws-sdk/credential-provider-process/3.37.0
+      '@aws-sdk/credential-provider-sso': registry.npmmirror.com/@aws-sdk/credential-provider-sso/3.37.0
+      '@aws-sdk/credential-provider-web-identity': registry.npmmirror.com/@aws-sdk/credential-provider-web-identity/3.37.0
+      '@aws-sdk/property-provider': registry.npmmirror.com/@aws-sdk/property-provider/3.37.0
+      '@aws-sdk/shared-ini-file-loader': registry.npmmirror.com/@aws-sdk/shared-ini-file-loader/3.37.0
+      '@aws-sdk/types': registry.npmmirror.com/@aws-sdk/types/3.37.0
+      '@aws-sdk/util-credentials': registry.npmmirror.com/@aws-sdk/util-credentials/3.37.0
+      tslib: registry.nlark.com/tslib/2.3.1
+    dev: false
+
+  registry.npmmirror.com/@aws-sdk/credential-provider-process/3.37.0:
+    resolution: {integrity: sha1-3rXRw/lBeMyLkWY9FV/8OunkK+8=, registry: https://registry.npm.taobao.org/, tarball: https://registry.npmmirror.com/@aws-sdk/credential-provider-process/download/@aws-sdk/credential-provider-process-3.37.0.tgz}
+    name: '@aws-sdk/credential-provider-process'
+    version: 3.37.0
+    engines: {node: '>= 10.0.0'}
+    dependencies:
+      '@aws-sdk/property-provider': registry.npmmirror.com/@aws-sdk/property-provider/3.37.0
+      '@aws-sdk/shared-ini-file-loader': registry.npmmirror.com/@aws-sdk/shared-ini-file-loader/3.37.0
+      '@aws-sdk/types': registry.npmmirror.com/@aws-sdk/types/3.37.0
+      '@aws-sdk/util-credentials': registry.npmmirror.com/@aws-sdk/util-credentials/3.37.0
+      tslib: registry.nlark.com/tslib/2.3.1
+    dev: false
+
+  registry.npmmirror.com/@aws-sdk/credential-provider-sso/3.37.0:
+    resolution: {integrity: sha1-oE+wSrresWzifKeLWZrda/citHI=, registry: https://registry.npm.taobao.org/, tarball: https://registry.npmmirror.com/@aws-sdk/credential-provider-sso/download/@aws-sdk/credential-provider-sso-3.37.0.tgz}
+    name: '@aws-sdk/credential-provider-sso'
+    version: 3.37.0
+    engines: {node: '>= 10.0.0'}
+    dependencies:
+      '@aws-sdk/client-sso': registry.npmmirror.com/@aws-sdk/client-sso/3.37.0
+      '@aws-sdk/property-provider': registry.npmmirror.com/@aws-sdk/property-provider/3.37.0
+      '@aws-sdk/shared-ini-file-loader': registry.npmmirror.com/@aws-sdk/shared-ini-file-loader/3.37.0
+      '@aws-sdk/types': registry.npmmirror.com/@aws-sdk/types/3.37.0
+      '@aws-sdk/util-credentials': registry.npmmirror.com/@aws-sdk/util-credentials/3.37.0
+      tslib: registry.nlark.com/tslib/2.3.1
+    dev: false
+
+  registry.npmmirror.com/@aws-sdk/credential-provider-web-identity/3.37.0:
+    resolution: {integrity: sha1-TFgxtMl9muoRkCbCbkziXi3Hbrg=, registry: https://registry.npm.taobao.org/, tarball: https://registry.npmmirror.com/@aws-sdk/credential-provider-web-identity/download/@aws-sdk/credential-provider-web-identity-3.37.0.tgz}
+    name: '@aws-sdk/credential-provider-web-identity'
+    version: 3.37.0
+    engines: {node: '>= 10.0.0'}
+    dependencies:
+      '@aws-sdk/property-provider': registry.npmmirror.com/@aws-sdk/property-provider/3.37.0
+      '@aws-sdk/types': registry.npmmirror.com/@aws-sdk/types/3.37.0
+      tslib: registry.nlark.com/tslib/2.3.1
+    dev: false
+
+  registry.npmmirror.com/@aws-sdk/eventstream-marshaller/3.37.0:
+    resolution: {integrity: sha1-Awopac950zmVXUzWsOwRkbrhefQ=, registry: https://registry.npm.taobao.org/, tarball: https://registry.npmmirror.com/@aws-sdk/eventstream-marshaller/download/@aws-sdk/eventstream-marshaller-3.37.0.tgz}
+    name: '@aws-sdk/eventstream-marshaller'
+    version: 3.37.0
+    dependencies:
+      '@aws-crypto/crc32': registry.npmmirror.com/@aws-crypto/crc32/1.2.2
+      '@aws-sdk/types': registry.npmmirror.com/@aws-sdk/types/3.37.0
+      '@aws-sdk/util-hex-encoding': registry.npmmirror.com/@aws-sdk/util-hex-encoding/3.37.0
+      tslib: registry.nlark.com/tslib/2.3.1
+    dev: false
+
+  registry.npmmirror.com/@aws-sdk/eventstream-serde-browser/3.37.0:
+    resolution: {integrity: sha1-74MBVpYolT9nwvWiES3RQ05PDWw=, registry: https://registry.npm.taobao.org/, tarball: https://registry.npmmirror.com/@aws-sdk/eventstream-serde-browser/download/@aws-sdk/eventstream-serde-browser-3.37.0.tgz}
+    name: '@aws-sdk/eventstream-serde-browser'
+    version: 3.37.0
+    engines: {node: '>= 10.0.0'}
+    dependencies:
+      '@aws-sdk/eventstream-marshaller': registry.npmmirror.com/@aws-sdk/eventstream-marshaller/3.37.0
+      '@aws-sdk/eventstream-serde-universal': registry.npmmirror.com/@aws-sdk/eventstream-serde-universal/3.37.0
+      '@aws-sdk/types': registry.npmmirror.com/@aws-sdk/types/3.37.0
+      tslib: registry.nlark.com/tslib/2.3.1
+    dev: false
+
+  registry.npmmirror.com/@aws-sdk/eventstream-serde-config-resolver/3.37.0:
+    resolution: {integrity: sha1-GPmVFUjqI3hlL1MzcHxEMcvFrPE=, registry: https://registry.npm.taobao.org/, tarball: https://registry.npmmirror.com/@aws-sdk/eventstream-serde-config-resolver/download/@aws-sdk/eventstream-serde-config-resolver-3.37.0.tgz}
+    name: '@aws-sdk/eventstream-serde-config-resolver'
+    version: 3.37.0
+    engines: {node: '>= 10.0.0'}
+    dependencies:
+      '@aws-sdk/types': registry.npmmirror.com/@aws-sdk/types/3.37.0
+      tslib: registry.nlark.com/tslib/2.3.1
+    dev: false
+
+  registry.npmmirror.com/@aws-sdk/eventstream-serde-node/3.37.0:
+    resolution: {integrity: sha1-sAQc9/0paaj2pNaf/XAxCeuBlMA=, registry: https://registry.npm.taobao.org/, tarball: https://registry.npmmirror.com/@aws-sdk/eventstream-serde-node/download/@aws-sdk/eventstream-serde-node-3.37.0.tgz}
+    name: '@aws-sdk/eventstream-serde-node'
+    version: 3.37.0
+    engines: {node: '>= 10.0.0'}
+    dependencies:
+      '@aws-sdk/eventstream-marshaller': registry.npmmirror.com/@aws-sdk/eventstream-marshaller/3.37.0
+      '@aws-sdk/eventstream-serde-universal': registry.npmmirror.com/@aws-sdk/eventstream-serde-universal/3.37.0
+      '@aws-sdk/types': registry.npmmirror.com/@aws-sdk/types/3.37.0
+      tslib: registry.nlark.com/tslib/2.3.1
+    dev: false
+
+  registry.npmmirror.com/@aws-sdk/eventstream-serde-universal/3.37.0:
+    resolution: {integrity: sha1-s0OvsYTjdRLpnDEpoUk/jj1dvTU=, registry: https://registry.npm.taobao.org/, tarball: https://registry.npmmirror.com/@aws-sdk/eventstream-serde-universal/download/@aws-sdk/eventstream-serde-universal-3.37.0.tgz}
+    name: '@aws-sdk/eventstream-serde-universal'
+    version: 3.37.0
+    engines: {node: '>= 10.0.0'}
+    dependencies:
+      '@aws-sdk/eventstream-marshaller': registry.npmmirror.com/@aws-sdk/eventstream-marshaller/3.37.0
+      '@aws-sdk/types': registry.npmmirror.com/@aws-sdk/types/3.37.0
+      tslib: registry.nlark.com/tslib/2.3.1
+    dev: false
+
+  registry.npmmirror.com/@aws-sdk/fetch-http-handler/3.37.0:
+    resolution: {integrity: sha1-6MynJ5bEzQCFL10XIyrSVcYDeKo=, registry: https://registry.npm.taobao.org/, tarball: https://registry.npmmirror.com/@aws-sdk/fetch-http-handler/download/@aws-sdk/fetch-http-handler-3.37.0.tgz}
+    name: '@aws-sdk/fetch-http-handler'
+    version: 3.37.0
+    dependencies:
+      '@aws-sdk/protocol-http': registry.npmmirror.com/@aws-sdk/protocol-http/3.37.0
+      '@aws-sdk/querystring-builder': registry.npmmirror.com/@aws-sdk/querystring-builder/3.37.0
+      '@aws-sdk/types': registry.npmmirror.com/@aws-sdk/types/3.37.0
+      '@aws-sdk/util-base64-browser': registry.npmmirror.com/@aws-sdk/util-base64-browser/3.37.0
+      tslib: registry.nlark.com/tslib/2.3.1
+    dev: false
+
+  registry.npmmirror.com/@aws-sdk/hash-blob-browser/3.37.0:
+    resolution: {integrity: sha1-MzibBgJ7g7OMbYJVrasl0Vq6qrU=, registry: https://registry.npm.taobao.org/, tarball: https://registry.npmmirror.com/@aws-sdk/hash-blob-browser/download/@aws-sdk/hash-blob-browser-3.37.0.tgz}
+    name: '@aws-sdk/hash-blob-browser'
+    version: 3.37.0
+    dependencies:
+      '@aws-sdk/chunked-blob-reader': registry.npmmirror.com/@aws-sdk/chunked-blob-reader/3.37.0
+      '@aws-sdk/chunked-blob-reader-native': registry.npmmirror.com/@aws-sdk/chunked-blob-reader-native/3.37.0
+      '@aws-sdk/types': registry.npmmirror.com/@aws-sdk/types/3.37.0
+      tslib: registry.nlark.com/tslib/2.3.1
+    dev: false
+
+  registry.npmmirror.com/@aws-sdk/hash-node/3.37.0:
+    resolution: {integrity: sha1-O8i2+KvPOQWr1B9HzTUGFqV9P7c=, registry: https://registry.npm.taobao.org/, tarball: https://registry.npmmirror.com/@aws-sdk/hash-node/download/@aws-sdk/hash-node-3.37.0.tgz}
+    name: '@aws-sdk/hash-node'
+    version: 3.37.0
+    engines: {node: '>= 10.0.0'}
+    dependencies:
+      '@aws-sdk/types': registry.npmmirror.com/@aws-sdk/types/3.37.0
+      '@aws-sdk/util-buffer-from': registry.npmmirror.com/@aws-sdk/util-buffer-from/3.37.0
+      tslib: registry.nlark.com/tslib/2.3.1
+    dev: false
+
+  registry.npmmirror.com/@aws-sdk/hash-stream-node/3.37.0:
+    resolution: {integrity: sha1-BZzzdfgl5QuLOpu9t5B2lqZwdQc=, registry: https://registry.npm.taobao.org/, tarball: https://registry.npmmirror.com/@aws-sdk/hash-stream-node/download/@aws-sdk/hash-stream-node-3.37.0.tgz}
+    name: '@aws-sdk/hash-stream-node'
+    version: 3.37.0
+    engines: {node: '>= 10.0.0'}
+    dependencies:
+      '@aws-sdk/types': registry.npmmirror.com/@aws-sdk/types/3.37.0
+      tslib: registry.nlark.com/tslib/2.3.1
+    dev: false
+
+  registry.npmmirror.com/@aws-sdk/invalid-dependency/3.37.0:
+    resolution: {integrity: sha1-vP0JYZ2s2s6QPaGuLM3dxa/TrQE=, registry: https://registry.npm.taobao.org/, tarball: https://registry.npmmirror.com/@aws-sdk/invalid-dependency/download/@aws-sdk/invalid-dependency-3.37.0.tgz}
+    name: '@aws-sdk/invalid-dependency'
+    version: 3.37.0
+    dependencies:
+      '@aws-sdk/types': registry.npmmirror.com/@aws-sdk/types/3.37.0
+      tslib: registry.nlark.com/tslib/2.3.1
+    dev: false
+
+  registry.npmmirror.com/@aws-sdk/is-array-buffer/3.37.0:
+    resolution: {integrity: sha1-qodhn4FysaKnrI1XMDICXZiubFA=, registry: https://registry.npm.taobao.org/, tarball: https://registry.npmmirror.com/@aws-sdk/is-array-buffer/download/@aws-sdk/is-array-buffer-3.37.0.tgz}
+    name: '@aws-sdk/is-array-buffer'
+    version: 3.37.0
+    engines: {node: '>= 10.0.0'}
+    dependencies:
+      tslib: registry.nlark.com/tslib/2.3.1
+    dev: false
+
+  registry.npmmirror.com/@aws-sdk/md5-js/3.37.0:
+    resolution: {integrity: sha1-MmkZ5ToytmaUe2yqnA4aEdc9ZG0=, registry: https://registry.npm.taobao.org/, tarball: https://registry.npmmirror.com/@aws-sdk/md5-js/download/@aws-sdk/md5-js-3.37.0.tgz}
+    name: '@aws-sdk/md5-js'
+    version: 3.37.0
+    dependencies:
+      '@aws-sdk/types': registry.npmmirror.com/@aws-sdk/types/3.37.0
+      '@aws-sdk/util-utf8-browser': registry.npmmirror.com/@aws-sdk/util-utf8-browser/3.37.0
+      '@aws-sdk/util-utf8-node': registry.npmmirror.com/@aws-sdk/util-utf8-node/3.37.0
+      tslib: registry.nlark.com/tslib/2.3.1
+    dev: false
+
+  registry.npmmirror.com/@aws-sdk/middleware-apply-body-checksum/3.37.0:
+    resolution: {integrity: sha1-IgRJxtrk05KtDFSeIkOYof8baIQ=, registry: https://registry.npm.taobao.org/, tarball: https://registry.npmmirror.com/@aws-sdk/middleware-apply-body-checksum/download/@aws-sdk/middleware-apply-body-checksum-3.37.0.tgz}
+    name: '@aws-sdk/middleware-apply-body-checksum'
+    version: 3.37.0
+    engines: {node: '>= 10.0.0'}
+    dependencies:
+      '@aws-sdk/is-array-buffer': registry.npmmirror.com/@aws-sdk/is-array-buffer/3.37.0
+      '@aws-sdk/protocol-http': registry.npmmirror.com/@aws-sdk/protocol-http/3.37.0
+      '@aws-sdk/types': registry.npmmirror.com/@aws-sdk/types/3.37.0
+      tslib: registry.nlark.com/tslib/2.3.1
+    dev: false
+
+  registry.npmmirror.com/@aws-sdk/middleware-bucket-endpoint/3.37.0:
+    resolution: {integrity: sha1-ja0Lij6nJSEsHCgacbeOCd11ngE=, registry: https://registry.npm.taobao.org/, tarball: https://registry.npmmirror.com/@aws-sdk/middleware-bucket-endpoint/download/@aws-sdk/middleware-bucket-endpoint-3.37.0.tgz}
+    name: '@aws-sdk/middleware-bucket-endpoint'
+    version: 3.37.0
+    engines: {node: '>= 10.0.0'}
+    dependencies:
+      '@aws-sdk/protocol-http': registry.npmmirror.com/@aws-sdk/protocol-http/3.37.0
+      '@aws-sdk/types': registry.npmmirror.com/@aws-sdk/types/3.37.0
+      '@aws-sdk/util-arn-parser': registry.npmmirror.com/@aws-sdk/util-arn-parser/3.37.0
+      tslib: registry.nlark.com/tslib/2.3.1
+    dev: false
+
+  registry.npmmirror.com/@aws-sdk/middleware-content-length/3.37.0:
+    resolution: {integrity: sha1-6/QWsXFVNaKZZvE2Iu5qKvBa8yk=, registry: https://registry.npm.taobao.org/, tarball: https://registry.npmmirror.com/@aws-sdk/middleware-content-length/download/@aws-sdk/middleware-content-length-3.37.0.tgz}
+    name: '@aws-sdk/middleware-content-length'
+    version: 3.37.0
+    engines: {node: '>= 10.0.0'}
+    dependencies:
+      '@aws-sdk/protocol-http': registry.npmmirror.com/@aws-sdk/protocol-http/3.37.0
+      '@aws-sdk/types': registry.npmmirror.com/@aws-sdk/types/3.37.0
+      tslib: registry.nlark.com/tslib/2.3.1
+    dev: false
+
+  registry.npmmirror.com/@aws-sdk/middleware-expect-continue/3.37.0:
+    resolution: {integrity: sha1-Iko4xcNCJ3rZ680Yd3S1tVV5UCY=, registry: https://registry.npm.taobao.org/, tarball: https://registry.npmmirror.com/@aws-sdk/middleware-expect-continue/download/@aws-sdk/middleware-expect-continue-3.37.0.tgz}
+    name: '@aws-sdk/middleware-expect-continue'
+    version: 3.37.0
+    engines: {node: '>= 10.0.0'}
+    dependencies:
+      '@aws-sdk/middleware-header-default': registry.npmmirror.com/@aws-sdk/middleware-header-default/3.37.0
+      '@aws-sdk/protocol-http': registry.npmmirror.com/@aws-sdk/protocol-http/3.37.0
+      '@aws-sdk/types': registry.npmmirror.com/@aws-sdk/types/3.37.0
+      tslib: registry.nlark.com/tslib/2.3.1
+    dev: false
+
+  registry.npmmirror.com/@aws-sdk/middleware-header-default/3.37.0:
+    resolution: {integrity: sha1-dIwhuHraDA/UJ9StVr20tOVE0tc=, registry: https://registry.npm.taobao.org/, tarball: https://registry.npmmirror.com/@aws-sdk/middleware-header-default/download/@aws-sdk/middleware-header-default-3.37.0.tgz}
+    name: '@aws-sdk/middleware-header-default'
+    version: 3.37.0
+    engines: {node: '>= 10.0.0'}
+    dependencies:
+      '@aws-sdk/protocol-http': registry.npmmirror.com/@aws-sdk/protocol-http/3.37.0
+      '@aws-sdk/types': registry.npmmirror.com/@aws-sdk/types/3.37.0
+      tslib: registry.nlark.com/tslib/2.3.1
+    dev: false
+
+  registry.npmmirror.com/@aws-sdk/middleware-host-header/3.37.0:
+    resolution: {integrity: sha1-WghgL/PmUSDqF4RG+ZIlnzTKH1Q=, registry: https://registry.npm.taobao.org/, tarball: https://registry.npmmirror.com/@aws-sdk/middleware-host-header/download/@aws-sdk/middleware-host-header-3.37.0.tgz}
+    name: '@aws-sdk/middleware-host-header'
+    version: 3.37.0
+    engines: {node: '>= 10.0.0'}
+    dependencies:
+      '@aws-sdk/protocol-http': registry.npmmirror.com/@aws-sdk/protocol-http/3.37.0
+      '@aws-sdk/types': registry.npmmirror.com/@aws-sdk/types/3.37.0
+      tslib: registry.nlark.com/tslib/2.3.1
+    dev: false
+
+  registry.npmmirror.com/@aws-sdk/middleware-location-constraint/3.37.0:
+    resolution: {integrity: sha1-LkQdvCAzu1yk4KUkACj4HxbVgmE=, registry: https://registry.npm.taobao.org/, tarball: https://registry.npmmirror.com/@aws-sdk/middleware-location-constraint/download/@aws-sdk/middleware-location-constraint-3.37.0.tgz}
+    name: '@aws-sdk/middleware-location-constraint'
+    version: 3.37.0
+    engines: {node: '>= 10.0.0'}
+    dependencies:
+      '@aws-sdk/types': registry.npmmirror.com/@aws-sdk/types/3.37.0
+      tslib: registry.nlark.com/tslib/2.3.1
+    dev: false
+
+  registry.npmmirror.com/@aws-sdk/middleware-logger/3.37.0:
+    resolution: {integrity: sha1-MBwd7hlSJLGHtcd+C5h+hGxPSf8=, registry: https://registry.npm.taobao.org/, tarball: https://registry.npmmirror.com/@aws-sdk/middleware-logger/download/@aws-sdk/middleware-logger-3.37.0.tgz}
+    name: '@aws-sdk/middleware-logger'
+    version: 3.37.0
+    engines: {node: '>= 10.0.0'}
+    dependencies:
+      '@aws-sdk/types': registry.npmmirror.com/@aws-sdk/types/3.37.0
+      tslib: registry.nlark.com/tslib/2.3.1
+    dev: false
+
+  registry.npmmirror.com/@aws-sdk/middleware-retry/3.37.0:
+    resolution: {integrity: sha1-/+CuRqclS+pg2kgGmtqn5pyJGD8=, registry: https://registry.npm.taobao.org/, tarball: https://registry.npmmirror.com/@aws-sdk/middleware-retry/download/@aws-sdk/middleware-retry-3.37.0.tgz}
+    name: '@aws-sdk/middleware-retry'
+    version: 3.37.0
+    engines: {node: '>= 10.0.0'}
+    dependencies:
+      '@aws-sdk/protocol-http': registry.npmmirror.com/@aws-sdk/protocol-http/3.37.0
+      '@aws-sdk/service-error-classification': registry.npmmirror.com/@aws-sdk/service-error-classification/3.37.0
+      '@aws-sdk/types': registry.npmmirror.com/@aws-sdk/types/3.37.0
+      tslib: registry.nlark.com/tslib/2.3.1
+      uuid: registry.nlark.com/uuid/8.3.2
+    dev: false
+
+  registry.npmmirror.com/@aws-sdk/middleware-sdk-s3/3.37.0:
+    resolution: {integrity: sha1-3D4EQObwo0Sv4hygLY53ZamewOc=, registry: https://registry.npm.taobao.org/, tarball: https://registry.npmmirror.com/@aws-sdk/middleware-sdk-s3/download/@aws-sdk/middleware-sdk-s3-3.37.0.tgz}
+    name: '@aws-sdk/middleware-sdk-s3'
+    version: 3.37.0
+    engines: {node: '>= 10.0.0'}
+    peerDependencies:
+      '@aws-sdk/signature-v4-crt': ^3.31.0
+    dependencies:
+      '@aws-sdk/protocol-http': registry.npmmirror.com/@aws-sdk/protocol-http/3.37.0
+      '@aws-sdk/signature-v4': registry.npmmirror.com/@aws-sdk/signature-v4/3.37.0
+      '@aws-sdk/types': registry.npmmirror.com/@aws-sdk/types/3.37.0
+      '@aws-sdk/util-arn-parser': registry.npmmirror.com/@aws-sdk/util-arn-parser/3.37.0
+      tslib: registry.nlark.com/tslib/2.3.1
+    dev: false
+
+  registry.npmmirror.com/@aws-sdk/middleware-sdk-sts/3.37.0:
+    resolution: {integrity: sha1-0UnUbp0rqniFq7q2YpRSiSfPerk=, registry: https://registry.npm.taobao.org/, tarball: https://registry.npmmirror.com/@aws-sdk/middleware-sdk-sts/download/@aws-sdk/middleware-sdk-sts-3.37.0.tgz}
+    name: '@aws-sdk/middleware-sdk-sts'
+    version: 3.37.0
+    engines: {node: '>= 10.0.0'}
+    dependencies:
+      '@aws-sdk/middleware-signing': registry.npmmirror.com/@aws-sdk/middleware-signing/3.37.0
+      '@aws-sdk/property-provider': registry.npmmirror.com/@aws-sdk/property-provider/3.37.0
+      '@aws-sdk/protocol-http': registry.npmmirror.com/@aws-sdk/protocol-http/3.37.0
+      '@aws-sdk/signature-v4': registry.npmmirror.com/@aws-sdk/signature-v4/3.37.0
+      '@aws-sdk/types': registry.npmmirror.com/@aws-sdk/types/3.37.0
+      tslib: registry.nlark.com/tslib/2.3.1
+    dev: false
+
+  registry.npmmirror.com/@aws-sdk/middleware-serde/3.37.0:
+    resolution: {integrity: sha1-aI+EkJxj4OvriqSrMfO1qUcgX/M=, registry: https://registry.npm.taobao.org/, tarball: https://registry.npmmirror.com/@aws-sdk/middleware-serde/download/@aws-sdk/middleware-serde-3.37.0.tgz}
+    name: '@aws-sdk/middleware-serde'
+    version: 3.37.0
+    engines: {node: '>= 10.0.0'}
+    dependencies:
+      '@aws-sdk/types': registry.npmmirror.com/@aws-sdk/types/3.37.0
+      tslib: registry.nlark.com/tslib/2.3.1
+    dev: false
+
+  registry.npmmirror.com/@aws-sdk/middleware-signing/3.37.0:
+    resolution: {integrity: sha1-LKRPvvZIId3fmHex27p8Vk2envE=, registry: https://registry.npm.taobao.org/, tarball: https://registry.npmmirror.com/@aws-sdk/middleware-signing/download/@aws-sdk/middleware-signing-3.37.0.tgz}
+    name: '@aws-sdk/middleware-signing'
+    version: 3.37.0
+    engines: {node: '>= 10.0.0'}
+    dependencies:
+      '@aws-sdk/property-provider': registry.npmmirror.com/@aws-sdk/property-provider/3.37.0
+      '@aws-sdk/protocol-http': registry.npmmirror.com/@aws-sdk/protocol-http/3.37.0
+      '@aws-sdk/signature-v4': registry.npmmirror.com/@aws-sdk/signature-v4/3.37.0
+      '@aws-sdk/types': registry.npmmirror.com/@aws-sdk/types/3.37.0
+      tslib: registry.nlark.com/tslib/2.3.1
+    dev: false
+
+  registry.npmmirror.com/@aws-sdk/middleware-ssec/3.37.0:
+    resolution: {integrity: sha1-xKIFCPxYMxOGY2mLrIABOWwt9eU=, registry: https://registry.npm.taobao.org/, tarball: https://registry.npmmirror.com/@aws-sdk/middleware-ssec/download/@aws-sdk/middleware-ssec-3.37.0.tgz}
+    name: '@aws-sdk/middleware-ssec'
+    version: 3.37.0
+    engines: {node: '>= 10.0.0'}
+    dependencies:
+      '@aws-sdk/types': registry.npmmirror.com/@aws-sdk/types/3.37.0
+      tslib: registry.nlark.com/tslib/2.3.1
+    dev: false
+
+  registry.npmmirror.com/@aws-sdk/middleware-stack/3.37.0:
+    resolution: {integrity: sha1-xcgEQO+6g+3L51Ug7vidvCY24X8=, registry: https://registry.npm.taobao.org/, tarball: https://registry.npmmirror.com/@aws-sdk/middleware-stack/download/@aws-sdk/middleware-stack-3.37.0.tgz}
+    name: '@aws-sdk/middleware-stack'
+    version: 3.37.0
+    engines: {node: '>= 10.0.0'}
+    dependencies:
+      tslib: registry.nlark.com/tslib/2.3.1
+    dev: false
+
+  registry.npmmirror.com/@aws-sdk/middleware-user-agent/3.37.0:
+    resolution: {integrity: sha1-swA3mZ4SEBR7Yn6AaVHsuqO24m8=, registry: https://registry.npm.taobao.org/, tarball: https://registry.npmmirror.com/@aws-sdk/middleware-user-agent/download/@aws-sdk/middleware-user-agent-3.37.0.tgz}
+    name: '@aws-sdk/middleware-user-agent'
+    version: 3.37.0
+    engines: {node: '>= 10.0.0'}
+    dependencies:
+      '@aws-sdk/protocol-http': registry.npmmirror.com/@aws-sdk/protocol-http/3.37.0
+      '@aws-sdk/types': registry.npmmirror.com/@aws-sdk/types/3.37.0
+      tslib: registry.nlark.com/tslib/2.3.1
+    dev: false
+
+  registry.npmmirror.com/@aws-sdk/node-config-provider/3.37.0:
+    resolution: {integrity: sha1-Kx61uUG4qmBDaYkjZmOdkynpWdo=, registry: https://registry.npm.taobao.org/, tarball: https://registry.npmmirror.com/@aws-sdk/node-config-provider/download/@aws-sdk/node-config-provider-3.37.0.tgz}
+    name: '@aws-sdk/node-config-provider'
+    version: 3.37.0
+    engines: {node: '>= 10.0.0'}
+    dependencies:
+      '@aws-sdk/property-provider': registry.npmmirror.com/@aws-sdk/property-provider/3.37.0
+      '@aws-sdk/shared-ini-file-loader': registry.npmmirror.com/@aws-sdk/shared-ini-file-loader/3.37.0
+      '@aws-sdk/types': registry.npmmirror.com/@aws-sdk/types/3.37.0
+      tslib: registry.nlark.com/tslib/2.3.1
+    dev: false
+
+  registry.npmmirror.com/@aws-sdk/node-http-handler/3.37.0:
+    resolution: {integrity: sha1-OtfG2K8lBqM7XfkmCeiRKZwesRc=, registry: https://registry.npm.taobao.org/, tarball: https://registry.npmmirror.com/@aws-sdk/node-http-handler/download/@aws-sdk/node-http-handler-3.37.0.tgz}
+    name: '@aws-sdk/node-http-handler'
+    version: 3.37.0
+    engines: {node: '>= 10.0.0'}
+    dependencies:
+      '@aws-sdk/abort-controller': registry.npmmirror.com/@aws-sdk/abort-controller/3.37.0
+      '@aws-sdk/protocol-http': registry.npmmirror.com/@aws-sdk/protocol-http/3.37.0
+      '@aws-sdk/querystring-builder': registry.npmmirror.com/@aws-sdk/querystring-builder/3.37.0
+      '@aws-sdk/types': registry.npmmirror.com/@aws-sdk/types/3.37.0
+      tslib: registry.nlark.com/tslib/2.3.1
+    dev: false
+
+  registry.npmmirror.com/@aws-sdk/property-provider/3.37.0:
+    resolution: {integrity: sha1-qFAYklkeL7eh9SM9azdOwnsx6Zw=, registry: https://registry.npm.taobao.org/, tarball: https://registry.npmmirror.com/@aws-sdk/property-provider/download/@aws-sdk/property-provider-3.37.0.tgz}
+    name: '@aws-sdk/property-provider'
+    version: 3.37.0
+    engines: {node: '>= 10.0.0'}
+    dependencies:
+      '@aws-sdk/types': registry.npmmirror.com/@aws-sdk/types/3.37.0
+      tslib: registry.nlark.com/tslib/2.3.1
+    dev: false
+
+  registry.npmmirror.com/@aws-sdk/protocol-http/3.37.0:
+    resolution: {integrity: sha1-9k5sTIHzpfCkoq/eAgl1UkpIBYg=, registry: https://registry.npm.taobao.org/, tarball: https://registry.npmmirror.com/@aws-sdk/protocol-http/download/@aws-sdk/protocol-http-3.37.0.tgz}
+    name: '@aws-sdk/protocol-http'
+    version: 3.37.0
+    engines: {node: '>= 10.0.0'}
+    dependencies:
+      '@aws-sdk/types': registry.npmmirror.com/@aws-sdk/types/3.37.0
+      tslib: registry.nlark.com/tslib/2.3.1
+    dev: false
+
+  registry.npmmirror.com/@aws-sdk/querystring-builder/3.37.0:
+    resolution: {integrity: sha1-Qi46f/75o54n7FxTQIvPTxbKKR4=, registry: https://registry.npm.taobao.org/, tarball: https://registry.npmmirror.com/@aws-sdk/querystring-builder/download/@aws-sdk/querystring-builder-3.37.0.tgz}
+    name: '@aws-sdk/querystring-builder'
+    version: 3.37.0
+    engines: {node: '>= 10.0.0'}
+    dependencies:
+      '@aws-sdk/types': registry.npmmirror.com/@aws-sdk/types/3.37.0
+      '@aws-sdk/util-uri-escape': registry.npmmirror.com/@aws-sdk/util-uri-escape/3.37.0
+      tslib: registry.nlark.com/tslib/2.3.1
+    dev: false
+
+  registry.npmmirror.com/@aws-sdk/querystring-parser/3.37.0:
+    resolution: {integrity: sha1-KL7EG/pfugTUly8+uqSoJbPM6M8=, registry: https://registry.npm.taobao.org/, tarball: https://registry.npmmirror.com/@aws-sdk/querystring-parser/download/@aws-sdk/querystring-parser-3.37.0.tgz}
+    name: '@aws-sdk/querystring-parser'
+    version: 3.37.0
+    engines: {node: '>= 10.0.0'}
+    dependencies:
+      '@aws-sdk/types': registry.npmmirror.com/@aws-sdk/types/3.37.0
+      tslib: registry.nlark.com/tslib/2.3.1
+    dev: false
+
+  registry.npmmirror.com/@aws-sdk/service-error-classification/3.37.0:
+    resolution: {integrity: sha1-aRvcz+WJRBfBnOCRSKMmroichtw=, registry: https://registry.npm.taobao.org/, tarball: https://registry.npmmirror.com/@aws-sdk/service-error-classification/download/@aws-sdk/service-error-classification-3.37.0.tgz}
+    name: '@aws-sdk/service-error-classification'
+    version: 3.37.0
+    engines: {node: '>= 10.0.0'}
+    dev: false
+
+  registry.npmmirror.com/@aws-sdk/shared-ini-file-loader/3.37.0:
+    resolution: {integrity: sha1-ylldl0UVD0aAX2i+amwWB9YYrZQ=, registry: https://registry.npm.taobao.org/, tarball: https://registry.npmmirror.com/@aws-sdk/shared-ini-file-loader/download/@aws-sdk/shared-ini-file-loader-3.37.0.tgz}
+    name: '@aws-sdk/shared-ini-file-loader'
+    version: 3.37.0
+    engines: {node: '>= 10.0.0'}
+    dependencies:
+      tslib: registry.nlark.com/tslib/2.3.1
+    dev: false
+
+  registry.npmmirror.com/@aws-sdk/signature-v4/3.37.0:
+    resolution: {integrity: sha1-wIFPHaEFg1oylPTTK3glwGl7wU4=, registry: https://registry.npm.taobao.org/, tarball: https://registry.npmmirror.com/@aws-sdk/signature-v4/download/@aws-sdk/signature-v4-3.37.0.tgz}
+    name: '@aws-sdk/signature-v4'
+    version: 3.37.0
+    engines: {node: '>= 10.0.0'}
+    dependencies:
+      '@aws-sdk/is-array-buffer': registry.npmmirror.com/@aws-sdk/is-array-buffer/3.37.0
+      '@aws-sdk/types': registry.npmmirror.com/@aws-sdk/types/3.37.0
+      '@aws-sdk/util-hex-encoding': registry.npmmirror.com/@aws-sdk/util-hex-encoding/3.37.0
+      '@aws-sdk/util-uri-escape': registry.npmmirror.com/@aws-sdk/util-uri-escape/3.37.0
+      tslib: registry.nlark.com/tslib/2.3.1
+    dev: false
+
+  registry.npmmirror.com/@aws-sdk/smithy-client/3.37.0:
+    resolution: {integrity: sha1-BzPoKuTgNwI8fmY34NadN/1rob8=, registry: https://registry.npm.taobao.org/, tarball: https://registry.npmmirror.com/@aws-sdk/smithy-client/download/@aws-sdk/smithy-client-3.37.0.tgz}
+    name: '@aws-sdk/smithy-client'
+    version: 3.37.0
+    engines: {node: '>= 10.0.0'}
+    dependencies:
+      '@aws-sdk/middleware-stack': registry.npmmirror.com/@aws-sdk/middleware-stack/3.37.0
+      '@aws-sdk/types': registry.npmmirror.com/@aws-sdk/types/3.37.0
+      tslib: registry.nlark.com/tslib/2.3.1
+    dev: false
+
+  registry.npmmirror.com/@aws-sdk/types/3.37.0:
+    resolution: {integrity: sha1-wTfnGTwWXgOV5agC6vSSmPrnxpI=, registry: https://registry.npm.taobao.org/, tarball: https://registry.npmmirror.com/@aws-sdk/types/download/@aws-sdk/types-3.37.0.tgz}
+    name: '@aws-sdk/types'
+    version: 3.37.0
+    engines: {node: '>= 10.0.0'}
+    dev: false
+
+  registry.npmmirror.com/@aws-sdk/url-parser/3.37.0:
+    resolution: {integrity: sha1-hCl4iOyKqP1GTSlZkHQLz5z4E4c=, registry: https://registry.npm.taobao.org/, tarball: https://registry.npmmirror.com/@aws-sdk/url-parser/download/@aws-sdk/url-parser-3.37.0.tgz}
+    name: '@aws-sdk/url-parser'
+    version: 3.37.0
+    dependencies:
+      '@aws-sdk/querystring-parser': registry.npmmirror.com/@aws-sdk/querystring-parser/3.37.0
+      '@aws-sdk/types': registry.npmmirror.com/@aws-sdk/types/3.37.0
+      tslib: registry.nlark.com/tslib/2.3.1
+    dev: false
+
+  registry.npmmirror.com/@aws-sdk/util-arn-parser/3.37.0:
+    resolution: {integrity: sha1-gHaRaQxMUsHo4KNiv1dnKRtibx8=, registry: https://registry.npm.taobao.org/, tarball: https://registry.npmmirror.com/@aws-sdk/util-arn-parser/download/@aws-sdk/util-arn-parser-3.37.0.tgz}
+    name: '@aws-sdk/util-arn-parser'
+    version: 3.37.0
+    engines: {node: '>= 10.0.0'}
+    dependencies:
+      tslib: registry.nlark.com/tslib/2.3.1
+    dev: false
+
+  registry.npmmirror.com/@aws-sdk/util-base64-browser/3.37.0:
+    resolution: {integrity: sha1-S/EF3pHl4X3tZEVX2saFHDDpktI=, registry: https://registry.npm.taobao.org/, tarball: https://registry.npmmirror.com/@aws-sdk/util-base64-browser/download/@aws-sdk/util-base64-browser-3.37.0.tgz}
+    name: '@aws-sdk/util-base64-browser'
+    version: 3.37.0
+    dependencies:
+      tslib: registry.nlark.com/tslib/2.3.1
+    dev: false
+
+  registry.npmmirror.com/@aws-sdk/util-base64-node/3.37.0:
+    resolution: {integrity: sha1-gf8WTSJ9uPrrkQrzP/X4YSadbWc=, registry: https://registry.npm.taobao.org/, tarball: https://registry.npmmirror.com/@aws-sdk/util-base64-node/download/@aws-sdk/util-base64-node-3.37.0.tgz}
+    name: '@aws-sdk/util-base64-node'
+    version: 3.37.0
+    engines: {node: '>= 10.0.0'}
+    dependencies:
+      '@aws-sdk/util-buffer-from': registry.npmmirror.com/@aws-sdk/util-buffer-from/3.37.0
+      tslib: registry.nlark.com/tslib/2.3.1
+    dev: false
+
+  registry.npmmirror.com/@aws-sdk/util-body-length-browser/3.37.0:
+    resolution: {integrity: sha1-Ljo3WsGRqbrNQKazR57kAty1dp0=, registry: https://registry.npm.taobao.org/, tarball: https://registry.npmmirror.com/@aws-sdk/util-body-length-browser/download/@aws-sdk/util-body-length-browser-3.37.0.tgz}
+    name: '@aws-sdk/util-body-length-browser'
+    version: 3.37.0
+    dependencies:
+      tslib: registry.nlark.com/tslib/2.3.1
+    dev: false
+
+  registry.npmmirror.com/@aws-sdk/util-body-length-node/3.37.0:
+    resolution: {integrity: sha1-1hcNr9NReZaH1YP4GKSjkkthy+w=, registry: https://registry.npm.taobao.org/, tarball: https://registry.npmmirror.com/@aws-sdk/util-body-length-node/download/@aws-sdk/util-body-length-node-3.37.0.tgz}
+    name: '@aws-sdk/util-body-length-node'
+    version: 3.37.0
+    engines: {node: '>= 10.0.0'}
+    dependencies:
+      tslib: registry.nlark.com/tslib/2.3.1
+    dev: false
+
+  registry.npmmirror.com/@aws-sdk/util-buffer-from/3.37.0:
+    resolution: {integrity: sha1-KY1KklufDKI/mWF2SM2fs4lrVzw=, registry: https://registry.npm.taobao.org/, tarball: https://registry.npmmirror.com/@aws-sdk/util-buffer-from/download/@aws-sdk/util-buffer-from-3.37.0.tgz}
+    name: '@aws-sdk/util-buffer-from'
+    version: 3.37.0
+    engines: {node: '>= 10.0.0'}
+    dependencies:
+      '@aws-sdk/is-array-buffer': registry.npmmirror.com/@aws-sdk/is-array-buffer/3.37.0
+      tslib: registry.nlark.com/tslib/2.3.1
+    dev: false
+
+  registry.npmmirror.com/@aws-sdk/util-credentials/3.37.0:
+    resolution: {integrity: sha1-diYcPXwgvuXSjlwXdBrfGVWLO2c=, registry: https://registry.npm.taobao.org/, tarball: https://registry.npmmirror.com/@aws-sdk/util-credentials/download/@aws-sdk/util-credentials-3.37.0.tgz}
+    name: '@aws-sdk/util-credentials'
+    version: 3.37.0
+    engines: {node: '>= 10.0.0'}
+    dependencies:
+      '@aws-sdk/shared-ini-file-loader': registry.npmmirror.com/@aws-sdk/shared-ini-file-loader/3.37.0
+      tslib: registry.nlark.com/tslib/2.3.1
+    dev: false
+
+  registry.npmmirror.com/@aws-sdk/util-hex-encoding/3.37.0:
+    resolution: {integrity: sha1-QM4htf9oLoEemKx0dmku5VrmFJM=, registry: https://registry.npm.taobao.org/, tarball: https://registry.npmmirror.com/@aws-sdk/util-hex-encoding/download/@aws-sdk/util-hex-encoding-3.37.0.tgz}
+    name: '@aws-sdk/util-hex-encoding'
+    version: 3.37.0
+    engines: {node: '>= 10.0.0'}
+    dependencies:
+      tslib: registry.nlark.com/tslib/2.3.1
+    dev: false
+
+  registry.npmmirror.com/@aws-sdk/util-locate-window/3.37.0:
+    resolution: {integrity: sha1-4EH0EeXmojXlvP+sxLf6kPJdjQE=, registry: https://registry.npm.taobao.org/, tarball: https://registry.npmmirror.com/@aws-sdk/util-locate-window/download/@aws-sdk/util-locate-window-3.37.0.tgz}
+    name: '@aws-sdk/util-locate-window'
+    version: 3.37.0
+    engines: {node: '>= 10.0.0'}
+    dependencies:
+      tslib: registry.nlark.com/tslib/2.3.1
+    dev: false
+
+  registry.npmmirror.com/@aws-sdk/util-uri-escape/3.37.0:
+    resolution: {integrity: sha1-Qrg5OlHcwE8ijnDRyUwv44pziZQ=, registry: https://registry.npm.taobao.org/, tarball: https://registry.npmmirror.com/@aws-sdk/util-uri-escape/download/@aws-sdk/util-uri-escape-3.37.0.tgz}
+    name: '@aws-sdk/util-uri-escape'
+    version: 3.37.0
+    engines: {node: '>= 10.0.0'}
+    dependencies:
+      tslib: registry.nlark.com/tslib/2.3.1
+    dev: false
+
+  registry.npmmirror.com/@aws-sdk/util-user-agent-browser/3.37.0:
+    resolution: {integrity: sha1-XMXpeNU2aHZ0AF+iZ9PzfDMfG1Q=, registry: https://registry.npm.taobao.org/, tarball: https://registry.npmmirror.com/@aws-sdk/util-user-agent-browser/download/@aws-sdk/util-user-agent-browser-3.37.0.tgz}
+    name: '@aws-sdk/util-user-agent-browser'
+    version: 3.37.0
+    dependencies:
+      '@aws-sdk/types': registry.npmmirror.com/@aws-sdk/types/3.37.0
+      bowser: registry.npmmirror.com/bowser/2.11.0
+      tslib: registry.nlark.com/tslib/2.3.1
+    dev: false
+
+  registry.npmmirror.com/@aws-sdk/util-user-agent-node/3.37.0:
+    resolution: {integrity: sha1-ovtxSXeFGJQC15edeeADOvcgqPk=, registry: https://registry.npm.taobao.org/, tarball: https://registry.npmmirror.com/@aws-sdk/util-user-agent-node/download/@aws-sdk/util-user-agent-node-3.37.0.tgz}
+    name: '@aws-sdk/util-user-agent-node'
+    version: 3.37.0
+    engines: {node: '>= 10.0.0'}
+    dependencies:
+      '@aws-sdk/node-config-provider': registry.npmmirror.com/@aws-sdk/node-config-provider/3.37.0
+      '@aws-sdk/types': registry.npmmirror.com/@aws-sdk/types/3.37.0
+      tslib: registry.nlark.com/tslib/2.3.1
+    dev: false
+
+  registry.npmmirror.com/@aws-sdk/util-utf8-browser/3.37.0:
+    resolution: {integrity: sha1-2JaJn0xHXO6vi3fF183EU+X+a4M=, registry: https://registry.npm.taobao.org/, tarball: https://registry.npmmirror.com/@aws-sdk/util-utf8-browser/download/@aws-sdk/util-utf8-browser-3.37.0.tgz}
+    name: '@aws-sdk/util-utf8-browser'
+    version: 3.37.0
+    dependencies:
+      tslib: registry.nlark.com/tslib/2.3.1
+    dev: false
+
+  registry.npmmirror.com/@aws-sdk/util-utf8-node/3.37.0:
+    resolution: {integrity: sha1-MAkSzOVdcsGCExkCN9arlD4Xtb8=, registry: https://registry.npm.taobao.org/, tarball: https://registry.npmmirror.com/@aws-sdk/util-utf8-node/download/@aws-sdk/util-utf8-node-3.37.0.tgz}
+    name: '@aws-sdk/util-utf8-node'
+    version: 3.37.0
+    engines: {node: '>= 10.0.0'}
+    dependencies:
+      '@aws-sdk/util-buffer-from': registry.npmmirror.com/@aws-sdk/util-buffer-from/3.37.0
+      tslib: registry.nlark.com/tslib/2.3.1
+    dev: false
+
+  registry.npmmirror.com/@aws-sdk/util-waiter/3.37.0:
+    resolution: {integrity: sha1-fzR2SW+6hKWgSIfWj9ba3zB2RKI=, registry: https://registry.npm.taobao.org/, tarball: https://registry.npmmirror.com/@aws-sdk/util-waiter/download/@aws-sdk/util-waiter-3.37.0.tgz}
+    name: '@aws-sdk/util-waiter'
+    version: 3.37.0
+    engines: {node: '>= 10.0.0'}
+    dependencies:
+      '@aws-sdk/abort-controller': registry.npmmirror.com/@aws-sdk/abort-controller/3.37.0
+      '@aws-sdk/types': registry.npmmirror.com/@aws-sdk/types/3.37.0
+      tslib: registry.nlark.com/tslib/2.3.1
+    dev: false
+
+  registry.npmmirror.com/@aws-sdk/xml-builder/3.37.0:
+    resolution: {integrity: sha1-F6zrNBiKWLXCW0k0T2YTWw/pX3k=, registry: https://registry.npm.taobao.org/, tarball: https://registry.npmmirror.com/@aws-sdk/xml-builder/download/@aws-sdk/xml-builder-3.37.0.tgz}
+    name: '@aws-sdk/xml-builder'
+    version: 3.37.0
+    engines: {node: '>= 10.0.0'}
+    dependencies:
+      tslib: registry.nlark.com/tslib/2.3.1
+    dev: false
+
+  registry.npmmirror.com/@rollup/plugin-commonjs/18.1.0_rollup@2.58.0:
+    resolution: {integrity: sha1-WnYNdXrxaKUHJ8CuCAJR+/zF6wI=, registry: https://registry.npm.taobao.org/, tarball: https://registry.npmmirror.com/@rollup/plugin-commonjs/download/@rollup/plugin-commonjs-18.1.0.tgz}
+    id: registry.npmmirror.com/@rollup/plugin-commonjs/18.1.0
+    name: '@rollup/plugin-commonjs'
+    version: 18.1.0
+    engines: {node: '>= 8.0.0'}
+    peerDependencies:
+      rollup: ^2.30.0
+    dependencies:
+      '@rollup/pluginutils': registry.nlark.com/@rollup/pluginutils/3.1.0_rollup@2.58.0
+      commondir: registry.nlark.com/commondir/1.0.1
+      estree-walker: registry.nlark.com/estree-walker/2.0.2
+      glob: registry.npmmirror.com/glob/7.2.0
+      is-reference: registry.nlark.com/is-reference/1.2.1
+      magic-string: registry.nlark.com/magic-string/0.25.7
+      resolve: registry.nlark.com/resolve/1.20.0
+      rollup: registry.npmmirror.com/rollup/2.58.0
+    dev: true
+
+  registry.npmmirror.com/@rollup/plugin-typescript/8.3.0_11969cb7979bf76fd37eb17f863ea3c2:
+    resolution: {integrity: sha1-vBB3+liXuYD8J+N2xON3iCxj5os=, registry: https://registry.npm.taobao.org/, tarball: https://registry.npmmirror.com/@rollup/plugin-typescript/download/@rollup/plugin-typescript-8.3.0.tgz}
+    id: registry.npmmirror.com/@rollup/plugin-typescript/8.3.0
+    name: '@rollup/plugin-typescript'
+    version: 8.3.0
+    engines: {node: '>=8.0.0'}
+    peerDependencies:
+      rollup: ^2.14.0
+      tslib: '*'
+      typescript: '>=3.7.0'
+    dependencies:
+      '@rollup/pluginutils': registry.nlark.com/@rollup/pluginutils/3.1.0_rollup@2.58.0
+      resolve: registry.nlark.com/resolve/1.20.0
+      rollup: registry.npmmirror.com/rollup/2.58.0
+      tslib: registry.nlark.com/tslib/2.3.1
+      typescript: registry.npmmirror.com/typescript/4.4.4
+    dev: true
+
+  registry.npmmirror.com/@types/codemirror/0.0.108:
+    resolution: {integrity: sha1-5kBCK2Zr9JJRs4TDkM3rI2JYW94=, registry: https://registry.npm.taobao.org/, tarball: https://registry.npmmirror.com/@types/codemirror/download/@types/codemirror-0.0.108.tgz}
+    name: '@types/codemirror'
+    version: 0.0.108
+    dependencies:
+      '@types/tern': registry.nlark.com/@types/tern/0.23.4
+    dev: false
+
+  registry.npmmirror.com/@types/node/14.17.27:
+    resolution: {integrity: sha1-UFRhDTe7X24hNC0ObSTElCMfO4U=, registry: https://registry.npm.taobao.org/, tarball: https://registry.npmmirror.com/@types/node/download/@types/node-14.17.27.tgz}
+    name: '@types/node'
+    version: 14.17.27
+    dev: true
+
+  registry.npmmirror.com/axios/0.21.4:
+    resolution: {integrity: sha1-xnuQ3AVo5cHPKwuFjEO6KOLtpXU=, registry: https://registry.npm.taobao.org/, tarball: https://registry.npmmirror.com/axios/download/axios-0.21.4.tgz}
+    name: axios
+    version: 0.21.4
+    dependencies:
+      follow-redirects: registry.nlark.com/follow-redirects/1.14.4
+    dev: false
+
+  registry.npmmirror.com/base-64/1.0.0:
+    resolution: {integrity: sha1-CdDyCE4yo/0IwkdblzeI7uauj0o=, registry: https://registry.npm.taobao.org/, tarball: https://registry.npmmirror.com/base-64/download/base-64-1.0.0.tgz}
+    name: base-64
+    version: 1.0.0
+    dev: false
+
+  registry.npmmirror.com/bowser/2.11.0:
+    resolution: {integrity: sha1-XKPDV1enqldxUAxwpzqfke9CCo8=, registry: https://registry.npm.taobao.org/, tarball: https://registry.npmmirror.com/bowser/download/bowser-2.11.0.tgz}
+    name: bowser
+    version: 2.11.0
+    dev: false
+
+  registry.npmmirror.com/codemirror/5.63.3:
+    resolution: {integrity: sha1-lwQqJCAn/gyHwJs2vAGTHTe3ZSc=, registry: https://registry.npm.taobao.org/, tarball: https://registry.npmmirror.com/codemirror/download/codemirror-5.63.3.tgz}
+    name: codemirror
+    version: 5.63.3
+    dev: false
+
+  registry.npmmirror.com/fast-xml-parser/3.19.0:
+    resolution: {integrity: sha1-y2N+w/OZn1FAbdj/Dm/E2D5SDQE=, registry: https://registry.npm.taobao.org/, tarball: https://registry.npmmirror.com/fast-xml-parser/download/fast-xml-parser-3.19.0.tgz}
+    name: fast-xml-parser
+    version: 3.19.0
+    hasBin: true
+    dev: false
+
+  registry.npmmirror.com/fast-xml-parser/3.20.3:
+    resolution: {integrity: sha1-wXFCU1bU2Snv7KTk9n8kIxoxx4Y=, registry: https://registry.npm.taobao.org/, tarball: https://registry.npmmirror.com/fast-xml-parser/download/fast-xml-parser-3.20.3.tgz}
+    name: fast-xml-parser
+    version: 3.20.3
+    hasBin: true
+    dependencies:
+      strnum: registry.npmmirror.com/strnum/1.0.4
+    dev: false
+
+  registry.npmmirror.com/glob/7.2.0:
+    resolution: {integrity: sha1-0VU1r3cy4C6Uj0xBYovZECk/YCM=, registry: https://registry.npm.taobao.org/, tarball: https://registry.npmmirror.com/glob/download/glob-7.2.0.tgz}
+    name: glob
+    version: 7.2.0
+    dependencies:
+      fs.realpath: registry.nlark.com/fs.realpath/1.0.0
+      inflight: registry.nlark.com/inflight/1.0.6
+      inherits: registry.nlark.com/inherits/2.0.4
+      minimatch: registry.nlark.com/minimatch/3.0.4
+      once: registry.nlark.com/once/1.4.0
+      path-is-absolute: registry.nlark.com/path-is-absolute/1.0.1
+    dev: true
+
+  registry.npmmirror.com/hot-patcher/0.5.0:
+    resolution: {integrity: sha1-nUAUJFharzqRZGuBbO/0DrapFrk=, registry: https://registry.npm.taobao.org/, tarball: https://registry.npmmirror.com/hot-patcher/download/hot-patcher-0.5.0.tgz}
+    name: hot-patcher
+    version: 0.5.0
+    dev: false
+
+  registry.npmmirror.com/is-core-module/2.8.0:
+    resolution: {integrity: sha1-AyEzbD0JJeSX/Zf12VyxFKXM1Ug=, registry: https://registry.npm.taobao.org/, tarball: https://registry.npmmirror.com/is-core-module/download/is-core-module-2.8.0.tgz}
+    name: is-core-module
+    version: 2.8.0
+    dependencies:
+      has: registry.nlark.com/has/1.0.3
+    dev: true
+
+  registry.npmmirror.com/layerr/0.1.2:
+    resolution: {integrity: sha1-Fsjn+wQtNZWrFUkr2tCI8x16/RU=, registry: https://registry.npm.taobao.org/, tarball: https://registry.npmmirror.com/layerr/download/layerr-0.1.2.tgz}
+    name: layerr
+    version: 0.1.2
+    dev: false
+
+  registry.npmmirror.com/mime-types/2.1.33:
+    resolution: {integrity: sha1-H6EqkERy+v0GjkjZ6EAfdNP3Dts=, registry: https://registry.npm.taobao.org/, tarball: https://registry.npmmirror.com/mime-types/download/mime-types-2.1.33.tgz}
+    name: mime-types
+    version: 2.1.33
+    engines: {node: '>= 0.6'}
+    dependencies:
+      mime-db: registry.nlark.com/mime-db/1.50.0
+    dev: true
+
+  registry.npmmirror.com/moment/2.29.1:
+    resolution: {integrity: sha1-sr52n6MZQL6e7qZGnAdeNQBvo9M=, registry: https://registry.npm.taobao.org/, tarball: https://registry.npmmirror.com/moment/download/moment-2.29.1.tgz?cache=0&sync_timestamp=1632817442935&other_urls=https%3A%2F%2Fregistry.npmmirror.com%2Fmoment%2Fdownload%2Fmoment-2.29.1.tgz}
+    name: moment
+    version: 2.29.1
+    dev: false
+
+  registry.npmmirror.com/nested-property/4.0.0:
+    resolution: {integrity: sha1-pntaMZkecB4DzbqmRTvFsQEbuI0=, registry: https://registry.npm.taobao.org/, tarball: https://registry.npmmirror.com/nested-property/download/nested-property-4.0.0.tgz}
+    name: nested-property
+    version: 4.0.0
+    dev: false
+
+  registry.npmmirror.com/obsidian/0.12.17:
+    resolution: {integrity: sha1-jv51MQ0OOYjN7M+7F206j/ezY8c=, registry: https://registry.npm.taobao.org/, tarball: https://registry.npmmirror.com/obsidian/download/obsidian-0.12.17.tgz}
+    name: obsidian
+    version: 0.12.17
+    dependencies:
+      '@types/codemirror': registry.npmmirror.com/@types/codemirror/0.0.108
+      moment: registry.npmmirror.com/moment/2.29.1
+    dev: false
+
+  registry.npmmirror.com/path-posix/1.0.0:
+    resolution: {integrity: sha1-BrJhE/Vr6rBCVFojv6iAA8ysJg8=, registry: https://registry.npm.taobao.org/, tarball: https://registry.npmmirror.com/path-posix/download/path-posix-1.0.0.tgz}
+    name: path-posix
+    version: 1.0.0
+    dev: false
+
+  registry.npmmirror.com/rollup/2.58.0:
+    resolution: {integrity: sha1-pkOYM2Xnv39bfGKoMxuYO3xMZ/s=, registry: https://registry.npm.taobao.org/, tarball: https://registry.npmmirror.com/rollup/download/rollup-2.58.0.tgz}
+    name: rollup
+    version: 2.58.0
+    engines: {node: '>=10.0.0'}
+    hasBin: true
+    optionalDependencies:
+      fsevents: registry.nlark.com/fsevents/2.3.2
+    dev: true
+
+  registry.npmmirror.com/strnum/1.0.4:
+    resolution: {integrity: sha1-6X42p9a6n5PQ1rSWsu0GeNQigys=, registry: https://registry.npm.taobao.org/, tarball: https://registry.npmmirror.com/strnum/download/strnum-1.0.4.tgz}
+    name: strnum
+    version: 1.0.4
+    dev: false
+
+  registry.npmmirror.com/typescript/4.4.4:
+    resolution: {integrity: sha1-LNAaGh8WBwTTEB/VpY/w+fy4Aww=, registry: https://registry.npm.taobao.org/, tarball: https://registry.npmmirror.com/typescript/download/typescript-4.4.4.tgz}
+    name: typescript
+    version: 4.4.4
+    engines: {node: '>=4.2.0'}
+    hasBin: true
+    dev: true
+
+  registry.npmmirror.com/webdav-fs/4.0.0:
+    resolution: {integrity: sha1-EYZ86IYvg+Q3E6KZDN4EbvZKZZg=, registry: https://registry.npm.taobao.org/, tarball: https://registry.npmmirror.com/webdav-fs/download/webdav-fs-4.0.0.tgz}
+    name: webdav-fs
+    version: 4.0.0
+    engines: {node: '>=14'}
+    dependencies:
+      webdav: registry.npmmirror.com/webdav/4.7.0
+    dev: false
+
+  registry.npmmirror.com/webdav-server/2.6.2:
+    resolution: {integrity: sha1-XqObJpqjShUSwVDinBt+J9OmiQg=, registry: https://registry.npm.taobao.org/, tarball: https://registry.npmmirror.com/webdav-server/download/webdav-server-2.6.2.tgz}
+    name: webdav-server
+    version: 2.6.2
+    engines: {node: '>= 4'}
+    dependencies:
+      mime-types: registry.npmmirror.com/mime-types/2.1.33
+      xml-js-builder: registry.npmmirror.com/xml-js-builder/1.0.3
+    dev: true
+
+  registry.npmmirror.com/webdav/4.7.0:
+    resolution: {integrity: sha1-OWTHLB1dyYVMADG0PkZPJg8iR24=, registry: https://registry.npm.taobao.org/, tarball: https://registry.npmmirror.com/webdav/download/webdav-4.7.0.tgz}
+    name: webdav
+    version: 4.7.0
+    dependencies:
+      axios: registry.npmmirror.com/axios/0.21.4
+      base-64: registry.npmmirror.com/base-64/1.0.0
+      fast-xml-parser: registry.npmmirror.com/fast-xml-parser/3.20.3
+      he: registry.nlark.com/he/1.2.0
+      hot-patcher: registry.npmmirror.com/hot-patcher/0.5.0
+      layerr: registry.npmmirror.com/layerr/0.1.2
+      md5: registry.nlark.com/md5/2.3.0
+      minimatch: registry.nlark.com/minimatch/3.0.4
+      nested-property: registry.npmmirror.com/nested-property/4.0.0
+      path-posix: registry.npmmirror.com/path-posix/1.0.0
+      url-join: registry.nlark.com/url-join/4.0.1
+      url-parse: registry.nlark.com/url-parse/1.5.3
+    dev: false
+
+  registry.npmmirror.com/xml-js-builder/1.0.3:
+    resolution: {integrity: sha1-kdJ1y5JvncQWfwKTV6Wyh1tdOJQ=, registry: https://registry.npm.taobao.org/, tarball: https://registry.npmmirror.com/xml-js-builder/download/xml-js-builder-1.0.3.tgz}
+    name: xml-js-builder
+    version: 1.0.3
+    engines: {node: '>= 4'}
+    dependencies:
+      xml-js: registry.npmmirror.com/xml-js/1.6.11
+    dev: true
+
+  registry.npmmirror.com/xml-js/1.6.11:
+    resolution: {integrity: sha1-kn0vaUf38cGaMW3Y7qNhTosY+Ok=, registry: https://registry.npm.taobao.org/, tarball: https://registry.npmmirror.com/xml-js/download/xml-js-1.6.11.tgz}
+    name: xml-js
+    version: 1.6.11
+    hasBin: true
+    dependencies:
+      sax: registry.nlark.com/sax/1.2.4
+    dev: true
