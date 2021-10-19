@@ -3,24 +3,12 @@
   "version": "0.0.1",
   "description": "This is yet another sync plugin for Obsidian app.",
   "scripts": {
-    "dev": "parcel watch",
-    "build": "parcel build",
+    "dev": "webpack --mode development",
+    "build": "webpack --mode production",
     "format": "npx prettier --write .",
     "clean": "npx rimraf main.js"
   },
   "source": "main.ts",
-  "targets": {
-    "frontend": {
-      "context": "browser",
-      "outputFormat": "commonjs",
-      "isLibrary": true,
-      "includeNodeModules": {
-        "obsidian": false
-      },
-      "sourceMap": false,
-      "distDir": "."
-    }
-  },
   "keywords": [],
   "author": "",
   "license": "Apache-2.0",
@@ -32,22 +20,23 @@
     "@types/node": "^14.14.37",
     "parcel": "^2.0.0",
     "prettier": "^2.4.1",
+    "ts-loader": "^9.2.6",
     "tslib": "^2.2.0",
-    "typescript": "^4.4.3",
-    "webdav-server": "^2.6.2"
+    "typescript": "^4.4.4",
+    "webdav-server": "^2.6.2",
+    "webpack": "^5.58.2",
+    "webpack-cli": "^4.9.1"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.37.0",
+    "@aws-sdk/signature-v4-crt": "^3.37.0",
     "@types/mime-types": "^2.1.1",
+    "aws-crt": "^1.10.1",
     "codemirror": "^5.63.1",
     "mime-types": "^2.1.33",
     "obsidian": "^0.12.0",
     "rimraf": "^3.0.2",
     "webdav": "^4.7.0",
     "webdav-fs": "^4.0.0"
-  },
-  "@parcel/transformer-js": {
-    "inlineFS": false,
-    "inlineEnvironment": false
   }
 }
