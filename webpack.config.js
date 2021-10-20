@@ -1,4 +1,5 @@
 const path = require("path");
+const TerserPlugin = require("terser-webpack-plugin");
 
 module.exports = {
   entry: "./main.ts",
@@ -44,9 +45,13 @@ module.exports = {
       util: require.resolve("util"),
       vm: require.resolve("vm-browserify"),
       zlib: require.resolve("browserify-zlib"),
-    }
+    },
   },
   externals: {
     obsidian: "commonjs2 obsidian",
+  },
+  optimization: {
+    minimize: true,
+    minimizer: [new TerserPlugin({ extractComments: false })],
   },
 };
