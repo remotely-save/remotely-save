@@ -152,7 +152,8 @@ export default class SaveRemotePlugin extends Plugin {
                 Bucket: this.settings.s3BucketName,
                 Key: `${fileOrFolder.path}`,
                 Body: Buffer.from(arrContent),
-                ContentType: mime.contentType(`${fileOrFolder.path}`) || undefined
+                ContentType:
+                  mime.contentType(`${fileOrFolder.path}`) || undefined,
               })
             );
           }
