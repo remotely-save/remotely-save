@@ -1,7 +1,8 @@
 import * as path from "path";
 import * as fs from "fs";
 import { Buffer } from "buffer";
-import * as mime from 'mime-types';
+import { Readable } from "stream";
+import * as mime from "mime-types";
 import {
   App,
   Modal,
@@ -18,6 +19,7 @@ import {
   S3Client,
   ListObjectsCommand,
   PutObjectCommand,
+  GetObjectCommand,
 } from "@aws-sdk/client-s3";
 
 interface SaveRemotePluginSettings {
@@ -41,8 +43,61 @@ const ignoreHiddenFiles = (item: string) => {
   return basename === "." || basename[0] !== ".";
 };
 
-const getTextToInsert = (x: any) => {
-  return "\n```json\n" + JSON.stringify(x, null, 2) + "\n```\n";
+/**
+ * Util func for mkdir -p based on the "path" of original file or folder
+ * "a/b/c/" => ["a", "a/b", "a/b/c"]
+ * "a/b/c/d/e.txt" => ["a", "a/b", "a/b/c", "a/b/c/d"]
+ * @param x string
+ * @returns string[] might be empty
+ */
+const getFolderLevels = (x: string) => {
+  const res: string[] = [];
+
+  if (x === "" || x === "/") {
+    return res;
+  }
+
+  const y1 = x.split("/");
+  let i = 0;
+  for (let index = 0; index + 1 < y1.length; index++) {
+    res.push(y1.slice(0, index + 1).join("/"));
+  }
+  return res;
+};
+
+/**
+ * https://stackoverflow.com/questions/8609289
+ * @param b Buffer
+ * @returns ArrayBuffer
+ */
+const bufferToArrayBuffer = (b: Buffer) => {
+  return b.buffer.slice(b.byteOffset, b.byteOffset + b.byteLength);
+};
+
+/**
+ * The Body of resp of aws GetObject has mix types
+ * and we want to get ArrayBuffer here.
+ * See https://github.com/aws/aws-sdk-js-v3/issues/1877
+ * @param b The Body of GetObject
+ * @returns Promise<ArrayBuffer>
+ */
+const getObjectBodyToArrayBuffer = async (
+  b: Readable | ReadableStream | Blob
+) => {
+  if (b instanceof Readable) {
+    const chunks: Uint8Array[] = [];
+    for await (let chunk of b) {
+      chunks.push(chunk);
+    }
+    const buf = Buffer.concat(chunks);
+    return bufferToArrayBuffer(buf);
+  } else if (b instanceof ReadableStream) {
+    return await new Response(b, {}).arrayBuffer();
+  } else if (b instanceof Blob) {
+    return await b.arrayBuffer();
+  } else {
+    throw TypeError(`The type of ${b} is not one of the supported types`);
+  }
 };
 
 export default class SaveRemotePlugin extends Plugin {
@@ -54,10 +109,11 @@ export default class SaveRemotePlugin extends Plugin {
 
     await this.loadSettings();
 
-    this.addRibbonIcon("dice", "Save Remote Plugin", async () => {
+    this.addRibbonIcon("right-arrow-with-tail", "Upload", async () => {
       // console.log(this.app.vault.getFiles());
       // console.log(this.app.vault.getAllLoadedFiles());
-      new Notice(`checking connection`);
+      new Notice(`Upload begun.`);
+      const allFilesAndFolders = this.app.vault.getAllLoadedFiles();
 
       const s3Client = new S3Client({
         region: this.settings.s3Region,
@@ -69,7 +125,6 @@ export default class SaveRemotePlugin extends Plugin {
       });
 
       try {
-        const allFilesAndFolders = this.app.vault.getAllLoadedFiles();
         for (const fileOrFolder of allFilesAndFolders) {
           if (fileOrFolder.path === "/") {
             console.log('ignore "/"');
@@ -102,7 +157,66 @@ export default class SaveRemotePlugin extends Plugin {
             );
           }
         }
-        new Notice('All upload finished!')
+        new Notice("Upload finished!");
+      } catch (err) {
+        console.log("Error", err);
+        new Notice(`${err}`);
+      }
+    });
+
+    this.addRibbonIcon("left-arrow-with-tail", "Download", async () => {
+      const allFilesAndFolders = this.app.vault.getAllLoadedFiles();
+
+      const s3Client = new S3Client({
+        region: this.settings.s3Region,
+        endpoint: this.settings.s3Endpoint,
+        credentials: {
+          accessKeyId: this.settings.s3AccessKeyID,
+          secretAccessKey: this.settings.s3SecretAccessKey,
+        },
+      });
+
+      try {
+        const listObj = await s3Client.send(
+          new ListObjectsCommand({ Bucket: this.settings.s3BucketName })
+        );
+
+        for (const singleContent of listObj.Contents) {
+          const foldersToBuild = getFolderLevels(singleContent.Key);
+          for (const folder of foldersToBuild) {
+            const r = await this.app.vault.adapter.exists(folder);
+            if (!r) {
+              console.log(`mkdir ${folder}`);
+              new Notice(`mkdir ${folder}`);
+              await this.app.vault.adapter.mkdir(folder);
+            }
+          }
+
+          if (singleContent.Key.endsWith("/")) {
+            // kind of a folder
+            // pass
+          } else {
+            // kind of a file
+            // download
+
+            console.log(`download file ${singleContent.Key}`);
+            new Notice(`download file ${singleContent.Key}`);
+
+            const data = await s3Client.send(
+              new GetObjectCommand({
+                Bucket: this.settings.s3BucketName,
+                Key: singleContent.Key,
+              })
+            );
+            const bodyContents = await getObjectBodyToArrayBuffer(data.Body);
+            await this.app.vault.adapter.writeBinary(
+              singleContent.Key,
+              bodyContents
+            );
+          }
+        }
+
+        new Notice("Download finished!");
       } catch (err) {
         console.log("Error", err);
         new Notice(`${err}`);
