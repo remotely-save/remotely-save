@@ -151,7 +151,7 @@ export default class SaveRemotePlugin extends Plugin {
               mime.contentType(
                 mime.lookup(`${fileOrFolder.path}`) || undefined
               ) || undefined;
-            console.log(contentType);
+            // console.log(contentType);
             const results = await s3Client.send(
               new PutObjectCommand({
                 Bucket: this.settings.s3BucketName,
