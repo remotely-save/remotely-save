@@ -12,12 +12,21 @@ import {
   Setting,
   request,
   Platform,
+  TFile,
+  TFolder,
 } from "obsidian";
 import * as CodeMirror from "codemirror";
+import type { FileFolderHistoryRecord, DatabaseConnection } from "./localdb";
+import {
+  prepareDB,
+  destroyDB,
+  DEFAULT_DB_NAME,
+  DEFAULT_TBL_DELETE_HISTORY,
+} from "./localdb";
 
 import {
   S3Client,
-  ListObjectsCommand,
+  ListObjectsV2Command,
   PutObjectCommand,
   GetObjectCommand,
 } from "@aws-sdk/client-s3";
@@ -103,11 +112,95 @@ const getObjectBodyToArrayBuffer = async (
 export default class SaveRemotePlugin extends Plugin {
   settings: SaveRemotePluginSettings;
   cm: CodeMirror.Editor;
+  db: DatabaseConnection;
 
   async onload() {
     console.log("loading plugin obsidian-save-remote");
 
     await this.loadSettings();
+
+    await this.prepareDB();
+
+    this.registerEvent(
+      this.app.vault.on("delete", async (fileOrFolder) => {
+        const schema = this.db.getSchema().table(DEFAULT_TBL_DELETE_HISTORY);
+        const tbl = this.db.getSchema().table(DEFAULT_TBL_DELETE_HISTORY);
+        // console.log(fileOrFolder);
+        let k: FileFolderHistoryRecord;
+        if (fileOrFolder instanceof TFile) {
+          k = {
+            key: fileOrFolder.path,
+            ctime: fileOrFolder.stat.ctime,
+            mtime: fileOrFolder.stat.mtime,
+            size: fileOrFolder.stat.size,
+            action_when: Date.now(),
+            action_type: "delete",
+            key_type: "file",
+            rename_to: "",
+          };
+        } else if (fileOrFolder instanceof TFolder) {
+          k = {
+            key: fileOrFolder.path,
+            ctime: 0,
+            mtime: 0,
+            size: 0,
+            action_when: Date.now(),
+            action_type: "delete",
+            key_type: "folder",
+            rename_to: "",
+          };
+        }
+        const row = tbl.createRow(k);
+        await this.db.insertOrReplace().into(tbl).values([row]).exec();
+      })
+    );
+
+    this.registerEvent(
+      this.app.vault.on("rename", async (fileOrFolder, oldPath) => {
+        const schema = this.db.getSchema().table(DEFAULT_TBL_DELETE_HISTORY);
+        const tbl = this.db.getSchema().table(DEFAULT_TBL_DELETE_HISTORY);
+        // console.log(fileOrFolder);
+        let k: FileFolderHistoryRecord;
+        if (fileOrFolder instanceof TFile) {
+          k = {
+            key: oldPath,
+            ctime: fileOrFolder.stat.ctime,
+            mtime: fileOrFolder.stat.mtime,
+            size: fileOrFolder.stat.size,
+            action_when: Date.now(),
+            action_type: "rename",
+            key_type: "file",
+            rename_to: fileOrFolder.path,
+          };
+        } else if (fileOrFolder instanceof TFolder) {
+          k = {
+            key: oldPath,
+            ctime: 0,
+            mtime: 0,
+            size: 0,
+            action_when: Date.now(),
+            action_type: "rename",
+            key_type: "folder",
+            rename_to: fileOrFolder.path,
+          };
+        }
+        const row = tbl.createRow(k);
+        await this.db.insertOrReplace().into(tbl).values([row]).exec();
+      })
+    );
+
+    this.addRibbonIcon("dice", "Misc", async () => {
+      const a = this.app.vault.getAllLoadedFiles();
+      console.log(a);
+
+      const schema = this.db.getSchema().table(DEFAULT_TBL_DELETE_HISTORY);
+
+      const h = await this.db.select().from(schema).exec();
+
+      console.log(h);
+
+      // console.log(b)
+    });
 
     this.addRibbonIcon("right-arrow-with-tail", "Upload", async () => {
       // console.log(this.app.vault.getFiles());
@@ -183,10 +276,15 @@ export default class SaveRemotePlugin extends Plugin {
 
       try {
         const listObj = await s3Client.send(
-          new ListObjectsCommand({ Bucket: this.settings.s3BucketName })
+          new ListObjectsV2Command({ Bucket: this.settings.s3BucketName })
         );
 
         for (const singleContent of listObj.Contents) {
+          const mtimeSec = Math.round(
+            singleContent.LastModified.valueOf() / 1000.0
+          );
+          console.log(`key ${singleContent.Key} mtime ${mtimeSec}`);
+
           const foldersToBuild = getFolderLevels(singleContent.Key);
           for (const folder of foldersToBuild) {
             const r = await this.app.vault.adapter.exists(folder);
@@ -246,6 +344,7 @@ export default class SaveRemotePlugin extends Plugin {
 
   onunload() {
     console.log("unloading plugin obsidian-save-remote");
+    this.destroyDB();
   }
 
   async loadSettings() {
@@ -254,6 +353,14 @@ export default class SaveRemotePlugin extends Plugin {
 
   async saveSettings() {
     await this.saveData(this.settings);
+  }
+
+  async prepareDB() {
+    this.db = await prepareDB();
+  }
+
+  destroyDB() {
+    destroyDB(this.db);
   }
 }
 
