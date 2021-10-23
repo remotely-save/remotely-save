@@ -21,5 +21,5 @@ We list all combinations mutually exclusive and collectively exhaustive.
 | 3   | exist        | not exist   | exist                       | mtime_remote >= delete_time_local | download remote file, create folder if not exists                                      |
 | 4   | exist        | not exist   | exist                       | mtime_remote < delete_time_local  | delete remote file, clear local history                                                |
 | 5   | exist        | not exist   | not exist                   |                                   | download remote file, create folder if not exists                                      |
-| 6   | not exist    | exist       | ignore                      |                                   | upload local file, create remote folder if not exists                                  |
+| 6   | not exist    | exist       | ignore                      |                                   | upload local file, create remote folder if not exists, clear local history if exists   |
 | 7   | not exist    | not exist   | ignore                      |                                   | clear local history if exists                                                          |
