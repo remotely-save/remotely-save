@@ -28,6 +28,8 @@ interface FileOrFolderMixedState {
   mtime_local?: number;
   mtime_remote?: number;
   delete_time_local?: number;
+  size_local?: number;
+  size_remote?: number;
   decision?: DecisionType;
   syncDone?: "done";
 }
@@ -46,11 +48,13 @@ export const ensembleMixedStates = (
       key: key,
       exist_remote: true,
       mtime_remote: entry.LastModified.valueOf(),
+      size_remote: entry.Size,
     };
     if (results.hasOwnProperty(key)) {
       results[key].key = r.key;
       results[key].exist_remote = r.exist_remote;
       results[key].mtime_remote = r.mtime_remote;
+      results[key].size_remote = r.size_remote;
     } else {
       results[key] = r;
     }
@@ -68,6 +72,7 @@ export const ensembleMixedStates = (
         key: entry.path,
         exist_local: true,
         mtime_local: entry.stat.mtime,
+        size_local: entry.stat.size,
       };
     } else if (entry instanceof TFolder) {
       key = `${entry.path}/`;
@@ -75,6 +80,7 @@ export const ensembleMixedStates = (
         key: key,
         exist_local: true,
         mtime_local: undefined,
+        size_local: 0,
       };
     } else {
       throw Error(`unexpected ${entry}`);
@@ -84,6 +90,7 @@ export const ensembleMixedStates = (
       results[key].key = r.key;
       results[key].exist_local = r.exist_local;
       results[key].mtime_local = r.mtime_local;
+      results[key].size_local = r.size_local;
     } else {
       results[key] = r;
     }
@@ -156,7 +163,25 @@ export const getOperation = (
     r.exist_local &&
     r.mtime_remote !== undefined &&
     r.mtime_local !== undefined &&
-    r.mtime_remote <= r.mtime_local
+    r.mtime_remote < r.mtime_local
+  ) {
+    r.decision = "upload_clearhist";
+  } else if (
+    r.exist_remote &&
+    r.exist_local &&
+    r.mtime_remote !== undefined &&
+    r.mtime_local !== undefined &&
+    r.mtime_remote === r.mtime_local &&
+    r.size_local === r.size_remote
+  ) {
+    r.decision = "skip";
+  } else if (
+    r.exist_remote &&
+    r.exist_local &&
+    r.mtime_remote !== undefined &&
+    r.mtime_local !== undefined &&
+    r.mtime_remote === r.mtime_local &&
+    r.size_local === r.size_remote
   ) {
     r.decision = "upload_clearhist";
   } else if (
