@@ -9,6 +9,7 @@ import {
   PutObjectCommand,
   GetObjectCommand,
   DeleteObjectCommand,
+  HeadObjectCommand,
 } from "@aws-sdk/client-s3";
 
 import type { _Object } from "@aws-sdk/client-s3";
@@ -46,6 +47,19 @@ export const getS3Client = (s3Config: S3Config) => {
   return s3Client;
 };
 
+export const getRemoteMeta = async (
+  s3Client: S3Client,
+  s3Config: S3Config,
+  fileOrFolderPath: string
+) => {
+  return await s3Client.send(
+    new HeadObjectCommand({
+      Bucket: s3Config.s3BucketName,
+      Key: fileOrFolderPath,
+    })
+  );
+};
+
 export const uploadToRemote = async (
   s3Client: S3Client,
   s3Config: S3Config,
@@ -62,7 +76,7 @@ export const uploadToRemote = async (
   } else if (isFolder && !isRecursively) {
     // folder
     const contentType = DEFAULT_CONTENT_TYPE;
-    return await s3Client.send(
+    await s3Client.send(
       new PutObjectCommand({
         Bucket: s3Config.s3BucketName,
         Key: fileOrFolderPath,
@@ -70,6 +84,7 @@ export const uploadToRemote = async (
         ContentType: contentType,
       })
     );
+    return await getRemoteMeta(s3Client, s3Config, fileOrFolderPath);
   } else {
     // file
     // we ignore isRecursively parameter here
@@ -78,7 +93,7 @@ export const uploadToRemote = async (
       DEFAULT_CONTENT_TYPE;
     const content = await vault.adapter.readBinary(fileOrFolderPath);
     const body = Buffer.from(content);
-    return await s3Client.send(
+    await s3Client.send(
       new PutObjectCommand({
         Bucket: s3Config.s3BucketName,
         Key: fileOrFolderPath,
@@ -86,6 +101,7 @@ export const uploadToRemote = async (
         ContentType: contentType,
       })
     );
+    return await getRemoteMeta(s3Client, s3Config, fileOrFolderPath);
   }
 };
 

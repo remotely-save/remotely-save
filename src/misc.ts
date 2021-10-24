@@ -1,6 +1,8 @@
 import { Vault } from "obsidian";
 import * as path from "path";
 
+export type SUPPORTED_SERVICES_TYPE = "s3" | "webdav" | "ftp";
+
 export const ignoreHiddenFiles = (item: string) => {
   const basename = path.basename(item);
   return basename === "." || basename[0] !== ".";

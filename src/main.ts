@@ -13,12 +13,12 @@ import {
 import * as CodeMirror from "codemirror";
 import type { DatabaseConnection } from "./localdb";
 import {
-  prepareDB,
-  destroyDB,
-  loadHistoryTable,
+  prepareDBs,
+  destroyDBs,
+  loadDeleteRenameHistoryTable,
   insertDeleteRecord,
   insertRenameRecord,
-  getAllRecords,
+  getAllDeleteRenameRecords,
 } from "./localdb";
 
 import type { SyncStatusType } from "./sync";
@@ -78,15 +78,16 @@ export default class SaveRemotePlugin extends Plugin {
       const s3Client = getS3Client(this.settings.s3);
       const remoteRsp = await listFromRemote(s3Client, this.settings.s3);
       const local = this.app.vault.getAllLoadedFiles();
-      const localHistory = await loadHistoryTable(this.db);
+      const localHistory = await loadDeleteRenameHistoryTable(this.db);
       // console.log(remoteRsp);
       // console.log(local);
       // console.log(localHistory);
 
-      const mixedStates = ensembleMixedStates(
+      const mixedStates = await ensembleMixedStates(
         remoteRsp.Contents,
         local,
-        localHistory
+        localHistory,
+        this.db
       );
 
       for (const [key, val] of Object.entries(mixedStates)) {
@@ -100,7 +101,7 @@ export default class SaveRemotePlugin extends Plugin {
 
       new Notice("Save Remote Sync data exchanging!");
 
-      doActualSync(
+      await doActualSync(
         s3Client,
         this.settings.s3,
         this.db,
@@ -130,7 +131,7 @@ export default class SaveRemotePlugin extends Plugin {
 
   onunload() {
     console.log("unloading plugin obsidian-save-remote");
-    this.destroyDB();
+    this.destroyDBs();
   }
 
   async loadSettings() {
@@ -142,11 +143,11 @@ export default class SaveRemotePlugin extends Plugin {
   }
 
   async prepareDB() {
-    this.db = await prepareDB();
+    this.db = await prepareDBs();
   }
 
-  destroyDB() {
-    destroyDB(this.db);
+  destroyDBs() {
+    destroyDBs(this.db);
   }
 }
 
