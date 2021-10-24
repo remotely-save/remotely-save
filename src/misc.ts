@@ -1,7 +1,5 @@
+import { Vault } from "obsidian";
 import * as path from "path";
-import * as fs from "fs";
-import { Buffer } from "buffer";
-import { Readable } from "stream";
 
 export const ignoreHiddenFiles = (item: string) => {
   const basename = path.basename(item);
@@ -30,6 +28,17 @@ export const getFolderLevels = (x: string) => {
   return res;
 };
 
+export const mkdirpInVault = async (thePath: string, vault: Vault) => {
+  const foldersToBuild = getFolderLevels(thePath);
+  for (const folder of foldersToBuild) {
+    const r = await vault.adapter.exists(folder);
+    if (!r) {
+      console.log(`mkdir ${folder}`);
+      await vault.adapter.mkdir(folder);
+    }
+  }
+};
+
 /**
  * https://stackoverflow.com/questions/8609289
  * @param b Buffer
@@ -37,30 +46,4 @@ export const getFolderLevels = (x: string) => {
  */
 export const bufferToArrayBuffer = (b: Buffer) => {
   return b.buffer.slice(b.byteOffset, b.byteOffset + b.byteLength);
-};
-
-/**
- * The Body of resp of aws GetObject has mix types
- * and we want to get ArrayBuffer here.
- * See https://github.com/aws/aws-sdk-js-v3/issues/1877
- * @param b The Body of GetObject
- * @returns Promise<ArrayBuffer>
- */
-export const getObjectBodyToArrayBuffer = async (
-  b: Readable | ReadableStream | Blob
-) => {
-  if (b instanceof Readable) {
-    const chunks: Uint8Array[] = [];
-    for await (let chunk of b) {
-      chunks.push(chunk);
-    }
-    const buf = Buffer.concat(chunks);
-    return bufferToArrayBuffer(buf);
-  } else if (b instanceof ReadableStream) {
-    return await new Response(b, {}).arrayBuffer();
-  } else if (b instanceof Blob) {
-    return await b.arrayBuffer();
-  } else {
-    throw TypeError(`The type of ${b} is not one of the supported types`);
-  }
 };
