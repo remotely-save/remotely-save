@@ -54,39 +54,41 @@ export const ensembleMixedStates = async (
 ) => {
   const results = {} as Record<string, FileOrFolderMixedState>;
 
-  for (const entry of remote) {
-    const backwardMapping = await getSyncMetaMappingByRemoteKeyS3(
-      db,
-      entry.Key,
-      entry.LastModified.valueOf(),
-      entry.ETag
-    );
+  if (remote !== undefined) {
+    for (const entry of remote) {
+      const backwardMapping = await getSyncMetaMappingByRemoteKeyS3(
+        db,
+        entry.Key,
+        entry.LastModified.valueOf(),
+        entry.ETag
+      );
 
-    let key = entry.Key;
-    let r = {} as FileOrFolderMixedState;
-    if (backwardMapping !== undefined) {
-      key = backwardMapping.local_key;
-      r = {
-        key: key,
-        exist_remote: true,
-        mtime_remote: backwardMapping.local_mtime,
-        size_remote: backwardMapping.local_size,
-      };
-    } else {
-      r = {
-        key: key,
-        exist_remote: true,
-        mtime_remote: entry.LastModified.valueOf(),
-        size_remote: entry.Size,
-      };
-    }
-    if (results.hasOwnProperty(key)) {
-      results[key].key = r.key;
-      results[key].exist_remote = r.exist_remote;
-      results[key].mtime_remote = r.mtime_remote;
-      results[key].size_remote = r.size_remote;
-    } else {
-      results[key] = r;
+      let key = entry.Key;
+      let r = {} as FileOrFolderMixedState;
+      if (backwardMapping !== undefined) {
+        key = backwardMapping.local_key;
+        r = {
+          key: key,
+          exist_remote: true,
+          mtime_remote: backwardMapping.local_mtime,
+          size_remote: backwardMapping.local_size,
+        };
+      } else {
+        r = {
+          key: key,
+          exist_remote: true,
+          mtime_remote: entry.LastModified.valueOf(),
+          size_remote: entry.Size,
+        };
+      }
+      if (results.hasOwnProperty(key)) {
+        results[key].key = r.key;
+        results[key].exist_remote = r.exist_remote;
+        results[key].mtime_remote = r.mtime_remote;
+        results[key].size_remote = r.size_remote;
+      } else {
+        results[key] = r;
+      }
     }
   }
 
