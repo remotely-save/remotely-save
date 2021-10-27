@@ -2,6 +2,7 @@ import * as crypto from "crypto";
 import * as base32 from "hi-base32";
 import { bufferToArrayBuffer, arrayBufferToBuffer } from "./misc";
 
+
 const DEFAULT_ITER = 10000;
 
 export const encryptBuffer = (
