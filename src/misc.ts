@@ -49,3 +49,12 @@ export const mkdirpInVault = async (thePath: string, vault: Vault) => {
 export const bufferToArrayBuffer = (b: Buffer) => {
   return b.buffer.slice(b.byteOffset, b.byteOffset + b.byteLength);
 };
+
+/**
+ * Simple func.
+ * @param b
+ * @returns
+ */
+export const arrayBufferToBuffer = (b: ArrayBuffer) => {
+  return Buffer.from(b);
+};

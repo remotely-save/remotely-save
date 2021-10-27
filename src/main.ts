@@ -27,10 +27,12 @@ import { DEFAULT_S3_CONFIG, getS3Client, listFromRemote, S3Config } from "./s3";
 
 interface SaveRemotePluginSettings {
   s3?: S3Config;
+  password?: string;
 }
 
 const DEFAULT_SETTINGS: SaveRemotePluginSettings = {
   s3: DEFAULT_S3_CONFIG,
+  password: "",
 };
 
 export default class SaveRemotePlugin extends Plugin {
@@ -87,7 +89,8 @@ export default class SaveRemotePlugin extends Plugin {
         remoteRsp.Contents,
         local,
         localHistory,
-        this.db
+        this.db,
+        this.settings.password
       );
 
       for (const [key, val] of Object.entries(mixedStates)) {
@@ -106,7 +109,8 @@ export default class SaveRemotePlugin extends Plugin {
         this.settings.s3,
         this.db,
         this.app.vault,
-        mixedStates
+        mixedStates,
+        this.settings.password
       );
 
       new Notice("Save Remote finish!");
@@ -214,6 +218,18 @@ class SaveRemoteSettingTab extends PluginSettingTab {
           .setValue(`${this.plugin.settings.s3.s3SecretAccessKey}`)
           .onChange(async (value) => {
             this.plugin.settings.s3.s3SecretAccessKey = value;
+            await this.plugin.saveSettings();
+          })
+      );
+    new Setting(containerEl)
+      .setName("password")
+      .setDesc("password")
+      .addText((text) =>
+        text
+          .setPlaceholder("")
+          .setValue(`${this.plugin.settings.password}`)
+          .onChange(async (value) => {
+            this.plugin.settings.password = value;
             await this.plugin.saveSettings();
           })
       );
