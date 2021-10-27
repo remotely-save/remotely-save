@@ -17,6 +17,7 @@ import {
   downloadFromRemote,
 } from "./s3";
 import { mkdirpInVault } from "./misc";
+import { decryptBase32ToString, encryptStringToBase32 } from "./encrypt";
 
 type DecisionType =
   | "undecided"
@@ -44,26 +45,32 @@ interface FileOrFolderMixedState {
   decision?: DecisionType;
   syncDone?: "done";
   decision_branch?: number;
+  remote_encrypted_key?: string;
 }
 
 export const ensembleMixedStates = async (
   remote: S3ObjectType[],
   local: TAbstractFile[],
   deleteHistory: FileFolderHistoryRecord[],
-  db: lf.DatabaseConnection
+  db: lf.DatabaseConnection,
+  password: string = ""
 ) => {
   const results = {} as Record<string, FileOrFolderMixedState>;
 
   if (remote !== undefined) {
     for (const entry of remote) {
+      const remoteEncryptedKey = entry.Key;
+      let key = remoteEncryptedKey;
+      if (password !== "") {
+        key = decryptBase32ToString(remoteEncryptedKey, password);
+      }
       const backwardMapping = await getSyncMetaMappingByRemoteKeyS3(
         db,
-        entry.Key,
+        key,
         entry.LastModified.valueOf(),
         entry.ETag
       );
 
-      let key = entry.Key;
       let r = {} as FileOrFolderMixedState;
       if (backwardMapping !== undefined) {
         key = backwardMapping.local_key;
@@ -72,6 +79,7 @@ export const ensembleMixedStates = async (
           exist_remote: true,
           mtime_remote: backwardMapping.local_mtime,
           size_remote: backwardMapping.local_size,
+          remote_encrypted_key: remoteEncryptedKey,
         };
       } else {
         r = {
@@ -79,6 +87,7 @@ export const ensembleMixedStates = async (
           exist_remote: true,
           mtime_remote: entry.LastModified.valueOf(),
           size_remote: entry.Size,
+          remote_encrypted_key: remoteEncryptedKey,
         };
       }
       if (results.hasOwnProperty(key)) {
@@ -86,6 +95,7 @@ export const ensembleMixedStates = async (
         results[key].exist_remote = r.exist_remote;
         results[key].mtime_remote = r.mtime_remote;
         results[key].size_remote = r.size_remote;
+        results[key].remote_encrypted_key = r.remote_encrypted_key;
       } else {
         results[key] = r;
       }
@@ -277,13 +287,21 @@ export const doActualSync = async (
   s3Config: S3Config,
   db: lf.DatabaseConnection,
   vault: Vault,
-  keyStates: Record<string, FileOrFolderMixedState>
+  keyStates: Record<string, FileOrFolderMixedState>,
+  password: string = ""
 ) => {
   Object.entries(keyStates)
     .sort((k, v) => -(k as string).length)
     .map(async ([k, v]) => {
       const key = k as string;
       const state = v as FileOrFolderMixedState;
+      let remoteEncryptedKey = key;
+      if (password !== "") {
+        remoteEncryptedKey = state.remote_encrypted_key;
+        if (remoteEncryptedKey === undefined || remoteEncryptedKey === "") {
+          remoteEncryptedKey = encryptStringToBase32(key, password);
+        }
+      }
 
       if (
         state.decision === undefined ||
@@ -299,7 +317,9 @@ export const doActualSync = async (
           s3Config,
           state.key,
           vault,
-          state.mtime_remote
+          state.mtime_remote,
+          password,
+          remoteEncryptedKey
         );
         await clearDeleteRenameHistoryOfKey(db, state.key);
       } else if (state.decision === "upload_clearhist") {
@@ -308,7 +328,9 @@ export const doActualSync = async (
           s3Config,
           state.key,
           vault,
-          false
+          false,
+          password,
+          remoteEncryptedKey
         );
         await upsertSyncMetaMappingDataS3(
           db,
@@ -328,7 +350,9 @@ export const doActualSync = async (
           s3Config,
           state.key,
           vault,
-          state.mtime_remote
+          state.mtime_remote,
+          password,
+          remoteEncryptedKey
         );
       } else if (state.decision === "delremote_clearhist") {
         await deleteFromRemote(s3Client, s3Config, state.key);
@@ -339,7 +363,9 @@ export const doActualSync = async (
           s3Config,
           state.key,
           vault,
-          false
+          false,
+          password,
+          remoteEncryptedKey
         );
         await upsertSyncMetaMappingDataS3(
           db,

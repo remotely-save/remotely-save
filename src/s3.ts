@@ -14,8 +14,13 @@ import {
 
 import type { _Object } from "@aws-sdk/client-s3";
 
-import { bufferToArrayBuffer, mkdirpInVault } from "./misc";
+import {
+  arrayBufferToBuffer,
+  bufferToArrayBuffer,
+  mkdirpInVault,
+} from "./misc";
 import * as mime from "mime-types";
+import { decryptArrayBuffer, encryptArrayBuffer } from "./encrypt";
 
 export interface S3Config {
   s3Endpoint: string;
@@ -65,8 +70,14 @@ export const uploadToRemote = async (
   s3Config: S3Config,
   fileOrFolderPath: string,
   vault: Vault,
-  isRecursively: boolean = false
+  isRecursively: boolean = false,
+  password: string = "",
+  remoteEncryptedKey: string = ""
 ) => {
+  let uploadFile = fileOrFolderPath;
+  if (password !== "") {
+    uploadFile = remoteEncryptedKey;
+  }
   const isFolder = fileOrFolderPath.endsWith("/");
 
   const DEFAULT_CONTENT_TYPE = "application/octet-stream";
@@ -79,7 +90,7 @@ export const uploadToRemote = async (
     await s3Client.send(
       new PutObjectCommand({
         Bucket: s3Config.s3BucketName,
-        Key: fileOrFolderPath,
+        Key: uploadFile,
         Body: "",
         ContentType: contentType,
       })
@@ -88,20 +99,28 @@ export const uploadToRemote = async (
   } else {
     // file
     // we ignore isRecursively parameter here
-    const contentType =
-      mime.contentType(mime.lookup(fileOrFolderPath) || DEFAULT_CONTENT_TYPE) ||
-      DEFAULT_CONTENT_TYPE;
-    const content = await vault.adapter.readBinary(fileOrFolderPath);
-    const body = Buffer.from(content);
+    let contentType = DEFAULT_CONTENT_TYPE;
+    if (password === "") {
+      contentType =
+        mime.contentType(
+          mime.lookup(fileOrFolderPath) || DEFAULT_CONTENT_TYPE
+        ) || DEFAULT_CONTENT_TYPE;
+    }
+    const localContent = await vault.adapter.readBinary(fileOrFolderPath);
+    let remoteContent = localContent;
+    if (password !== "") {
+      remoteContent = encryptArrayBuffer(localContent, password);
+    }
+    const body = arrayBufferToBuffer(remoteContent);
     await s3Client.send(
       new PutObjectCommand({
         Bucket: s3Config.s3BucketName,
-        Key: fileOrFolderPath,
+        Key: uploadFile,
         Body: body,
         ContentType: contentType,
       })
     );
-    return await getRemoteMeta(s3Client, s3Config, fileOrFolderPath);
+    return await getRemoteMeta(s3Client, s3Config, uploadFile);
   }
 };
 
@@ -169,22 +188,35 @@ export const downloadFromRemote = async (
   s3Config: S3Config,
   fileOrFolderPath: string,
   vault: Vault,
-  mtime: number
+  mtime: number,
+  password: string = "",
+  remoteEncryptedKey: string = ""
 ) => {
   const isFolder = fileOrFolderPath.endsWith("/");
 
   await mkdirpInVault(fileOrFolderPath, vault);
 
+  // the file is always local file
+  // we need to encrypt it
+
   if (isFolder) {
     // mkdirp locally is enough
     // do nothing here
   } else {
-    const content = await downloadFromRemoteRaw(
+    let downloadFile = fileOrFolderPath;
+    if (password !== "") {
+      downloadFile = remoteEncryptedKey;
+    }
+    const remoteContent = await downloadFromRemoteRaw(
       s3Client,
       s3Config,
-      fileOrFolderPath
+      downloadFile
     );
-    await vault.adapter.writeBinary(fileOrFolderPath, content, {
+    let localContent = remoteContent;
+    if (password !== "") {
+      localContent = decryptArrayBuffer(remoteContent, password);
+    }
+    await vault.adapter.writeBinary(fileOrFolderPath, localContent, {
       mtime: mtime,
     });
   }
@@ -200,12 +232,25 @@ export const downloadFromRemote = async (
 export const deleteFromRemote = async (
   s3Client: S3Client,
   s3Config: S3Config,
-  fileOrFolderPath: string
+  fileOrFolderPath: string,
+  password: string = "",
+  remoteEncryptedKey: string = ""
 ) => {
   if (fileOrFolderPath === "/") {
     return;
   }
-  if (fileOrFolderPath.endsWith("/")) {
+  let remoteFileName = fileOrFolderPath;
+  if (password !== "") {
+    remoteFileName = remoteEncryptedKey;
+  }
+  await s3Client.send(
+    new DeleteObjectCommand({
+      Bucket: s3Config.s3BucketName,
+      Key: remoteFileName,
+    })
+  );
+
+  if (fileOrFolderPath.endsWith("/") && password === "") {
     const x = await listFromRemote(s3Client, s3Config, fileOrFolderPath);
     x.Contents.forEach(async (element) => {
       await s3Client.send(
@@ -215,12 +260,9 @@ export const deleteFromRemote = async (
         })
       );
     });
+  } else if (fileOrFolderPath.endsWith("/") && password !== "") {
+    // TODO
   } else {
-    await s3Client.send(
-      new DeleteObjectCommand({
-        Bucket: s3Config.s3BucketName,
-        Key: fileOrFolderPath,
-      })
-    );
+    // pass
   }
 };
