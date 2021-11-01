@@ -58,3 +58,11 @@ export const bufferToArrayBuffer = (b: Buffer) => {
 export const arrayBufferToBuffer = (b: ArrayBuffer) => {
   return Buffer.from(b);
 };
+
+export const arrayBufferToBase64 = (b: ArrayBuffer) => {
+  return arrayBufferToBuffer(b).toString("base64");
+};
+
+export const base64ToArrayBuffer = (b64text: string) => {
+  return bufferToArrayBuffer(Buffer.from(b64text, "base64"));
+};
