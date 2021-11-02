@@ -221,18 +221,6 @@ class SaveRemoteSettingTab extends PluginSettingTab {
             await this.plugin.saveSettings();
           })
       );
-    new Setting(containerEl)
-      .setName("password")
-      .setDesc("password")
-      .addText((text) =>
-        text
-          .setPlaceholder("")
-          .setValue(`${this.plugin.settings.password}`)
-          .onChange(async (value) => {
-            this.plugin.settings.password = value;
-            await this.plugin.saveSettings();
-          })
-      );
 
     new Setting(containerEl)
       .setName("s3BucketName")
@@ -243,6 +231,19 @@ class SaveRemoteSettingTab extends PluginSettingTab {
           .setValue(`${this.plugin.settings.s3.s3BucketName}`)
           .onChange(async (value) => {
             this.plugin.settings.s3.s3BucketName = value;
+            await this.plugin.saveSettings();
+          })
+      );
+
+    new Setting(containerEl)
+      .setName("password")
+      .setDesc("password")
+      .addText((text) =>
+        text
+          .setPlaceholder("")
+          .setValue(`${this.plugin.settings.password}`)
+          .onChange(async (value) => {
+            this.plugin.settings.password = value;
             await this.plugin.saveSettings();
           })
       );
