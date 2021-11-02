@@ -31,7 +31,7 @@ module.exports = {
   },
   resolve: {
     extensions: [".tsx", ".ts", ".js"],
-    mainFields: ["module", "main"],
+    mainFields: ["browser", "module", "main"],
     fallback: {
       assert: require.resolve("assert"),
       buffer: require.resolve("buffer/"),
