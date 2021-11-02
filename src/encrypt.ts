@@ -1,4 +1,5 @@
-import { randomBytes, pbkdf2, createDecipheriv, createCipheriv } from "crypto";
+import { randomBytes, createDecipheriv, createCipheriv } from "crypto";
+import { pbkdf2, createSHA256 } from "hash-wasm";
 import { promisify } from "util";
 import * as base32 from "hi-base32";
 import { bufferToArrayBuffer, arrayBufferToBuffer } from "./misc";
@@ -11,13 +12,14 @@ export const encryptBuffer = async (
   rounds: number = DEFAULT_ITER
 ) => {
   const salt = await promisify(randomBytes)(8);
-  const derivedKey = await promisify(pbkdf2)(
-    password,
-    salt,
-    rounds,
-    32 + 16,
-    "sha256"
-  );
+  const derivedKey = await pbkdf2({
+    password: password,
+    salt: salt,
+    iterations: rounds,
+    hashLength: 32 + 16,
+    hashFunction: createSHA256(),
+    outputType: "binary",
+  });
   const key = derivedKey.slice(0, 32);
   const iv = derivedKey.slice(32, 32 + 16);
   const cipher = createCipheriv("aes-256-cbc", key, iv);
@@ -35,13 +37,14 @@ export const decryptBuffer = async (
 ) => {
   const prefix = buf.slice(0, 8);
   const salt = buf.slice(8, 16);
-  const derivedKey = await promisify(pbkdf2)(
-    password,
-    salt,
-    rounds,
-    32 + 16,
-    "sha256"
-  );
+  const derivedKey = await pbkdf2({
+    password: password,
+    salt: salt,
+    iterations: rounds,
+    hashLength: 32 + 16,
+    hashFunction: createSHA256(),
+    outputType: "binary",
+  });
   const key = derivedKey.slice(0, 32);
   const iv = derivedKey.slice(32, 32 + 16);
   const decipher = createDecipheriv("aes-256-cbc", key, iv);
