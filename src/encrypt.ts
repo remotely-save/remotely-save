@@ -1,16 +1,17 @@
-import * as crypto from "crypto";
+import { randomBytes, pbkdf2, createDecipheriv, createCipheriv } from "crypto";
+import { promisify } from "util";
 import * as base32 from "hi-base32";
 import { bufferToArrayBuffer, arrayBufferToBuffer } from "./misc";
 
 const DEFAULT_ITER = 10000;
 
-export const encryptBuffer = (
+export const encryptBuffer = async (
   buf: Buffer,
   password: string,
   rounds: number = DEFAULT_ITER
 ) => {
-  const salt = crypto.randomBytes(8);
-  const derivedKey = crypto.pbkdf2Sync(
+  const salt = await promisify(randomBytes)(8);
+  const derivedKey = await promisify(pbkdf2)(
     password,
     salt,
     rounds,
@@ -19,7 +20,7 @@ export const encryptBuffer = (
   );
   const key = derivedKey.slice(0, 32);
   const iv = derivedKey.slice(32, 32 + 16);
-  const cipher = crypto.createCipheriv("aes-256-cbc", key, iv);
+  const cipher = createCipheriv("aes-256-cbc", key, iv);
   cipher.write(buf);
   cipher.end();
   const encrypted = cipher.read();
@@ -27,14 +28,14 @@ export const encryptBuffer = (
   return res;
 };
 
-export const decryptBuffer = (
+export const decryptBuffer = async (
   buf: Buffer,
   password: string,
   rounds: number = DEFAULT_ITER
 ) => {
   const prefix = buf.slice(0, 8);
   const salt = buf.slice(8, 16);
-  const derivedKey = crypto.pbkdf2Sync(
+  const derivedKey = await promisify(pbkdf2)(
     password,
     salt,
     rounds,
@@ -43,49 +44,53 @@ export const decryptBuffer = (
   );
   const key = derivedKey.slice(0, 32);
   const iv = derivedKey.slice(32, 32 + 16);
-  const decipher = crypto.createDecipheriv("aes-256-cbc", key, iv);
+  const decipher = createDecipheriv("aes-256-cbc", key, iv);
   decipher.write(buf.slice(16));
   decipher.end();
   const decrypted = decipher.read();
   return decrypted as Buffer;
 };
 
-export const encryptArrayBuffer = (
+export const encryptArrayBuffer = async (
   arrBuf: ArrayBuffer,
   password: string,
   rounds: number = DEFAULT_ITER
 ) => {
   return bufferToArrayBuffer(
-    encryptBuffer(arrayBufferToBuffer(arrBuf), password, rounds)
+    await encryptBuffer(arrayBufferToBuffer(arrBuf), password, rounds)
   );
 };
 
-export const decryptArrayBuffer = (
+export const decryptArrayBuffer = async (
   arrBuf: ArrayBuffer,
   password: string,
   rounds: number = DEFAULT_ITER
 ) => {
   return bufferToArrayBuffer(
-    decryptBuffer(arrayBufferToBuffer(arrBuf), password, rounds)
+    await decryptBuffer(arrayBufferToBuffer(arrBuf), password, rounds)
   );
 };
 
-export const encryptStringToBase32 = (
+export const encryptStringToBase32 = async (
   text: string,
   password: string,
   rounds: number = DEFAULT_ITER
 ) => {
-  return base32.encode(encryptBuffer(Buffer.from(text), password, rounds));
+  return base32.encode(
+    await encryptBuffer(Buffer.from(text), password, rounds)
+  );
 };
 
-export const decryptBase32ToString = (
+export const decryptBase32ToString = async (
   text: string,
   password: string,
   rounds: number = DEFAULT_ITER
 ) => {
-  return decryptBuffer(
-    Buffer.from(base32.decode.asBytes(text)),
-    password,
-    rounds
+  return (
+    await decryptBuffer(
+      Buffer.from(base32.decode.asBytes(text)),
+      password,
+      rounds
+    )
   ).toString();
 };

@@ -62,7 +62,7 @@ export const ensembleMixedStates = async (
       const remoteEncryptedKey = entry.Key;
       let key = remoteEncryptedKey;
       if (password !== "") {
-        key = decryptBase32ToString(remoteEncryptedKey, password);
+        key = await decryptBase32ToString(remoteEncryptedKey, password);
       }
       const backwardMapping = await getSyncMetaMappingByRemoteKeyS3(
         db,
@@ -299,7 +299,7 @@ export const doActualSync = async (
       if (password !== "") {
         remoteEncryptedKey = state.remote_encrypted_key;
         if (remoteEncryptedKey === undefined || remoteEncryptedKey === "") {
-          remoteEncryptedKey = encryptStringToBase32(key, password);
+          remoteEncryptedKey = await encryptStringToBase32(key, password);
         }
       }
 

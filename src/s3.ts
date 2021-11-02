@@ -109,7 +109,7 @@ export const uploadToRemote = async (
     const localContent = await vault.adapter.readBinary(fileOrFolderPath);
     let remoteContent = localContent;
     if (password !== "") {
-      remoteContent = encryptArrayBuffer(localContent, password);
+      remoteContent = await encryptArrayBuffer(localContent, password);
     }
     const body = arrayBufferToBuffer(remoteContent);
     await s3Client.send(
@@ -214,7 +214,7 @@ export const downloadFromRemote = async (
     );
     let localContent = remoteContent;
     if (password !== "") {
-      localContent = decryptArrayBuffer(remoteContent, password);
+      localContent = await decryptArrayBuffer(remoteContent, password);
     }
     await vault.adapter.writeBinary(fileOrFolderPath, localContent, {
       mtime: mtime,
