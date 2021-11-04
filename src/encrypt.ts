@@ -58,11 +58,12 @@ export const encryptArrayBuffer = async (
   const prefix = new TextEncoder().encode("Salted__");
 
   const res = new Uint8Array(
-    prefix.byteLength + salt.byteLength + enc.byteLength
+    [
+      ...prefix,
+      ...salt,
+      ...new Uint8Array(enc)
+    ]
   );
-  res.set(new Uint8Array(prefix));
-  res.set(new Uint8Array(salt));
-  res.set(new Uint8Array(enc));
 
   return bufferToArrayBuffer(res);
 };
