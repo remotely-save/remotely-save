@@ -1,12 +1,6 @@
 import * as base32 from "hi-base32";
 import { bufferToArrayBuffer, arrayBufferToBuffer } from "./misc";
 
-if (window === undefined) {
-  global.window = {
-    crypto: require("crypto").webcrypto,
-  } as any;
-}
-
 const DEFAULT_ITER = 10000;
 
 const getKeyIVFromPassword = async (

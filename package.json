@@ -7,7 +7,7 @@
     "build": "webpack --mode production",
     "format": "npx prettier --write .",
     "clean": "npx rimraf main.js",
-    "test": "env TS_NODE_COMPILER_OPTIONS='{\"module\": \"commonjs\" }' mocha -r ts-node/register -r jsdom-global/register 'tests/**/*.ts'"
+    "test": "env TS_NODE_COMPILER_OPTIONS='{\"module\": \"commonjs\" }' mocha -r ts-node/register 'tests/**/*.ts'"
   },
   "source": "main.ts",
   "keywords": [],

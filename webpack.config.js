@@ -38,7 +38,6 @@ module.exports = {
       // console: require.resolve("console-browserify"),
       // constants: require.resolve("constants-browserify"),
       // crypto: require.resolve("crypto-browserify"),
-      crypto: false, // deliberately set to false, since we use webcrypto here
       // domain: require.resolve("domain-browser"),
       // events: require.resolve("events"),
       // http: require.resolve("stream-http"),
