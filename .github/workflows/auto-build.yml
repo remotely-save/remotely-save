@@ -25,6 +25,7 @@ jobs:
         with:
           node-version: ${{ matrix.node-version }}
       - run: npm install
+      - run: npm test
       - run: npm run build
       - uses: actions/upload-artifact@v2
         with:
