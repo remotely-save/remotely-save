@@ -46,7 +46,7 @@ export const mkdirpInVault = async (thePath: string, vault: Vault) => {
  * @param b Buffer
  * @returns ArrayBuffer
  */
-export const bufferToArrayBuffer = (b: Buffer) => {
+export const bufferToArrayBuffer = (b: Buffer | Uint8Array) => {
   return b.buffer.slice(b.byteOffset, b.byteOffset + b.byteLength);
 };
 

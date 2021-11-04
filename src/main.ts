@@ -62,13 +62,6 @@ export default class SaveRemotePlugin extends Plugin {
       })
     );
 
-    // this.addRibbonIcon("dice", "Misc", async () => {
-    //   const a = this.app.vault.getAllLoadedFiles();
-    //   console.log(a);
-    //   const h = await getAllRecords(this.db);
-    //   console.log(h);
-    // });
-
     this.addRibbonIcon("switch", "Save Remote", async () => {
       if (this.syncStatus !== "idle") {
         new Notice("Save Remote already running!");

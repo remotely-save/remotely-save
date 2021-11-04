@@ -355,7 +355,13 @@ export const doActualSync = async (
           remoteEncryptedKey
         );
       } else if (state.decision === "delremote_clearhist") {
-        await deleteFromRemote(s3Client, s3Config, state.key, password, remoteEncryptedKey);
+        await deleteFromRemote(
+          s3Client,
+          s3Config,
+          state.key,
+          password,
+          remoteEncryptedKey
+        );
         await clearDeleteRenameHistoryOfKey(db, state.key);
       } else if (state.decision === "upload") {
         const remoteObjMeta = await uploadToRemote(
