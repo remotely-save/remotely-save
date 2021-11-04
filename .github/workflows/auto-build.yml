@@ -5,9 +5,9 @@ name: BuildCI
 
 on:
   push:
-    branches: [master, enc]
+    branches: [master]
   pull_request:
-    branches: [master, enc]
+    branches: [master]
 
 jobs:
   build:
