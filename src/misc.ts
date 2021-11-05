@@ -1,6 +1,8 @@
 import { Vault } from "obsidian";
 import * as path from "path";
 
+import { base32 } from "rfc4648";
+
 export type SUPPORTED_SERVICES_TYPE = "s3" | "webdav" | "ftp";
 
 export const ignoreHiddenFiles = (item: string) => {
@@ -63,6 +65,27 @@ export const arrayBufferToBase64 = (b: ArrayBuffer) => {
   return arrayBufferToBuffer(b).toString("base64");
 };
 
+export const arrayBufferToHex = (b: ArrayBuffer) => {
+  return arrayBufferToBuffer(b).toString("hex");
+};
+
 export const base64ToArrayBuffer = (b64text: string) => {
   return bufferToArrayBuffer(Buffer.from(b64text, "base64"));
+};
+
+/**
+ * https://stackoverflow.com/questions/43131242
+ * @param hex
+ * @returns
+ */
+export const hexStringToTypedArray = (hex: string) => {
+  return new Uint8Array(
+    hex.match(/[\da-f]{2}/gi).map(function (h) {
+      return parseInt(h, 16);
+    })
+  );
+};
+
+export const base64ToBase32 = (a: string) => {
+  return base32.stringify(Buffer.from(a, "base64"));
 };

@@ -1,5 +1,10 @@
-import * as base32 from "hi-base32";
-import { bufferToArrayBuffer, arrayBufferToBuffer } from "./misc";
+import { base32, base64 } from "rfc4648";
+import {
+  bufferToArrayBuffer,
+  arrayBufferToBuffer,
+  hexStringToTypedArray,
+  arrayBufferToHex,
+} from "./misc";
 
 const DEFAULT_ITER = 10000;
 
@@ -33,9 +38,15 @@ const getKeyIVFromPassword = async (
 export const encryptArrayBuffer = async (
   arrBuf: ArrayBuffer,
   password: string,
-  rounds: number = DEFAULT_ITER
+  rounds: number = DEFAULT_ITER,
+  saltHex: string = ""
 ) => {
-  const salt = window.crypto.getRandomValues(new Uint8Array(8));
+  let salt: Uint8Array;
+  if (saltHex !== "") {
+    salt = hexStringToTypedArray(saltHex);
+  } else {
+    salt = window.crypto.getRandomValues(new Uint8Array(8));
+  }
 
   const derivedKey = await getKeyIVFromPassword(salt, password, rounds);
   const key = derivedKey.slice(0, 32);
@@ -97,11 +108,16 @@ export const decryptArrayBuffer = async (
 export const encryptStringToBase32 = async (
   text: string,
   password: string,
-  rounds: number = DEFAULT_ITER
+  rounds: number = DEFAULT_ITER,
+  saltHex: string = ""
 ) => {
-  return base32.encode(
-    await encryptArrayBuffer(new TextEncoder().encode(text), password, rounds)
+  const enc = await encryptArrayBuffer(
+    bufferToArrayBuffer(new TextEncoder().encode(text)),
+    password,
+    rounds,
+    saltHex
   );
+  return base32.stringify(new Uint8Array(enc));
 };
 
 export const decryptBase32ToString = async (
@@ -109,11 +125,11 @@ export const decryptBase32ToString = async (
   password: string,
   rounds: number = DEFAULT_ITER
 ) => {
-  return (
+  return new TextDecoder().decode(
     await decryptArrayBuffer(
-      bufferToArrayBuffer(Uint8Array.from(base32.decode.asBytes(text))),
+      bufferToArrayBuffer(base32.parse(text)),
       password,
       rounds
     )
-  ).toString();
+  );
 };
