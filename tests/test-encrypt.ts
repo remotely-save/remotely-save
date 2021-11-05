@@ -23,9 +23,9 @@ describe("Encryption tests", () => {
     const k = "jfkkjkjbce7983ycdeknkkjckooAIUHIDIBIE((*BII)njD/d/dd/d/sjxhux";
     const password = "hfiuibec989###oiu982bj1`";
     const enc = await encryptStringToBase32(k, password);
-    console.log(enc);
+    // console.log(enc);
     const dec = await decryptBase32ToString(enc, password);
-    console.log(dec);
+    // console.log(dec);
     expect(dec).equal(k);
   });
 
