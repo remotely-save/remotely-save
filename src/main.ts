@@ -190,7 +190,7 @@ class SaveRemoteSettingTab extends PluginSettingTab {
           .setPlaceholder("")
           .setValue(this.plugin.settings.s3.s3Endpoint)
           .onChange(async (value) => {
-            this.plugin.settings.s3.s3Endpoint = value;
+            this.plugin.settings.s3.s3Endpoint = value.trim();
             await this.plugin.saveSettings();
           })
       );
@@ -203,7 +203,7 @@ class SaveRemoteSettingTab extends PluginSettingTab {
           .setPlaceholder("")
           .setValue(`${this.plugin.settings.s3.s3Region}`)
           .onChange(async (value) => {
-            this.plugin.settings.s3.s3Region = value;
+            this.plugin.settings.s3.s3Region = value.trim();
             await this.plugin.saveSettings();
           })
       );
@@ -216,7 +216,7 @@ class SaveRemoteSettingTab extends PluginSettingTab {
           .setPlaceholder("")
           .setValue(`${this.plugin.settings.s3.s3AccessKeyID}`)
           .onChange(async (value) => {
-            this.plugin.settings.s3.s3AccessKeyID = value;
+            this.plugin.settings.s3.s3AccessKeyID = value.trim();
             await this.plugin.saveSettings();
           })
       );
@@ -229,7 +229,7 @@ class SaveRemoteSettingTab extends PluginSettingTab {
           .setPlaceholder("")
           .setValue(`${this.plugin.settings.s3.s3SecretAccessKey}`)
           .onChange(async (value) => {
-            this.plugin.settings.s3.s3SecretAccessKey = value;
+            this.plugin.settings.s3.s3SecretAccessKey = value.trim();
             await this.plugin.saveSettings();
           })
       );
@@ -242,7 +242,7 @@ class SaveRemoteSettingTab extends PluginSettingTab {
           .setPlaceholder("")
           .setValue(`${this.plugin.settings.s3.s3BucketName}`)
           .onChange(async (value) => {
-            this.plugin.settings.s3.s3BucketName = value;
+            this.plugin.settings.s3.s3BucketName = value.trim();
             await this.plugin.saveSettings();
           })
       );
@@ -255,7 +255,7 @@ class SaveRemoteSettingTab extends PluginSettingTab {
           .setPlaceholder("")
           .setValue(`${this.plugin.settings.password}`)
           .onChange(async (value) => {
-            this.plugin.settings.password = value;
+            this.plugin.settings.password = value.trim();
             await this.plugin.saveSettings();
           })
       );
