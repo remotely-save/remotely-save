@@ -19,7 +19,12 @@ jobs:
         # See supported Node.js release schedule at https://nodejs.org/en/about/releases/
 
     steps:
-      - uses: actions/checkout@v2
+      - name: Checkout codes
+        uses: actions/checkout@v2
+        with:
+          lfs: true
+      - name: Checkout LFS
+        run: git lfs checkout
       - name: Use Node.js ${{ matrix.node-version }}
         uses: actions/setup-node@v2
         with:
