@@ -290,103 +290,105 @@ export const doActualSync = async (
   keyStates: Record<string, FileOrFolderMixedState>,
   password: string = ""
 ) => {
-  Object.entries(keyStates)
-    .sort((k, v) => -(k as string).length)
-    .map(async ([k, v]) => {
-      const key = k as string;
-      const state = v as FileOrFolderMixedState;
-      let remoteEncryptedKey = key;
-      if (password !== "") {
-        remoteEncryptedKey = state.remote_encrypted_key;
-        if (remoteEncryptedKey === undefined || remoteEncryptedKey === "") {
-          remoteEncryptedKey = await encryptStringToBase32(key, password);
+  await Promise.all(
+    Object.entries(keyStates)
+      .sort((k, v) => -(k as string).length)
+      .map(async ([k, v]) => {
+        const key = k as string;
+        const state = v as FileOrFolderMixedState;
+        let remoteEncryptedKey = key;
+        if (password !== "") {
+          remoteEncryptedKey = state.remote_encrypted_key;
+          if (remoteEncryptedKey === undefined || remoteEncryptedKey === "") {
+            remoteEncryptedKey = await encryptStringToBase32(key, password);
+          }
         }
-      }
 
-      if (
-        state.decision === undefined ||
-        state.decision === "unknown" ||
-        state.decision === "undecided"
-      ) {
-        throw Error(`unknown decision in ${JSON.stringify(state)}`);
-      } else if (state.decision === "skip") {
-        // do nothing
-      } else if (state.decision === "download_clearhist") {
-        await downloadFromRemote(
-          s3Client,
-          s3Config,
-          state.key,
-          vault,
-          state.mtime_remote,
-          password,
-          remoteEncryptedKey
-        );
-        await clearDeleteRenameHistoryOfKey(db, state.key);
-      } else if (state.decision === "upload_clearhist") {
-        const remoteObjMeta = await uploadToRemote(
-          s3Client,
-          s3Config,
-          state.key,
-          vault,
-          false,
-          password,
-          remoteEncryptedKey
-        );
-        await upsertSyncMetaMappingDataS3(
-          db,
-          state.key,
-          state.mtime_local,
-          state.size_local,
-          state.key,
-          remoteObjMeta.LastModified.valueOf(),
-          remoteObjMeta.ContentLength,
-          remoteObjMeta.ETag
-        );
-        await clearDeleteRenameHistoryOfKey(db, state.key);
-      } else if (state.decision === "download") {
-        await mkdirpInVault(state.key, vault);
-        await downloadFromRemote(
-          s3Client,
-          s3Config,
-          state.key,
-          vault,
-          state.mtime_remote,
-          password,
-          remoteEncryptedKey
-        );
-      } else if (state.decision === "delremote_clearhist") {
-        await deleteFromRemote(
-          s3Client,
-          s3Config,
-          state.key,
-          password,
-          remoteEncryptedKey
-        );
-        await clearDeleteRenameHistoryOfKey(db, state.key);
-      } else if (state.decision === "upload") {
-        const remoteObjMeta = await uploadToRemote(
-          s3Client,
-          s3Config,
-          state.key,
-          vault,
-          false,
-          password,
-          remoteEncryptedKey
-        );
-        await upsertSyncMetaMappingDataS3(
-          db,
-          state.key,
-          state.mtime_local,
-          state.size_local,
-          state.key,
-          remoteObjMeta.LastModified.valueOf(),
-          remoteObjMeta.ContentLength,
-          remoteObjMeta.ETag
-        );
-      } else if (state.decision === "clearhist") {
-        await clearDeleteRenameHistoryOfKey(db, state.key);
-      } else {
-        throw Error("this should never happen!");
-      }
-    });
+        if (
+          state.decision === undefined ||
+          state.decision === "unknown" ||
+          state.decision === "undecided"
+        ) {
+          throw Error(`unknown decision in ${JSON.stringify(state)}`);
+        } else if (state.decision === "skip") {
+          // do nothing
+        } else if (state.decision === "download_clearhist") {
+          await downloadFromRemote(
+            s3Client,
+            s3Config,
+            state.key,
+            vault,
+            state.mtime_remote,
+            password,
+            remoteEncryptedKey
+          );
+          await clearDeleteRenameHistoryOfKey(db, state.key);
+        } else if (state.decision === "upload_clearhist") {
+          const remoteObjMeta = await uploadToRemote(
+            s3Client,
+            s3Config,
+            state.key,
+            vault,
+            false,
+            password,
+            remoteEncryptedKey
+          );
+          await upsertSyncMetaMappingDataS3(
+            db,
+            state.key,
+            state.mtime_local,
+            state.size_local,
+            state.key,
+            remoteObjMeta.LastModified.valueOf(),
+            remoteObjMeta.ContentLength,
+            remoteObjMeta.ETag
+          );
+          await clearDeleteRenameHistoryOfKey(db, state.key);
+        } else if (state.decision === "download") {
+          await mkdirpInVault(state.key, vault);
+          await downloadFromRemote(
+            s3Client,
+            s3Config,
+            state.key,
+            vault,
+            state.mtime_remote,
+            password,
+            remoteEncryptedKey
+          );
+        } else if (state.decision === "delremote_clearhist") {
+          await deleteFromRemote(
+            s3Client,
+            s3Config,
+            state.key,
+            password,
+            remoteEncryptedKey
+          );
+          await clearDeleteRenameHistoryOfKey(db, state.key);
+        } else if (state.decision === "upload") {
+          const remoteObjMeta = await uploadToRemote(
+            s3Client,
+            s3Config,
+            state.key,
+            vault,
+            false,
+            password,
+            remoteEncryptedKey
+          );
+          await upsertSyncMetaMappingDataS3(
+            db,
+            state.key,
+            state.mtime_local,
+            state.size_local,
+            state.key,
+            remoteObjMeta.LastModified.valueOf(),
+            remoteObjMeta.ContentLength,
+            remoteObjMeta.ETag
+          );
+        } else if (state.decision === "clearhist") {
+          await clearDeleteRenameHistoryOfKey(db, state.key);
+        } else {
+          throw Error("this should never happen!");
+        }
+      })
+  );
 };
