@@ -86,6 +86,7 @@ export default class SaveRemotePlugin extends Plugin {
         // console.log(localHistory);
 
         new Notice("4/6 Starting to generate sync plan.");
+        this.syncStatus = "generating_plan";
         const mixedStates = await ensembleMixedStates(
           remoteRsp.Contents,
           local,
@@ -116,10 +117,15 @@ export default class SaveRemotePlugin extends Plugin {
         );
 
         new Notice("6/6 Save Remote finish!");
+        this.syncStatus = "finish";
         this.syncStatus = "idle";
       } catch (error) {
-        new Notice(`Save Remote error while ${this.syncStatus}: ${error}`);
         this.syncStatus = "idle";
+        const msg = `Save Remote error while ${this.syncStatus}`;
+        console.log(msg);
+        console.log(error);
+        new Notice(msg);
+        new Notice(error);
       }
     });
 
