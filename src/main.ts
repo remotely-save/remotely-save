@@ -163,7 +163,7 @@ export default class SaveRemotePlugin extends Plugin {
   }
 
   destroyDBs() {
-    destroyDBs(this.db);
+    /* destroyDBs(this.db); */
   }
 }
 
