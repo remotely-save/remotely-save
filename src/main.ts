@@ -120,12 +120,12 @@ export default class SaveRemotePlugin extends Plugin {
         this.syncStatus = "finish";
         this.syncStatus = "idle";
       } catch (error) {
-        this.syncStatus = "idle";
         const msg = `Save Remote error while ${this.syncStatus}`;
         console.log(msg);
         console.log(error);
         new Notice(msg);
         new Notice(error);
+        this.syncStatus = "idle";
       }
     });
 
