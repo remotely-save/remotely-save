@@ -2,6 +2,14 @@
 
 This is yet another sync plugin for Obsidian.
 
+## Download and Install
+
+[![BuildCI](https://github.com/fyears/obsidian-save-remote/actions/workflows/auto-build.yml/badge.svg)](https://github.com/fyears/obsidian-save-remote/actions/workflows/auto-build.yml)
+
+Every artifacts are placed in the "Summary" under every successful builds.
+
+Besides manually download the files, you can also use [Obsidian42 - BRAT](https://github.com/TfTHacker/obsidian42-brat) to install this plugin.
+
 ## Disclaimer
 
 **This is NOT the official sync service provided by Obsidian.**
@@ -14,5 +22,5 @@ As of October 2021, the plugin is under development. **DO NOT USE IT for any ser
 
 Remote service in support list:
 
-- [ ] AWS S3
+- [X] AWS S3
 - [ ] webdav
