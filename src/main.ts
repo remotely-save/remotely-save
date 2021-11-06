@@ -22,7 +22,7 @@ import {
 } from "./localdb";
 
 import type { SyncStatusType } from "./sync";
-import { ensembleMixedStates, getOperation, doActualSync } from "./sync";
+import { getSyncPlan, doActualSync } from "./sync";
 import { DEFAULT_S3_CONFIG, getS3Client, listFromRemote, S3Config } from "./s3";
 
 interface SaveRemotePluginSettings {
@@ -87,19 +87,14 @@ export default class SaveRemotePlugin extends Plugin {
 
         new Notice("4/6 Starting to generate sync plan.");
         this.syncStatus = "generating_plan";
-        const mixedStates = await ensembleMixedStates(
+        const syncPlan = await getSyncPlan(
           remoteRsp.Contents,
           local,
           localHistory,
           this.db,
           this.settings.password
         );
-
-        for (const [key, val] of Object.entries(mixedStates)) {
-          getOperation(val, true);
-        }
-
-        console.log(mixedStates);
+        console.log(syncPlan.mixedStates); // for debugging
 
         // The operations above are read only and kind of safe.
         // The operations below begins to write or delete (!!!) something.
@@ -112,7 +107,7 @@ export default class SaveRemotePlugin extends Plugin {
           this.settings.s3,
           this.db,
           this.app.vault,
-          mixedStates,
+          syncPlan,
           this.settings.password
         );
 
@@ -262,5 +257,7 @@ class SaveRemoteSettingTab extends PluginSettingTab {
             await this.plugin.saveSettings();
           })
       );
+
+    containerEl.createEl("h2", { text: "Debug" });
   }
 }

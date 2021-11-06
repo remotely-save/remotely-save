@@ -16,8 +16,17 @@ import {
   deleteFromRemote,
   downloadFromRemote,
 } from "./s3";
-import { mkdirpInVault } from "./misc";
+import { mkdirpInVault, SUPPORTED_SERVICES_TYPE } from "./misc";
 import { decryptBase32ToString, encryptStringToBase32 } from "./encrypt";
+
+export type SyncStatusType =
+  | "idle"
+  | "preparing"
+  | "getting_remote_meta"
+  | "getting_local_meta"
+  | "generating_plan"
+  | "syncing"
+  | "finish";
 
 type DecisionType =
   | "undecided"
@@ -30,15 +39,6 @@ type DecisionType =
   | "clearhist"
   | "mkdirplocal"
   | "skip";
-
-export type SyncStatusType =
-  | "idle"
-  | "preparing"
-  | "getting_remote_meta"
-  | "getting_local_meta"
-  | "generating_plan"
-  | "syncing"
-  | "finish";
 
 interface FileOrFolderMixedState {
   key: string;
@@ -55,7 +55,13 @@ interface FileOrFolderMixedState {
   remote_encrypted_key?: string;
 }
 
-export const ensembleMixedStates = async (
+interface SyncPlanType {
+  ts: number;
+  remoteType: SUPPORTED_SERVICES_TYPE;
+  mixedStates: Record<string, FileOrFolderMixedState>;
+}
+
+const ensembleMixedStates = async (
   remote: S3ObjectType[],
   local: TAbstractFile[],
   deleteHistory: FileFolderHistoryRecord[],
@@ -173,7 +179,7 @@ export const ensembleMixedStates = async (
   return results;
 };
 
-export const getOperation = (
+const getOperation = (
   origRecord: FileOrFolderMixedState,
   inplace: boolean = false
 ) => {
@@ -289,14 +295,40 @@ export const getOperation = (
   return r;
 };
 
+export const getSyncPlan = async (
+  remote: S3ObjectType[],
+  local: TAbstractFile[],
+  deleteHistory: FileFolderHistoryRecord[],
+  db: lf.DatabaseConnection,
+  password: string = ""
+) => {
+  const mixedStates = await ensembleMixedStates(
+    remote,
+    local,
+    deleteHistory,
+    db,
+    password
+  );
+  for (const [key, val] of Object.entries(mixedStates)) {
+    getOperation(val, true);
+  }
+  const plan = {
+    ts: Date.now(),
+    remoteType: "s3",
+    mixedStates: mixedStates,
+  } as SyncPlanType;
+  return plan;
+};
+
 export const doActualSync = async (
   s3Client: S3Client,
   s3Config: S3Config,
   db: lf.DatabaseConnection,
   vault: Vault,
-  keyStates: Record<string, FileOrFolderMixedState>,
+  syncPlan: SyncPlanType,
   password: string = ""
 ) => {
+  const keyStates = syncPlan.mixedStates;
   await Promise.all(
     Object.entries(keyStates)
       .sort((k, v) => -(k as string).length)
