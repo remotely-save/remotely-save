@@ -180,7 +180,9 @@ class SaveRemoteSettingTab extends PluginSettingTab {
 
     containerEl.empty();
 
-    containerEl.createEl("h2", { text: "Settings for Save Remote" });
+    containerEl.createEl("h1", { text: "Save Remote" });
+
+    containerEl.createEl("h2", { text: "S3" });
 
     new Setting(containerEl)
       .setName("s3Endpoint")
@@ -247,9 +249,10 @@ class SaveRemoteSettingTab extends PluginSettingTab {
           })
       );
 
+    containerEl.createEl("h2", { text: "General" });
     new Setting(containerEl)
-      .setName("password")
-      .setDesc("password")
+      .setName("encryption password")
+      .setDesc("Password for E2E encryption. Empty for no password.")
       .addText((text) =>
         text
           .setPlaceholder("")
