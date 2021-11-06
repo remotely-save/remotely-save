@@ -22,5 +22,5 @@ As of October 2021, the plugin is under development. **DO NOT USE IT for any ser
 
 Remote service in support list:
 
-- [X] AWS S3
+- [x] AWS S3
 - [ ] webdav
