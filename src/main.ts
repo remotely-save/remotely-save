@@ -64,50 +64,63 @@ export default class SaveRemotePlugin extends Plugin {
 
     this.addRibbonIcon("switch", "Save Remote", async () => {
       if (this.syncStatus !== "idle") {
-        new Notice("Save Remote already running!");
+        new Notice(`Save Remote already running in stage ${this.syncStatus}!`);
         return;
       }
 
-      new Notice("Save Remote Sync Preparing");
-      this.syncStatus = "preparing";
-      const s3Client = getS3Client(this.settings.s3);
-      const remoteRsp = await listFromRemote(s3Client, this.settings.s3);
-      const local = this.app.vault.getAllLoadedFiles();
-      const localHistory = await loadDeleteRenameHistoryTable(this.db);
-      // console.log(remoteRsp);
-      // console.log(local);
-      // console.log(localHistory);
+      try {
+        new Notice("1/6 Save Remote Sync Preparing");
+        this.syncStatus = "preparing";
 
-      const mixedStates = await ensembleMixedStates(
-        remoteRsp.Contents,
-        local,
-        localHistory,
-        this.db,
-        this.settings.password
-      );
+        new Notice("2/6 Starting to fetch remote meta data.");
+        this.syncStatus = "getting_remote_meta";
+        const s3Client = getS3Client(this.settings.s3);
+        const remoteRsp = await listFromRemote(s3Client, this.settings.s3);
 
-      for (const [key, val] of Object.entries(mixedStates)) {
-        getOperation(val, true);
+        new Notice("3/6 Starting to fetch local meta data.");
+        this.syncStatus = "getting_local_meta";
+        const local = this.app.vault.getAllLoadedFiles();
+        const localHistory = await loadDeleteRenameHistoryTable(this.db);
+        // console.log(remoteRsp);
+        // console.log(local);
+        // console.log(localHistory);
+
+        new Notice("4/6 Starting to generate sync plan.");
+        const mixedStates = await ensembleMixedStates(
+          remoteRsp.Contents,
+          local,
+          localHistory,
+          this.db,
+          this.settings.password
+        );
+
+        for (const [key, val] of Object.entries(mixedStates)) {
+          getOperation(val, true);
+        }
+
+        console.log(mixedStates);
+
+        // The operations above are read only and kind of safe.
+        // The operations below begins to write or delete (!!!) something.
+
+        new Notice("5/6 Save Remote Sync data exchanging!");
+
+        this.syncStatus = "syncing";
+        await doActualSync(
+          s3Client,
+          this.settings.s3,
+          this.db,
+          this.app.vault,
+          mixedStates,
+          this.settings.password
+        );
+
+        new Notice("6/6 Save Remote finish!");
+        this.syncStatus = "idle";
+      } catch (error) {
+        new Notice(`Save Remote error while ${this.syncStatus}: ${error}`);
+        this.syncStatus = "idle";
       }
-
-      console.log(mixedStates);
-
-      // The operations above are read only and kind of safe.
-      // The operations below begins to write or delete (!!!) something.
-
-      new Notice("Save Remote Sync data exchanging!");
-
-      await doActualSync(
-        s3Client,
-        this.settings.s3,
-        this.db,
-        this.app.vault,
-        mixedStates,
-        this.settings.password
-      );
-
-      new Notice("Save Remote finish!");
-      this.syncStatus = "idle";
     });
 
     this.addSettingTab(new SaveRemoteSettingTab(this.app, this));

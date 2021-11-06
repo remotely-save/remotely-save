@@ -31,7 +31,14 @@ type DecisionType =
   | "mkdirplocal"
   | "skip";
 
-export type SyncStatusType = "idle" | "preparing" | "syncing";
+export type SyncStatusType =
+  | "idle"
+  | "preparing"
+  | "getting_remote_meta"
+  | "getting_local_meta"
+  | "generating_plan"
+  | "syncing"
+  | "finish";
 
 interface FileOrFolderMixedState {
   key: string;
