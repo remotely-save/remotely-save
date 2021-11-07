@@ -11,6 +11,8 @@ import {
   DeleteObjectCommand,
   HeadObjectCommand,
   HeadBucketCommand,
+  ListObjectsV2CommandInput,
+  ListObjectsV2CommandOutput,
 } from "@aws-sdk/client-s3";
 
 import type { _Object } from "@aws-sdk/client-s3";
@@ -130,17 +132,42 @@ export const listFromRemote = async (
   s3Config: S3Config,
   prefix?: string
 ) => {
+  const confCmd = {
+    Bucket: s3Config.s3BucketName,
+  } as ListObjectsV2CommandInput;
   if (prefix !== undefined) {
-    return await s3Client.send(
-      new ListObjectsV2Command({
-        Bucket: s3Config.s3BucketName,
-        Prefix: prefix,
-      })
-    );
+    confCmd.Prefix = prefix;
   }
-  return await s3Client.send(
-    new ListObjectsV2Command({ Bucket: s3Config.s3BucketName })
-  );
+
+  const contents = [] as _Object[];
+
+  let isTruncated = true;
+  let continuationToken = "";
+  do {
+    const rsp = await s3Client.send(new ListObjectsV2Command(confCmd));
+
+    if (rsp.$metadata.httpStatusCode !== 200) {
+      throw Error("some thing bad while listing remote!");
+    }
+    contents.push(...rsp.Contents);
+
+    isTruncated = rsp.IsTruncated;
+    confCmd.ContinuationToken = rsp.NextContinuationToken;
+    if (
+      isTruncated &&
+      (continuationToken === undefined || continuationToken === "")
+    ) {
+      throw Error("isTruncated is true but no continuationToken provided");
+    }
+  } while (isTruncated);
+
+  // ensemble fake rsp
+  return {
+    "$.metadata": {
+      httpStatusCode: 200,
+    },
+    Contents: contents,
+  };
 };
 
 /**
