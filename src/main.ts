@@ -81,6 +81,7 @@ export default class SaveRemotePlugin extends Plugin {
       }
 
       try {
+        //console.log(`huh ${this.settings.password}`)
         new Notice("1/6 Save Remote Sync Preparing");
         this.syncStatus = "preparing";
 
@@ -172,6 +173,59 @@ export default class SaveRemotePlugin extends Plugin {
 
   destroyDBs() {
     /* destroyDBs(this.db); */
+  }
+}
+
+export class PasswordModal extends Modal {
+  plugin: SaveRemotePlugin;
+  newPassword: string;
+  constructor(app: App, plugin: SaveRemotePlugin, newPassword: string) {
+    super(app);
+    this.plugin = plugin;
+    this.newPassword = newPassword;
+  }
+
+  onOpen() {
+    let { contentEl } = this;
+    // contentEl.setText("Add Or change password.");
+    contentEl.createEl("h2", { text: "Hold on and PLEASE READ ON..." });
+    contentEl.createEl("p", {
+      text: "This password allows you encrypt your files before sending to remote services.",
+    });
+    contentEl.createEl("p", { text: "Empty means no password." });
+
+    contentEl.createEl("p", {
+      text: "Attention 1/3: The password setting itself is stored in PLAIN TEXT LOCALLY (because the plugin needs to use the password to encrypt the files) (and the password would not be sent to remote by this plugin).",
+    });
+    contentEl.createEl("p", {
+      text: "Attention 2/3: If you change the password. You should make sure the remote service (s3/webdav/...) IS EMPTY, or REMOTE FILES WERE ENCRYPTED BY THAT NEW PASSWORD. OTHERWISE SOMETHING BAD WOULD HAPPEN!",
+    });
+    contentEl.createEl("p", {
+      text: "Attention 3/3: The longer the password, the better.",
+    });
+
+    new Setting(contentEl)
+      .addButton((button) => {
+        button.setButtonText("The Second Confirm to change password.");
+        button.onClick(async () => {
+          this.plugin.settings.password = this.newPassword;
+          await this.plugin.saveSettings();
+          new Notice("New password saved!");
+          this.close();
+        });
+        button.setClass("password_second_confirm");
+      })
+      .addButton((button) => {
+        button.setButtonText("Cancel (password not changed.)");
+        button.onClick(() => {
+          this.close();
+        });
+      });
+  }
+
+  onClose() {
+    let { contentEl } = this;
+    contentEl.empty();
   }
 }
 
@@ -278,18 +332,27 @@ class SaveRemoteSettingTab extends PluginSettingTab {
       });
 
     containerEl.createEl("h2", { text: "General" });
+
+    let newPassword = `${this.plugin.settings.password}`;
     new Setting(containerEl)
       .setName("encryption password")
-      .setDesc("Password for E2E encryption. Empty for no password.")
+      .setDesc(
+        'Password for E2E encryption. Empty for no password. You need to click "Confirm".'
+      )
       .addText((text) =>
         text
           .setPlaceholder("")
           .setValue(`${this.plugin.settings.password}`)
           .onChange(async (value) => {
-            this.plugin.settings.password = value.trim();
-            await this.plugin.saveSettings();
+            newPassword = value.trim();
           })
-      );
+      )
+      .addButton(async (button) => {
+        button.setButtonText("Confirm");
+        button.onClick(async () => {
+          new PasswordModal(this.app, this.plugin, newPassword).open();
+        });
+      });
 
     containerEl.createEl("h2", { text: "Debug" });
 
