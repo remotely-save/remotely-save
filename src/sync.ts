@@ -190,7 +190,8 @@ const ensembleMixedStates = async (
 
 const getOperation = (
   origRecord: FileOrFolderMixedState,
-  inplace: boolean = false
+  inplace: boolean = false,
+  password: string = ""
 ) => {
   let r = origRecord;
   if (!inplace) {
@@ -238,6 +239,7 @@ const getOperation = (
     r.mtime_remote !== undefined &&
     r.mtime_local !== undefined &&
     r.mtime_remote === r.mtime_local &&
+    password === "" &&
     r.size_local === r.size_remote
   ) {
     r.decision = "skip";
@@ -248,17 +250,31 @@ const getOperation = (
     r.mtime_remote !== undefined &&
     r.mtime_local !== undefined &&
     r.mtime_remote === r.mtime_local &&
+    password === "" &&
     r.size_local !== r.size_remote
   ) {
     r.decision = "upload_clearhist";
     r.decision_branch = 4;
+  } else if (
+    r.exist_remote &&
+    r.exist_local &&
+    r.mtime_remote !== undefined &&
+    r.mtime_local !== undefined &&
+    r.mtime_remote === r.mtime_local &&
+    password !== ""
+  ) {
+    // if we have encryption,
+    // the size is always unequal
+    // only mtime(s) are reliable
+    r.decision = "skip";
+    r.decision_branch = 5;
   } else if (r.exist_remote && r.exist_local && r.mtime_local === undefined) {
     // this must be a folder!
     if (!r.key.endsWith("/")) {
       throw Error(`${r.key} is not a folder but lacks local mtime`);
     }
     r.decision = "skip";
-    r.decision_branch = 5;
+    r.decision_branch = 6;
   } else if (
     r.exist_remote &&
     !r.exist_local &&
@@ -268,7 +284,7 @@ const getOperation = (
     r.mtime_remote >= r.delete_time_local
   ) {
     r.decision = "download_clearhist";
-    r.decision_branch = 6;
+    r.decision_branch = 7;
   } else if (
     r.exist_remote &&
     !r.exist_local &&
@@ -278,7 +294,7 @@ const getOperation = (
     r.mtime_remote < r.delete_time_local
   ) {
     r.decision = "delremote_clearhist";
-    r.decision_branch = 7;
+    r.decision_branch = 8;
   } else if (
     r.exist_remote &&
     !r.exist_local &&
@@ -287,10 +303,10 @@ const getOperation = (
     r.delete_time_local == undefined
   ) {
     r.decision = "download";
-    r.decision_branch = 8;
+    r.decision_branch = 9;
   } else if (!r.exist_remote && r.exist_local && r.mtime_remote === undefined) {
     r.decision = "upload_clearhist";
-    r.decision_branch = 9;
+    r.decision_branch = 10;
   } else if (
     !r.exist_remote &&
     !r.exist_local &&
@@ -298,7 +314,7 @@ const getOperation = (
     r.mtime_local === undefined
   ) {
     r.decision = "clearhist";
-    r.decision_branch = 10;
+    r.decision_branch = 11;
   }
 
   return r;
