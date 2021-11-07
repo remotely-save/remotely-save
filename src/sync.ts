@@ -335,7 +335,7 @@ export const getSyncPlan = async (
     password
   );
   for (const [key, val] of Object.entries(mixedStates)) {
-    getOperation(val, true);
+    getOperation(val, true, password);
   }
   const plan = {
     ts: Date.now(),
