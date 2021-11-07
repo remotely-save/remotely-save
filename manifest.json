@@ -1,7 +1,7 @@
 {
   "id": "obsdian-save-remote",
   "name": "Save remote",
-  "version": "0.0.7",
+  "version": "0.0.8",
   "minAppVersion": "0.12.15",
   "description": "This is yet another plugin allowing users to sync notes between local device and the cloud.",
   "author": "fyears",
