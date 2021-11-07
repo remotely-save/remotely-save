@@ -205,13 +205,16 @@ export class PasswordModal extends Modal {
     contentEl.createEl("p", { text: "Empty means no password." });
 
     contentEl.createEl("p", {
-      text: "Attention 1/3: The password setting itself is stored in PLAIN TEXT LOCALLY (because the plugin needs to use the password to encrypt the files) (and the password would not be sent to remote by this plugin).",
+      text: "Attention 1/4: The password setting itself is stored in PLAIN TEXT LOCALLY (because the plugin needs to use the password to encrypt the files) (and the password would not be sent to remote by this plugin).",
     });
     contentEl.createEl("p", {
-      text: "Attention 2/3: If you change the password. You should make sure the remote service (s3/webdav/...) IS EMPTY, or REMOTE FILES WERE ENCRYPTED BY THAT NEW PASSWORD. OTHERWISE SOMETHING BAD WOULD HAPPEN!",
+      text: "Attention 2/4: The file contents are encrypted using openssl format. BUT, some metadata such as file sizes and directory structures are not encrypted or can be easily guessed.",
     });
     contentEl.createEl("p", {
-      text: "Attention 3/3: The longer the password, the better.",
+      text: "Attention 3/4: If you change the password. You should make sure the remote service (s3/webdav/...) IS EMPTY, or REMOTE FILES WERE ENCRYPTED BY THAT NEW PASSWORD. OTHERWISE SOMETHING BAD WOULD HAPPEN!",
+    });
+    contentEl.createEl("p", {
+      text: "Attention 4/4: The longer the password, the better.",
     });
 
     new Setting(contentEl)
