@@ -11,7 +11,11 @@ import {
   TFolder,
 } from "obsidian";
 import * as CodeMirror from "codemirror";
-import { clearAllSyncPlanRecords, DatabaseConnection } from "./localdb";
+import {
+  clearAllSyncPlanRecords,
+  clearAllSyncMetaMapping,
+  DatabaseConnection,
+} from "./localdb";
 import {
   prepareDBs,
   destroyDBs,
@@ -316,6 +320,26 @@ class SaveRemoteSettingTab extends PluginSettingTab {
         button.onClick(async () => {
           await clearAllSyncPlanRecords(this.plugin.db);
           new Notice("sync plans history (in db) deleted");
+        });
+      });
+
+    const syncMappingDiv = containerEl.createEl("div");
+    syncMappingDiv.createEl("p", {
+      text: "Sync mappings history stores the actual LOCAL last modified time of the REMOTE objects.",
+    });
+
+    syncMappingDiv.createEl("p", {
+      text: "If the sync mappings history are deleted, unnecessary data exchanges may occur in next-time syncing, because whether a remote object and local object with same name are equivalent or not could not be determined correctly by comparing last modified times.",
+    });
+
+    new Setting(containerEl)
+      .setName("delete sync mappings history in db")
+      .setDesc("delete sync mappings history in db")
+      .addButton(async (button) => {
+        button.setButtonText("Delete Sync Mappings");
+        button.onClick(async () => {
+          await clearAllSyncMetaMapping(this.plugin.db);
+          new Notice("sync mappings history (in local db) deleted");
         });
       });
   }

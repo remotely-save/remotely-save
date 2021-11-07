@@ -276,6 +276,11 @@ export const getSyncMetaMappingByRemoteKeyS3 = async (
   throw Error("something bad in sync meta mapping!");
 };
 
+export const clearAllSyncMetaMapping = async (db: lf.DatabaseConnection) => {
+  const tbl = db.getSchema().table(DEFAULT_TBL_SYNC_MAPPING);
+  await db.delete().from(tbl).exec();
+};
+
 export const insertSyncPlanRecord = async (
   db: lf.DatabaseConnection,
   syncPlan: SyncPlanType
