@@ -5,9 +5,28 @@ import { base32 } from "rfc4648";
 
 export type SUPPORTED_SERVICES_TYPE = "s3" | "webdav" | "ftp";
 
-export const ignoreHiddenFiles = (item: string) => {
-  const basename = path.basename(item);
-  return basename === "." || basename[0] !== ".";
+/**
+ * If any part of the file starts with '.' or '_' then it's a hidden file.
+ * @param item
+ * @param loose
+ * @returns
+ */
+export const isHiddenPath = (item: string, loose: boolean = true) => {
+  const k = path.posix.normalize(item); // TODO: only unix path now
+  const k2 = k.split("/"); // TODO: only unix path now
+  // console.log(k2)
+  for (const singlePart of k2) {
+    if (singlePart === "." || singlePart === ".." || singlePart === "") {
+      continue;
+    }
+    if (singlePart[0] === ".") {
+      return true;
+    }
+    if (loose && singlePart[0] === "_") {
+      return true;
+    }
+  }
+  return false;
 };
 
 /**
