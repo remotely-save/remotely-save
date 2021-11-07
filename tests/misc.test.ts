@@ -4,7 +4,7 @@ import { expect } from "chai";
 
 import * as misc from '../src/misc'
 
-describe("Misc tests", () => {
+describe("Misc: hidden file", () => {
   it("should find hidden file correctly", () => {
     let item = '';
     expect(misc.isHiddenPath(item)).to.be.false;
