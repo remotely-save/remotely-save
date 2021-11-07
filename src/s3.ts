@@ -10,6 +10,7 @@ import {
   GetObjectCommand,
   DeleteObjectCommand,
   HeadObjectCommand,
+  HeadBucketCommand,
 } from "@aws-sdk/client-s3";
 
 import type { _Object } from "@aws-sdk/client-s3";
@@ -264,5 +265,33 @@ export const deleteFromRemote = async (
     // TODO
   } else {
     // pass
+  }
+};
+
+/**
+ * Check the config of S3 by heading bucket
+ * https://stackoverflow.com/questions/50842835
+ * @param s3Client
+ * @param s3Config
+ * @returns
+ */
+export const checkS3Connectivity = async (
+  s3Client: S3Client,
+  s3Config: S3Config
+) => {
+  try {
+    const results = await s3Client.send(
+      new HeadBucketCommand({ Bucket: s3Config.s3BucketName })
+    );
+    if (
+      results === undefined ||
+      results.$metadata === undefined ||
+      results.$metadata.httpStatusCode === undefined
+    ) {
+      return false;
+    }
+    return results.$metadata.httpStatusCode === 200;
+  } catch (err) {
+    return false;
   }
 };

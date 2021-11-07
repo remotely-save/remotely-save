@@ -24,7 +24,13 @@ import {
 
 import type { SyncStatusType } from "./sync";
 import { getSyncPlan, doActualSync } from "./sync";
-import { DEFAULT_S3_CONFIG, getS3Client, listFromRemote, S3Config } from "./s3";
+import {
+  DEFAULT_S3_CONFIG,
+  getS3Client,
+  listFromRemote,
+  S3Config,
+  checkS3Connectivity,
+} from "./s3";
 import { exportSyncPlansToFiles } from "./debugMode";
 
 interface SaveRemotePluginSettings {
@@ -246,6 +252,26 @@ class SaveRemoteSettingTab extends PluginSettingTab {
             await this.plugin.saveSettings();
           })
       );
+
+    new Setting(containerEl)
+      .setName("check connectivity")
+      .setDesc("check connectivity")
+      .addButton(async (button) => {
+        button.setButtonText("Check");
+        button.onClick(async () => {
+          new Notice("Checking...");
+          const s3Client = getS3Client(this.plugin.settings.s3);
+          const res = await checkS3Connectivity(
+            s3Client,
+            this.plugin.settings.s3
+          );
+          if (res) {
+            new Notice("Great! The bucket can be accessed.");
+          } else {
+            new Notice("The S3 bucket cannot be reached.");
+          }
+        });
+      });
 
     containerEl.createEl("h2", { text: "General" });
     new Setting(containerEl)
