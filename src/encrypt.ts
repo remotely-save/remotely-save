@@ -8,6 +8,9 @@ import {
 
 const DEFAULT_ITER = 10000;
 
+// base32.stringify(Buffer.from('Salted__'))
+export const MAGIC_ENCRYPTED_PREFIX_BASE32 = "KNQWY5DFMRPV";
+
 const getKeyIVFromPassword = async (
   salt: Uint8Array,
   password: string,

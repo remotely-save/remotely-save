@@ -17,13 +17,18 @@ import {
   downloadFromRemote,
 } from "./s3";
 import { mkdirpInVault, SUPPORTED_SERVICES_TYPE, isHiddenPath } from "./misc";
-import { decryptBase32ToString, encryptStringToBase32 } from "./encrypt";
+import {
+  decryptBase32ToString,
+  encryptStringToBase32,
+  MAGIC_ENCRYPTED_PREFIX_BASE32,
+} from "./encrypt";
 
 export type SyncStatusType =
   | "idle"
   | "preparing"
   | "getting_remote_meta"
   | "getting_local_meta"
+  | "checking_password"
   | "generating_plan"
   | "syncing"
   | "finish";
@@ -60,6 +65,66 @@ export interface SyncPlanType {
   remoteType: SUPPORTED_SERVICES_TYPE;
   mixedStates: Record<string, FileOrFolderMixedState>;
 }
+
+export interface PasswordCheckType {
+  ok: boolean;
+  reason:
+    | "ok"
+    | "empty_remote"
+    | "remote_encrypted_local_no_password"
+    | "password_matched"
+    | "password_not_matched"
+    | "remote_not_encrypted_local_has_password"
+    | "no_password_both_sides";
+}
+
+export const isPasswordOk = async (
+  remote: S3ObjectType[],
+  password: string = ""
+) => {
+  if (remote === undefined || remote.length === 0) {
+    // remote empty
+    return {
+      ok: true,
+      reason: "empty_remote",
+    } as PasswordCheckType;
+  }
+  const santyCheckKey = remote[0].Key;
+  if (santyCheckKey.startsWith(MAGIC_ENCRYPTED_PREFIX_BASE32)) {
+    // this is encrypted!
+    // try to decrypt it using the provided password.
+    if (password === "") {
+      return {
+        ok: false,
+        reason: "remote_encrypted_local_no_password",
+      } as PasswordCheckType;
+    }
+    try {
+      const res = await decryptBase32ToString(santyCheckKey, password);
+      return {
+        ok: true,
+        reason: "password_matched",
+      } as PasswordCheckType;
+    } catch (error) {
+      return {
+        ok: false,
+        reason: "password_not_matched",
+      } as PasswordCheckType;
+    }
+  } else {
+    // it is not encrypted!
+    if (password !== "") {
+      return {
+        ok: false,
+        reason: "remote_not_encrypted_local_has_password",
+      } as PasswordCheckType;
+    }
+    return {
+      ok: true,
+      reason: "no_password_both_sides",
+    } as PasswordCheckType;
+  }
+};
 
 const ensembleMixedStates = async (
   remote: S3ObjectType[],

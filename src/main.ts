@@ -26,8 +26,8 @@ import {
   insertSyncPlanRecord,
 } from "./localdb";
 
-import type { SyncStatusType } from "./sync";
-import { getSyncPlan, doActualSync } from "./sync";
+import type { SyncStatusType, PasswordCheckType } from "./sync";
+import { isPasswordOk, getSyncPlan, doActualSync } from "./sync";
 import {
   DEFAULT_S3_CONFIG,
   getS3Client,
@@ -98,7 +98,17 @@ export default class SaveRemotePlugin extends Plugin {
         // console.log(local);
         // console.log(localHistory);
 
-        new Notice("4/6 Starting to generate sync plan.");
+        new Notice("4/7 Checking password correct or not.");
+        this.syncStatus = "checking_password";
+        const passwordCheckResult = await isPasswordOk(
+          remoteRsp.Contents,
+          this.settings.password
+        );
+        if (!passwordCheckResult.ok) {
+          throw Error(passwordCheckResult.reason);
+        }
+
+        new Notice("5/7 Starting to generate sync plan.");
         this.syncStatus = "generating_plan";
         const syncPlan = await getSyncPlan(
           remoteRsp.Contents,
@@ -113,7 +123,7 @@ export default class SaveRemotePlugin extends Plugin {
         // The operations above are read only and kind of safe.
         // The operations below begins to write or delete (!!!) something.
 
-        new Notice("5/6 Save Remote Sync data exchanging!");
+        new Notice("6/7 Save Remote Sync data exchanging!");
 
         this.syncStatus = "syncing";
         await doActualSync(
@@ -125,7 +135,7 @@ export default class SaveRemotePlugin extends Plugin {
           this.settings.password
         );
 
-        new Notice("6/6 Save Remote finish!");
+        new Notice("7/7 Save Remote finish!");
         this.syncStatus = "finish";
         this.syncStatus = "idle";
       } catch (error) {
@@ -133,7 +143,7 @@ export default class SaveRemotePlugin extends Plugin {
         console.log(msg);
         console.log(error);
         new Notice(msg);
-        new Notice(error);
+        new Notice(error.message);
         this.syncStatus = "idle";
       }
     });
