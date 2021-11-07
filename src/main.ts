@@ -289,6 +289,14 @@ class SaveRemoteSettingTab extends PluginSettingTab {
 
     containerEl.createEl("h2", { text: "Debug" });
 
+    const syncPlanDiv = containerEl.createEl("div");
+    syncPlanDiv.createEl("p", {
+      text: "Sync plans are created every time after you trigger sync and before the actual sync.",
+    });
+    syncPlanDiv.createEl("p", {
+      text: "They are useful to know what would actually happen in those sync.",
+    });
+
     new Setting(containerEl)
       .setName("export sync plans")
       .setDesc("export sync plans")
