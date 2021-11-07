@@ -11,7 +11,7 @@ import {
   TFolder,
 } from "obsidian";
 import * as CodeMirror from "codemirror";
-import type { DatabaseConnection } from "./localdb";
+import { clearAllSyncPlanRecords, DatabaseConnection } from "./localdb";
 import {
   prepareDBs,
   destroyDBs,
@@ -19,11 +19,13 @@ import {
   insertDeleteRecord,
   insertRenameRecord,
   getAllDeleteRenameRecords,
+  insertSyncPlanRecord,
 } from "./localdb";
 
 import type { SyncStatusType } from "./sync";
 import { getSyncPlan, doActualSync } from "./sync";
 import { DEFAULT_S3_CONFIG, getS3Client, listFromRemote, S3Config } from "./s3";
+import { exportSyncPlansToFiles } from "./debugMode";
 
 interface SaveRemotePluginSettings {
   s3?: S3Config;
@@ -95,6 +97,7 @@ export default class SaveRemotePlugin extends Plugin {
           this.settings.password
         );
         console.log(syncPlan.mixedStates); // for debugging
+        await insertSyncPlanRecord(this.db, syncPlan);
 
         // The operations above are read only and kind of safe.
         // The operations below begins to write or delete (!!!) something.
@@ -259,5 +262,27 @@ class SaveRemoteSettingTab extends PluginSettingTab {
       );
 
     containerEl.createEl("h2", { text: "Debug" });
+
+    new Setting(containerEl)
+      .setName("export sync plans")
+      .setDesc("export sync plans")
+      .addButton(async (button) => {
+        button.setButtonText("Export");
+        button.onClick(async () => {
+          await exportSyncPlansToFiles(this.plugin.db, this.app.vault);
+          new Notice("sync plans history exported");
+        });
+      });
+
+    new Setting(containerEl)
+      .setName("delete sync plans history in db")
+      .setDesc("delete sync plans history in db")
+      .addButton(async (button) => {
+        button.setButtonText("Delete History");
+        button.onClick(async () => {
+          await clearAllSyncPlanRecords(this.plugin.db);
+          new Notice("sync plans history (in db) deleted");
+        });
+      });
   }
 }

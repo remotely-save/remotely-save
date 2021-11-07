@@ -2,12 +2,14 @@ import * as lf from "lovefield-ts/dist/es6/lf.js";
 import { TAbstractFile, TFile, TFolder } from "obsidian";
 
 import type { SUPPORTED_SERVICES_TYPE } from "./misc";
+import type { SyncPlanType } from "./sync";
 
 export type DatabaseConnection = lf.DatabaseConnection;
 
 export const DEFAULT_DB_NAME = "saveremotedb";
 export const DEFAULT_TBL_DELETE_HISTORY = "filefolderoperationhistory";
 export const DEFAULT_TBL_SYNC_MAPPING = "syncmetadatahistory";
+export const DEFAULT_SYNC_PLANS_HISTORY = "syncplanshistory";
 
 export interface FileFolderHistoryRecord {
   key: string;
@@ -30,6 +32,12 @@ export interface SyncMetaMappingRecord {
   remote_extra_key: string;
   remote_type: SUPPORTED_SERVICES_TYPE;
   key_type: "folder" | "file";
+}
+
+interface SyncPlanRecord {
+  ts: number;
+  remote_type: string;
+  sync_plan: string;
 }
 
 export const prepareDBs = async () => {
@@ -67,6 +75,15 @@ export const prepareDBs = async () => {
     ])
     .addPrimaryKey(["id"], true)
     .addIndex("idxkey", ["local_key", "remote_key"]);
+
+  schemaBuilder
+    .createTable(DEFAULT_SYNC_PLANS_HISTORY)
+    .addColumn("id", lf.Type.INTEGER)
+    .addColumn("ts", lf.Type.INTEGER)
+    .addColumn("remote_type", lf.Type.STRING)
+    .addColumn("sync_plan", lf.Type.STRING)
+    .addPrimaryKey(["id"], true)
+    .addIndex("tskey", ["ts"]);
 
   const db = await schemaBuilder.connect({
     storeType: lf.DataStoreType.INDEXED_DB,
@@ -257,4 +274,38 @@ export const getSyncMetaMappingByRemoteKeyS3 = async (
   }
 
   throw Error("something bad in sync meta mapping!");
+};
+
+export const insertSyncPlanRecord = async (
+  db: lf.DatabaseConnection,
+  syncPlan: SyncPlanType
+) => {
+  const schema = db.getSchema().table(DEFAULT_SYNC_PLANS_HISTORY);
+  const row = schema.createRow({
+    ts: syncPlan.ts,
+    remote_type: syncPlan.remoteType,
+    sync_plan: JSON.stringify(syncPlan, null, 2),
+  } as SyncPlanRecord);
+  await db.insertOrReplace().into(schema).values([row]).exec();
+};
+
+export const clearAllSyncPlanRecords = async (db: lf.DatabaseConnection) => {
+  const tbl = db.getSchema().table(DEFAULT_SYNC_PLANS_HISTORY);
+  await db.delete().from(tbl).exec();
+};
+
+export const readAllSyncPlanRecordTexts = async (db: lf.DatabaseConnection) => {
+  const schema = db.getSchema().table(DEFAULT_SYNC_PLANS_HISTORY);
+
+  const records = (await db
+    .select()
+    .from(schema)
+    .orderBy(schema.col("ts"), lf.Order.DESC)
+    .exec()) as SyncPlanRecord[];
+
+  if (records === undefined) {
+    return [] as string[];
+  } else {
+    return records.map((x) => x.sync_plan);
+  }
 };

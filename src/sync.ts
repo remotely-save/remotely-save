@@ -16,7 +16,7 @@ import {
   deleteFromRemote,
   downloadFromRemote,
 } from "./s3";
-import { mkdirpInVault, SUPPORTED_SERVICES_TYPE } from "./misc";
+import { mkdirpInVault, SUPPORTED_SERVICES_TYPE, isHiddenPath } from "./misc";
 import { decryptBase32ToString, encryptStringToBase32 } from "./encrypt";
 
 export type SyncStatusType =
@@ -55,7 +55,7 @@ interface FileOrFolderMixedState {
   remote_encrypted_key?: string;
 }
 
-interface SyncPlanType {
+export interface SyncPlanType {
   ts: number;
   remoteType: SUPPORTED_SERVICES_TYPE;
   mixedStates: Record<string, FileOrFolderMixedState>;
@@ -103,6 +103,9 @@ const ensembleMixedStates = async (
           remote_encrypted_key: remoteEncryptedKey,
         };
       }
+      if (isHiddenPath(key)) {
+        continue;
+      }
       if (results.hasOwnProperty(key)) {
         results[key].key = r.key;
         results[key].exist_remote = r.exist_remote;
@@ -141,6 +144,9 @@ const ensembleMixedStates = async (
       throw Error(`unexpected ${entry}`);
     }
 
+    if (isHiddenPath(key)) {
+      continue;
+    }
     if (results.hasOwnProperty(key)) {
       results[key].key = r.key;
       results[key].exist_local = r.exist_local;
@@ -168,6 +174,9 @@ const ensembleMixedStates = async (
       delete_time_local: entry.action_when,
     } as FileOrFolderMixedState;
 
+    if (isHiddenPath(key)) {
+      continue;
+    }
     if (results.hasOwnProperty(key)) {
       results[key].key = r.key;
       results[key].delete_time_local = r.delete_time_local;

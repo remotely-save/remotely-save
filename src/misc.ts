@@ -52,9 +52,12 @@ export const getFolderLevels = (x: string) => {
 };
 
 export const mkdirpInVault = async (thePath: string, vault: Vault) => {
+  console.log(thePath);
   const foldersToBuild = getFolderLevels(thePath);
+  console.log(foldersToBuild);
   for (const folder of foldersToBuild) {
     const r = await vault.adapter.exists(folder);
+    console.log(r);
     if (!r) {
       console.log(`mkdir ${folder}`);
       await vault.adapter.mkdir(folder);
