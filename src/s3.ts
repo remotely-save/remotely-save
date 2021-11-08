@@ -98,7 +98,7 @@ export const uploadToRemote = async (
         ContentType: contentType,
       })
     );
-    return await getRemoteMeta(s3Client, s3Config, fileOrFolderPath);
+    return await getRemoteMeta(s3Client, s3Config, uploadFile);
   } else {
     // file
     // we ignore isRecursively parameter here
