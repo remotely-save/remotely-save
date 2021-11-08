@@ -149,6 +149,9 @@ export const listFromRemote = async (
     if (rsp.$metadata.httpStatusCode !== 200) {
       throw Error("some thing bad while listing remote!");
     }
+    if (rsp.Contents === undefined) {
+      break;
+    }
     contents.push(...rsp.Contents);
 
     isTruncated = rsp.IsTruncated;
