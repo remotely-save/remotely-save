@@ -3,6 +3,7 @@ import { Readable } from "stream";
 
 import { Vault } from "obsidian";
 
+import { Upload } from "@aws-sdk/lib-storage";
 import {
   S3Client,
   ListObjectsV2Command,
@@ -115,14 +116,24 @@ export const uploadToRemote = async (
       remoteContent = await encryptArrayBuffer(localContent, password);
     }
     const body = arrayBufferToBuffer(remoteContent);
-    await s3Client.send(
-      new PutObjectCommand({
+
+    const upload = new Upload({
+      client: s3Client,
+      queueSize: 20, // concurrency
+      partSize: 5242880, // minimal 5MB by default
+      leavePartsOnError: false,
+      params: {
         Bucket: s3Config.s3BucketName,
         Key: uploadFile,
         Body: body,
         ContentType: contentType,
-      })
-    );
+      },
+    });
+    upload.on("httpUploadProgress", (progress) => {
+      // console.log(progress);
+    });
+    await upload.done();
+
     return await getRemoteMeta(s3Client, s3Config, uploadFile);
   }
 };
