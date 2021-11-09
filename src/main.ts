@@ -105,6 +105,7 @@ export default class SaveRemotePlugin extends Plugin {
           this.settings.password
         );
         if (!passwordCheckResult.ok) {
+          new Notice("something goes wrong while checking password");
           throw Error(passwordCheckResult.reason);
         }
 
