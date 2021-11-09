@@ -38,3 +38,4 @@ jobs:
           path: |
             main.js
             manifest.json
+            styles.css
