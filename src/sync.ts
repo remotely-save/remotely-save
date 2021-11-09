@@ -16,7 +16,12 @@ import {
   deleteFromRemote,
   downloadFromRemote,
 } from "./s3";
-import { mkdirpInVault, SUPPORTED_SERVICES_TYPE, isHiddenPath } from "./misc";
+import {
+  mkdirpInVault,
+  SUPPORTED_SERVICES_TYPE,
+  isHiddenPath,
+  isVaildText,
+} from "./misc";
 import {
   decryptBase32ToString,
   encryptStringToBase32,
@@ -74,6 +79,7 @@ export interface PasswordCheckType {
     | "remote_encrypted_local_no_password"
     | "password_matched"
     | "password_not_matched"
+    | "invalid_text_after_decryption"
     | "remote_not_encrypted_local_has_password"
     | "no_password_both_sides";
 }
@@ -101,10 +107,20 @@ export const isPasswordOk = async (
     }
     try {
       const res = await decryptBase32ToString(santyCheckKey, password);
-      return {
-        ok: true,
-        reason: "password_matched",
-      } as PasswordCheckType;
+
+      // additional test
+      // because iOS Safari bypasses decryption with wrong password!
+      if (isVaildText(res)) {
+        return {
+          ok: true,
+          reason: "password_matched",
+        } as PasswordCheckType;
+      } else {
+        return {
+          ok: false,
+          reason: "invalid_text_after_decryption",
+        } as PasswordCheckType;
+      }
     } catch (error) {
       return {
         ok: false,

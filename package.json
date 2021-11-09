@@ -31,7 +31,8 @@
     "typescript": "^4.4.4",
     "webdav-server": "^2.6.2",
     "webpack": "^5.58.2",
-    "webpack-cli": "^4.9.1"
+    "webpack-cli": "^4.9.1",
+    "xregexp": "^5.1.0"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.37.0",

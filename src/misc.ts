@@ -2,6 +2,7 @@ import { Vault } from "obsidian";
 import * as path from "path";
 
 import { base32 } from "rfc4648";
+import XRegExp from "XRegExp";
 
 export type SUPPORTED_SERVICES_TYPE = "s3" | "webdav" | "ftp";
 
@@ -110,4 +111,22 @@ export const hexStringToTypedArray = (hex: string) => {
 
 export const base64ToBase32 = (a: string) => {
   return base32.stringify(Buffer.from(a, "base64"));
+};
+
+/**
+ * iOS Safari could decrypt string with invalid password!
+ * So we need an extra way to test the decrypted result.
+ * One simple way is testing the result are "valid", printable chars or not.
+ *
+ * https://stackoverflow.com/questions/6198986
+ * https://www.regular-expressions.info/unicode.html
+ * Manual test shows that emojis like '🍎' match '\\p{Cs}',
+ * so we need to write the regrex in a form that \p{C} minus \p{Cs}
+ * @param a
+ */
+export const isVaildText = (a: string) => {
+  // If the regex matches, the string is invalid.
+  return !XRegExp("\\p{Cc}|\\p{Cf}|\\p{Co}|\\p{Cn}|\\p{Zl}|\\p{Zp}", "A").test(
+    a
+  );
 };
