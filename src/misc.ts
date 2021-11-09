@@ -2,7 +2,7 @@ import { Vault } from "obsidian";
 import * as path from "path";
 
 import { base32 } from "rfc4648";
-import XRegExp from "XRegExp";
+import XRegExp from "xregexp";
 
 export type SUPPORTED_SERVICES_TYPE = "s3" | "webdav" | "ftp";
 
