@@ -272,7 +272,7 @@ class RemotelySaveSettingTab extends PluginSettingTab {
     });
 
     s3Div.createEl("p", {
-      text: "You need to configure CORS to allow requests from origin app://obsidian.md",
+      text: "You need to configure CORS to allow requests from origin app://obsidian.md and capacitor://localhost",
     });
 
     s3Div.createEl("p", {
