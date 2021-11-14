@@ -257,9 +257,44 @@ class SaveRemoteSettingTab extends PluginSettingTab {
 
     containerEl.createEl("h1", { text: "Save Remote" });
 
-    containerEl.createEl("h2", { text: "S3" });
+    const s3Div = containerEl.createEl("div");
+    s3Div.createEl("h2", { text: "S3 (-compatible) Service" });
 
-    new Setting(containerEl)
+    s3Div.createEl("p", {
+      text: "You can use Amazon S3 or another S3-compatible service to sync your vault. Enter your bucket information below.",
+    });
+
+    s3Div.createEl("p", {
+      text: "Disclaimer: The infomation is stored in PLAIN TEXT locally. Other malicious/harmful/faulty plugins may or may not be able to read the info. If you see any unintentional access to your S3 bucket, please immediately delete the access key to stop further accessment.",
+      cls: "s3-disclaimer",
+    });
+
+    s3Div.createEl("p", {
+      text: "You need to configure CORS to allow requests from origin app://obsidian.md",
+    });
+
+    s3Div.createEl("p", {
+      text: "Some Amazon S3 official docs:",
+    });
+
+    const s3LinksUl = s3Div.createEl("div").createEl("ul");
+
+    s3LinksUl.createEl("li").createEl("a", {
+      href: "https://docs.aws.amazon.com/general/latest/gr/s3.html",
+      text: "Endpoint and region info",
+    });
+
+    s3LinksUl.createEl("li").createEl("a", {
+      href: "https://docs.aws.amazon.com/sdk-for-javascript/v3/developer-guide/getting-your-credentials.html",
+      text: "Access key ID and Secret access key info",
+    });
+
+    s3LinksUl.createEl("li").createEl("a", {
+      href: "https://docs.aws.amazon.com/AmazonS3/latest/userguide/enabling-cors-examples.html",
+      text: "Configuring CORS",
+    });
+
+    new Setting(s3Div)
       .setName("s3Endpoint")
       .setDesc("s3Endpoint")
       .addText((text) =>
@@ -272,7 +307,7 @@ class SaveRemoteSettingTab extends PluginSettingTab {
           })
       );
 
-    new Setting(containerEl)
+    new Setting(s3Div)
       .setName("s3Region")
       .setDesc("s3Region")
       .addText((text) =>
@@ -285,7 +320,7 @@ class SaveRemoteSettingTab extends PluginSettingTab {
           })
       );
 
-    new Setting(containerEl)
+    new Setting(s3Div)
       .setName("s3AccessKeyID")
       .setDesc("s3AccessKeyID")
       .addText((text) =>
@@ -298,7 +333,7 @@ class SaveRemoteSettingTab extends PluginSettingTab {
           })
       );
 
-    new Setting(containerEl)
+    new Setting(s3Div)
       .setName("s3SecretAccessKey")
       .setDesc("s3SecretAccessKey")
       .addText((text) =>
@@ -311,7 +346,7 @@ class SaveRemoteSettingTab extends PluginSettingTab {
           })
       );
 
-    new Setting(containerEl)
+    new Setting(s3Div)
       .setName("s3BucketName")
       .setDesc("s3BucketName")
       .addText((text) =>
@@ -324,7 +359,7 @@ class SaveRemoteSettingTab extends PluginSettingTab {
           })
       );
 
-    new Setting(containerEl)
+    new Setting(s3Div)
       .setName("check connectivity")
       .setDesc("check connectivity")
       .addButton(async (button) => {
@@ -344,10 +379,12 @@ class SaveRemoteSettingTab extends PluginSettingTab {
         });
       });
 
-    containerEl.createEl("h2", { text: "General" });
+    const generalDiv = containerEl.createEl("div");
+    generalDiv.createEl("h2", { text: "General" });
 
+    const passwordDiv = generalDiv.createEl("div");
     let newPassword = `${this.plugin.settings.password}`;
-    new Setting(containerEl)
+    new Setting(passwordDiv)
       .setName("encryption password")
       .setDesc(
         'Password for E2E encryption. Empty for no password. You need to click "Confirm".'
@@ -367,9 +404,9 @@ class SaveRemoteSettingTab extends PluginSettingTab {
         });
       });
 
-    containerEl.createEl("h2", { text: "Debug" });
-
-    const syncPlanDiv = containerEl.createEl("div");
+    const debugDiv = containerEl.createEl("div");
+    debugDiv.createEl("h2", { text: "Debug" });
+    const syncPlanDiv = debugDiv.createEl("div");
     syncPlanDiv.createEl("p", {
       text: "Sync plans are created every time after you trigger sync and before the actual sync. Useful to know what would actually happen in those sync.",
     });
@@ -396,7 +433,7 @@ class SaveRemoteSettingTab extends PluginSettingTab {
         });
       });
 
-    const syncMappingDiv = containerEl.createEl("div");
+    const syncMappingDiv = debugDiv.createEl("div");
     syncMappingDiv.createEl("p", {
       text: "Sync mappings history stores the actual LOCAL last modified time of the REMOTE objects. Clearing it may cause unnecessary data exchanges in next-time sync.",
     });
@@ -412,7 +449,7 @@ class SaveRemoteSettingTab extends PluginSettingTab {
         });
       });
 
-    const dbsResetDiv = containerEl.createEl("div");
+    const dbsResetDiv = debugDiv.createEl("div");
     syncMappingDiv.createEl("p", {
       text: "Reset local internal caches/databases (for debugging purposes). You would want to reload the plugin after resetting this. This option will not empty the {s3, password...} settings.",
     });
