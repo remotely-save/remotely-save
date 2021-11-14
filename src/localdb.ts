@@ -7,7 +7,7 @@ import type { SyncPlanType } from "./sync";
 export type LocalForage = typeof localforage;
 
 export const DEFAULT_DB_VERSION_NUMBER: number = 20211114;
-export const DEFAULT_DB_NAME = "saveremotedb";
+export const DEFAULT_DB_NAME = "remotelysavedb";
 export const DEFAULT_TBL_VERSION = "schemaversion";
 export const DEFAULT_TBL_DELETE_HISTORY = "filefolderoperationhistory";
 export const DEFAULT_TBL_SYNC_MAPPING = "syncmetadatahistory";

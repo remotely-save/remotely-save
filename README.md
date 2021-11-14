@@ -1,10 +1,10 @@
-# Save Remote
+# Remotely Save
 
-This is yet another sync plugin for Obsidian.
+This is yet another unofficial sync plugin for Obsidian.
 
 ## Download and Install
 
-[![BuildCI](https://github.com/fyears/obsidian-save-remote/actions/workflows/auto-build.yml/badge.svg)](https://github.com/fyears/obsidian-save-remote/actions/workflows/auto-build.yml)
+[![BuildCI](https://github.com/fyears/obsidian-remotely-save/actions/workflows/auto-build.yml/badge.svg)](https://github.com/fyears/obsidian-remotely-save/actions/workflows/auto-build.yml)
 
 Every artifacts are placed in the "Summary" under every successful builds.
 

@@ -34,24 +34,24 @@ import {
 } from "./s3";
 import { exportSyncPlansToFiles } from "./debugMode";
 
-interface SaveRemotePluginSettings {
+interface RemotelySavePluginSettings {
   s3?: S3Config;
   password?: string;
 }
 
-const DEFAULT_SETTINGS: SaveRemotePluginSettings = {
+const DEFAULT_SETTINGS: RemotelySavePluginSettings = {
   s3: DEFAULT_S3_CONFIG,
   password: "",
 };
 
-export default class SaveRemotePlugin extends Plugin {
-  settings: SaveRemotePluginSettings;
+export default class RemotelySavePlugin extends Plugin {
+  settings: RemotelySavePluginSettings;
   cm: CodeMirror.Editor;
   db: InternalDBs;
   syncStatus: SyncStatusType;
 
   async onload() {
-    console.log("loading plugin obsidian-save-remote");
+    console.log("loading plugin obsidian-remotely-save");
 
     await this.loadSettings();
 
@@ -71,15 +71,17 @@ export default class SaveRemotePlugin extends Plugin {
       })
     );
 
-    this.addRibbonIcon("switch", "Save Remote", async () => {
+    this.addRibbonIcon("switch", "Remotely Save", async () => {
       if (this.syncStatus !== "idle") {
-        new Notice(`Save Remote already running in stage ${this.syncStatus}!`);
+        new Notice(
+          `Remotely Save already running in stage ${this.syncStatus}!`
+        );
         return;
       }
 
       try {
         //console.log(`huh ${this.settings.password}`)
-        new Notice("1/6 Save Remote Sync Preparing");
+        new Notice("1/6 Remotely Save Sync Preparing");
         this.syncStatus = "preparing";
 
         new Notice("2/6 Starting to fetch remote meta data.");
@@ -121,7 +123,7 @@ export default class SaveRemotePlugin extends Plugin {
         // The operations above are read only and kind of safe.
         // The operations below begins to write or delete (!!!) something.
 
-        new Notice("6/7 Save Remote Sync data exchanging!");
+        new Notice("6/7 Remotely Save Sync data exchanging!");
 
         this.syncStatus = "syncing";
         await doActualSync(
@@ -133,11 +135,11 @@ export default class SaveRemotePlugin extends Plugin {
           this.settings.password
         );
 
-        new Notice("7/7 Save Remote finish!");
+        new Notice("7/7 Remotely Save finish!");
         this.syncStatus = "finish";
         this.syncStatus = "idle";
       } catch (error) {
-        const msg = `Save Remote error while ${this.syncStatus}`;
+        const msg = `Remotely Save error while ${this.syncStatus}`;
         console.log(msg);
         console.log(error);
         new Notice(msg);
@@ -146,7 +148,7 @@ export default class SaveRemotePlugin extends Plugin {
       }
     });
 
-    this.addSettingTab(new SaveRemoteSettingTab(this.app, this));
+    this.addSettingTab(new RemotelySaveSettingTab(this.app, this));
 
     this.registerCodeMirror((cm: CodeMirror.Editor) => {
       this.cm = cm;
@@ -163,7 +165,7 @@ export default class SaveRemotePlugin extends Plugin {
   }
 
   onunload() {
-    console.log("unloading plugin obsidian-save-remote");
+    console.log("unloading plugin obsidian-remotely-save");
     this.destroyDBs();
   }
 
@@ -185,9 +187,9 @@ export default class SaveRemotePlugin extends Plugin {
 }
 
 export class PasswordModal extends Modal {
-  plugin: SaveRemotePlugin;
+  plugin: RemotelySavePlugin;
   newPassword: string;
-  constructor(app: App, plugin: SaveRemotePlugin, newPassword: string) {
+  constructor(app: App, plugin: RemotelySavePlugin, newPassword: string) {
     super(app);
     this.plugin = plugin;
     this.newPassword = newPassword;
@@ -242,10 +244,10 @@ export class PasswordModal extends Modal {
   }
 }
 
-class SaveRemoteSettingTab extends PluginSettingTab {
-  plugin: SaveRemotePlugin;
+class RemotelySaveSettingTab extends PluginSettingTab {
+  plugin: RemotelySavePlugin;
 
-  constructor(app: App, plugin: SaveRemotePlugin) {
+  constructor(app: App, plugin: RemotelySavePlugin) {
     super(app, plugin);
     this.plugin = plugin;
   }
@@ -255,7 +257,7 @@ class SaveRemoteSettingTab extends PluginSettingTab {
 
     containerEl.empty();
 
-    containerEl.createEl("h1", { text: "Save Remote" });
+    containerEl.createEl("h1", { text: "Remotely Save" });
 
     const s3Div = containerEl.createEl("div");
     s3Div.createEl("h2", { text: "S3 (-compatible) Service" });

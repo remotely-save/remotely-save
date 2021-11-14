@@ -1,9 +1,9 @@
 {
-  "id": "obsidian-save-remote",
-  "name": "Save remote",
+  "id": "obsidian-remotely-Save",
+  "name": "Remotely Save",
   "version": "0.0.15",
   "minAppVersion": "0.12.15",
-  "description": "This is yet another plugin allowing users to sync notes between local device and the cloud.",
+  "description": "Yet another unofficial plugin allowing users to sync notes between local device and the cloud service.",
   "author": "fyears",
   "authorUrl": "https://github.com/fyears",
   "isDesktopOnly": false
