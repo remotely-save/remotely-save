@@ -83,10 +83,21 @@ export const prepareDBs = async () => {
 };
 
 export const destroyDBs = async () => {
-  await localforage.dropInstance({
-    name: DEFAULT_DB_NAME,
-  });
-  console.log("db deleted");
+  // await localforage.dropInstance({
+  //   name: DEFAULT_DB_NAME,
+  // });
+  // console.log("db deleted");
+  const req = indexedDB.deleteDatabase(DEFAULT_DB_NAME);
+  req.onsuccess = (event) => {
+    console.log("db deleted");
+  };
+  req.onblocked = (event) => {
+    console.warn("trying to delete db but it was blocked");
+  };
+  req.onerror = (event) => {
+    console.error("tried to delete db but something bad!");
+    console.error(event);
+  };
 };
 
 const migrateDBs = async (db: InternalDBs, oldVer: number, newVer: number) => {
