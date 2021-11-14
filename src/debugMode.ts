@@ -1,22 +1,14 @@
 import { TAbstractFile, TFolder, TFile, Vault } from "obsidian";
 
-import * as lf from "lovefield-ts/dist/es6/lf.js";
-
 import type { SyncPlanType } from "./sync";
-import {
-  insertSyncPlanRecord,
-  clearAllSyncPlanRecords,
-  readAllSyncPlanRecordTexts,
-} from "./localdb";
+import { readAllSyncPlanRecordTexts } from "./localdb";
+import type { InternalDBs } from "./localdb";
 import { mkdirpInVault } from "./misc";
 
 const DEFAULT_DEBUG_FOLDER = "_debug_save_remote/";
 const DEFAULT_SYNC_PLANS_HISTORY_FILE_PREFIX = "sync_plans_hist_exported_on_";
 
-export const exportSyncPlansToFiles = async (
-  db: lf.DatabaseConnection,
-  vault: Vault
-) => {
+export const exportSyncPlansToFiles = async (db: InternalDBs, vault: Vault) => {
   console.log("exporting");
   await mkdirpInVault(DEFAULT_DEBUG_FOLDER, vault);
   const records = await readAllSyncPlanRecordTexts(db);

@@ -1,14 +1,14 @@
 import { TAbstractFile, TFolder, TFile, Vault } from "obsidian";
 
 import { S3Client } from "@aws-sdk/client-s3";
-import * as lf from "lovefield-ts/dist/es6/lf.js";
 
 import {
   clearDeleteRenameHistoryOfKey,
-  FileFolderHistoryRecord,
   upsertSyncMetaMappingDataS3,
   getSyncMetaMappingByRemoteKeyS3,
 } from "./localdb";
+import type { FileFolderHistoryRecord, InternalDBs } from "./localdb";
+
 import {
   S3Config,
   S3ObjectType,
@@ -146,7 +146,7 @@ const ensembleMixedStates = async (
   remote: S3ObjectType[],
   local: TAbstractFile[],
   deleteHistory: FileFolderHistoryRecord[],
-  db: lf.DatabaseConnection,
+  db: InternalDBs,
   password: string = ""
 ) => {
   const results = {} as Record<string, FileOrFolderMixedState>;
@@ -167,12 +167,12 @@ const ensembleMixedStates = async (
 
       let r = {} as FileOrFolderMixedState;
       if (backwardMapping !== undefined) {
-        key = backwardMapping.local_key;
+        key = backwardMapping.localKey;
         r = {
           key: key,
           exist_remote: true,
-          mtime_remote: backwardMapping.local_mtime,
-          size_remote: backwardMapping.local_size,
+          mtime_remote: backwardMapping.localMtime,
+          size_remote: backwardMapping.localSize,
           remote_encrypted_key: remoteEncryptedKey,
         };
       } else {
@@ -240,11 +240,11 @@ const ensembleMixedStates = async (
 
   for (const entry of deleteHistory) {
     let key = entry.key;
-    if (entry.key_type === "folder") {
+    if (entry.keyType === "folder") {
       if (!entry.key.endsWith("/")) {
         key = `${entry.key}/`;
       }
-    } else if (entry.key_type === "file") {
+    } else if (entry.keyType === "file") {
       // pass
     } else {
       throw Error(`unexpected ${entry}`);
@@ -252,7 +252,7 @@ const ensembleMixedStates = async (
 
     const r = {
       key: key,
-      delete_time_local: entry.action_when,
+      delete_time_local: entry.actionWhen,
     } as FileOrFolderMixedState;
 
     if (isHiddenPath(key)) {
@@ -405,7 +405,7 @@ export const getSyncPlan = async (
   remote: S3ObjectType[],
   local: TAbstractFile[],
   deleteHistory: FileFolderHistoryRecord[],
-  db: lf.DatabaseConnection,
+  db: InternalDBs,
   password: string = ""
 ) => {
   const mixedStates = await ensembleMixedStates(
@@ -429,7 +429,7 @@ export const getSyncPlan = async (
 export const doActualSync = async (
   s3Client: S3Client,
   s3Config: S3Config,
-  db: lf.DatabaseConnection,
+  db: InternalDBs,
   vault: Vault,
   syncPlan: SyncPlanType,
   password: string = ""

@@ -12,19 +12,16 @@ import {
 } from "obsidian";
 import * as CodeMirror from "codemirror";
 import {
-  clearAllSyncPlanRecords,
-  clearAllSyncMetaMapping,
-  DatabaseConnection,
-} from "./localdb";
-import {
   prepareDBs,
   destroyDBs,
   loadDeleteRenameHistoryTable,
+  clearAllSyncPlanRecords,
+  clearAllSyncMetaMapping,
   insertDeleteRecord,
   insertRenameRecord,
-  getAllDeleteRenameRecords,
   insertSyncPlanRecord,
 } from "./localdb";
+import type { InternalDBs } from "./localdb";
 
 import type { SyncStatusType, PasswordCheckType } from "./sync";
 import { isPasswordOk, getSyncPlan, doActualSync } from "./sync";
@@ -50,7 +47,7 @@ const DEFAULT_SETTINGS: SaveRemotePluginSettings = {
 export default class SaveRemotePlugin extends Plugin {
   settings: SaveRemotePluginSettings;
   cm: CodeMirror.Editor;
-  db: DatabaseConnection;
+  db: InternalDBs;
   syncStatus: SyncStatusType;
 
   async onload() {

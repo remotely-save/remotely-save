@@ -1,12 +1,14 @@
-import * as lf from "lovefield-ts/dist/es6/lf.js";
+import localforage from "localforage";
 import { TAbstractFile, TFile, TFolder } from "obsidian";
 
 import type { SUPPORTED_SERVICES_TYPE } from "./misc";
 import type { SyncPlanType } from "./sync";
 
-export type DatabaseConnection = lf.DatabaseConnection;
+export type LocalForage = typeof localforage;
 
+export const DEFAULT_DB_VERSION_NUMBER: number = 20211114;
 export const DEFAULT_DB_NAME = "saveremotedb";
+export const DEFAULT_TBL_VERSION = "schemaversion";
 export const DEFAULT_TBL_DELETE_HISTORY = "filefolderoperationhistory";
 export const DEFAULT_TBL_SYNC_MAPPING = "syncmetadatahistory";
 export const DEFAULT_SYNC_PLANS_HISTORY = "syncplanshistory";
@@ -16,128 +18,105 @@ export interface FileFolderHistoryRecord {
   ctime: number;
   mtime: number;
   size: number;
-  action_when: number;
-  action_type: "delete" | "rename";
-  key_type: "folder" | "file";
-  rename_to: string;
+  actionWhen: number;
+  actionType: "delete" | "rename";
+  keyType: "folder" | "file";
+  renameTo: string;
 }
 
-export interface SyncMetaMappingRecord {
-  local_key: string;
-  remote_key: string;
-  local_size: number;
-  remote_size: number;
-  local_mtime: number;
-  remote_mtime: number;
-  remote_extra_key: string;
-  remote_type: SUPPORTED_SERVICES_TYPE;
-  key_type: "folder" | "file";
+interface SyncMetaMappingRecord {
+  localKey: string;
+  remoteKey: string;
+  localSize: number;
+  remoteSize: number;
+  localMtime: number;
+  remoteMtime: number;
+  remoteExtraKey: string;
+  remoteType: SUPPORTED_SERVICES_TYPE;
+  keyType: "folder" | "file";
 }
 
 interface SyncPlanRecord {
   ts: number;
-  remote_type: string;
-  sync_plan: string;
+  remoteType: string;
+  syncPlan: string;
+}
+
+export interface InternalDBs {
+  versionTbl: LocalForage;
+  deleteHistoryTbl: LocalForage;
+  syncMappingTbl: LocalForage;
+  syncPlansTbl: LocalForage;
 }
 
 export const prepareDBs = async () => {
-  const schemaBuilder = lf.schema.create(DEFAULT_DB_NAME, 1);
-  schemaBuilder
-    .createTable(DEFAULT_TBL_DELETE_HISTORY)
-    .addColumn("id", lf.Type.INTEGER)
-    .addColumn("key", lf.Type.STRING)
-    .addColumn("ctime", lf.Type.INTEGER)
-    .addColumn("mtime", lf.Type.INTEGER)
-    .addColumn("size", lf.Type.INTEGER)
-    .addColumn("action_when", lf.Type.INTEGER)
-    .addColumn("action_type", lf.Type.STRING)
-    .addColumn("key_type", lf.Type.STRING)
-    .addPrimaryKey(["id"], true)
-    .addIndex("idxKey", ["key"]);
+  const db = {
+    versionTbl: localforage.createInstance({
+      name: DEFAULT_DB_NAME,
+      storeName: DEFAULT_TBL_VERSION,
+    }),
+    deleteHistoryTbl: localforage.createInstance({
+      name: DEFAULT_DB_NAME,
+      storeName: DEFAULT_TBL_DELETE_HISTORY,
+    }),
+    syncMappingTbl: localforage.createInstance({
+      name: DEFAULT_DB_NAME,
+      storeName: DEFAULT_TBL_SYNC_MAPPING,
+    }),
+    syncPlansTbl: localforage.createInstance({
+      name: DEFAULT_DB_NAME,
+      storeName: DEFAULT_SYNC_PLANS_HISTORY,
+    }),
+  } as InternalDBs;
 
-  schemaBuilder
-    .createTable(DEFAULT_TBL_SYNC_MAPPING)
-    .addColumn("id", lf.Type.INTEGER)
-    .addColumn("local_key", lf.Type.STRING)
-    .addColumn("remote_key", lf.Type.STRING)
-    .addColumn("local_size", lf.Type.INTEGER)
-    .addColumn("remote_size", lf.Type.INTEGER)
-    .addColumn("local_mtime", lf.Type.INTEGER)
-    .addColumn("remote_mtime", lf.Type.INTEGER)
-    .addColumn("key_type", lf.Type.STRING)
-    .addColumn("remote_extra_key", lf.Type.STRING)
-    .addColumn("remote_type", lf.Type.STRING)
-    .addNullable([
-      "remote_extra_key",
-      "remote_mtime",
-      "remote_size",
-      "local_mtime",
-    ])
-    .addPrimaryKey(["id"], true)
-    .addIndex("idxkey", ["local_key", "remote_key"]);
+  const originalVersion = (await db.versionTbl.getItem("version")) as number;
+  if (originalVersion === null) {
+    await db.versionTbl.setItem("version", DEFAULT_DB_VERSION_NUMBER);
+  } else if (originalVersion === DEFAULT_DB_VERSION_NUMBER) {
+    // do nothing
+  } else {
+    await migrateDBs(db, originalVersion, DEFAULT_DB_VERSION_NUMBER);
+  }
 
-  schemaBuilder
-    .createTable(DEFAULT_SYNC_PLANS_HISTORY)
-    .addColumn("id", lf.Type.INTEGER)
-    .addColumn("ts", lf.Type.INTEGER)
-    .addColumn("remote_type", lf.Type.STRING)
-    .addColumn("sync_plan", lf.Type.STRING)
-    .addPrimaryKey(["id"], true)
-    .addIndex("tskey", ["ts"]);
-
-  const db = await schemaBuilder.connect({
-    storeType: lf.DataStoreType.INDEXED_DB,
-  });
   console.log("db connected");
   return db;
 };
 
-export const destroyDBs = async (db: lf.DatabaseConnection) => {
-  db.close();
-  const req = indexedDB.deleteDatabase(DEFAULT_DB_NAME);
-  req.onsuccess = (event) => {
-    console.log("db deleted");
-  };
-  req.onblocked = (event) => {
-    console.warn("trying to delete db but it was blocked");
-  };
-  req.onerror = (event) => {
-    console.error("tried to delete db but something bad!");
-    console.error(event);
-  };
+export const destroyDBs = async () => {
+  await localforage.dropInstance({
+    name: DEFAULT_DB_NAME,
+  });
+  console.log("db deleted");
 };
 
-export const loadDeleteRenameHistoryTable = async (
-  db: lf.DatabaseConnection
-) => {
-  const schema = db.getSchema().table(DEFAULT_TBL_DELETE_HISTORY);
-  const tbl = db.getSchema().table(DEFAULT_TBL_DELETE_HISTORY);
+const migrateDBs = async (db: InternalDBs, oldVer: number, newVer: number) => {
+  if (oldVer === newVer) {
+    return;
+  }
+  // not implemented
+  throw Error(`not supported internal db changes from ${oldVer} to ${newVer}`);
+};
 
-  const records = await db
-    .select()
-    .from(schema)
-    .orderBy(schema.col("action_when"), lf.Order.ASC)
-    .exec();
-
-  return records as FileFolderHistoryRecord[];
+export const loadDeleteRenameHistoryTable = async (db: InternalDBs) => {
+  const records = [] as FileFolderHistoryRecord[];
+  await db.deleteHistoryTbl.iterate((value, key, iterationNumber) => {
+    records.push(value as FileFolderHistoryRecord);
+  });
+  records.sort((a, b) => a.actionWhen - b.actionWhen); // ascending
+  return records;
 };
 
 export const clearDeleteRenameHistoryOfKey = async (
-  db: lf.DatabaseConnection,
+  db: InternalDBs,
   key: string
 ) => {
-  const schema = db.getSchema().table(DEFAULT_TBL_DELETE_HISTORY);
-  const tbl = db.getSchema().table(DEFAULT_TBL_DELETE_HISTORY);
-
-  await db.delete().from(tbl).where(tbl.col("key").eq(key)).exec();
+  await db.deleteHistoryTbl.removeItem(key);
 };
 
 export const insertDeleteRecord = async (
-  db: lf.DatabaseConnection,
+  db: InternalDBs,
   fileOrFolder: TAbstractFile
 ) => {
-  const schema = db.getSchema().table(DEFAULT_TBL_DELETE_HISTORY);
-  const tbl = db.getSchema().table(DEFAULT_TBL_DELETE_HISTORY);
   // console.log(fileOrFolder);
   let k: FileFolderHistoryRecord;
   if (fileOrFolder instanceof TFile) {
@@ -146,10 +125,10 @@ export const insertDeleteRecord = async (
       ctime: fileOrFolder.stat.ctime,
       mtime: fileOrFolder.stat.mtime,
       size: fileOrFolder.stat.size,
-      action_when: Date.now(),
-      action_type: "delete",
-      key_type: "file",
-      rename_to: "",
+      actionWhen: Date.now(),
+      actionType: "delete",
+      keyType: "file",
+      renameTo: "",
     };
   } else if (fileOrFolder instanceof TFolder) {
     // key should endswith "/"
@@ -161,23 +140,20 @@ export const insertDeleteRecord = async (
       ctime: 0,
       mtime: 0,
       size: 0,
-      action_when: Date.now(),
-      action_type: "delete",
-      key_type: "folder",
-      rename_to: "",
+      actionWhen: Date.now(),
+      actionType: "delete",
+      keyType: "folder",
+      renameTo: "",
     };
   }
-  const row = tbl.createRow(k);
-  await db.insertOrReplace().into(tbl).values([row]).exec();
+  await db.deleteHistoryTbl.setItem(k.key, k);
 };
 
 export const insertRenameRecord = async (
-  db: lf.DatabaseConnection,
+  db: InternalDBs,
   fileOrFolder: TAbstractFile,
   oldPath: string
 ) => {
-  const schema = db.getSchema().table(DEFAULT_TBL_DELETE_HISTORY);
-  const tbl = db.getSchema().table(DEFAULT_TBL_DELETE_HISTORY);
   // console.log(fileOrFolder);
   let k: FileFolderHistoryRecord;
   if (fileOrFolder instanceof TFile) {
@@ -186,10 +162,10 @@ export const insertRenameRecord = async (
       ctime: fileOrFolder.stat.ctime,
       mtime: fileOrFolder.stat.mtime,
       size: fileOrFolder.stat.size,
-      action_when: Date.now(),
-      action_type: "rename",
-      key_type: "file",
-      rename_to: fileOrFolder.path,
+      actionWhen: Date.now(),
+      actionType: "rename",
+      keyType: "file",
+      renameTo: fileOrFolder.path,
     };
   } else if (fileOrFolder instanceof TFolder) {
     const key = oldPath.endsWith("/") ? oldPath : `${oldPath}/`;
@@ -201,25 +177,17 @@ export const insertRenameRecord = async (
       ctime: 0,
       mtime: 0,
       size: 0,
-      action_when: Date.now(),
-      action_type: "rename",
-      key_type: "folder",
-      rename_to: renameTo,
+      actionWhen: Date.now(),
+      actionType: "rename",
+      keyType: "folder",
+      renameTo: renameTo,
     };
   }
-  const row = tbl.createRow(k);
-  await db.insertOrReplace().into(tbl).values([row]).exec();
-};
-
-export const getAllDeleteRenameRecords = async (db: lf.DatabaseConnection) => {
-  const schema = db.getSchema().table(DEFAULT_TBL_DELETE_HISTORY);
-  const res1 = await db.select().from(schema).exec();
-  const res2 = res1 as FileFolderHistoryRecord[];
-  return res2;
+  await db.deleteHistoryTbl.setItem(k.key, k);
 };
 
 export const upsertSyncMetaMappingDataS3 = async (
-  db: lf.DatabaseConnection,
+  db: InternalDBs,
   localKey: string,
   localMTime: number,
   localSize: number,
@@ -228,89 +196,78 @@ export const upsertSyncMetaMappingDataS3 = async (
   remoteSize: number,
   remoteExtraKey: string /* ETag from s3 */
 ) => {
-  const schema = db.getSchema().table(DEFAULT_TBL_SYNC_MAPPING);
   const aggregratedInfo: SyncMetaMappingRecord = {
-    local_key: localKey,
-    local_mtime: localMTime,
-    local_size: localSize,
-    remote_key: remoteKey,
-    remote_mtime: remoteMTime,
-    remote_size: remoteSize,
-    remote_extra_key: remoteExtraKey,
-    remote_type: "s3",
-    key_type: localKey.endsWith("/") ? "folder" : "file",
+    localKey: localKey,
+    localMtime: localMTime,
+    localSize: localSize,
+    remoteKey: remoteKey,
+    remoteMtime: remoteMTime,
+    remoteSize: remoteSize,
+    remoteExtraKey: remoteExtraKey,
+    remoteType: "s3",
+    keyType: localKey.endsWith("/") ? "folder" : "file",
   };
-  const row = schema.createRow(aggregratedInfo);
-  await db.insertOrReplace().into(schema).values([row]).exec();
+  await db.syncMappingTbl.setItem(remoteKey, aggregratedInfo);
 };
 
 export const getSyncMetaMappingByRemoteKeyS3 = async (
-  db: lf.DatabaseConnection,
+  db: InternalDBs,
   remoteKey: string,
   remoteMTime: number,
   remoteExtraKey: string
 ) => {
-  const schema = db.getSchema().table(DEFAULT_TBL_SYNC_MAPPING);
-  const tbl = db.getSchema().table(DEFAULT_TBL_SYNC_MAPPING);
-  const res = (await db
-    .select()
-    .from(tbl)
-    .where(
-      lf.op.and(
-        tbl.col("remote_key").eq(remoteKey),
-        tbl.col("remote_mtime").eq(remoteMTime),
-        tbl.col("remote_extra_key").eq(remoteExtraKey),
-        tbl.col("remote_type").eq("s3")
-      )
-    )
-    .exec()) as SyncMetaMappingRecord[];
+  const potentialItem = (await db.syncMappingTbl.getItem(
+    remoteKey
+  )) as SyncMetaMappingRecord;
 
-  if (res.length === 1) {
-    return res[0];
-  }
-
-  if (res.length === 0) {
+  if (potentialItem === null) {
+    // no result was found
     return undefined;
   }
 
-  throw Error("something bad in sync meta mapping!");
+  if (
+    potentialItem.remoteKey === remoteKey &&
+    potentialItem.remoteMtime === remoteMTime &&
+    potentialItem.remoteExtraKey === remoteExtraKey &&
+    potentialItem.remoteType === "s3"
+  ) {
+    // the result was found
+    return potentialItem;
+  } else {
+    return undefined;
+  }
 };
 
-export const clearAllSyncMetaMapping = async (db: lf.DatabaseConnection) => {
-  const tbl = db.getSchema().table(DEFAULT_TBL_SYNC_MAPPING);
-  await db.delete().from(tbl).exec();
+export const clearAllSyncMetaMapping = async (db: InternalDBs) => {
+  await db.syncMappingTbl.clear();
 };
 
 export const insertSyncPlanRecord = async (
-  db: lf.DatabaseConnection,
+  db: InternalDBs,
   syncPlan: SyncPlanType
 ) => {
-  const schema = db.getSchema().table(DEFAULT_SYNC_PLANS_HISTORY);
-  const row = schema.createRow({
+  const record = {
     ts: syncPlan.ts,
-    remote_type: syncPlan.remoteType,
-    sync_plan: JSON.stringify(syncPlan, null, 2),
-  } as SyncPlanRecord);
-  await db.insertOrReplace().into(schema).values([row]).exec();
+    remoteType: syncPlan.remoteType,
+    syncPlan: JSON.stringify(syncPlan /* directly stringify */, null, 2),
+  } as SyncPlanRecord;
+  await db.syncPlansTbl.setItem(`${syncPlan.ts}`, record);
 };
 
-export const clearAllSyncPlanRecords = async (db: lf.DatabaseConnection) => {
-  const tbl = db.getSchema().table(DEFAULT_SYNC_PLANS_HISTORY);
-  await db.delete().from(tbl).exec();
+export const clearAllSyncPlanRecords = async (db: InternalDBs) => {
+  await db.syncPlansTbl.clear();
 };
 
-export const readAllSyncPlanRecordTexts = async (db: lf.DatabaseConnection) => {
-  const schema = db.getSchema().table(DEFAULT_SYNC_PLANS_HISTORY);
-
-  const records = (await db
-    .select()
-    .from(schema)
-    .orderBy(schema.col("ts"), lf.Order.DESC)
-    .exec()) as SyncPlanRecord[];
+export const readAllSyncPlanRecordTexts = async (db: InternalDBs) => {
+  const records = [] as SyncPlanRecord[];
+  await db.syncPlansTbl.iterate((value, key, iterationNumber) => {
+    records.push(value as SyncPlanRecord);
+  });
+  records.sort((a, b) => -(a.ts - b.ts)); // descending
 
   if (records === undefined) {
     return [] as string[];
   } else {
-    return records.map((x) => x.sync_plan);
+    return records.map((x) => x.syncPlan);
   }
 };
