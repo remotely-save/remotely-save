@@ -6,7 +6,7 @@ import {
   arrayBufferToHex,
 } from "./misc";
 
-const DEFAULT_ITER = 10000;
+const DEFAULT_ITER = 20000;
 
 // base32.stringify(Buffer.from('Salted__'))
 export const MAGIC_ENCRYPTED_PREFIX_BASE32 = "KNQWY5DFMRPV";

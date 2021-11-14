@@ -60,10 +60,10 @@ describe("Encryption tests", () => {
     );
 
     // two command returns same result:
-    // cat ./sometext.txt | openssl enc -p -aes-256-cbc -S 8302F586FAB491EC -pbkdf2 -iter 10000 -base64 -pass pass:somepassword
-    // openssl enc -p -aes-256-cbc -S 8302F586FAB491EC -pbkdf2 -iter 10000 -base64 -pass pass:somepassword -in ./sometext.txt
+    // cat ./sometext.txt | openssl enc -p -aes-256-cbc -S 8302F586FAB491EC -pbkdf2 -iter 20000 -base64 -pass pass:somepassword
+    // openssl enc -p -aes-256-cbc -S 8302F586FAB491EC -pbkdf2 -iter 20000 -base64 -pass pass:somepassword -in ./sometext.txt
     const opensslBase64Res =
-      "U2FsdGVkX1+DAvWG+rSR7MSa+yJav1zCE7SSXiBooqwI5Q+LMpIthpk/pXkLj+25";
+      "U2FsdGVkX1+DAvWG+rSR7BPXMnlvSSVGMdjsx7kE1CTH+28P+yAZRdDGgFWMGkMd";
     // we output base32, so we need some transformation
     const opensslBase32Res = base64ToBase32(opensslBase64Res);
 
@@ -88,6 +88,8 @@ describe("Encryption tests", () => {
     const opensslArrBuf = bufferToArrayBuffer(
       await fs.readFileSync(path.join(testFolder, testFileName + ".enc"))
     );
+
+    // openssl enc -p -aes-256-cbc -S 8302F586FAB491EC -pbkdf2 -iter 20000 -pass pass:somepassword -in mona_lisa/1374px-Mona_Lisa,_by_Leonardo_da_Vinci,_from_C2RMF_retouched.jpg -out mona_lisa/1374px-Mona_Lisa,_by_Leonardo_da_Vinci,_from_C2RMF_retouched.jpg.enc
 
     expect(Buffer.from(enc).equals(Buffer.from(opensslArrBuf))).to.be.true;
   });
