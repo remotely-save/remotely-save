@@ -198,18 +198,20 @@ export class PasswordModal extends Modal {
     // contentEl.setText("Add Or change password.");
     contentEl.createEl("h2", { text: "Hold on and PLEASE READ ON..." });
     contentEl.createEl("p", {
-      text: "This password allows you encrypt your files before sending to remote services.",
+      text: "If the field is not empty, files are enctrypted using the password locally before sent to remote.",
     });
-    contentEl.createEl("p", { text: "Empty means no password." });
+    contentEl.createEl("p", {
+      text: "If the field is empty, then no password is used, and files would be sent without encryption.",
+    });
 
     contentEl.createEl("p", {
-      text: "Attention 1/4: The password setting itself is stored in PLAIN TEXT LOCALLY (because the plugin needs to use the password to encrypt the files) (and the password would not be sent to remote by this plugin).",
+      text: "Attention 1/4: The password itself is stored in PLAIN TEXT LOCALLY and would not be sent to remote by this plugin.",
     });
     contentEl.createEl("p", {
-      text: "Attention 2/4: The file contents are encrypted using openssl format. BUT, some metadata such as file sizes and directory structures are not encrypted or can be easily guessed.",
+      text: "Attention 2/4: Non-empty file contents are encrypted using openssl format. File/directory path are also encrypted then applied base32. BUT, some metadata such as file sizes and directory structures are not encrypted or can be easily guessed, and directory path are stored as 0-byte-size object remotely.",
     });
     contentEl.createEl("p", {
-      text: "Attention 3/4: If you change the password. You should make sure the remote service (s3/webdav/...) IS EMPTY, or REMOTE FILES WERE ENCRYPTED BY THAT NEW PASSWORD. OTHERWISE SOMETHING BAD WOULD HAPPEN!",
+      text: "Attention 3/4: Before changing password, you should make sure the remote store (s3/webdav/...) IS EMPTY, or REMOTE FILES WERE ENCRYPTED BY THAT NEW PASSWORD. OTHERWISE SOMETHING BAD WOULD HAPPEN!",
     });
     contentEl.createEl("p", {
       text: "Attention 4/4: The longer the password, the better.",
@@ -227,7 +229,7 @@ export class PasswordModal extends Modal {
         button.setClass("password_second_confirm");
       })
       .addButton((button) => {
-        button.setButtonText("Cancel (password not changed.)");
+        button.setButtonText("Go Back");
         button.onClick(() => {
           this.close();
         });
@@ -369,13 +371,10 @@ class SaveRemoteSettingTab extends PluginSettingTab {
 
     const syncPlanDiv = containerEl.createEl("div");
     syncPlanDiv.createEl("p", {
-      text: "Sync plans are created every time after you trigger sync and before the actual sync.",
-    });
-    syncPlanDiv.createEl("p", {
-      text: "They are useful to know what would actually happen in those sync.",
+      text: "Sync plans are created every time after you trigger sync and before the actual sync. Useful to know what would actually happen in those sync.",
     });
 
-    new Setting(containerEl)
+    new Setting(syncPlanDiv)
       .setName("export sync plans")
       .setDesc("export sync plans")
       .addButton(async (button) => {
@@ -386,7 +385,7 @@ class SaveRemoteSettingTab extends PluginSettingTab {
         });
       });
 
-    new Setting(containerEl)
+    new Setting(syncPlanDiv)
       .setName("delete sync plans history in db")
       .setDesc("delete sync plans history in db")
       .addButton(async (button) => {
@@ -399,14 +398,10 @@ class SaveRemoteSettingTab extends PluginSettingTab {
 
     const syncMappingDiv = containerEl.createEl("div");
     syncMappingDiv.createEl("p", {
-      text: "Sync mappings history stores the actual LOCAL last modified time of the REMOTE objects.",
+      text: "Sync mappings history stores the actual LOCAL last modified time of the REMOTE objects. Clearing it may cause unnecessary data exchanges in next-time sync.",
     });
 
-    syncMappingDiv.createEl("p", {
-      text: "If the sync mappings history are deleted, unnecessary data exchanges may occur in next-time syncing, because whether a remote object and local object with same name are equivalent or not could not be determined correctly by comparing last modified times.",
-    });
-
-    new Setting(containerEl)
+    new Setting(syncMappingDiv)
       .setName("delete sync mappings history in db")
       .setDesc("delete sync mappings history in db")
       .addButton(async (button) => {
@@ -414,6 +409,23 @@ class SaveRemoteSettingTab extends PluginSettingTab {
         button.onClick(async () => {
           await clearAllSyncMetaMapping(this.plugin.db);
           new Notice("sync mappings history (in local db) deleted");
+        });
+      });
+
+    const dbsResetDiv = containerEl.createEl("div");
+    syncMappingDiv.createEl("p", {
+      text: "Reset local internal caches/databases (for debugging purposes). You would want to reload the plugin after resetting this. This option will not empty the {s3, password...} settings.",
+    });
+    new Setting(syncMappingDiv)
+      .setName("reset local internal cache/databases")
+      .setDesc("reset local internal cache/databases")
+      .addButton(async (button) => {
+        button.setButtonText("Reset");
+        button.onClick(async () => {
+          await destroyDBs();
+          new Notice(
+            "Local internal cache/databases deleted. Please manually reload the plugin."
+          );
         });
       });
   }
