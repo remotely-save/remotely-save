@@ -1,4 +1,4 @@
-# Algorithm
+# Sync Algorithm
 
 ## Sources
 
