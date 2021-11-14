@@ -45,9 +45,13 @@ export const DEFAULT_S3_CONFIG = {
 export type S3ObjectType = _Object;
 
 export const getS3Client = (s3Config: S3Config) => {
+  let endpoint = s3Config.s3Endpoint;
+  if (!(endpoint.startsWith("http://") || endpoint.startsWith("https://"))) {
+    endpoint = `https://${endpoint}`;
+  }
   const s3Client = new S3Client({
     region: s3Config.s3Region,
-    endpoint: s3Config.s3Endpoint,
+    endpoint: endpoint,
     credentials: {
       accessKeyId: s3Config.s3AccessKeyID,
       secretAccessKey: s3Config.s3SecretAccessKey,
