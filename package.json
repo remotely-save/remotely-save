@@ -1,6 +1,6 @@
 {
   "name": "obsidian-remotely-save",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "This is yet another sync plugin for Obsidian app.",
   "scripts": {
     "dev": "webpack --mode development --watch",
