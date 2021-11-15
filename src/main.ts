@@ -150,10 +150,10 @@ export default class RemotelySavePlugin extends Plugin {
 
     this.addSettingTab(new RemotelySaveSettingTab(this.app, this));
 
-    this.registerCodeMirror((cm: CodeMirror.Editor) => {
-      this.cm = cm;
-      console.log("codemirror registered.");
-    });
+    // this.registerCodeMirror((cm: CodeMirror.Editor) => {
+    //   this.cm = cm;
+    //   console.log("codemirror registered.");
+    // });
 
     // this.registerDomEvent(document, "click", (evt: MouseEvent) => {
     //   console.log("click", evt);
