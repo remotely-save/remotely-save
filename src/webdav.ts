@@ -14,11 +14,13 @@ import {
 } from "./misc";
 import { decryptArrayBuffer, encryptArrayBuffer } from "./encrypt";
 
+export type WebdavAuthType = "digest" | "basic";
+
 export interface WebdavConfig {
   address: string;
   username: string;
   password: string;
-  authType: "digest" | "basic";
+  authType: WebdavAuthType;
 }
 
 export const DEFAULT_WEBDAV_CONFIG = {

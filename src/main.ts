@@ -26,20 +26,23 @@ import type { InternalDBs } from "./localdb";
 import type { SyncStatusType, PasswordCheckType } from "./sync";
 import { isPasswordOk, getSyncPlan, doActualSync } from "./sync";
 import { S3Config, DEFAULT_S3_CONFIG } from "./s3";
-import { WebdavConfig, DEFAULT_WEBDAV_CONFIG } from "./webdav";
+import { WebdavConfig, DEFAULT_WEBDAV_CONFIG, WebdavAuthType } from "./webdav";
 import { RemoteClient } from "./remote";
 import { exportSyncPlansToFiles } from "./debugMode";
+import { SUPPORTED_SERVICES_TYPE } from "./baseTypes";
 
 interface RemotelySavePluginSettings {
   s3: S3Config;
   webdav: WebdavConfig;
   password: string;
+  serviceType: SUPPORTED_SERVICES_TYPE;
 }
 
 const DEFAULT_SETTINGS: RemotelySavePluginSettings = {
   s3: DEFAULT_S3_CONFIG,
   webdav: DEFAULT_WEBDAV_CONFIG,
   password: "",
+  serviceType: "s3",
 };
 
 export default class RemotelySavePlugin extends Plugin {
@@ -69,16 +72,6 @@ export default class RemotelySavePlugin extends Plugin {
       })
     );
 
-    this.addRibbonIcon("dice", "Remotely Save", async () => {
-      const client = new RemoteClient(
-        "webdav",
-        undefined,
-        this.settings.webdav
-      );
-      const xx = await client.listFromRemote()
-      console.log(xx);
-    });
-
     this.addRibbonIcon("switch", "Remotely Save", async () => {
       if (this.syncStatus !== "idle") {
         new Notice(
@@ -89,15 +82,16 @@ export default class RemotelySavePlugin extends Plugin {
 
       try {
         //console.log(`huh ${this.settings.password}`)
-        new Notice("1/6 Remotely Save Sync Preparing");
+        new Notice(
+          `1/6 Remotely Save Sync Preparing (${this.settings.serviceType})`
+        );
         this.syncStatus = "preparing";
 
         new Notice("2/6 Starting to fetch remote meta data.");
         this.syncStatus = "getting_remote_meta";
-        // const client = new RemoteClient('s3', this.settings.s3, undefined);
         const client = new RemoteClient(
-          "webdav",
-          undefined,
+          this.settings.serviceType,
+          this.settings.s3,
           this.settings.webdav
         );
         const remoteRsp = await client.listFromRemote();
@@ -272,87 +266,36 @@ class RemotelySaveSettingTab extends PluginSettingTab {
 
     containerEl.createEl("h1", { text: "Remotely Save" });
 
-    const webdavDiv = containerEl.createEl("div");
-    webdavDiv.createEl("h2", { text: "Webdav Service" });
-    new Setting(webdavDiv)
-      .setName("server address")
-      .setDesc("server address")
+    const generalDiv = containerEl.createEl("div");
+    generalDiv.createEl("h2", { text: "General" });
+
+    const passwordDiv = generalDiv.createEl("div");
+    let newPassword = `${this.plugin.settings.password}`;
+    new Setting(passwordDiv)
+      .setName("encryption password")
+      .setDesc(
+        'Password for E2E encryption. Empty for no password. You need to click "Confirm".'
+      )
       .addText((text) =>
         text
           .setPlaceholder("")
-          .setValue(this.plugin.settings.webdav.address)
+          .setValue(`${this.plugin.settings.password}`)
           .onChange(async (value) => {
-            this.plugin.settings.webdav.address = value.trim();
-            await this.plugin.saveSettings();
+            newPassword = value.trim();
           })
-      );
-
-    new Setting(webdavDiv)
-      .setName("server username")
-      .setDesc("server username")
-      .addText((text) =>
-        text
-          .setPlaceholder("")
-          .setValue(this.plugin.settings.webdav.username)
-          .onChange(async (value) => {
-            this.plugin.settings.webdav.username = value.trim();
-            await this.plugin.saveSettings();
-          })
-      );
-
-    new Setting(webdavDiv)
-      .setName("server password")
-      .setDesc("server password")
-      .addText((text) =>
-        text
-          .setPlaceholder("")
-          .setValue(this.plugin.settings.webdav.password)
-          .onChange(async (value) => {
-            this.plugin.settings.webdav.password = value.trim();
-            await this.plugin.saveSettings();
-          })
-      );
-
-    new Setting(webdavDiv)
-      .setName("server auth type")
-      .setDesc("server auth type")
-      .addText((text) =>
-        text
-          .setPlaceholder("")
-          .setValue(this.plugin.settings.webdav.authType)
-          .onChange(async (value) => {
-            if (value.trim() === "digest") {
-              this.plugin.settings.webdav.authType = "digest";
-            } else {
-              this.plugin.settings.webdav.authType = "basic";
-            }
-
-            await this.plugin.saveSettings();
-          })
-      );
-
-    new Setting(webdavDiv)
-      .setName("check connectivity")
-      .setDesc("check connectivity")
+      )
       .addButton(async (button) => {
-        button.setButtonText("Check");
+        button.setButtonText("Confirm");
         button.onClick(async () => {
-          new Notice("Checking...");
-          const client = new RemoteClient(
-            "webdav",
-            undefined,
-            this.plugin.settings.webdav
-          );
-          const res = await client.checkConnectivity();
-          if (res) {
-            new Notice("Great! The webdav server can be accessed.");
-          } else {
-            new Notice("The webdav server cannot be reached.");
-          }
+          new PasswordModal(this.app, this.plugin, newPassword).open();
         });
       });
 
-    const s3Div = containerEl.createEl("div");
+    // we need to create the div in advance of s3Div and webdavDiv
+    const serviceChooserDiv = generalDiv.createEl("div");
+
+    const s3Div = containerEl.createEl("div", { cls: "s3-hide" });
+    s3Div.toggleClass("s3-hide", this.plugin.settings.serviceType !== "s3");
     s3Div.createEl("h2", { text: "S3 (-compatible) Service" });
 
     s3Div.createEl("p", {
@@ -475,29 +418,127 @@ class RemotelySaveSettingTab extends PluginSettingTab {
         });
       });
 
-    const generalDiv = containerEl.createEl("div");
-    generalDiv.createEl("h2", { text: "General" });
+    const webdavDiv = containerEl.createEl("div", { cls: "webdav-hide" });
+    webdavDiv.toggleClass(
+      "webdav-hide",
+      this.plugin.settings.serviceType !== "webdav"
+    );
 
-    const passwordDiv = generalDiv.createEl("div");
-    let newPassword = `${this.plugin.settings.password}`;
-    new Setting(passwordDiv)
-      .setName("encryption password")
-      .setDesc(
-        'Password for E2E encryption. Empty for no password. You need to click "Confirm".'
-      )
+    webdavDiv.createEl("h2", { text: "Webdav Service" });
+
+    webdavDiv.createEl("p", {
+      text: "Disclaimer: Webdav functions are more experimental, and s3 functions are more stable now.",
+      cls: "webdav-disclaimer",
+    });
+
+    webdavDiv.createEl("p", {
+      text: "Disclaimer: The infomation is stored in PLAIN TEXT locally. Other malicious/harmful/faulty plugins may or may not be able to read the info. If you see any unintentional access to your webdav server, please immediately change the username and/or password to stop further accessment.",
+      cls: "webdav-disclaimer",
+    });
+
+    webdavDiv.createEl("p", {
+      text: "You need to configure CORS to allow requests from origin app://obsidian.md and capacitor://localhost and http://localhost",
+    });
+
+    new Setting(webdavDiv)
+      .setName("server address")
+      .setDesc("server address")
       .addText((text) =>
         text
           .setPlaceholder("")
-          .setValue(`${this.plugin.settings.password}`)
+          .setValue(this.plugin.settings.webdav.address)
           .onChange(async (value) => {
-            newPassword = value.trim();
+            this.plugin.settings.webdav.address = value.trim();
+            await this.plugin.saveSettings();
           })
+      );
+
+    new Setting(webdavDiv)
+      .setName("server username")
+      .setDesc("server username")
+      .addText((text) =>
+        text
+          .setPlaceholder("")
+          .setValue(this.plugin.settings.webdav.username)
+          .onChange(async (value) => {
+            this.plugin.settings.webdav.username = value.trim();
+            await this.plugin.saveSettings();
+          })
+      );
+
+    new Setting(webdavDiv)
+      .setName("server password")
+      .setDesc("server password")
+      .addText((text) =>
+        text
+          .setPlaceholder("")
+          .setValue(this.plugin.settings.webdav.password)
+          .onChange(async (value) => {
+            this.plugin.settings.webdav.password = value.trim();
+            await this.plugin.saveSettings();
+          })
+      );
+
+    new Setting(webdavDiv)
+      .setName("server auth type")
+      .setDesc(
+        "Server auth type. If you do not set password, this option would be ignored."
       )
+      .addDropdown((dropdown) => {
+        dropdown.addOption("basic", "basic");
+        dropdown.addOption("digest", "digest");
+
+        dropdown
+          .setValue(this.plugin.settings.webdav.authType)
+          .onChange(async (val: WebdavAuthType) => {
+            this.plugin.settings.webdav.authType = val;
+            await this.plugin.saveSettings();
+          });
+      });
+
+    new Setting(webdavDiv)
+      .setName("check connectivity")
+      .setDesc("check connectivity")
       .addButton(async (button) => {
-        button.setButtonText("Confirm");
+        button.setButtonText("Check");
         button.onClick(async () => {
-          new PasswordModal(this.app, this.plugin, newPassword).open();
+          new Notice("Checking...");
+          const client = new RemoteClient(
+            "webdav",
+            undefined,
+            this.plugin.settings.webdav
+          );
+          const res = await client.checkConnectivity();
+          if (res) {
+            new Notice("Great! The webdav server can be accessed.");
+          } else {
+            new Notice("The webdav server cannot be reached.");
+          }
         });
+      });
+
+    // we need to create chooser
+    // after s3Div and webdavDiv being created
+    new Setting(serviceChooserDiv)
+      .setName("Choose service")
+      .setDesc("Choose a service, by default s3")
+      .addDropdown(async (dropdown) => {
+        dropdown.addOption("s3", "s3 (more mature)");
+        dropdown.addOption("webdav", "webdav (experimental)");
+        dropdown
+          .setValue(this.plugin.settings.serviceType)
+          .onChange(async (val: SUPPORTED_SERVICES_TYPE) => {
+            this.plugin.settings.serviceType = val;
+            s3Div.toggleClass(
+              "s3-hide",
+              this.plugin.settings.serviceType !== "s3"
+            );
+            webdavDiv.toggleClass(
+              "webdav-hide",
+              this.plugin.settings.serviceType !== "webdav"
+            );
+            await this.plugin.saveSettings();
+          });
       });
 
     const debugDiv = containerEl.createEl("div");
