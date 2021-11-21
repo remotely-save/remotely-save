@@ -1,7 +1,7 @@
 import localforage from "localforage";
 import { TAbstractFile, TFile, TFolder } from "obsidian";
 
-import type { SUPPORTED_SERVICES_TYPE } from "./misc";
+import type { SUPPORTED_SERVICES_TYPE } from "./baseTypes";
 import type { SyncPlanType } from "./sync";
 
 export type LocalForage = typeof localforage;
@@ -197,7 +197,8 @@ export const insertRenameRecord = async (
   await db.deleteHistoryTbl.setItem(k.key, k);
 };
 
-export const upsertSyncMetaMappingDataS3 = async (
+export const upsertSyncMetaMappingData = async (
+  serviceType: SUPPORTED_SERVICES_TYPE,
   db: InternalDBs,
   localKey: string,
   localMTime: number,
@@ -215,13 +216,14 @@ export const upsertSyncMetaMappingDataS3 = async (
     remoteMtime: remoteMTime,
     remoteSize: remoteSize,
     remoteExtraKey: remoteExtraKey,
-    remoteType: "s3",
+    remoteType: serviceType,
     keyType: localKey.endsWith("/") ? "folder" : "file",
   };
   await db.syncMappingTbl.setItem(remoteKey, aggregratedInfo);
 };
 
-export const getSyncMetaMappingByRemoteKeyS3 = async (
+export const getSyncMetaMappingByRemoteKey = async (
+  serviceType: SUPPORTED_SERVICES_TYPE,
   db: InternalDBs,
   remoteKey: string,
   remoteMTime: number,
@@ -240,7 +242,7 @@ export const getSyncMetaMappingByRemoteKeyS3 = async (
     potentialItem.remoteKey === remoteKey &&
     potentialItem.remoteMtime === remoteMTime &&
     potentialItem.remoteExtraKey === remoteExtraKey &&
-    potentialItem.remoteType === "s3"
+    potentialItem.remoteType === serviceType
   ) {
     // the result was found
     return potentialItem;

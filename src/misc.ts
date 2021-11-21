@@ -4,8 +4,6 @@ import * as path from "path";
 import { base32 } from "rfc4648";
 import XRegExp from "xregexp";
 
-export type SUPPORTED_SERVICES_TYPE = "s3" | "webdav" | "ftp";
-
 /**
  * If any part of the file starts with '.' or '_' then it's a hidden file.
  * @param item
@@ -129,4 +127,18 @@ export const isVaildText = (a: string) => {
   return !XRegExp("\\p{Cc}|\\p{Cf}|\\p{Co}|\\p{Cn}|\\p{Zl}|\\p{Zp}", "A").test(
     a
   );
+};
+
+/**
+ * If input is already a folder, returns it as is;
+ * And if input is a file, returns its direname.
+ * @param a
+ * @returns
+ */
+export const getPathFolder = (a: string) => {
+  if (a.endsWith("/")) {
+    return a;
+  }
+  const b = path.posix.dirname(a);
+  return b.endsWith("/") ? b : `${b}/`;
 };

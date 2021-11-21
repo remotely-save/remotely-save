@@ -89,3 +89,25 @@ describe("Misc: vaild file name tests", () => {
     expect(x).to.be.true;
   });
 });
+
+describe("Misc: get dirname", () => {
+  it("should return itself for folder", async () => {
+    const x = misc.getPathFolder("ssss/");
+    // console.log(x)
+    expect(x).to.equal("ssss/");
+  });
+
+  it("should return folder for file", async () => {
+    const x = misc.getPathFolder("sss/yyy");
+    // console.log(x)
+    expect(x).to.equal("sss/");
+  });
+
+  it("should treat / specially", async () => {
+    const x = misc.getPathFolder("/");
+    expect(x).to.equal("/");
+
+    const y = misc.getPathFolder("/abc");
+    expect(y).to.equal("/");
+  });
+});

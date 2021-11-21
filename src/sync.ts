@@ -1,27 +1,15 @@
 import { TAbstractFile, TFolder, TFile, Vault } from "obsidian";
 
-import { S3Client } from "@aws-sdk/client-s3";
-
 import {
   clearDeleteRenameHistoryOfKey,
-  upsertSyncMetaMappingDataS3,
-  getSyncMetaMappingByRemoteKeyS3,
+  upsertSyncMetaMappingData,
+  getSyncMetaMappingByRemoteKey,
 } from "./localdb";
 import type { FileFolderHistoryRecord, InternalDBs } from "./localdb";
 
-import {
-  S3Config,
-  S3ObjectType,
-  uploadToRemote,
-  deleteFromRemote,
-  downloadFromRemote,
-} from "./s3";
-import {
-  mkdirpInVault,
-  SUPPORTED_SERVICES_TYPE,
-  isHiddenPath,
-  isVaildText,
-} from "./misc";
+import { RemoteClient } from "./remote";
+import type { SUPPORTED_SERVICES_TYPE, RemoteItem } from "./baseTypes";
+import { mkdirpInVault, isHiddenPath, isVaildText } from "./misc";
 import {
   decryptBase32ToString,
   encryptStringToBase32,
@@ -85,7 +73,7 @@ export interface PasswordCheckType {
 }
 
 export const isPasswordOk = async (
-  remote: S3ObjectType[],
+  remote: RemoteItem[],
   password: string = ""
 ) => {
   if (remote === undefined || remote.length === 0) {
@@ -95,7 +83,7 @@ export const isPasswordOk = async (
       reason: "empty_remote",
     } as PasswordCheckType;
   }
-  const santyCheckKey = remote[0].Key;
+  const santyCheckKey = remote[0].key;
   if (santyCheckKey.startsWith(MAGIC_ENCRYPTED_PREFIX_BASE32)) {
     // this is encrypted!
     // try to decrypt it using the provided password.
@@ -143,26 +131,28 @@ export const isPasswordOk = async (
 };
 
 const ensembleMixedStates = async (
-  remote: S3ObjectType[],
+  remote: RemoteItem[],
   local: TAbstractFile[],
   deleteHistory: FileFolderHistoryRecord[],
   db: InternalDBs,
+  remoteType: SUPPORTED_SERVICES_TYPE,
   password: string = ""
 ) => {
   const results = {} as Record<string, FileOrFolderMixedState>;
 
   if (remote !== undefined) {
     for (const entry of remote) {
-      const remoteEncryptedKey = entry.Key;
+      const remoteEncryptedKey = entry.key;
       let key = remoteEncryptedKey;
       if (password !== "") {
         key = await decryptBase32ToString(remoteEncryptedKey, password);
       }
-      const backwardMapping = await getSyncMetaMappingByRemoteKeyS3(
+      const backwardMapping = await getSyncMetaMappingByRemoteKey(
+        remoteType,
         db,
         key,
-        entry.LastModified.valueOf(),
-        entry.ETag
+        entry.lastModified,
+        entry.etag
       );
 
       let r = {} as FileOrFolderMixedState;
@@ -179,8 +169,8 @@ const ensembleMixedStates = async (
         r = {
           key: key,
           exist_remote: true,
-          mtime_remote: entry.LastModified.valueOf(),
-          size_remote: entry.Size,
+          mtime_remote: entry.lastModified,
+          size_remote: entry.size,
           remote_encrypted_key: remoteEncryptedKey,
         };
       }
@@ -402,10 +392,11 @@ const getOperation = (
 };
 
 export const getSyncPlan = async (
-  remote: S3ObjectType[],
+  remote: RemoteItem[],
   local: TAbstractFile[],
   deleteHistory: FileFolderHistoryRecord[],
   db: InternalDBs,
+  remoteType: SUPPORTED_SERVICES_TYPE,
   password: string = ""
 ) => {
   const mixedStates = await ensembleMixedStates(
@@ -413,6 +404,7 @@ export const getSyncPlan = async (
     local,
     deleteHistory,
     db,
+    remoteType,
     password
   );
   for (const [key, val] of Object.entries(mixedStates)) {
@@ -420,15 +412,105 @@ export const getSyncPlan = async (
   }
   const plan = {
     ts: Date.now(),
-    remoteType: "s3",
+    remoteType: remoteType,
     mixedStates: mixedStates,
   } as SyncPlanType;
   return plan;
 };
 
+const dispatchOperationToActual = async (
+  key: string,
+  state: FileOrFolderMixedState,
+  client: RemoteClient,
+  db: InternalDBs,
+  vault: Vault,
+  password: string = ""
+) => {
+  let remoteEncryptedKey = key;
+  if (password !== "") {
+    remoteEncryptedKey = state.remote_encrypted_key;
+    if (remoteEncryptedKey === undefined || remoteEncryptedKey === "") {
+      remoteEncryptedKey = await encryptStringToBase32(key, password);
+    }
+  }
+
+  if (
+    state.decision === undefined ||
+    state.decision === "unknown" ||
+    state.decision === "undecided"
+  ) {
+    throw Error(`unknown decision in ${JSON.stringify(state)}`);
+  } else if (state.decision === "skip") {
+    // do nothing
+  } else if (state.decision === "download_clearhist") {
+    await client.downloadFromRemote(
+      state.key,
+      vault,
+      state.mtime_remote,
+      password,
+      remoteEncryptedKey
+    );
+    await clearDeleteRenameHistoryOfKey(db, state.key);
+  } else if (state.decision === "upload_clearhist") {
+    const remoteObjMeta = await client.uploadToRemote(
+      state.key,
+      vault,
+      false,
+      password,
+      remoteEncryptedKey
+    );
+    await upsertSyncMetaMappingData(
+      client.serviceType,
+      db,
+      state.key,
+      state.mtime_local,
+      state.size_local,
+      state.key,
+      remoteObjMeta.lastModified,
+      remoteObjMeta.size,
+      remoteObjMeta.etag
+    );
+    await clearDeleteRenameHistoryOfKey(db, state.key);
+  } else if (state.decision === "download") {
+    await mkdirpInVault(state.key, vault);
+    await client.downloadFromRemote(
+      state.key,
+      vault,
+      state.mtime_remote,
+      password,
+      remoteEncryptedKey
+    );
+  } else if (state.decision === "delremote_clearhist") {
+    await client.deleteFromRemote(state.key, password, remoteEncryptedKey);
+    await clearDeleteRenameHistoryOfKey(db, state.key);
+  } else if (state.decision === "upload") {
+    const remoteObjMeta = await client.uploadToRemote(
+      state.key,
+      vault,
+      false,
+      password,
+      remoteEncryptedKey
+    );
+    await upsertSyncMetaMappingData(
+      client.serviceType,
+      db,
+      state.key,
+      state.mtime_local,
+      state.size_local,
+      state.key,
+      remoteObjMeta.lastModified,
+      remoteObjMeta.size,
+      remoteObjMeta.etag
+    );
+  } else if (state.decision === "clearhist") {
+    await clearDeleteRenameHistoryOfKey(db, state.key);
+  } else {
+    throw Error("this should never happen!");
+  }
+};
+
 export const doActualSync = async (
-  s3Client: S3Client,
-  s3Config: S3Config,
+  client: RemoteClient,
   db: InternalDBs,
   vault: Vault,
   syncPlan: SyncPlanType,
@@ -438,102 +520,15 @@ export const doActualSync = async (
   await Promise.all(
     Object.entries(keyStates)
       .sort((k, v) => -(k as string).length)
-      .map(async ([k, v]) => {
-        const key = k as string;
-        const state = v as FileOrFolderMixedState;
-        let remoteEncryptedKey = key;
-        if (password !== "") {
-          remoteEncryptedKey = state.remote_encrypted_key;
-          if (remoteEncryptedKey === undefined || remoteEncryptedKey === "") {
-            remoteEncryptedKey = await encryptStringToBase32(key, password);
-          }
-        }
-
-        if (
-          state.decision === undefined ||
-          state.decision === "unknown" ||
-          state.decision === "undecided"
-        ) {
-          throw Error(`unknown decision in ${JSON.stringify(state)}`);
-        } else if (state.decision === "skip") {
-          // do nothing
-        } else if (state.decision === "download_clearhist") {
-          await downloadFromRemote(
-            s3Client,
-            s3Config,
-            state.key,
-            vault,
-            state.mtime_remote,
-            password,
-            remoteEncryptedKey
-          );
-          await clearDeleteRenameHistoryOfKey(db, state.key);
-        } else if (state.decision === "upload_clearhist") {
-          const remoteObjMeta = await uploadToRemote(
-            s3Client,
-            s3Config,
-            state.key,
-            vault,
-            false,
-            password,
-            remoteEncryptedKey
-          );
-          await upsertSyncMetaMappingDataS3(
-            db,
-            state.key,
-            state.mtime_local,
-            state.size_local,
-            state.key,
-            remoteObjMeta.LastModified.valueOf(),
-            remoteObjMeta.ContentLength,
-            remoteObjMeta.ETag
-          );
-          await clearDeleteRenameHistoryOfKey(db, state.key);
-        } else if (state.decision === "download") {
-          await mkdirpInVault(state.key, vault);
-          await downloadFromRemote(
-            s3Client,
-            s3Config,
-            state.key,
-            vault,
-            state.mtime_remote,
-            password,
-            remoteEncryptedKey
-          );
-        } else if (state.decision === "delremote_clearhist") {
-          await deleteFromRemote(
-            s3Client,
-            s3Config,
-            state.key,
-            password,
-            remoteEncryptedKey
-          );
-          await clearDeleteRenameHistoryOfKey(db, state.key);
-        } else if (state.decision === "upload") {
-          const remoteObjMeta = await uploadToRemote(
-            s3Client,
-            s3Config,
-            state.key,
-            vault,
-            false,
-            password,
-            remoteEncryptedKey
-          );
-          await upsertSyncMetaMappingDataS3(
-            db,
-            state.key,
-            state.mtime_local,
-            state.size_local,
-            state.key,
-            remoteObjMeta.LastModified.valueOf(),
-            remoteObjMeta.ContentLength,
-            remoteObjMeta.ETag
-          );
-        } else if (state.decision === "clearhist") {
-          await clearDeleteRenameHistoryOfKey(db, state.key);
-        } else {
-          throw Error("this should never happen!");
-        }
-      })
+      .map(async ([k, v]) =>
+        dispatchOperationToActual(
+          k as string,
+          v as FileOrFolderMixedState,
+          client,
+          db,
+          vault,
+          password
+        )
+      )
   );
 };

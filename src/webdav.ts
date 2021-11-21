@@ -2,14 +2,17 @@ import { Buffer } from "buffer";
 import { FileStats, Vault } from "obsidian";
 import { AuthType, BufferLike, createClient } from "webdav/web";
 import type { WebDAVClient, ResponseDataDetailed, FileStat } from "webdav/web";
+export type { WebDAVClient } from "webdav/web";
+
+import type { RemoteItem } from "./baseTypes";
 
 import {
   arrayBufferToBuffer,
   bufferToArrayBuffer,
   mkdirpInVault,
+  getPathFolder,
 } from "./misc";
 import { decryptArrayBuffer, encryptArrayBuffer } from "./encrypt";
-import { fileURLToPath } from "url";
 
 export interface WebdavConfig {
   address: string;
@@ -24,6 +27,34 @@ export const DEFAULT_WEBDAV_CONFIG = {
   password: "",
   authType: "basic",
 } as WebdavConfig;
+
+const getWebdavPath = (fileOrFolderPath: string) => {
+  if (!fileOrFolderPath.startsWith("/")) {
+    return `/${fileOrFolderPath}`;
+  }
+  return fileOrFolderPath;
+};
+
+const getNormPath = (fileOrFolderPath: string) => {
+  if (fileOrFolderPath.startsWith("/")) {
+    return fileOrFolderPath.slice(1);
+  }
+  return fileOrFolderPath;
+};
+
+const fromWebdavItemToRemoteItem = (x: FileStat) => {
+  let key = getNormPath(x.filename);
+  if (x.type === "directory" && !key.endsWith("/")) {
+    key = `${key}/`;
+  }
+  return {
+    key: key,
+    lastModified: Date.parse(x.lastmod).valueOf(),
+    size: x.size,
+    remoteType: "webdav",
+    etag: x.etag || undefined,
+  } as RemoteItem;
+};
 
 export const getWebdavClient = (webdavConfig: WebdavConfig) => {
   if (webdavConfig.username !== "" && webdavConfig.password !== "") {
@@ -41,29 +72,14 @@ export const getWebdavClient = (webdavConfig: WebdavConfig) => {
   }
 };
 
-const getWebdavPath = (fileOrFolderPath: string) => {
-  if (!fileOrFolderPath.startsWith("/")) {
-    return `/${fileOrFolderPath}`;
-  }
-  return fileOrFolderPath;
-};
-
-const getNormPath = (fileOrFolderPath: string) => {
-  if (fileOrFolderPath.startsWith("/")) {
-    return fileOrFolderPath.slice(1);
-  }
-  return fileOrFolderPath;
-};
-
 export const getRemoteMeta = async (
   client: WebDAVClient,
   fileOrFolderPath: string
 ) => {
   const res = (await client.stat(getWebdavPath(fileOrFolderPath), {
-    details: true,
-  })) as ResponseDataDetailed<FileStat>;
-  res.data.filename = getNormPath(res.data.filename);
-  return res;
+    details: false,
+  })) as FileStat;
+  return fromWebdavItemToRemoteItem(res);
 };
 
 export const uploadToRemote = async (
@@ -88,10 +104,11 @@ export const uploadToRemote = async (
     // folder
     if (password === "") {
       // if not encrypted, mkdir a remote folder
-      client.createDirectory(uploadFile, {
+      await client.createDirectory(uploadFile, {
         recursive: true,
       });
-      return await getRemoteMeta(client, uploadFile);
+      const res = await getRemoteMeta(client, uploadFile);
+      return res;
     } else {
       // if encrypted, upload a fake file with the encrypted file name
       await client.putFileContents(uploadFile, "", {
@@ -110,6 +127,11 @@ export const uploadToRemote = async (
     let remoteContent = localContent;
     if (password !== "") {
       remoteContent = await encryptArrayBuffer(localContent, password);
+    }
+    // we need to create folders before uploading
+    const dir = getPathFolder(uploadFile);
+    if (dir !== "/" && dir !== "") {
+      await client.createDirectory(dir, { recursive: true });
     }
     await client.putFileContents(uploadFile, remoteContent, {
       overwrite: true,
@@ -131,15 +153,12 @@ export const listFromRemote = async (client: WebDAVClient, prefix?: string) => {
     details: false /* no need for verbose details here */,
     glob: "/**" /* avoid dot files by using glob */,
   })) as FileStat[];
-  for (const singleItem of contents) {
-    singleItem.filename = getNormPath(singleItem.filename);
-  }
   return {
-    Contents: contents,
+    Contents: contents.map((x) => fromWebdavItemToRemoteItem(x)),
   };
 };
 
-export const downloadFromRemoteRaw = async (
+const downloadFromRemoteRaw = async (
   client: WebDAVClient,
   fileOrFolderPath: string
 ) => {
@@ -212,15 +231,10 @@ export const deleteFromRemote = async (
   }
 };
 
-export const checkWebdavConnectivity = async (client: WebDAVClient) => {
+export const checkConnectivity = async (client: WebDAVClient) => {
   try {
     const results = await getRemoteMeta(client, "/");
-    if (
-      results === undefined ||
-      results.data === undefined ||
-      results.data.type === undefined ||
-      results.data.type !== "directory"
-    ) {
+    if (results === undefined) {
       return false;
     }
     return true;

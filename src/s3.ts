@@ -14,7 +14,9 @@ import {
   HeadBucketCommand,
   ListObjectsV2CommandInput,
   ListObjectsV2CommandOutput,
+  HeadObjectCommandOutput,
 } from "@aws-sdk/client-s3";
+export { S3Client } from "@aws-sdk/client-s3";
 
 import type { _Object } from "@aws-sdk/client-s3";
 
@@ -24,6 +26,8 @@ import {
   mkdirpInVault,
 } from "./misc";
 import * as mime from "mime-types";
+
+import { RemoteItem } from "./baseTypes";
 import { decryptArrayBuffer, encryptArrayBuffer } from "./encrypt";
 
 export interface S3Config {
@@ -43,6 +47,29 @@ export const DEFAULT_S3_CONFIG = {
 };
 
 export type S3ObjectType = _Object;
+
+const fromS3ObjectToRemoteItem = (x: S3ObjectType) => {
+  return {
+    key: x.Key,
+    lastModified: x.LastModified.valueOf(),
+    size: x.Size,
+    remoteType: "s3",
+    etag: x.ETag,
+  } as RemoteItem;
+};
+
+const fromS3HeadObjectToRemoteItem = (
+  key: string,
+  x: HeadObjectCommandOutput
+) => {
+  return {
+    key: key,
+    lastModified: x.LastModified.valueOf(),
+    size: x.ContentLength,
+    remoteType: "s3",
+    etag: x.ETag,
+  } as RemoteItem;
+};
 
 export const getS3Client = (s3Config: S3Config) => {
   let endpoint = s3Config.s3Endpoint;
@@ -65,12 +92,14 @@ export const getRemoteMeta = async (
   s3Config: S3Config,
   fileOrFolderPath: string
 ) => {
-  return await s3Client.send(
+  const res = await s3Client.send(
     new HeadObjectCommand({
       Bucket: s3Config.s3BucketName,
       Key: fileOrFolderPath,
     })
   );
+
+  return fromS3HeadObjectToRemoteItem(fileOrFolderPath, res);
 };
 
 export const uploadToRemote = async (
@@ -181,10 +210,7 @@ export const listFromRemote = async (
 
   // ensemble fake rsp
   return {
-    "$.metadata": {
-      httpStatusCode: 200,
-    },
-    Contents: contents,
+    Contents: contents.map((x) => fromS3ObjectToRemoteItem(x)),
   };
 };
 
@@ -214,7 +240,7 @@ const getObjectBodyToArrayBuffer = async (
   }
 };
 
-export const downloadFromRemoteRaw = async (
+const downloadFromRemoteRaw = async (
   s3Client: S3Client,
   s3Config: S3Config,
   fileOrFolderPath: string
@@ -302,7 +328,7 @@ export const deleteFromRemote = async (
       await s3Client.send(
         new DeleteObjectCommand({
           Bucket: s3Config.s3BucketName,
-          Key: element.Key,
+          Key: element.key,
         })
       );
     });
@@ -320,7 +346,7 @@ export const deleteFromRemote = async (
  * @param s3Config
  * @returns
  */
-export const checkS3Connectivity = async (
+export const checkConnectivity = async (
   s3Client: S3Client,
   s3Config: S3Config
 ) => {

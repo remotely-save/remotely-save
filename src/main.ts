@@ -25,22 +25,20 @@ import type { InternalDBs } from "./localdb";
 
 import type { SyncStatusType, PasswordCheckType } from "./sync";
 import { isPasswordOk, getSyncPlan, doActualSync } from "./sync";
-import {
-  DEFAULT_S3_CONFIG,
-  getS3Client,
-  listFromRemote,
-  S3Config,
-  checkS3Connectivity,
-} from "./s3";
+import { S3Config, DEFAULT_S3_CONFIG } from "./s3";
+import { WebdavConfig, DEFAULT_WEBDAV_CONFIG } from "./webdav";
+import { RemoteClient } from "./remote";
 import { exportSyncPlansToFiles } from "./debugMode";
 
 interface RemotelySavePluginSettings {
-  s3?: S3Config;
-  password?: string;
+  s3: S3Config;
+  webdav: WebdavConfig;
+  password: string;
 }
 
 const DEFAULT_SETTINGS: RemotelySavePluginSettings = {
   s3: DEFAULT_S3_CONFIG,
+  webdav: DEFAULT_WEBDAV_CONFIG,
   password: "",
 };
 
@@ -71,6 +69,16 @@ export default class RemotelySavePlugin extends Plugin {
       })
     );
 
+    this.addRibbonIcon("dice", "Remotely Save", async () => {
+      const client = new RemoteClient(
+        "webdav",
+        undefined,
+        this.settings.webdav
+      );
+      const xx = await client.listFromRemote()
+      console.log(xx);
+    });
+
     this.addRibbonIcon("switch", "Remotely Save", async () => {
       if (this.syncStatus !== "idle") {
         new Notice(
@@ -86,8 +94,13 @@ export default class RemotelySavePlugin extends Plugin {
 
         new Notice("2/6 Starting to fetch remote meta data.");
         this.syncStatus = "getting_remote_meta";
-        const s3Client = getS3Client(this.settings.s3);
-        const remoteRsp = await listFromRemote(s3Client, this.settings.s3);
+        // const client = new RemoteClient('s3', this.settings.s3, undefined);
+        const client = new RemoteClient(
+          "webdav",
+          undefined,
+          this.settings.webdav
+        );
+        const remoteRsp = await client.listFromRemote();
 
         new Notice("3/6 Starting to fetch local meta data.");
         this.syncStatus = "getting_local_meta";
@@ -115,6 +128,7 @@ export default class RemotelySavePlugin extends Plugin {
           local,
           localHistory,
           this.db,
+          client.serviceType,
           this.settings.password
         );
         console.log(syncPlan.mixedStates); // for debugging
@@ -127,8 +141,7 @@ export default class RemotelySavePlugin extends Plugin {
 
         this.syncStatus = "syncing";
         await doActualSync(
-          s3Client,
-          this.settings.s3,
+          client,
           this.db,
           this.app.vault,
           syncPlan,
@@ -259,6 +272,86 @@ class RemotelySaveSettingTab extends PluginSettingTab {
 
     containerEl.createEl("h1", { text: "Remotely Save" });
 
+    const webdavDiv = containerEl.createEl("div");
+    webdavDiv.createEl("h2", { text: "Webdav Service" });
+    new Setting(webdavDiv)
+      .setName("server address")
+      .setDesc("server address")
+      .addText((text) =>
+        text
+          .setPlaceholder("")
+          .setValue(this.plugin.settings.webdav.address)
+          .onChange(async (value) => {
+            this.plugin.settings.webdav.address = value.trim();
+            await this.plugin.saveSettings();
+          })
+      );
+
+    new Setting(webdavDiv)
+      .setName("server username")
+      .setDesc("server username")
+      .addText((text) =>
+        text
+          .setPlaceholder("")
+          .setValue(this.plugin.settings.webdav.username)
+          .onChange(async (value) => {
+            this.plugin.settings.webdav.username = value.trim();
+            await this.plugin.saveSettings();
+          })
+      );
+
+    new Setting(webdavDiv)
+      .setName("server password")
+      .setDesc("server password")
+      .addText((text) =>
+        text
+          .setPlaceholder("")
+          .setValue(this.plugin.settings.webdav.password)
+          .onChange(async (value) => {
+            this.plugin.settings.webdav.password = value.trim();
+            await this.plugin.saveSettings();
+          })
+      );
+
+    new Setting(webdavDiv)
+      .setName("server auth type")
+      .setDesc("server auth type")
+      .addText((text) =>
+        text
+          .setPlaceholder("")
+          .setValue(this.plugin.settings.webdav.authType)
+          .onChange(async (value) => {
+            if (value.trim() === "digest") {
+              this.plugin.settings.webdav.authType = "digest";
+            } else {
+              this.plugin.settings.webdav.authType = "basic";
+            }
+
+            await this.plugin.saveSettings();
+          })
+      );
+
+    new Setting(webdavDiv)
+      .setName("check connectivity")
+      .setDesc("check connectivity")
+      .addButton(async (button) => {
+        button.setButtonText("Check");
+        button.onClick(async () => {
+          new Notice("Checking...");
+          const client = new RemoteClient(
+            "webdav",
+            undefined,
+            this.plugin.settings.webdav
+          );
+          const res = await client.checkConnectivity();
+          if (res) {
+            new Notice("Great! The webdav server can be accessed.");
+          } else {
+            new Notice("The webdav server cannot be reached.");
+          }
+        });
+      });
+
     const s3Div = containerEl.createEl("div");
     s3Div.createEl("h2", { text: "S3 (-compatible) Service" });
 
@@ -368,11 +461,12 @@ class RemotelySaveSettingTab extends PluginSettingTab {
         button.setButtonText("Check");
         button.onClick(async () => {
           new Notice("Checking...");
-          const s3Client = getS3Client(this.plugin.settings.s3);
-          const res = await checkS3Connectivity(
-            s3Client,
-            this.plugin.settings.s3
+          const client = new RemoteClient(
+            "s3",
+            this.plugin.settings.s3,
+            undefined
           );
+          const res = await client.checkConnectivity();
           if (res) {
             new Notice("Great! The bucket can be accessed.");
           } else {
