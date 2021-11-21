@@ -161,8 +161,8 @@ const ensembleMixedStates = async (
         r = {
           key: key,
           exist_remote: true,
-          mtime_remote: backwardMapping.localMtime,
-          size_remote: backwardMapping.localSize,
+          mtime_remote: backwardMapping.localMtime || entry.lastModified,
+          size_remote: backwardMapping.localSize || entry.size,
           remote_encrypted_key: remoteEncryptedKey,
         };
       } else {
@@ -386,6 +386,10 @@ const getOperation = (
   ) {
     r.decision = "clearhist";
     r.decision_branch = 11;
+  }
+
+  if (r.decision === "unknown") {
+    throw Error(`unknown decision for ${r}`);
   }
 
   return r;
