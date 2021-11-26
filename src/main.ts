@@ -296,8 +296,18 @@ class RemotelySaveSettingTab extends PluginSettingTab {
     // we need to create the div in advance of s3Div and webdavDiv
     const serviceChooserDiv = generalDiv.createEl("div");
 
+    let clickChooserTimes = 0;
     serviceChooserDiv.onClickEvent((x) => {
-      if (x.detail === 5) {
+      if (Platform.isIosApp) {
+        // downgrade the experiment
+        // because iOS doesn't support x.detail
+        clickChooserTimes += 1;
+        setTimeout(function () {
+          clickChooserTimes = 0;
+        }, 2000);
+      }
+
+      if ((Platform.isIosApp && clickChooserTimes === 5) || x.detail === 5) {
         if (this.plugin.settings.serviceType === "webdav") {
           new Notice(
             "You've enabled hidden unstable experimental webdav support before. Nothing changes."
@@ -316,6 +326,7 @@ class RemotelySaveSettingTab extends PluginSettingTab {
           );
         }
       }
+      x.preventDefault();
     });
 
     const s3Div = containerEl.createEl("div", { cls: "s3-hide" });
