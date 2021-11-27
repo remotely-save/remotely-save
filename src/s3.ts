@@ -225,12 +225,12 @@ const getObjectBodyToArrayBuffer = async (
   b: Readable | ReadableStream | Blob
 ) => {
   if (b instanceof Readable) {
-    const chunks: Uint8Array[] = [];
-    for await (let chunk of b) {
-      chunks.push(chunk);
-    }
-    const buf = Buffer.concat(chunks);
-    return bufferToArrayBuffer(buf);
+    return (await new Promise((resolve, reject) => {
+      const chunks: Uint8Array[] = [];
+      b.on("data", (chunk) => chunks.push(chunk));
+      b.on("error", reject);
+      b.on("end", () => resolve(bufferToArrayBuffer(Buffer.concat(chunks))));
+    })) as ArrayBuffer;
   } else if (b instanceof ReadableStream) {
     return await new Response(b, {}).arrayBuffer();
   } else if (b instanceof Blob) {
