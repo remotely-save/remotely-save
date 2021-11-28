@@ -11,6 +11,7 @@ import {
   TFolder,
 } from "obsidian";
 import * as CodeMirror from "codemirror";
+import process from "process";
 import {
   prepareDBs,
   destroyDBs,
@@ -199,6 +200,9 @@ export default class RemotelySavePlugin extends Plugin {
       JSON.parse(JSON.stringify(DEFAULT_SETTINGS)) /* copy an object */,
       await this.loadData()
     );
+    if (this.settings.dropbox.clientID === "") {
+      this.settings.dropbox.clientID = DEFAULT_SETTINGS.dropbox.clientID;
+    }
   }
 
   async saveSettings() {

@@ -1,3 +1,4 @@
+import dotenv from "dotenv/config";
 import esbuild from "esbuild";
 import process from "process";
 // import builtins from 'builtin-modules'
@@ -9,6 +10,8 @@ if you want to view the source, please visit the github repository of this plugi
 `;
 
 const prod = process.argv[2] === "production";
+
+const DEFAULT_DROPBOX_APP_KEY = process.env.DROPBOX_APP_KEY || "";
 
 esbuild
   .build({
@@ -31,5 +34,8 @@ esbuild
     treeShaking: true,
     minify: prod,
     outfile: "main.js",
+    define: {
+      "process.env.DEFAULT_DROPBOX_APP_KEY": `"${DEFAULT_DROPBOX_APP_KEY}"`,
+    },
   })
   .catch(() => process.exit(1));

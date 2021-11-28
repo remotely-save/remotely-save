@@ -29,7 +29,7 @@ export interface DropboxConfig {
 
 export const DEFAULT_DROPBOX_CONFIG = {
   accessToken: "",
-  clientID: "",
+  clientID: process.env.DEFAULT_DROPBOX_APP_KEY,
   refreshToken: "",
   accessTokenExpiresInSeconds: 0,
   accessTokenExpiresAtTime: 0,
