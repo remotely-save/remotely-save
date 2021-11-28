@@ -11,25 +11,34 @@ export class RemoteClient {
   readonly s3Config?: s3.S3Config;
   readonly webdavClient?: webdav.WebDAVClient;
   readonly webdavConfig?: webdav.WebdavConfig;
-  readonly dropboxClient?: dropbox.Dropbox;
+  readonly dropboxClient?: dropbox.WrappedDropboxClient;
   readonly dropboxConfig?: dropbox.DropboxConfig;
 
   constructor(
     serviceType: SUPPORTED_SERVICES_TYPE,
     s3Config?: s3.S3Config,
     webdavConfig?: webdav.WebdavConfig,
-    dropboxConfig?: dropbox.DropboxConfig
+    dropboxConfig?: dropbox.DropboxConfig,
+    saveUpdatedConfigFunc?: () => Promise<any>
   ) {
     this.serviceType = serviceType;
+    // the client may modify the config inplace,
+    // so we use a ref not copy of config here
     if (serviceType === "s3") {
-      this.s3Config = { ...s3Config };
+      this.s3Config = s3Config;
       this.s3Client = s3.getS3Client(this.s3Config);
     } else if (serviceType === "webdav") {
-      this.webdavConfig = { ...webdavConfig };
+      this.webdavConfig = webdavConfig;
       this.webdavClient = webdav.getWebdavClient(this.webdavConfig);
     } else if (serviceType === "dropbox") {
-      this.dropboxConfig = { ...dropboxConfig };
-      this.dropboxClient = dropbox.getDropboxClient(this.dropboxConfig);
+      if (saveUpdatedConfigFunc === undefined) {
+        throw Error("remember to provide callback while init dropbox client");
+      }
+      this.dropboxConfig = dropboxConfig;
+      this.dropboxClient = dropbox.getDropboxClient(
+        this.dropboxConfig,
+        saveUpdatedConfigFunc
+      );
     } else {
       throw Error(`not supported service type ${this.serviceType}`);
     }

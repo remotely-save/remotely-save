@@ -103,11 +103,13 @@ export default class RemotelySavePlugin extends Plugin {
 
         new Notice("2/6 Starting to fetch remote meta data.");
         this.syncStatus = "getting_remote_meta";
+        const self = this;
         const client = new RemoteClient(
           this.settings.serviceType,
           this.settings.s3,
           this.settings.webdav,
-          this.settings.dropbox
+          this.settings.dropbox,
+          () => self.saveSettings()
         );
         const remoteRsp = await client.listFromRemote();
         // console.log(remoteRsp);
@@ -336,11 +338,13 @@ export class DropboxAuthModal extends Modal {
               this.plugin.settings.dropbox,
               authRes
             );
+            const self = this;
             const client = new RemoteClient(
               "dropbox",
               undefined,
               undefined,
-              this.plugin.settings.dropbox
+              this.plugin.settings.dropbox,
+              () => self.plugin.saveSettings()
             );
             const username = await client.getUser();
             this.plugin.settings.dropbox.username = username;
@@ -359,7 +363,7 @@ export class DropboxAuthModal extends Modal {
             );
             this.close();
           } catch (err) {
-            console.log(err);
+            console.error(err);
             new Notice("Something goes wrong while connecting to Dropbox.");
           }
         });
@@ -607,16 +611,18 @@ class RemotelySaveSettingTab extends PluginSettingTab {
         button.setButtonText("Revoke Auth");
         button.onClick(async () => {
           try {
-            console.log("settings ");
-            console.log(this.plugin.settings.dropbox);
+            const self = this;
             const client = new RemoteClient(
               "dropbox",
               undefined,
               undefined,
-              this.plugin.settings.dropbox
+              this.plugin.settings.dropbox,
+              () => self.plugin.saveSettings()
             );
             await client.revokeAuth();
-            this.plugin.settings.dropbox = { ...DEFAULT_DROPBOX_CONFIG };
+            this.plugin.settings.dropbox = JSON.parse(
+              JSON.stringify(DEFAULT_DROPBOX_CONFIG)
+            );
             await this.plugin.saveSettings();
             dropboxAuthDiv.toggleClass(
               "dropbox-auth-button-hide",
@@ -628,7 +634,7 @@ class RemotelySaveSettingTab extends PluginSettingTab {
             );
             new Notice("Revoked!");
           } catch (err) {
-            console.log(err);
+            console.error(err);
             new Notice("Something goes wrong while revoking");
           }
         });
@@ -666,12 +672,15 @@ class RemotelySaveSettingTab extends PluginSettingTab {
         button.setButtonText("Check");
         button.onClick(async () => {
           new Notice("Checking...");
+          const self = this;
           const client = new RemoteClient(
             "dropbox",
             undefined,
             undefined,
-            this.plugin.settings.dropbox
+            this.plugin.settings.dropbox,
+            () => self.plugin.saveSettings()
           );
+
           const res = await client.checkConnectivity();
           if (res) {
             new Notice("Great! We can connect to Dropbox!");
