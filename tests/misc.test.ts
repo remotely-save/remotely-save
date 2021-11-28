@@ -69,6 +69,28 @@ describe("Misc: get folder levels", () => {
     const res3 = ["xxx", "xxx/yyy", "xxx/yyy/zzz"];
     expect(misc.getFolderLevels(item3)).to.deep.equal(res3);
   });
+
+  it("should treat path starting with / correctly", ()=> {
+    const item = "/xxx/yyy/zzz.md";
+    const res = ["/xxx", "/xxx/yyy"];
+    expect(misc.getFolderLevels(item)).to.deep.equal(res);
+
+    const item2 = "/xxx/yyy/zzz";
+    const res2 = ["/xxx", "/xxx/yyy"];
+    expect(misc.getFolderLevels(item2)).to.deep.equal(res2);
+
+    const item3 = "/xxx/yyy/zzz/";
+    const res3 = ["/xxx", "/xxx/yyy", "/xxx/yyy/zzz"];
+    expect(misc.getFolderLevels(item3)).to.deep.equal(res3);
+
+    const item4 = "/xxx";
+    const res4 = [] as string[];
+    expect(misc.getFolderLevels(item4)).to.deep.equal(res4);
+
+    const item5 = "/";
+    const res5 = [] as string[];
+    expect(misc.getFolderLevels(item5)).to.deep.equal(res5);
+  });
 });
 
 describe("Misc: vaild file name tests", () => {

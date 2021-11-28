@@ -45,7 +45,10 @@ export const getFolderLevels = (x: string) => {
   const y1 = x.split("/");
   let i = 0;
   for (let index = 0; index + 1 < y1.length; index++) {
-    res.push(y1.slice(0, index + 1).join("/"));
+    const k = y1.slice(0, index + 1).join("/");
+    if (k !== '' && k!== '/') {
+      res.push(k)
+    }
   }
   return res;
 };
