@@ -188,4 +188,20 @@ export class RemoteClient {
       throw Error(`not supported service type ${this.serviceType}`);
     }
   };
+
+  getUser = async () => {
+    if (this.serviceType === "dropbox") {
+      return await dropbox.getUserDisplayName(this.dropboxClient);
+    } else {
+      throw Error(`not supported service type ${this.serviceType}`);
+    }
+  };
+
+  revokeAuth = async () => {
+    if (this.serviceType === "dropbox") {
+      return await dropbox.revokeAuth(this.dropboxClient);
+    } else {
+      throw Error(`not supported service type ${this.serviceType}`);
+    }
+  };
 }

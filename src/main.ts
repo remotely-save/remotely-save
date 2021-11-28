@@ -28,7 +28,14 @@ import { isPasswordOk, getSyncPlan, doActualSync } from "./sync";
 
 import { S3Config, DEFAULT_S3_CONFIG } from "./s3";
 import { WebdavConfig, DEFAULT_WEBDAV_CONFIG, WebdavAuthType } from "./webdav";
-import { DropboxConfig, DEFAULT_DROPBOX_CONFIG } from "./remoteForDropbox";
+import {
+  DropboxConfig,
+  DEFAULT_DROPBOX_CONFIG,
+  getCodeVerifierAndChallenge,
+  getAuthUrl,
+  sendAuthReq,
+  setConfigBySuccessfullAuthInplace,
+} from "./remoteForDropbox";
 
 import { RemoteClient } from "./remote";
 import { exportSyncPlansToFiles } from "./debugMode";
@@ -185,7 +192,11 @@ export default class RemotelySavePlugin extends Plugin {
   }
 
   async loadSettings() {
-    this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
+    this.settings = Object.assign(
+      {},
+      JSON.parse(JSON.stringify(DEFAULT_SETTINGS)) /* copy an object */,
+      await this.loadData()
+    );
   }
 
   async saveSettings() {
@@ -259,6 +270,108 @@ export class PasswordModal extends Modal {
   }
 }
 
+export class DropboxAuthModal extends Modal {
+  readonly plugin: RemotelySavePlugin;
+  readonly authDiv: HTMLDivElement;
+  readonly revokeAuthDiv: HTMLDivElement;
+  readonly revokeAuthSetting: Setting;
+  constructor(
+    app: App,
+    plugin: RemotelySavePlugin,
+    authDiv: HTMLDivElement,
+    revokeAuthDiv: HTMLDivElement,
+    revokeAuthSetting: Setting
+  ) {
+    super(app);
+    this.plugin = plugin;
+    this.authDiv = authDiv;
+    this.revokeAuthDiv = revokeAuthDiv;
+    this.revokeAuthSetting = revokeAuthSetting;
+  }
+
+  onOpen() {
+    let { contentEl } = this;
+
+    const k = getCodeVerifierAndChallenge();
+    const authUrl = getAuthUrl(
+      this.plugin.settings.dropbox.clientID,
+      k.challenge
+    );
+
+    contentEl.createEl("p", {
+      text: "Step 1: Visit the following address in a browser, and follow the steps on the web page to authorize.",
+    });
+    contentEl.createEl("p").createEl("a", {
+      href: authUrl,
+      text: authUrl,
+    });
+
+    contentEl.createEl("p", {
+      text: 'Step 2: In the end of the web flow, you obtain a long code. Paste it here then click "Submit".',
+    });
+
+    let authCode = "";
+    new Setting(contentEl)
+      .setName("Auth Code from web page")
+      .setDesc('You need to click "Confirm".')
+      .addText((text) =>
+        text
+          .setPlaceholder("")
+          .setValue("")
+          .onChange((val) => {
+            authCode = val.trim();
+          })
+      )
+      .addButton(async (button) => {
+        button.setButtonText("Confirm");
+        button.onClick(async () => {
+          new Notice("Trying to connect to Dropbox");
+          try {
+            const authRes = await sendAuthReq(
+              this.plugin.settings.dropbox.clientID,
+              k.verifier,
+              authCode
+            );
+            setConfigBySuccessfullAuthInplace(
+              this.plugin.settings.dropbox,
+              authRes
+            );
+            const client = new RemoteClient(
+              "dropbox",
+              undefined,
+              undefined,
+              this.plugin.settings.dropbox
+            );
+            const username = await client.getUser();
+            this.plugin.settings.dropbox.username = username;
+            await this.plugin.saveSettings();
+            new Notice(`Good! We've connected to Dropbox as user ${username}!`);
+            this.authDiv.toggleClass(
+              "dropbox-auth-button-hide",
+              this.plugin.settings.dropbox.username !== ""
+            );
+            this.revokeAuthDiv.toggleClass(
+              "dropbox-revoke-auth-button-hide",
+              this.plugin.settings.dropbox.username === ""
+            );
+            this.revokeAuthSetting.setDesc(
+              `You've connected as user ${this.plugin.settings.dropbox.username}. If you want to disconnect, click this button`
+            );
+            this.close();
+          } catch (err) {
+            console.log(err);
+            new Notice("Something goes wrong while connecting to Dropbox.");
+          }
+        });
+      });
+  }
+
+  onClose() {
+    let { contentEl } = this;
+    contentEl.empty();
+  }
+}
+
 class RemotelySaveSettingTab extends PluginSettingTab {
   plugin: RemotelySavePlugin;
 
@@ -299,11 +412,11 @@ class RemotelySaveSettingTab extends PluginSettingTab {
         });
       });
 
-    // we need to create the div in advance of s3Div and webdavDiv
+    // we need to create the div in advance of any other service divs
     const serviceChooserDiv = generalDiv.createEl("div");
 
     let clickChooserTimes = 0;
-    serviceChooserDiv.onClickEvent((x) => {
+    serviceChooserDiv.onClickEvent(async (x) => {
       if (Platform.isIosApp) {
         // downgrade the experiment
         // because iOS doesn't support x.detail
@@ -320,13 +433,13 @@ class RemotelySaveSettingTab extends PluginSettingTab {
           );
         } else if (!this.plugin.settings.enableExperimentService) {
           this.plugin.settings.enableExperimentService = true;
-          this.plugin.saveSettings();
+          await this.plugin.saveSettings();
           new Notice(
             "You've enabled hidden unstable experimental webdav support. Reopen settings again and try webdav with caution."
           );
         } else if (this.plugin.settings.enableExperimentService) {
           this.plugin.settings.enableExperimentService = false;
-          this.plugin.saveSettings();
+          await this.plugin.saveSettings();
           new Notice(
             "You've disabled hidden unstable experimental webdav support. Reopen settings again."
           );
@@ -474,21 +587,77 @@ class RemotelySaveSettingTab extends PluginSettingTab {
       cls: "dropbox-disclaimer",
     });
     dropboxDiv.createEl("p", {
-      text: "We create a folder App/obsidian-remotely-save on your Dropbox. All files/folders sync would happen inside this folder.",
+      text: "We will create a folder App/obsidian-remotely-save on your Dropbox. All files/folders sync would happen inside this folder.",
     });
 
-    new Setting(dropboxDiv)
-      .setName("access token")
-      .setDesc("access token")
-      .addText((text) =>
-        text
-          .setPlaceholder("")
-          .setValue(this.plugin.settings.dropbox.accessToken)
-          .onChange(async (value) => {
-            this.plugin.settings.dropbox.accessToken = value.trim();
+    const dropboxSelectAuthDiv = dropboxDiv.createDiv();
+    const dropboxAuthDiv = dropboxSelectAuthDiv.createDiv({
+      cls: "dropbox-auth-button-hide",
+    });
+    const dropboxRevokeAuthDiv = dropboxSelectAuthDiv.createDiv({
+      cls: "dropbox-revoke-auth-button-hide",
+    });
+
+    const revokeAuthSetting = new Setting(dropboxRevokeAuthDiv)
+      .setName("Revoke Auth")
+      .setDesc(
+        `You've connected as user ${this.plugin.settings.dropbox.username}. If you want to disconnect, click this button`
+      )
+      .addButton(async (button) => {
+        button.setButtonText("Revoke Auth");
+        button.onClick(async () => {
+          try {
+            console.log("settings ");
+            console.log(this.plugin.settings.dropbox);
+            const client = new RemoteClient(
+              "dropbox",
+              undefined,
+              undefined,
+              this.plugin.settings.dropbox
+            );
+            await client.revokeAuth();
+            this.plugin.settings.dropbox = { ...DEFAULT_DROPBOX_CONFIG };
             await this.plugin.saveSettings();
-          })
-      );
+            dropboxAuthDiv.toggleClass(
+              "dropbox-auth-button-hide",
+              this.plugin.settings.dropbox.username !== ""
+            );
+            dropboxRevokeAuthDiv.toggleClass(
+              "dropbox-revoke-auth-button-hide",
+              this.plugin.settings.dropbox.username === ""
+            );
+            new Notice("Revoked!");
+          } catch (err) {
+            console.log(err);
+            new Notice("Something goes wrong while revoking");
+          }
+        });
+      });
+
+    new Setting(dropboxAuthDiv)
+      .setName("Auth")
+      .setDesc("Auth")
+      .addButton(async (button) => {
+        button.setButtonText("Auth");
+        button.onClick(async () => {
+          new DropboxAuthModal(
+            this.app,
+            this.plugin,
+            dropboxAuthDiv,
+            dropboxRevokeAuthDiv,
+            revokeAuthSetting
+          ).open();
+        });
+      });
+
+    dropboxAuthDiv.toggleClass(
+      "dropbox-auth-button-hide",
+      this.plugin.settings.dropbox.username !== ""
+    );
+    dropboxRevokeAuthDiv.toggleClass(
+      "dropbox-revoke-auth-button-hide",
+      this.plugin.settings.dropbox.username === ""
+    );
 
     new Setting(dropboxDiv)
       .setName("check connectivity")

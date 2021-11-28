@@ -1,5 +1,7 @@
 import * as path from "path";
 import { FileStats, Vault } from "obsidian";
+import { Buffer } from "buffer";
+import * as crypto from "crypto";
 
 import { Dropbox, DropboxResponse, files } from "dropbox";
 export { Dropbox } from "dropbox";
@@ -17,10 +19,22 @@ import { strict as assert } from "assert";
 
 export interface DropboxConfig {
   accessToken: string;
+  clientID: string;
+  refreshToken: string;
+  accessTokenExpiresInSeconds: number;
+  accessTokenExpiresAtTime: number;
+  accountID: string;
+  username: string;
 }
 
 export const DEFAULT_DROPBOX_CONFIG = {
   accessToken: "",
+  clientID: "",
+  refreshToken: "",
+  accessTokenExpiresInSeconds: 0,
+  accessTokenExpiresAtTime: 0,
+  accountID: "",
+  username: "",
 };
 
 export const getDropboxPath = (fileOrFolderPath: string) => {
@@ -369,4 +383,85 @@ export const checkConnectivity = async (dbx: Dropbox) => {
   } catch (err) {
     return false;
   }
+};
+
+export const getUserDisplayName = async (dbx: Dropbox) => {
+  const acct = await dbx.usersGetCurrentAccount();
+  return acct.result.name.display_name;
+};
+
+/**
+ * Dropbox authorization using PKCE
+ * see https://dropbox.tech/developers/pkce--what-and-why-
+ *
+ */
+
+const specialBase64Encode = (str: Buffer) => {
+  return str
+    .toString("base64")
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_")
+    .replace(/=/g, "");
+};
+const sha256 = (buffer: string) => {
+  return crypto.createHash("sha256").update(buffer).digest();
+};
+
+export const getCodeVerifierAndChallenge = () => {
+  const codeVerifier = specialBase64Encode(crypto.randomBytes(32));
+  // console.log(`Client generated code_verifier: ${codeVerifier}`);
+  const codeChallenge = specialBase64Encode(sha256(codeVerifier));
+  // console.log(`Client generated code_challenge: ${codeChallenge}`);
+  return {
+    verifier: codeVerifier,
+    challenge: codeChallenge,
+  };
+};
+
+export const getAuthUrl = (appKey: string, challenge: string) => {
+  return `https://www.dropbox.com/oauth2/authorize?client_id=${appKey}&response_type=code&code_challenge=${challenge}&code_challenge_method=S256&token_access_type=offline`;
+};
+
+export interface DropboxSuccessAuthRes {
+  access_token: string;
+  token_type: string;
+  expires_in: number;
+  refresh_token: string;
+  scope: string;
+  uid: string;
+  account_id: string;
+}
+
+export const sendAuthReq = async (
+  appKey: string,
+  verifier: string,
+  authCode: string
+) => {
+  const resp1 = await fetch("https://api.dropboxapi.com/oauth2/token", {
+    method: "POST",
+    body: new URLSearchParams({
+      code: authCode,
+      grant_type: "authorization_code",
+      code_verifier: verifier,
+      client_id: appKey,
+    }),
+  });
+  const resp2 = (await resp1.json()) as DropboxSuccessAuthRes;
+  return resp2;
+};
+
+export const setConfigBySuccessfullAuthInplace = (
+  config: DropboxConfig,
+  authRes: DropboxSuccessAuthRes
+) => {
+  config.accessToken = authRes.access_token;
+  config.refreshToken = authRes.refresh_token;
+  config.accessTokenExpiresInSeconds = authRes.expires_in;
+  config.accessTokenExpiresAtTime =
+    Date.now() + authRes.expires_in * 1000 - 10 * 1000;
+  config.accountID = authRes.account_id;
+};
+
+export const revokeAuth = async (client: Dropbox) => {
+  await client.authTokenRevoke();
 };

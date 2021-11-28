@@ -18,6 +18,14 @@
   display: none;
 }
 
+.dropbox-auth-button-hide {
+  display: none;
+}
+
+.dropbox-revoke-auth-button-hide {
+  display: none;
+}
+
 .webdav-disclaimer {
   font-weight: bold;
 }
