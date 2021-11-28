@@ -46,8 +46,8 @@ export const getFolderLevels = (x: string) => {
   let i = 0;
   for (let index = 0; index + 1 < y1.length; index++) {
     const k = y1.slice(0, index + 1).join("/");
-    if (k !== '' && k!== '/') {
-      res.push(k)
+    if (k !== "" && k !== "/") {
+      res.push(k);
     }
   }
   return res;
@@ -144,4 +144,14 @@ export const getPathFolder = (a: string) => {
   }
   const b = path.posix.dirname(a);
   return b.endsWith("/") ? b : `${b}/`;
+};
+
+/**
+ * https://stackoverflow.com/questions/54511144
+ * @param a
+ * @param delimiter
+ * @returns
+ */
+export const setToString = (a: Set<string>, delimiter: string = ",") => {
+  return [...a].join(delimiter);
 };

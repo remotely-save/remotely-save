@@ -70,7 +70,7 @@ describe("Misc: get folder levels", () => {
     expect(misc.getFolderLevels(item3)).to.deep.equal(res3);
   });
 
-  it("should treat path starting with / correctly", ()=> {
+  it("should treat path starting with / correctly", () => {
     const item = "/xxx/yyy/zzz.md";
     const res = ["/xxx", "/xxx/yyy"];
     expect(misc.getFolderLevels(item)).to.deep.equal(res);
