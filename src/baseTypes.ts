@@ -2,7 +2,7 @@
  * Only type defs here.
  */
 
-export type SUPPORTED_SERVICES_TYPE = "s3" | "webdav";
+export type SUPPORTED_SERVICES_TYPE = "s3" | "webdav" | "dropbox";
 
 export interface RemoteItem {
   key: string;

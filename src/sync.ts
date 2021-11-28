@@ -9,7 +9,7 @@ import type { FileFolderHistoryRecord, InternalDBs } from "./localdb";
 
 import { RemoteClient } from "./remote";
 import type { SUPPORTED_SERVICES_TYPE, RemoteItem } from "./baseTypes";
-import { mkdirpInVault, isHiddenPath, isVaildText } from "./misc";
+import { mkdirpInVault, isHiddenPath, isVaildText, setToString } from "./misc";
 import {
   decryptBase32ToString,
   encryptStringToBase32,
@@ -389,7 +389,7 @@ const getOperation = (
   }
 
   if (r.decision === "unknown") {
-    throw Error(`unknown decision for ${r}`);
+    throw Error(`unknown decision for ${JSON.stringify(r)}`);
   }
 
   return r;
@@ -428,7 +428,8 @@ const dispatchOperationToActual = async (
   client: RemoteClient,
   db: InternalDBs,
   vault: Vault,
-  password: string = ""
+  password: string = "",
+  foldersCreatedBefore: Set<string> | undefined = undefined
 ) => {
   let remoteEncryptedKey = key;
   if (password !== "") {
@@ -461,7 +462,8 @@ const dispatchOperationToActual = async (
       vault,
       false,
       password,
-      remoteEncryptedKey
+      remoteEncryptedKey,
+      foldersCreatedBefore
     );
     await upsertSyncMetaMappingData(
       client.serviceType,
@@ -493,7 +495,8 @@ const dispatchOperationToActual = async (
       vault,
       false,
       password,
-      remoteEncryptedKey
+      remoteEncryptedKey,
+      foldersCreatedBefore
     );
     await upsertSyncMetaMappingData(
       client.serviceType,
@@ -521,18 +524,35 @@ export const doActualSync = async (
   password: string = ""
 ) => {
   const keyStates = syncPlan.mixedStates;
-  await Promise.all(
-    Object.entries(keyStates)
-      .sort((k, v) => -(k as string).length)
-      .map(async ([k, v]) =>
-        dispatchOperationToActual(
-          k as string,
-          v as FileOrFolderMixedState,
-          client,
-          db,
-          vault,
-          password
-        )
-      )
-  );
+  const foldersCreatedBefore = new Set<string>();
+  for (const [k, v] of Object.entries(keyStates).sort(
+    ([k1, v1], [k2, v2]) => k2.length - k1.length
+  )) {
+    const k2 = k as string;
+    const v2 = v as FileOrFolderMixedState;
+    await dispatchOperationToActual(
+      k as string,
+      v as FileOrFolderMixedState,
+      client,
+      db,
+      vault,
+      password,
+      foldersCreatedBefore
+    );
+    // console.log(`finished ${k}, with ${setToString(foldersCreatedBefore)}`);
+  }
+  // await Promise.all(
+  //   Object.entries(keyStates)
+  //     .map(async ([k, v]) =>
+  //       dispatchOperationToActual(
+  //         k as string,
+  //         v as FileOrFolderMixedState,
+  //         client,
+  //         db,
+  //         vault,
+  //         password,
+  //         foldersCreatedBefore
+  //       )
+  //     )
+  // );
 };

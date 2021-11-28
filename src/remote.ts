@@ -3,6 +3,7 @@ import { Vault } from "obsidian";
 import type { SUPPORTED_SERVICES_TYPE } from "./baseTypes";
 import * as s3 from "./s3";
 import * as webdav from "./webdav";
+import * as dropbox from "./remoteForDropbox";
 
 export class RemoteClient {
   readonly serviceType: SUPPORTED_SERVICES_TYPE;
@@ -10,19 +11,25 @@ export class RemoteClient {
   readonly s3Config?: s3.S3Config;
   readonly webdavClient?: webdav.WebDAVClient;
   readonly webdavConfig?: webdav.WebdavConfig;
+  readonly dropboxClient?: dropbox.Dropbox;
+  readonly dropboxConfig?: dropbox.DropboxConfig;
 
   constructor(
     serviceType: SUPPORTED_SERVICES_TYPE,
     s3Config?: s3.S3Config,
-    webdavConfig?: webdav.WebdavConfig
+    webdavConfig?: webdav.WebdavConfig,
+    dropboxConfig?: dropbox.DropboxConfig
   ) {
     this.serviceType = serviceType;
     if (serviceType === "s3") {
-      this.s3Config = s3Config;
-      this.s3Client = s3.getS3Client(s3Config);
+      this.s3Config = { ...s3Config };
+      this.s3Client = s3.getS3Client(this.s3Config);
     } else if (serviceType === "webdav") {
-      this.webdavConfig = webdavConfig;
-      this.webdavClient = webdav.getWebdavClient(webdavConfig);
+      this.webdavConfig = { ...webdavConfig };
+      this.webdavClient = webdav.getWebdavClient(this.webdavConfig);
+    } else if (serviceType === "dropbox") {
+      this.dropboxConfig = { ...dropboxConfig };
+      this.dropboxClient = dropbox.getDropboxClient(this.dropboxConfig);
     } else {
       throw Error(`not supported service type ${this.serviceType}`);
     }
@@ -37,6 +44,8 @@ export class RemoteClient {
       );
     } else if (this.serviceType === "webdav") {
       return await webdav.getRemoteMeta(this.webdavClient, fileOrFolderPath);
+    } else if (this.serviceType === "dropbox") {
+      return await dropbox.getRemoteMeta(this.dropboxClient, fileOrFolderPath);
     } else {
       throw Error(`not supported service type ${this.serviceType}`);
     }
@@ -47,7 +56,8 @@ export class RemoteClient {
     vault: Vault,
     isRecursively: boolean = false,
     password: string = "",
-    remoteEncryptedKey: string = ""
+    remoteEncryptedKey: string = "",
+    foldersCreatedBefore: Set<string> | undefined = undefined
   ) => {
     if (this.serviceType === "s3") {
       return await s3.uploadToRemote(
@@ -68,6 +78,16 @@ export class RemoteClient {
         password,
         remoteEncryptedKey
       );
+    } else if (this.serviceType === "dropbox") {
+      return await dropbox.uploadToRemote(
+        this.dropboxClient,
+        fileOrFolderPath,
+        vault,
+        isRecursively,
+        password,
+        remoteEncryptedKey,
+        foldersCreatedBefore
+      );
     } else {
       throw Error(`not supported service type ${this.serviceType}`);
     }
@@ -78,6 +98,8 @@ export class RemoteClient {
       return await s3.listFromRemote(this.s3Client, this.s3Config, prefix);
     } else if (this.serviceType === "webdav") {
       return await webdav.listFromRemote(this.webdavClient, prefix);
+    } else if (this.serviceType === "dropbox") {
+      return await dropbox.listFromRemote(this.dropboxClient, prefix);
     } else {
       throw Error(`not supported service type ${this.serviceType}`);
     }
@@ -109,6 +131,15 @@ export class RemoteClient {
         password,
         remoteEncryptedKey
       );
+    } else if (this.serviceType === "dropbox") {
+      return await dropbox.downloadFromRemote(
+        this.dropboxClient,
+        fileOrFolderPath,
+        vault,
+        mtime,
+        password,
+        remoteEncryptedKey
+      );
     } else {
       throw Error(`not supported service type ${this.serviceType}`);
     }
@@ -134,6 +165,13 @@ export class RemoteClient {
         password,
         remoteEncryptedKey
       );
+    } else if (this.serviceType === "dropbox") {
+      return await dropbox.deleteFromRemote(
+        this.dropboxClient,
+        fileOrFolderPath,
+        password,
+        remoteEncryptedKey
+      );
     } else {
       throw Error(`not supported service type ${this.serviceType}`);
     }
@@ -144,6 +182,8 @@ export class RemoteClient {
       return await s3.checkConnectivity(this.s3Client, this.s3Config);
     } else if (this.serviceType === "webdav") {
       return await webdav.checkConnectivity(this.webdavClient);
+    } else if (this.serviceType === "dropbox") {
+      return await dropbox.checkConnectivity(this.dropboxClient);
     } else {
       throw Error(`not supported service type ${this.serviceType}`);
     }

@@ -25,8 +25,11 @@ import type { InternalDBs } from "./localdb";
 
 import type { SyncStatusType, PasswordCheckType } from "./sync";
 import { isPasswordOk, getSyncPlan, doActualSync } from "./sync";
+
 import { S3Config, DEFAULT_S3_CONFIG } from "./s3";
 import { WebdavConfig, DEFAULT_WEBDAV_CONFIG, WebdavAuthType } from "./webdav";
+import { DropboxConfig, DEFAULT_DROPBOX_CONFIG } from "./remoteForDropbox";
+
 import { RemoteClient } from "./remote";
 import { exportSyncPlansToFiles } from "./debugMode";
 import { SUPPORTED_SERVICES_TYPE } from "./baseTypes";
@@ -34,6 +37,7 @@ import { SUPPORTED_SERVICES_TYPE } from "./baseTypes";
 interface RemotelySavePluginSettings {
   s3: S3Config;
   webdav: WebdavConfig;
+  dropbox: DropboxConfig;
   password: string;
   serviceType: SUPPORTED_SERVICES_TYPE;
   enableExperimentService: boolean;
@@ -42,6 +46,7 @@ interface RemotelySavePluginSettings {
 const DEFAULT_SETTINGS: RemotelySavePluginSettings = {
   s3: DEFAULT_S3_CONFIG,
   webdav: DEFAULT_WEBDAV_CONFIG,
+  dropbox: DEFAULT_DROPBOX_CONFIG,
   password: "",
   serviceType: "s3",
   enableExperimentService: false,
@@ -94,15 +99,16 @@ export default class RemotelySavePlugin extends Plugin {
         const client = new RemoteClient(
           this.settings.serviceType,
           this.settings.s3,
-          this.settings.webdav
+          this.settings.webdav,
+          this.settings.dropbox
         );
         const remoteRsp = await client.listFromRemote();
+        // console.log(remoteRsp);
 
         new Notice("3/6 Starting to fetch local meta data.");
         this.syncStatus = "getting_local_meta";
         const local = this.app.vault.getAllLoadedFiles();
         const localHistory = await loadDeleteRenameHistoryTable(this.db);
-        // console.log(remoteRsp);
         // console.log(local);
         // console.log(localHistory);
 
@@ -453,6 +459,59 @@ class RemotelySaveSettingTab extends PluginSettingTab {
         });
       });
 
+    const dropboxDiv = containerEl.createEl("div", { cls: "dropbox-hide" });
+    dropboxDiv.toggleClass(
+      "dropbox-hide",
+      this.plugin.settings.serviceType !== "dropbox"
+    );
+    dropboxDiv.createEl("h2", { text: "for Dropbox" });
+    dropboxDiv.createEl("p", {
+      text: "Disclaimer: Sync support for Dropbox are more experimental, and s3 functions are more stable now.",
+      cls: "dropbox-disclaimer",
+    });
+    dropboxDiv.createEl("p", {
+      text: "Disclaimer: This app is NOT an official Dropbox product. It just uses Dropbox open api.",
+      cls: "dropbox-disclaimer",
+    });
+    dropboxDiv.createEl("p", {
+      text: "We create a folder App/obsidian-remotely-save on your Dropbox. All files/folders sync would happen inside this folder.",
+    });
+
+    new Setting(dropboxDiv)
+      .setName("access token")
+      .setDesc("access token")
+      .addText((text) =>
+        text
+          .setPlaceholder("")
+          .setValue(this.plugin.settings.dropbox.accessToken)
+          .onChange(async (value) => {
+            this.plugin.settings.dropbox.accessToken = value.trim();
+            await this.plugin.saveSettings();
+          })
+      );
+
+    new Setting(dropboxDiv)
+      .setName("check connectivity")
+      .setDesc("check connectivity")
+      .addButton(async (button) => {
+        button.setButtonText("Check");
+        button.onClick(async () => {
+          new Notice("Checking...");
+          const client = new RemoteClient(
+            "dropbox",
+            undefined,
+            undefined,
+            this.plugin.settings.dropbox
+          );
+          const res = await client.checkConnectivity();
+          if (res) {
+            new Notice("Great! We can connect to Dropbox!");
+          } else {
+            new Notice("We cannot connect to Dropbox.");
+          }
+        });
+      });
+
     const webdavDiv = containerEl.createEl("div", { cls: "webdav-hide" });
     webdavDiv.toggleClass(
       "webdav-hide",
@@ -563,6 +622,7 @@ class RemotelySaveSettingTab extends PluginSettingTab {
           this.plugin.settings.enableExperimentService;
 
         dropdown.addOption("s3", "s3 (-compatible)");
+        dropdown.addOption("dropbox", "Dropbox");
         if (currService === "webdav" || enableExperimentService) {
           dropdown.addOption("webdav", "webdav (experimental)");
           if (!enableExperimentService) {
@@ -577,6 +637,10 @@ class RemotelySaveSettingTab extends PluginSettingTab {
             s3Div.toggleClass(
               "s3-hide",
               this.plugin.settings.serviceType !== "s3"
+            );
+            dropboxDiv.toggleClass(
+              "dropbox-hide",
+              this.plugin.settings.serviceType !== "dropbox"
             );
             webdavDiv.toggleClass(
               "webdav-hide",

@@ -11,10 +11,16 @@
   display: none;
 }
 
+.dropbox-disclaimer {
+  font-weight: bold;
+}
+.dropbox-hide {
+  display: none;
+}
+
 .webdav-disclaimer {
   font-weight: bold;
 }
-
 .webdav-hide {
   display: none;
 }

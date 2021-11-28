@@ -12,7 +12,10 @@
   "browser": {
     "path": "path-browserify",
     "process": "process/browser",
-    "stream": "stream-browserify"
+    "stream": "stream-browserify",
+    "crypto": "crypto-browserify",
+    "util": "util/",
+    "assert": "assert/"
   },
   "source": "main.ts",
   "keywords": [],
@@ -42,9 +45,12 @@
     "@aws-sdk/lib-storage": "^3.40.1",
     "@aws-sdk/signature-v4-crt": "^3.37.0",
     "acorn": "^8.5.0",
+    "assert": "^2.0.0",
     "aws-crt": "^1.10.1",
     "buffer": "^6.0.3",
     "codemirror": "^5.63.1",
+    "crypto-browserify": "^3.12.0",
+    "dropbox": "^10.22.0",
     "localforage": "^1.10.0",
     "mime-types": "^2.1.33",
     "obsidian": "^0.12.0",
@@ -53,6 +59,7 @@
     "rfc4648": "^1.5.0",
     "rimraf": "^3.0.2",
     "stream-browserify": "^3.0.0",
+    "util": "^0.12.4",
     "webdav": "^4.7.0",
     "webdav-fs": "^4.0.0",
     "xregexp": "^5.1.0"
