@@ -49,7 +49,7 @@ As of November 2021, the plugin is considered in BETA stage. **DO NOT USE IT for
 
 - **This plugin's function for Dropbox is not as mature as functions for S3.**
 - **This plugin is NOT an official Dropbox product.** The plugin just uses Dropbox's public API.
-- After the authorization, the plugin can read your name and email (which cannot be unselected on Dropbox api), and read and write files in your Dropbox's `/App/obsidian-remotely-save` folder.
+- After the authorization, the plugin can read your name and email (which cannot be unselected on Dropbox api), and read and write files in your Dropbox's `/Apps/obsidian-remotely-save` folder.
 - If you decide to authorize this plugin to connect to Dropbox, please go to plugin's settings, and choose Dropbox then follow the instructions.
 - Password-based end-to-end encryption is also supported.
 
