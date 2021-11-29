@@ -12,7 +12,7 @@ As of November 2021, the plugin is considered in BETA stage. **DO NOT USE IT for
 
 ## Features
 
-- **Amazon S3 or S3-compatible services are supported.** Webdav supports on the half way.
+- **Amazon S3 or S3-compatible, and Dropbox services are supported.** Webdav supports on the half way.
 - **Obsidiain Mobile supported.** Vaults can be synced across mobile and desktop devices with the cloud service as the "broker".
 - **[End-to-end encryption](./docs/encryption.md) supported.** Files would be encrypted using openssl format before being sent to the cloud **if** user specify a password.
 - **[Minimal Intrusive](./docs/minimal_intrusive_design.md).**
@@ -44,6 +44,14 @@ As of November 2021, the plugin is considered in BETA stage. **DO NOT USE IT for
 - If you want to enable end-to-end encryption, also set a password in settings. If you do not specify a password, the files and folders are synced in plain, original content to the cloud.
 - Click the new "switch" icon on the ribbon (the left sidebar), **every time** you want to sync your vault between local and remote. (No "auto sync" yet.)
 - **Be patient while syncing.** Especially in the first-time sync.
+
+### Dropbox
+
+- **This plugin's function for Dropbox is not as mature as functions for S3.**
+- **This plugin is NOT an official Dropbox product.** The plugin just uses Dropbox's public API.
+- After the authorization, the plugin can read your name and email (which cannot be unselected on Dropbox api), and read and write files in your Dropbox's `/App/obsidian-remotely-save` folder.
+- If you decide to authorize this plugin to connect to Dropbox, please go to plugin's settings, and choose Dropbox then follow the instructions.
+- Password-based end-to-end encryption is also supported.
 
 ### webdav
 
