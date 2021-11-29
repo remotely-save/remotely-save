@@ -338,11 +338,12 @@ export class DropboxAuthModal extends Modal {
               k.verifier,
               authCode
             );
+            const self = this;
             setConfigBySuccessfullAuthInplace(
               this.plugin.settings.dropbox,
-              authRes
+              authRes,
+              () => self.plugin.saveSettings()
             );
-            const self = this;
             const client = new RemoteClient(
               "dropbox",
               undefined,

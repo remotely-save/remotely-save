@@ -229,9 +229,10 @@ export const sendRefreshTokenReq = async (
   return resp2;
 };
 
-export const setConfigBySuccessfullAuthInplace = (
+export const setConfigBySuccessfullAuthInplace = async (
   config: DropboxConfig,
-  authRes: DropboxSuccessAuthRes
+  authRes: DropboxSuccessAuthRes,
+  saveUpdatedConfigFunc: () => Promise<any> | undefined
 ) => {
   console.log("start updating local info of Dropbox token");
 
@@ -245,6 +246,10 @@ export const setConfigBySuccessfullAuthInplace = (
   }
   if (authRes.refresh_token !== undefined) {
     config.accountID = authRes.account_id;
+  }
+
+  if (saveUpdatedConfigFunc !== undefined) {
+    await saveUpdatedConfigFunc();
   }
 
   console.log("finish updating local info of Dropbox token");
@@ -269,7 +274,7 @@ export class WrappedDropboxClient {
   init = async () => {
     if (
       this.dropboxConfig.accessToken === "" ||
-      this.dropboxConfig.username === ""
+      this.dropboxConfig.refreshToken === ""
     ) {
       throw Error("The user has not manually auth yet.");
     }
@@ -289,9 +294,11 @@ export class WrappedDropboxClient {
         this.dropboxConfig.refreshToken
       );
 
-      setConfigBySuccessfullAuthInplace(this.dropboxConfig, resp);
-      await this.saveUpdatedConfigFunc();
-
+      setConfigBySuccessfullAuthInplace(
+        this.dropboxConfig,
+        resp,
+        this.saveUpdatedConfigFunc
+      );
       this.dropbox = new Dropbox({
         accessToken: this.dropboxConfig.accessToken,
       });
