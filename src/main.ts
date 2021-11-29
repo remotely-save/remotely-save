@@ -596,6 +596,10 @@ class RemotelySaveSettingTab extends PluginSettingTab {
       cls: "dropbox-disclaimer",
     });
     dropboxDiv.createEl("p", {
+      text: "Disclaimer: The infomation is stored in PLAIN TEXT locally. Other malicious/harmful/faulty plugins may or may not be able to read the info. If you see any unintentional access to your Dropbox, please immediately disconnect this app on https://www.dropbox.com/account/connected_apps .",
+      cls: "dropbox-disclaimer",
+    });
+    dropboxDiv.createEl("p", {
       text: "We will create a folder App/obsidian-remotely-save on your Dropbox. All files/folders sync would happen inside this folder.",
     });
 
