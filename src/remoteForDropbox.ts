@@ -15,7 +15,6 @@ import {
   setToString,
 } from "./misc";
 import { decryptArrayBuffer, encryptArrayBuffer } from "./encrypt";
-import { strict as assert } from "assert";
 
 export interface DropboxConfig {
   accessToken: string;
@@ -146,7 +145,6 @@ const fixLastModifiedTimeInplace = (allFilesFolders: RemoteItem[]) => {
     if (item.lastModified !== undefined) {
       continue; // don't need to deal with it
     }
-    assert(!(item.key in potentialMTime));
     const parent = `${path.posix.dirname(item.key)}/`;
     if (parent in potentialMTime) {
       item.lastModified = potentialMTime[parent];
