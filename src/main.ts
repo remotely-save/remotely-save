@@ -110,6 +110,7 @@ export default class RemotelySavePlugin extends Plugin {
           this.settings.s3,
           this.settings.webdav,
           this.settings.dropbox,
+          this.app.vault.getName(),
           () => self.saveSettings()
         );
         const remoteRsp = await client.listFromRemote();
@@ -349,6 +350,7 @@ export class DropboxAuthModal extends Modal {
               undefined,
               undefined,
               this.plugin.settings.dropbox,
+              this.app.vault.getName(),
               () => self.plugin.saveSettings()
             );
             const username = await client.getUser();
@@ -626,6 +628,7 @@ class RemotelySaveSettingTab extends PluginSettingTab {
               undefined,
               undefined,
               this.plugin.settings.dropbox,
+              this.app.vault.getName(),
               () => self.plugin.saveSettings()
             );
             await client.revokeAuth();
@@ -687,6 +690,7 @@ class RemotelySaveSettingTab extends PluginSettingTab {
             undefined,
             undefined,
             this.plugin.settings.dropbox,
+            this.app.vault.getName(),
             () => self.plugin.saveSettings()
           );
 

@@ -19,6 +19,7 @@ export class RemoteClient {
     s3Config?: s3.S3Config,
     webdavConfig?: webdav.WebdavConfig,
     dropboxConfig?: dropbox.DropboxConfig,
+    vaultName?: string,
     saveUpdatedConfigFunc?: () => Promise<any>
   ) {
     this.serviceType = serviceType;
@@ -31,12 +32,15 @@ export class RemoteClient {
       this.webdavConfig = webdavConfig;
       this.webdavClient = webdav.getWebdavClient(this.webdavConfig);
     } else if (serviceType === "dropbox") {
-      if (saveUpdatedConfigFunc === undefined) {
-        throw Error("remember to provide callback while init dropbox client");
+      if (vaultName === undefined || saveUpdatedConfigFunc === undefined) {
+        throw Error(
+          "remember to provide vault name and callback while init dropbox client"
+        );
       }
       this.dropboxConfig = dropboxConfig;
       this.dropboxClient = dropbox.getDropboxClient(
         this.dropboxConfig,
+        vaultName,
         saveUpdatedConfigFunc
       );
     } else {

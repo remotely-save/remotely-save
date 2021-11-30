@@ -37,10 +37,11 @@ export const DEFAULT_DROPBOX_CONFIG = {
   username: "",
 };
 
-export const getDropboxPath = (fileOrFolderPath: string) => {
+export const getDropboxPath = (fileOrFolderPath: string, vaultName: string) => {
   let key = fileOrFolderPath;
   if (!fileOrFolderPath.startsWith("/")) {
-    key = `/${fileOrFolderPath}`;
+    // then this is original path in Obsidian
+    key = `/${vaultName}/${fileOrFolderPath}`;
   }
   if (key.endsWith("/")) {
     key = key.slice(0, key.length - 1);
@@ -48,20 +49,26 @@ export const getDropboxPath = (fileOrFolderPath: string) => {
   return key;
 };
 
-const getNormPath = (fileOrFolderPath: string) => {
-  if (fileOrFolderPath.startsWith("/")) {
-    return fileOrFolderPath.slice(1);
+const getNormPath = (fileOrFolderPath: string, vaultName: string) => {
+  if (
+    !(
+      fileOrFolderPath === `/${vaultName}` ||
+      fileOrFolderPath.startsWith(`/${vaultName}/`)
+    )
+  ) {
+    throw Error(`"${fileOrFolderPath}" doesn't starts with "/${vaultName}/"`);
   }
-  return fileOrFolderPath;
+  return fileOrFolderPath.slice(`/${vaultName}/`.length);
 };
 
 const fromDropboxItemToRemoteItem = (
   x:
     | files.FileMetadataReference
     | files.FolderMetadataReference
-    | files.DeletedMetadataReference
+    | files.DeletedMetadataReference,
+  vaultName: string
 ): RemoteItem => {
-  let key = getNormPath(x.path_display);
+  let key = getNormPath(x.path_display, vaultName);
   if (x[".tag"] === "folder" && !key.endsWith("/")) {
     key = `${key}/`;
   }
@@ -261,17 +268,23 @@ export const setConfigBySuccessfullAuthInplace = async (
 
 export class WrappedDropboxClient {
   dropboxConfig: DropboxConfig;
+  vaultName: string;
   saveUpdatedConfigFunc: () => Promise<any>;
   dropbox: Dropbox;
+  vaultFolderExists: boolean;
   constructor(
     dropboxConfig: DropboxConfig,
+    vaultName: string,
     saveUpdatedConfigFunc: () => Promise<any>
   ) {
     this.dropboxConfig = dropboxConfig;
+    this.vaultName = vaultName;
     this.saveUpdatedConfigFunc = saveUpdatedConfigFunc;
+    this.vaultFolderExists = false;
   }
 
   init = async () => {
+    // check token
     if (
       this.dropboxConfig.accessToken === "" ||
       this.dropboxConfig.refreshToken === ""
@@ -303,6 +316,33 @@ export class WrappedDropboxClient {
         accessToken: this.dropboxConfig.accessToken,
       });
     }
+
+    // check vault folder
+    // console.log(`checking remote has folder /${this.vaultName}`);
+    if (this.vaultFolderExists) {
+      // console.log(`already checked, /${this.vaultName} exist before`)
+    } else {
+      const res = await this.dropbox.filesListFolder({
+        path: "",
+        recursive: false,
+      });
+      for (const item of res.result.entries) {
+        if (item.path_display === `/${this.vaultName}`) {
+          this.vaultFolderExists = true;
+          break;
+        }
+      }
+      if (!this.vaultFolderExists) {
+        console.log(`remote does not have folder /${this.vaultName}`);
+        await this.dropbox.filesCreateFolderV2({
+          path: `/${this.vaultName}`,
+        });
+        console.log(`remote folder /${this.vaultName} created`);
+      } else {
+        // console.log(`remote folder /${this.vaultName} exists`);
+      }
+    }
+
     return this.dropbox;
   };
 }
@@ -313,9 +353,14 @@ export class WrappedDropboxClient {
  */
 export const getDropboxClient = (
   dropboxConfig: DropboxConfig,
+  vaultName: string,
   saveUpdatedConfigFunc: () => Promise<any>
 ) => {
-  return new WrappedDropboxClient(dropboxConfig, saveUpdatedConfigFunc);
+  return new WrappedDropboxClient(
+    dropboxConfig,
+    vaultName,
+    saveUpdatedConfigFunc
+  );
 };
 
 export const getRemoteMeta = async (
@@ -328,7 +373,7 @@ export const getRemoteMeta = async (
     // we instead try to list files
     // if no error occurs, we ensemble a fake result.
     const rsp = await client.dropbox.filesListFolder({
-      path: "",
+      path: `/${client.vaultName}`,
       recursive: false, // don't need to recursive here
     });
     if (rsp.status !== 200) {
@@ -343,7 +388,7 @@ export const getRemoteMeta = async (
     } as RemoteItem;
   }
 
-  const key = getDropboxPath(fileOrFolderPath);
+  const key = getDropboxPath(fileOrFolderPath, client.vaultName);
 
   const rsp = await client.dropbox.filesGetMetadata({
     path: key,
@@ -351,7 +396,7 @@ export const getRemoteMeta = async (
   if (rsp.status !== 200) {
     throw Error(JSON.stringify(rsp));
   }
-  return fromDropboxItemToRemoteItem(rsp.result);
+  return fromDropboxItemToRemoteItem(rsp.result, client.vaultName);
 };
 
 export const uploadToRemote = async (
@@ -369,7 +414,7 @@ export const uploadToRemote = async (
   if (password !== "") {
     uploadFile = remoteEncryptedKey;
   }
-  uploadFile = getDropboxPath(uploadFile);
+  uploadFile = getDropboxPath(uploadFile, client.vaultName);
 
   const isFolder = fileOrFolderPath.endsWith("/");
 
@@ -425,7 +470,9 @@ export const uploadToRemote = async (
     });
     // we want to mark that parent folders are created
     if (foldersCreatedBefore !== undefined) {
-      const dirs = getFolderLevels(uploadFile).map(getDropboxPath);
+      const dirs = getFolderLevels(uploadFile).map((x) =>
+        getDropboxPath(x, client.vaultName)
+      );
       for (const dir of dirs) {
         foldersCreatedBefore?.add(dir);
       }
@@ -443,7 +490,7 @@ export const listFromRemote = async (
   }
   await client.init();
   const res = await client.dropbox.filesListFolder({
-    path: "",
+    path: `/${client.vaultName}`,
     recursive: true,
   });
   if (res.status !== 200) {
@@ -453,7 +500,8 @@ export const listFromRemote = async (
   const contents = res.result.entries;
   const unifiedContents = contents
     .filter((x) => x[".tag"] !== "deleted")
-    .map(fromDropboxItemToRemoteItem);
+    .filter((x) => x.path_display !== `/${client.vaultName}`)
+    .map((x) => fromDropboxItemToRemoteItem(x, client.vaultName));
   fixLastModifiedTimeInplace(unifiedContents);
   return {
     Contents: unifiedContents,
@@ -465,7 +513,7 @@ const downloadFromRemoteRaw = async (
   fileOrFolderPath: string
 ) => {
   await client.init();
-  const key = getDropboxPath(fileOrFolderPath);
+  const key = getDropboxPath(fileOrFolderPath, client.vaultName);
   const rsp = await client.dropbox.filesDownload({
     path: key,
   });
@@ -505,7 +553,7 @@ export const downloadFromRemote = async (
     if (password !== "") {
       downloadFile = remoteEncryptedKey;
     }
-    downloadFile = getDropboxPath(downloadFile);
+    downloadFile = getDropboxPath(downloadFile, client.vaultName);
     const remoteContent = await downloadFromRemoteRaw(client, downloadFile);
     let localContent = remoteContent;
     if (password !== "") {
@@ -530,7 +578,7 @@ export const deleteFromRemote = async (
   if (password !== "") {
     remoteFileName = remoteEncryptedKey;
   }
-  remoteFileName = getDropboxPath(remoteFileName);
+  remoteFileName = getDropboxPath(remoteFileName, client.vaultName);
 
   await client.init();
   try {
