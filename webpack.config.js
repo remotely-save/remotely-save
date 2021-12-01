@@ -1,6 +1,9 @@
+require("dotenv").config();
 const path = require("path");
 const webpack = require("webpack");
 const TerserPlugin = require("terser-webpack-plugin");
+
+const DEFAULT_DROPBOX_APP_KEY = process.env.DROPBOX_APP_KEY || "";
 
 module.exports = {
   entry: "./src/main.ts",
@@ -11,6 +14,9 @@ module.exports = {
     libraryTarget: "commonjs",
   },
   plugins: [
+    new webpack.DefinePlugin({
+      "process.env.DEFAULT_DROPBOX_APP_KEY": `"${DEFAULT_DROPBOX_APP_KEY}"`,
+    }),
     // Work around for Buffer is undefined:
     // https://github.com/webpack/changelog-v5/issues/10
     new webpack.ProvidePlugin({
