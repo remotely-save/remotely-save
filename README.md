@@ -4,7 +4,7 @@ This is yet another unofficial sync plugin for Obsidian.
 
 ## Disclaimer
 
-- **This is NOT the [official sync service](https://github.com/fyears/obsidian-remotely-save.git) provided by Obsidian.**
+- **This is NOT the [official sync service](https://obsidian.md/sync) provided by Obsidian.**
 
 ## !!!Caution!!!
 
