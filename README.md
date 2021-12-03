@@ -29,7 +29,7 @@ As of November 2021, the plugin is considered in BETA stage. **DO NOT USE IT for
 
 ## Download and Install
 
-- Option #1: [![BuildCI](https://github.com/fyears/obsidian-remotely-save/actions/workflows/auto-build.yml/badge.svg)](https://github.com/fyears/obsidian-remotely-save/actions/workflows/auto-build.yml) Every artifacts are placed in the "Summary" under every successful builds.
+- Option #1: [![BuildCI](https://github.com/fyears/remotely-save/actions/workflows/auto-build.yml/badge.svg)](https://github.com/fyears/remotely-save/actions/workflows/auto-build.yml) Every artifacts are placed in the "Summary" under every successful builds.
 - Option #2: Besides manually downloading the files, you can also use [Obsidian42 - BRAT](https://github.com/TfTHacker/obsidian42-brat) to install this plugin.
 - Option #3: The pluin would be submitted to the official "community plugin list" in near future.
 
@@ -49,7 +49,7 @@ As of November 2021, the plugin is considered in BETA stage. **DO NOT USE IT for
 
 - **This plugin's function for Dropbox is not as mature as functions for S3.**
 - **This plugin is NOT an official Dropbox product.** The plugin just uses Dropbox's public API.
-- After the authorization, the plugin can read your name and email (which cannot be unselected on Dropbox api), and read and write files in your Dropbox's `/Apps/obsidian-remotely-save` folder.
+- After the authorization, the plugin can read your name and email (which cannot be unselected on Dropbox api), and read and write files in your Dropbox's `/Apps/remotely-save` folder.
 - If you decide to authorize this plugin to connect to Dropbox, please go to plugin's settings, and choose Dropbox then follow the instructions.
 - Password-based end-to-end encryption is also supported.
 
