@@ -599,7 +599,7 @@ class RemotelySaveSettingTab extends PluginSettingTab {
       cls: "dropbox-disclaimer",
     });
     dropboxDiv.createEl("p", {
-      text: "We will create a folder App/obsidian-remotely-save on your Dropbox. All files/folders sync would happen inside this folder.",
+      text: "We will create a folder Apps/obsidian-remotely-save on your Dropbox. All files/folders sync would happen inside this folder.",
     });
 
     const dropboxSelectAuthDiv = dropboxDiv.createDiv();
