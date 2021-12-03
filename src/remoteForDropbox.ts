@@ -1,9 +1,7 @@
 import * as path from "path";
 import { FileStats, Vault } from "obsidian";
-import { Buffer } from "buffer";
-import * as crypto from "crypto";
 
-import { Dropbox, DropboxResponse, files } from "dropbox";
+import { Dropbox, DropboxAuth, DropboxResponse, files } from "dropbox";
 export { Dropbox } from "dropbox";
 import { RemoteItem } from "./baseTypes";
 import {
@@ -162,30 +160,26 @@ const fixLastModifiedTimeInplace = (allFilesFolders: RemoteItem[]) => {
 // see https://dropbox.tech/developers/pkce--what-and-why-
 ////////////////////////////////////////////////////////////////////////////////
 
-const specialBase64Encode = (str: Buffer) => {
-  return str
-    .toString("base64")
-    .replace(/\+/g, "-")
-    .replace(/\//g, "_")
-    .replace(/=/g, "");
-};
-const sha256 = (buffer: string) => {
-  return crypto.createHash("sha256").update(buffer).digest();
-};
-
-export const getCodeVerifierAndChallenge = () => {
-  const codeVerifier = specialBase64Encode(crypto.randomBytes(32));
-  // console.log(`Client generated code_verifier: ${codeVerifier}`);
-  const codeChallenge = specialBase64Encode(sha256(codeVerifier));
-  // console.log(`Client generated code_challenge: ${codeChallenge}`);
+export const getAuthUrlAndVerifier = async (appKey: string) => {
+  const auth = new DropboxAuth({
+    clientId: appKey,
+  });
+  const authUrl = (
+    await auth.getAuthenticationUrl(
+      undefined,
+      undefined,
+      "code",
+      "offline",
+      undefined,
+      "none",
+      true
+    )
+  ).toString();
+  const verifier = auth.getCodeVerifier();
   return {
-    verifier: codeVerifier,
-    challenge: codeChallenge,
+    authUrl: authUrl,
+    verifier: verifier,
   };
-};
-
-export const getAuthUrl = (appKey: string, challenge: string) => {
-  return `https://www.dropbox.com/oauth2/authorize?client_id=${appKey}&response_type=code&code_challenge=${challenge}&code_challenge_method=S256&token_access_type=offline`;
 };
 
 export interface DropboxSuccessAuthRes {

@@ -32,8 +32,7 @@ import { WebdavConfig, DEFAULT_WEBDAV_CONFIG, WebdavAuthType } from "./webdav";
 import {
   DropboxConfig,
   DEFAULT_DROPBOX_CONFIG,
-  getCodeVerifierAndChallenge,
-  getAuthUrl,
+  getAuthUrlAndVerifier,
   sendAuthReq,
   setConfigBySuccessfullAuthInplace,
 } from "./remoteForDropbox";
@@ -296,13 +295,11 @@ export class DropboxAuthModal extends Modal {
     this.revokeAuthSetting = revokeAuthSetting;
   }
 
-  onOpen() {
+  async onOpen() {
     let { contentEl } = this;
 
-    const k = getCodeVerifierAndChallenge();
-    const authUrl = getAuthUrl(
-      this.plugin.settings.dropbox.clientID,
-      k.challenge
+    const { authUrl, verifier } = await getAuthUrlAndVerifier(
+      this.plugin.settings.dropbox.clientID
     );
 
     contentEl.createEl("p", {
@@ -336,7 +333,7 @@ export class DropboxAuthModal extends Modal {
           try {
             const authRes = await sendAuthReq(
               this.plugin.settings.dropbox.clientID,
-              k.verifier,
+              verifier,
               authCode
             );
             const self = this;

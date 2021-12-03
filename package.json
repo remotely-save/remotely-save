@@ -13,10 +13,7 @@
   "browser": {
     "path": "path-browserify",
     "process": "process/browser",
-    "stream": "stream-browserify",
-    "crypto": "crypto-browserify",
-    "util": "util/",
-    "assert": "assert/"
+    "stream": "stream-browserify"
   },
   "source": "main.ts",
   "keywords": [],

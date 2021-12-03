@@ -24,6 +24,7 @@ esbuild
       "obsidian",
       "electron",
       "fs",
+      "crypto",
       // ...builtins
     ],
     format: "cjs",
