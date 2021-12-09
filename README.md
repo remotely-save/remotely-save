@@ -12,7 +12,10 @@ As of November 2021, the plugin is considered in BETA stage. **DO NOT USE IT for
 
 ## Features
 
-- **Amazon S3 or S3-compatible, and Dropbox services are supported.** Webdav supports on the half way.
+- Supports:
+  - Amazon S3 or S3-compatible
+  - Dropbox
+  - Webdav
 - **Obsidiain Mobile supported.** Vaults can be synced across mobile and desktop devices with the cloud service as the "broker".
 - **[End-to-end encryption](./docs/encryption.md) supported.** Files would be encrypted using openssl format before being sent to the cloud **if** user specify a password.
 - **[Minimal Intrusive](./docs/minimal_intrusive_design.md).**
@@ -55,6 +58,8 @@ As of November 2021, the plugin is considered in BETA stage. **DO NOT USE IT for
 
 ### webdav
 
-- **webdav support is buggy (as of now, 20211122) and considered experimental, so it's hidden by default.** Highly recommend to use the more stable s3.
-- If you decide to give it a try, open settings, and click "Choose service" area five times, then a Notice should show up. Close and open settings again then you will be able to select webdav.
-- Currently webdav server should enable CORS for requests, because of technical limitations of mobile.
+- **webdav support is considered experimental.**
+- Currently only supports BASIC authorization method.
+- Currently webdav server has to be enabled CORS for requests from `app://obsidian.md` and `capacitor://localhost` and `http://localhost`, **AND** all webdav HTTP methods and webdav headers, because of technical limitations of mobile.
+  - Popular software NextCloud and OwnCloud do **NOT** enable CORS by default. If you are using any of them, you should find a way to enable CORS before using this plugin.
+  - The plugin is tested successfully under python package [`wsgidav` (version 4.0)](https://github.com/mar10/wsgidav). See [this issue](https://github.com/mar10/wsgidav/issues/239) for details.
