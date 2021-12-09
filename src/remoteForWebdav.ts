@@ -226,7 +226,7 @@ export const deleteFromRemote = async (
   remoteFileName = getWebdavPath(remoteFileName);
   try {
     await client.deleteFile(remoteFileName);
-    console.log(`delete ${remoteFileName} succeeded`);
+    // console.log(`delete ${remoteFileName} succeeded`);
   } catch (err) {
     console.error("some error while deleting");
     console.log(err);
