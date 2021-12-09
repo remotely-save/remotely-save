@@ -737,7 +737,7 @@ class RemotelySaveSettingTab extends PluginSettingTab {
       )
       .addDropdown((dropdown) => {
         dropdown.addOption("basic", "basic");
-        dropdown.addOption("digest", "digest");
+        // dropdown.addOption("digest", "digest");
 
         dropdown
           .setValue(this.plugin.settings.webdav.authType)
