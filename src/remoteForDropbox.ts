@@ -481,20 +481,41 @@ export const listFromRemote = async (
     throw Error("prefix not supported (yet)");
   }
   await client.init();
-  const res = await client.dropbox.filesListFolder({
+  let res = await client.dropbox.filesListFolder({
     path: `/${client.vaultName}`,
     recursive: true,
+    include_deleted: false,
+    limit: 1000,
   });
   if (res.status !== 200) {
     throw Error(JSON.stringify(res));
   }
   // console.log(res);
+
   const contents = res.result.entries;
   const unifiedContents = contents
     .filter((x) => x[".tag"] !== "deleted")
     .filter((x) => x.path_display !== `/${client.vaultName}`)
     .map((x) => fromDropboxItemToRemoteItem(x, client.vaultName));
+
+  while (res.result.has_more) {
+    res = await client.dropbox.filesListFolderContinue({
+      cursor: res.result.cursor,
+    });
+    if (res.status !== 200) {
+      throw Error(JSON.stringify(res));
+    }
+
+    const contents2 = res.result.entries;
+    const unifiedContents2 = contents2
+      .filter((x) => x[".tag"] !== "deleted")
+      .filter((x) => x.path_display !== `/${client.vaultName}`)
+      .map((x) => fromDropboxItemToRemoteItem(x, client.vaultName));
+    unifiedContents.push(...unifiedContents2);
+  }
+
   fixLastModifiedTimeInplace(unifiedContents);
+
   return {
     Contents: unifiedContents,
   };
