@@ -27,8 +27,12 @@ import type { InternalDBs } from "./localdb";
 import type { SyncStatusType, PasswordCheckType } from "./sync";
 import { isPasswordOk, getSyncPlan, doActualSync } from "./sync";
 
-import { S3Config, DEFAULT_S3_CONFIG } from "./s3";
-import { WebdavConfig, DEFAULT_WEBDAV_CONFIG, WebdavAuthType } from "./webdav";
+import { S3Config, DEFAULT_S3_CONFIG } from "./remoteForS3";
+import {
+  WebdavConfig,
+  DEFAULT_WEBDAV_CONFIG,
+  WebdavAuthType,
+} from "./remoteForWebdav";
 import {
   DropboxConfig,
   DEFAULT_DROPBOX_CONFIG,

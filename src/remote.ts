@@ -1,8 +1,8 @@
 import { Vault } from "obsidian";
 
 import type { SUPPORTED_SERVICES_TYPE } from "./baseTypes";
-import * as s3 from "./s3";
-import * as webdav from "./webdav";
+import * as s3 from "./remoteForS3";
+import * as webdav from "./remoteForWebdav";
 import * as dropbox from "./remoteForDropbox";
 
 export class RemoteClient {
