@@ -427,7 +427,7 @@ class RemotelySaveSettingTab extends PluginSettingTab {
 
     const s3Div = containerEl.createEl("div", { cls: "s3-hide" });
     s3Div.toggleClass("s3-hide", this.plugin.settings.serviceType !== "s3");
-    s3Div.createEl("h2", { text: "S3 (-compatible) Service" });
+    s3Div.createEl("h2", { text: "Remote For S3 (-compatible)" });
 
     s3Div.createEl("p", {
       text: "You can use Amazon S3 or another S3-compatible service to sync your vault. Enter your bucket information below.",
@@ -554,7 +554,7 @@ class RemotelySaveSettingTab extends PluginSettingTab {
       "dropbox-hide",
       this.plugin.settings.serviceType !== "dropbox"
     );
-    dropboxDiv.createEl("h2", { text: "for Dropbox" });
+    dropboxDiv.createEl("h2", { text: "Remote For Dropbox" });
     dropboxDiv.createEl("p", {
       text: "Disclaimer: Sync support for Dropbox are more experimental, and s3 functions are more stable now.",
       cls: "dropbox-disclaimer",
@@ -675,7 +675,7 @@ class RemotelySaveSettingTab extends PluginSettingTab {
       this.plugin.settings.serviceType !== "webdav"
     );
 
-    webdavDiv.createEl("h2", { text: "Webdav Service" });
+    webdavDiv.createEl("h2", { text: "Remote For Webdav" });
 
     webdavDiv.createEl("p", {
       text: "Disclaimer: Webdav functions are more experimental, and s3 functions are more stable now.",
