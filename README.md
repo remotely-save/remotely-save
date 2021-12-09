@@ -8,7 +8,7 @@ This is yet another unofficial sync plugin for Obsidian.
 
 ## !!!Caution!!!
 
-As of November 2021, the plugin is considered in BETA stage. **DO NOT USE IT for any serious vaults.** **Backup your vault before using this plugin.** Don't be surprise to data loss!
+As of Dec 2021, the plugin is considered in BETA stage. **DO NOT USE IT for any serious vaults.** **ALWAYS, ALWAYS, backup your vault before using this plugin.**
 
 ## Features
 
@@ -30,15 +30,25 @@ As of November 2021, the plugin is considered in BETA stage. **DO NOT USE IT for
 - **Cloud services cost you money.** Always be aware of the costs and pricing.
 - **All files or folder starting with `.` (dot) or `_` (underscore) are treated as hidden files, and would NOT be synced.** It's useful if you have some files just staying locally. But this strategy also means that themes / other plugins / settings of this plugin would neither be synced.
 
+## Questions, Suggestions, Or Bugs
+
+You are greatly welcome to ask questions, post any suggestions, or report any bugs! The project is mainly maintained on GitHub:
+
+- Questions: [GitHub repo Discussions](https://github.com/fyears/remotely-save/discussions)
+- Suggestions: also in [GitHub repo Discussions](https://github.com/fyears/remotely-save/discussions)
+- Bugs: [GitHub repo Issues](https://github.com/fyears/remotely-save/issues) (NOT Discussion)
+
+Additionally, the plugin author may occasionally visit Obsidian official forum and official Discord server, and pay attention to this-plugin-related information there.
+
 ## Download and Install
 
-- Option #1: [![BuildCI](https://github.com/fyears/remotely-save/actions/workflows/auto-build.yml/badge.svg)](https://github.com/fyears/remotely-save/actions/workflows/auto-build.yml) Every artifacts are placed in the "Summary" under every successful builds.
-- Option #2: Besides manually downloading the files, you can also use [Obsidian42 - BRAT](https://github.com/TfTHacker/obsidian42-brat) to install this plugin.
-- Option #3: The pluin would be submitted to the official "community plugin list" in near future.
+- Option #1: You can search, download, and install the plugin in official "community plugin list".
+- Option #2: [![BuildCI](https://github.com/fyears/remotely-save/actions/workflows/auto-build.yml/badge.svg)](https://github.com/fyears/remotely-save/actions/workflows/auto-build.yml) Every artifacts are placed in the "Summary" under every successful builds.
+- Option #3: Besides manually downloading the files, you can also use [Obsidian42 - BRAT](https://github.com/TfTHacker/obsidian42-brat) to install this plugin.
 
 ## Usage
 
-### s3
+### S3
 
 - Prepare your S3 (-compatible) service information: [endpoint, region](https://docs.aws.amazon.com/general/latest/gr/s3.html), [access key id, secret access key](https://docs.aws.amazon.com/sdk-for-javascript/v3/developer-guide/getting-your-credentials.html), bucket name. The bucket should be empty and solely for syncing a vault.
 - Configure (enable) [CORS](https://docs.aws.amazon.com/AmazonS3/latest/userguide/enabling-cors-examples.html) for requests from `app://obsidian.md` and `capacitor://localhost` and `http://localhost`. It's unfortunately required, because the plugin sends requests from a browser-like envirement. And those addresses are tested and found on desktop and ios and android.
@@ -60,6 +70,7 @@ As of November 2021, the plugin is considered in BETA stage. **DO NOT USE IT for
 
 - **webdav support is considered experimental.**
 - Currently only supports BASIC authorization method.
-- Currently webdav server has to be enabled CORS for requests from `app://obsidian.md` and `capacitor://localhost` and `http://localhost`, **AND** all webdav HTTP methods and webdav headers, because of technical limitations of mobile.
-  - Popular software NextCloud and OwnCloud do **NOT** enable CORS by default. If you are using any of them, you should find a way to enable CORS before using this plugin.
-  - The plugin is tested successfully under python package [`wsgidav` (version 4.0)](https://github.com/mar10/wsgidav). See [this issue](https://github.com/mar10/wsgidav/issues/239) for details.
+- Currently webdav server has to be enabled CORS for requests from `app://obsidian.md` and `capacitor://localhost` and `http://localhost`, **AND** all webdav HTTP methods, **AND** all webdav headers. These are required, because Obsidian mobile works like a browser and mobile plugins are limited by CORS policies.
+  - Popular software NextCloud and OwnCloud do **NOT** enable CORS by default. If you are using any of them, you should evaluate the risk, and find a way to enable CORS, before using this plugin.
+  - The plugin is tested successfully under python package [`wsgidav` (version 4.0)](https://github.com/mar10/wsgidav). See [this issue](https://github.com/mar10/wsgidav/issues/239) for some details.
+- Password-based end-to-end encryption is also supported.
