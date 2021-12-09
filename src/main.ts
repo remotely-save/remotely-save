@@ -51,7 +51,6 @@ interface RemotelySavePluginSettings {
   dropbox: DropboxConfig;
   password: string;
   serviceType: SUPPORTED_SERVICES_TYPE;
-  enableExperimentService: boolean;
 }
 
 const DEFAULT_SETTINGS: RemotelySavePluginSettings = {
@@ -60,7 +59,6 @@ const DEFAULT_SETTINGS: RemotelySavePluginSettings = {
   dropbox: DEFAULT_DROPBOX_CONFIG,
   password: "",
   serviceType: "s3",
-  enableExperimentService: false,
 };
 
 export default class RemotelySavePlugin extends Plugin {
@@ -427,39 +425,6 @@ class RemotelySaveSettingTab extends PluginSettingTab {
     // we need to create the div in advance of any other service divs
     const serviceChooserDiv = generalDiv.createEl("div");
 
-    let clickChooserTimes = 0;
-    serviceChooserDiv.onClickEvent(async (x) => {
-      if (Platform.isIosApp) {
-        // downgrade the experiment
-        // because iOS doesn't support x.detail
-        clickChooserTimes += 1;
-        setTimeout(function () {
-          clickChooserTimes = 0;
-        }, 2000);
-      }
-
-      if ((Platform.isIosApp && clickChooserTimes === 5) || x.detail === 5) {
-        if (this.plugin.settings.serviceType === "webdav") {
-          new Notice(
-            "You've enabled hidden unstable experimental webdav support before. Nothing changes."
-          );
-        } else if (!this.plugin.settings.enableExperimentService) {
-          this.plugin.settings.enableExperimentService = true;
-          await this.plugin.saveSettings();
-          new Notice(
-            "You've enabled hidden unstable experimental webdav support. Reopen settings again and try webdav with caution."
-          );
-        } else if (this.plugin.settings.enableExperimentService) {
-          this.plugin.settings.enableExperimentService = false;
-          await this.plugin.saveSettings();
-          new Notice(
-            "You've disabled hidden unstable experimental webdav support. Reopen settings again."
-          );
-        }
-      }
-      x.preventDefault();
-    });
-
     const s3Div = containerEl.createEl("div", { cls: "s3-hide" });
     s3Div.toggleClass("s3-hide", this.plugin.settings.serviceType !== "s3");
     s3Div.createEl("h2", { text: "S3 (-compatible) Service" });
@@ -810,18 +775,10 @@ class RemotelySaveSettingTab extends PluginSettingTab {
       .setDesc("Choose a service, by default s3")
       .addDropdown(async (dropdown) => {
         const currService = this.plugin.settings.serviceType;
-        const enableExperimentService =
-          this.plugin.settings.enableExperimentService;
 
         dropdown.addOption("s3", "s3 (-compatible)");
         dropdown.addOption("dropbox", "Dropbox");
-        if (currService === "webdav" || enableExperimentService) {
-          dropdown.addOption("webdav", "webdav (experimental)");
-          if (!enableExperimentService) {
-            this.plugin.settings.enableExperimentService = true;
-            await this.plugin.saveSettings();
-          }
-        }
+        dropdown.addOption("webdav", "webdav (experimental)");
         dropdown
           .setValue(this.plugin.settings.serviceType)
           .onChange(async (val: SUPPORTED_SERVICES_TYPE) => {
