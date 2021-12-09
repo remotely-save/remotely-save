@@ -3,7 +3,7 @@
   "name": "Remotely Save",
   "version": "0.2.1",
   "minAppVersion": "0.12.15",
-  "description": "Yet another unofficial plugin allowing users to sync notes between local device and the cloud service.",
+  "description": "Yet another unofficial plugin allowing users to synchronize notes between local device and the cloud service.",
   "author": "fyears",
   "authorUrl": "https://github.com/fyears",
   "isDesktopOnly": false
