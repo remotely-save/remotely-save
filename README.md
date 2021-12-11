@@ -62,9 +62,9 @@ Additionally, the plugin author may occasionally visit Obsidian official forum a
 
 - **This plugin's function for Dropbox is not as mature as functions for S3.**
 - **This plugin is NOT an official Dropbox product.** The plugin just uses Dropbox's public API.
-- After the authorization, the plugin can read your name and email (which cannot be unselected on Dropbox api), and read and write files in your Dropbox's `/Apps/remotely-save` folder.
+- After the authorization, the plugin can read your name and email (which cannot be unselected on Dropbox api), and read and write files in your Dropbox's `/Apps/remotely-save/${vaultName}` folder.
 - If you decide to authorize this plugin to connect to Dropbox, please go to plugin's settings, and choose Dropbox then follow the instructions.
-- Password-based end-to-end encryption is also supported.
+- Password-based end-to-end encryption is also supported. But please be aware that **the vault name itself is not encrypted**.
 
 ### webdav
 
@@ -73,7 +73,8 @@ Additionally, the plugin author may occasionally visit Obsidian official forum a
 - Currently webdav server has to be enabled CORS for requests from `app://obsidian.md` and `capacitor://localhost` and `http://localhost`, **AND** all webdav HTTP methods, **AND** all webdav headers. These are required, because Obsidian mobile works like a browser and mobile plugins are limited by CORS policies.
   - Popular software NextCloud and OwnCloud do **NOT** enable CORS by default. If you are using any of them, you should evaluate the risk, and find a way to enable CORS, before using this plugin.
   - The plugin is tested successfully under python package [`wsgidav` (version 4.0)](https://github.com/mar10/wsgidav). See [this issue](https://github.com/mar10/wsgidav/issues/239) for some details.
-- Password-based end-to-end encryption is also supported.
+- Your data would be synced to a `${vaultName}` sub folder on your webdav server.
+- Password-based end-to-end encryption is also supported. But please be aware that **the vault name itself is not encrypted**.
 
 ## Import And Export Plugin Settings By QR Code
 
