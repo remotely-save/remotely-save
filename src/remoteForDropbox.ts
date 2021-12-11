@@ -26,6 +26,10 @@ export const DEFAULT_DROPBOX_CONFIG = {
 
 export const getDropboxPath = (fileOrFolderPath: string, vaultName: string) => {
   let key = fileOrFolderPath;
+  if (fileOrFolderPath === "/" || fileOrFolderPath === "") {
+    // special
+    key = `/${vaultName}`;
+  }
   if (!fileOrFolderPath.startsWith("/")) {
     // then this is original path in Obsidian
     key = `/${vaultName}/${fileOrFolderPath}`;
@@ -320,6 +324,7 @@ export class WrappedDropboxClient {
           path: `/${this.vaultName}`,
         });
         console.log(`remote folder /${this.vaultName} created`);
+        this.vaultFolderExists = true;
       } else {
         // console.log(`remote folder /${this.vaultName} exists`);
       }
@@ -541,6 +546,8 @@ export const downloadFromRemote = async (
   password: string = "",
   remoteEncryptedKey: string = ""
 ) => {
+  await client.init();
+
   const isFolder = fileOrFolderPath.endsWith("/");
 
   await mkdirpInVault(fileOrFolderPath, vault);
