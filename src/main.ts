@@ -60,7 +60,7 @@ const DEFAULT_SETTINGS: RemotelySavePluginSettings = {
 
 export default class RemotelySavePlugin extends Plugin {
   settings: RemotelySavePluginSettings;
-  cm: CodeMirror.Editor;
+  // cm: CodeMirror.Editor;
   db: InternalDBs;
   syncStatus: SyncStatusType;
 
