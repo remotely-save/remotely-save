@@ -1,6 +1,7 @@
 import * as fs from "fs";
 import * as path from "path";
 import { expect } from "chai";
+import { JSDOM } from "jsdom";
 
 import * as misc from "../src/misc";
 
@@ -131,5 +132,19 @@ describe("Misc: get dirname", () => {
 
     const y = misc.getPathFolder("/abc");
     expect(y).to.equal("/");
+  });
+});
+
+describe("Misc: extract svg", () => {
+  beforeEach(function () {
+    const fakeBrowser = new JSDOM("");
+    global.window = fakeBrowser.window as any;
+  });
+
+  it("should extract rect from svg correctly", () => {
+    const x = "<svg><rect/><g/></svg>";
+    const y = misc.extractSvgSub(x);
+    // console.log(x)
+    expect(y).to.equal("<rect/><g/>");
   });
 });

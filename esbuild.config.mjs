@@ -18,6 +18,9 @@ esbuild
     banner: {
       js: banner,
     },
+    loader: {
+      ".svg": "text",
+    },
     entryPoints: ["./src/main.ts"],
     bundle: true,
     external: [

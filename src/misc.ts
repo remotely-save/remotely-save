@@ -155,3 +155,11 @@ export const getPathFolder = (a: string) => {
 export const setToString = (a: Set<string>, delimiter: string = ",") => {
   return [...a].join(delimiter);
 };
+
+export const extractSvgSub = (x: string, subEl: string = "rect") => {
+  const parser = new window.DOMParser();
+  const dom = parser.parseFromString(x, "image/svg+xml");
+  const svg = dom.querySelector("svg");
+  svg.setAttribute("viewbox", "0 0 10 10");
+  return svg.innerHTML;
+};
