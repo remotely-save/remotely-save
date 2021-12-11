@@ -4,7 +4,7 @@ import { AuthType, BufferLike, createClient } from "webdav/web";
 import type { WebDAVClient, ResponseDataDetailed, FileStat } from "webdav/web";
 export type { WebDAVClient } from "webdav/web";
 
-import type { RemoteItem } from "./baseTypes";
+import type { RemoteItem, WebdavAuthType, WebdavConfig } from "./baseTypes";
 
 import {
   arrayBufferToBuffer,
@@ -13,15 +13,6 @@ import {
   getPathFolder,
 } from "./misc";
 import { decryptArrayBuffer, encryptArrayBuffer } from "./encrypt";
-
-export type WebdavAuthType = "digest" | "basic";
-
-export interface WebdavConfig {
-  address: string;
-  username: string;
-  password: string;
-  authType: WebdavAuthType;
-}
 
 export const DEFAULT_WEBDAV_CONFIG = {
   address: "",

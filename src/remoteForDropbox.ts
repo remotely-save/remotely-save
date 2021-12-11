@@ -3,7 +3,7 @@ import { FileStats, Vault } from "obsidian";
 
 import { Dropbox, DropboxAuth, DropboxResponse, files } from "dropbox";
 export { Dropbox } from "dropbox";
-import { RemoteItem } from "./baseTypes";
+import { RemoteItem, DropboxConfig } from "./baseTypes";
 import {
   arrayBufferToBuffer,
   bufferToArrayBuffer,
@@ -13,16 +13,6 @@ import {
   setToString,
 } from "./misc";
 import { decryptArrayBuffer, encryptArrayBuffer } from "./encrypt";
-
-export interface DropboxConfig {
-  accessToken: string;
-  clientID: string;
-  refreshToken: string;
-  accessTokenExpiresInSeconds: number;
-  accessTokenExpiresAtTime: number;
-  accountID: string;
-  username: string;
-}
 
 export const DEFAULT_DROPBOX_CONFIG = {
   accessToken: "",

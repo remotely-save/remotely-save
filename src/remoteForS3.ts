@@ -27,16 +27,8 @@ import {
 } from "./misc";
 import * as mime from "mime-types";
 
-import { RemoteItem } from "./baseTypes";
+import { RemoteItem, S3Config } from "./baseTypes";
 import { decryptArrayBuffer, encryptArrayBuffer } from "./encrypt";
-
-export interface S3Config {
-  s3Endpoint: string;
-  s3Region: string;
-  s3AccessKeyID: string;
-  s3SecretAccessKey: string;
-  s3BucketName: string;
-}
 
 export const DEFAULT_S3_CONFIG = {
   s3Endpoint: "",

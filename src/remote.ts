@@ -1,6 +1,11 @@
 import { Vault } from "obsidian";
 
-import type { SUPPORTED_SERVICES_TYPE } from "./baseTypes";
+import type {
+  SUPPORTED_SERVICES_TYPE,
+  S3Config,
+  DropboxConfig,
+  WebdavConfig,
+} from "./baseTypes";
 import * as s3 from "./remoteForS3";
 import * as webdav from "./remoteForWebdav";
 import * as dropbox from "./remoteForDropbox";
@@ -8,17 +13,17 @@ import * as dropbox from "./remoteForDropbox";
 export class RemoteClient {
   readonly serviceType: SUPPORTED_SERVICES_TYPE;
   readonly s3Client?: s3.S3Client;
-  readonly s3Config?: s3.S3Config;
+  readonly s3Config?: S3Config;
   readonly webdavClient?: webdav.WebDAVClient;
-  readonly webdavConfig?: webdav.WebdavConfig;
+  readonly webdavConfig?: WebdavConfig;
   readonly dropboxClient?: dropbox.WrappedDropboxClient;
-  readonly dropboxConfig?: dropbox.DropboxConfig;
+  readonly dropboxConfig?: DropboxConfig;
 
   constructor(
     serviceType: SUPPORTED_SERVICES_TYPE,
-    s3Config?: s3.S3Config,
-    webdavConfig?: webdav.WebdavConfig,
-    dropboxConfig?: dropbox.DropboxConfig,
+    s3Config?: S3Config,
+    webdavConfig?: WebdavConfig,
+    dropboxConfig?: DropboxConfig,
     vaultName?: string,
     saveUpdatedConfigFunc?: () => Promise<any>
   ) {

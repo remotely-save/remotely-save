@@ -27,14 +27,9 @@ import type { InternalDBs } from "./localdb";
 import type { SyncStatusType, PasswordCheckType } from "./sync";
 import { isPasswordOk, getSyncPlan, doActualSync } from "./sync";
 
-import { S3Config, DEFAULT_S3_CONFIG } from "./remoteForS3";
+import { DEFAULT_S3_CONFIG } from "./remoteForS3";
+import { DEFAULT_WEBDAV_CONFIG } from "./remoteForWebdav";
 import {
-  WebdavConfig,
-  DEFAULT_WEBDAV_CONFIG,
-  WebdavAuthType,
-} from "./remoteForWebdav";
-import {
-  DropboxConfig,
   DEFAULT_DROPBOX_CONFIG,
   getAuthUrlAndVerifier,
   sendAuthReq,
@@ -43,15 +38,17 @@ import {
 
 import { RemoteClient } from "./remote";
 import { exportSyncPlansToFiles } from "./debugMode";
-import { SUPPORTED_SERVICES_TYPE } from "./baseTypes";
-
-interface RemotelySavePluginSettings {
-  s3: S3Config;
-  webdav: WebdavConfig;
-  dropbox: DropboxConfig;
-  password: string;
-  serviceType: SUPPORTED_SERVICES_TYPE;
-}
+import { COMMAND_URI, COMMAND_CALLBACK } from "./baseTypes";
+import type {
+  SUPPORTED_SERVICES_TYPE,
+  S3Config,
+  DropboxConfig,
+  WebdavAuthType,
+  WebdavConfig,
+  RemotelySavePluginSettings,
+} from "./baseTypes";
+import type { ProcessQrCodeResultType } from "./importExport";
+import { exportQrCodeUri, importQrCodeUri } from "./importExport";
 
 const DEFAULT_SETTINGS: RemotelySavePluginSettings = {
   s3: DEFAULT_S3_CONFIG,
@@ -86,6 +83,32 @@ export default class RemotelySavePlugin extends Plugin {
       this.app.vault.on("rename", async (fileOrFolder, oldPath) => {
         await insertRenameRecord(this.db, fileOrFolder, oldPath);
       })
+    );
+
+    this.registerObsidianProtocolHandler(COMMAND_URI, async (inputParams) => {
+      const parsed = importQrCodeUri(inputParams, this.app.vault.getName());
+      if (parsed.status === "error") {
+        new Notice(parsed.message);
+      } else {
+        const copied = JSON.parse(JSON.stringify(parsed.result));
+        // new Notice(JSON.stringify(copied))
+        this.settings = copied;
+        this.saveSettings();
+        new Notice(
+          `New settings for ${this.manifest.name} saved. Reopen the plugin Settings to the effect.`
+        );
+      }
+    });
+
+    this.registerObsidianProtocolHandler(
+      COMMAND_CALLBACK,
+      async (inputParams) => {
+        new Notice(
+          `Your uri call a callback that's not supported yet: ${JSON.stringify(
+            inputParams
+          )}`
+        );
+      }
     );
 
     this.addRibbonIcon("switch", "Remotely Save", async () => {
@@ -374,6 +397,60 @@ export class DropboxAuthModal extends Modal {
           }
         });
       });
+  }
+
+  onClose() {
+    let { contentEl } = this;
+    contentEl.empty();
+  }
+}
+
+export class ExportSettingsQrCodeModal extends Modal {
+  plugin: RemotelySavePlugin;
+  constructor(app: App, plugin: RemotelySavePlugin) {
+    super(app);
+    this.plugin = plugin;
+  }
+
+  async onOpen() {
+    let { contentEl } = this;
+
+    const { rawUri, imgUri } = await exportQrCodeUri(
+      this.plugin.settings,
+      this.app.vault.getName(),
+      this.plugin.manifest.version
+    );
+
+    contentEl.createEl("p", {
+      text: "You can use another device to scan this qrcode.",
+    });
+
+    contentEl.createEl("p", {
+      text: "Or, you can click the button to copy the special url.",
+    });
+
+    contentEl.createEl(
+      "button",
+      {
+        text: "Click to copy the special URI",
+      },
+      (el) => {
+        el.onclick = async () => {
+          await navigator.clipboard.writeText(rawUri);
+          new Notice("special uri copied to clipboard!");
+        };
+      }
+    );
+
+    contentEl.createEl(
+      "img",
+      {
+        cls: "qrcode-img",
+      },
+      async (el) => {
+        el.src = imgUri;
+      }
+    );
   }
 
   onClose() {
@@ -798,6 +875,24 @@ class RemotelySaveSettingTab extends PluginSettingTab {
             await this.plugin.saveSettings();
           });
       });
+
+    // import and export
+    const importExportDiv = containerEl.createEl("div");
+    importExportDiv.createEl("h2", { text: "Import and Export Settings" });
+
+    new Setting(importExportDiv)
+      .setName("export")
+      .setDesc("export all settings by generating qrcode")
+      .addButton(async (button) => {
+        button.setButtonText("Get QR Code");
+        button.onClick(async () => {
+          new ExportSettingsQrCodeModal(this.app, this.plugin).open();
+        });
+      });
+
+    new Setting(importExportDiv)
+      .setName("import")
+      .setDesc("You should manually open a camera app to scan the QR code");
 
     const debugDiv = containerEl.createEl("div");
     debugDiv.createEl("h2", { text: "Debug" });
