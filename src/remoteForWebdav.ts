@@ -100,12 +100,12 @@ export class WrappedWebdavClient {
     } else {
       const res = await this.client.exists(`/${this.vaultName}`);
       if (res) {
-        console.log("exits!");
+        // console.log("remote vault folder exits!");
         this.vaultFolderExists = true;
       } else {
-        console.log("not exists, creating");
+        console.log("remote vault folder not exists, creating");
         await this.client.createDirectory(`/${this.vaultName}`);
-        console.log("created!");
+        console.log("remote vault folder created!");
         this.vaultFolderExists = true;
       }
     }
@@ -125,7 +125,7 @@ export const getRemoteMeta = async (
 ) => {
   await client.init();
   const remotePath = getWebdavPath(fileOrFolderPath, client.vaultName);
-  console.log(`remotePath = ${remotePath}`);
+  // console.log(`remotePath = ${remotePath}`);
   const res = (await client.client.stat(remotePath, {
     details: false,
   })) as FileStat;
@@ -165,7 +165,7 @@ export const uploadToRemote = async (
       await client.client.putFileContents(uploadFile, "", {
         overwrite: true,
         onUploadProgress: (progress) => {
-          console.log(`Uploaded ${progress.loaded} bytes of ${progress.total}`);
+          // console.log(`Uploaded ${progress.loaded} bytes of ${progress.total}`);
         },
       });
 
