@@ -21,22 +21,35 @@ export const DEFAULT_WEBDAV_CONFIG = {
   authType: "basic",
 } as WebdavConfig;
 
-const getWebdavPath = (fileOrFolderPath: string) => {
+const getWebdavPath = (fileOrFolderPath: string, vaultName: string) => {
+  let key = fileOrFolderPath;
+  if (fileOrFolderPath === "/" || fileOrFolderPath === "") {
+    // special
+    key = `/${vaultName}/`;
+  }
   if (!fileOrFolderPath.startsWith("/")) {
-    return `/${fileOrFolderPath}`;
+    key = `/${vaultName}/${fileOrFolderPath}`;
   }
-  return fileOrFolderPath;
+  return key;
 };
 
-const getNormPath = (fileOrFolderPath: string) => {
-  if (fileOrFolderPath.startsWith("/")) {
-    return fileOrFolderPath.slice(1);
+const getNormPath = (fileOrFolderPath: string, vaultName: string) => {
+  if (
+    !(
+      fileOrFolderPath === `/${vaultName}` ||
+      fileOrFolderPath.startsWith(`/${vaultName}/`)
+    )
+  ) {
+    throw Error(`"${fileOrFolderPath}" doesn't starts with "/${vaultName}/"`);
   }
-  return fileOrFolderPath;
+  // if (fileOrFolderPath.startsWith("/")) {
+  //   return fileOrFolderPath.slice(1);
+  // }
+  return fileOrFolderPath.slice(`/${vaultName}/`.length);
 };
 
-const fromWebdavItemToRemoteItem = (x: FileStat) => {
-  let key = getNormPath(x.filename);
+const fromWebdavItemToRemoteItem = (x: FileStat, vaultName: string) => {
+  let key = getNormPath(x.filename, vaultName);
   if (x.type === "directory" && !key.endsWith("/")) {
     key = `${key}/`;
   }
@@ -49,45 +62,90 @@ const fromWebdavItemToRemoteItem = (x: FileStat) => {
   } as RemoteItem;
 };
 
-export const getWebdavClient = (webdavConfig: WebdavConfig) => {
-  if (webdavConfig.username !== "" && webdavConfig.password !== "") {
-    return createClient(webdavConfig.address, {
-      username: webdavConfig.username,
-      password: webdavConfig.password,
-      authType:
-        webdavConfig.authType === "digest"
-          ? AuthType.Digest
-          : AuthType.Password,
-    });
-  } else {
-    console.log("no password");
-    return createClient(webdavConfig.address);
+export class WrappedWebdavClient {
+  webdavConfig: WebdavConfig;
+  vaultName: string;
+  client: WebDAVClient;
+  vaultFolderExists: boolean;
+  constructor(webdavConfig: WebdavConfig, vaultName: string) {
+    this.webdavConfig = webdavConfig;
+    this.vaultName = vaultName;
+    this.vaultFolderExists = false;
   }
+
+  init = async () => {
+    // init client if not inited
+    if (this.client === undefined) {
+      if (
+        this.webdavConfig.username !== "" &&
+        this.webdavConfig.password !== ""
+      ) {
+        this.client = createClient(this.webdavConfig.address, {
+          username: this.webdavConfig.username,
+          password: this.webdavConfig.password,
+          authType:
+            this.webdavConfig.authType === "digest"
+              ? AuthType.Digest
+              : AuthType.Password,
+        });
+      } else {
+        console.log("no password");
+        this.client = createClient(this.webdavConfig.address);
+      }
+    }
+
+    // check vault folder
+    if (this.vaultFolderExists) {
+      // pass
+    } else {
+      const res = await this.client.exists(`/${this.vaultName}`);
+      if (res) {
+        console.log("exits!");
+        this.vaultFolderExists = true;
+      } else {
+        console.log("not exists, creating");
+        await this.client.createDirectory(`/${this.vaultName}`);
+        console.log("created!");
+        this.vaultFolderExists = true;
+      }
+    }
+  };
+}
+
+export const getWebdavClient = (
+  webdavConfig: WebdavConfig,
+  vaultName: string
+) => {
+  return new WrappedWebdavClient(webdavConfig, vaultName);
 };
 
 export const getRemoteMeta = async (
-  client: WebDAVClient,
+  client: WrappedWebdavClient,
   fileOrFolderPath: string
 ) => {
-  const res = (await client.stat(getWebdavPath(fileOrFolderPath), {
+  await client.init();
+  const remotePath = getWebdavPath(fileOrFolderPath, client.vaultName);
+  console.log(`remotePath = ${remotePath}`);
+  const res = (await client.client.stat(remotePath, {
     details: false,
   })) as FileStat;
-  return fromWebdavItemToRemoteItem(res);
+  return fromWebdavItemToRemoteItem(res, client.vaultName);
 };
 
 export const uploadToRemote = async (
-  client: WebDAVClient,
+  client: WrappedWebdavClient,
   fileOrFolderPath: string,
   vault: Vault,
   isRecursively: boolean = false,
   password: string = "",
   remoteEncryptedKey: string = ""
 ) => {
+  await client.init();
   let uploadFile = fileOrFolderPath;
   if (password !== "") {
     uploadFile = remoteEncryptedKey;
   }
-  uploadFile = getWebdavPath(uploadFile);
+  uploadFile = getWebdavPath(uploadFile, client.vaultName);
 
   const isFolder = fileOrFolderPath.endsWith("/");
 
@@ -97,14 +155,14 @@ export const uploadToRemote = async (
     // folder
     if (password === "") {
       // if not encrypted, mkdir a remote folder
-      await client.createDirectory(uploadFile, {
+      await client.client.createDirectory(uploadFile, {
         recursive: true,
       });
       const res = await getRemoteMeta(client, uploadFile);
       return res;
     } else {
       // if encrypted, upload a fake file with the encrypted file name
-      await client.putFileContents(uploadFile, "", {
+      await client.client.putFileContents(uploadFile, "", {
         overwrite: true,
         onUploadProgress: (progress) => {
           console.log(`Uploaded ${progress.loaded} bytes of ${progress.total}`);
@@ -124,9 +182,9 @@ export const uploadToRemote = async (
     // we need to create folders before uploading
     const dir = getPathFolder(uploadFile);
     if (dir !== "/" && dir !== "") {
-      await client.createDirectory(dir, { recursive: true });
+      await client.client.createDirectory(dir, { recursive: true });
     }
-    await client.putFileContents(uploadFile, remoteContent, {
+    await client.client.putFileContents(uploadFile, remoteContent, {
       overwrite: true,
       onUploadProgress: (progress) => {
         console.log(`Uploaded ${progress.loaded} bytes of ${progress.total}`);
@@ -137,26 +195,36 @@ export const uploadToRemote = async (
   }
 };
 
-export const listFromRemote = async (client: WebDAVClient, prefix?: string) => {
+export const listFromRemote = async (
+  client: WrappedWebdavClient,
+  prefix?: string
+) => {
   if (prefix !== undefined) {
     throw Error("prefix not supported");
   }
-  const contents = (await client.getDirectoryContents("/", {
-    deep: true,
-    details: false /* no need for verbose details here */,
-    glob: "/**" /* avoid dot files by using glob */,
-  })) as FileStat[];
+  await client.init();
+  const contents = (await client.client.getDirectoryContents(
+    `/${client.vaultName}`,
+    {
+      deep: true,
+      details: false /* no need for verbose details here */,
+      glob: "/**" /* avoid dot files by using glob */,
+    }
+  )) as FileStat[];
   return {
-    Contents: contents.map((x) => fromWebdavItemToRemoteItem(x)),
+    Contents: contents.map((x) =>
+      fromWebdavItemToRemoteItem(x, client.vaultName)
+    ),
   };
 };
 
 const downloadFromRemoteRaw = async (
-  client: WebDAVClient,
+  client: WrappedWebdavClient,
   fileOrFolderPath: string
 ) => {
-  const buff = (await client.getFileContents(
-    getWebdavPath(fileOrFolderPath)
+  await client.init();
+  const buff = (await client.client.getFileContents(
+    getWebdavPath(fileOrFolderPath, client.vaultName)
   )) as BufferLike;
   if (buff instanceof ArrayBuffer) {
     return buff;
@@ -167,13 +235,15 @@ const downloadFromRemoteRaw = async (
 };
 
 export const downloadFromRemote = async (
-  client: WebDAVClient,
+  client: WrappedWebdavClient,
   fileOrFolderPath: string,
   vault: Vault,
   mtime: number,
   password: string = "",
   remoteEncryptedKey: string = ""
 ) => {
+  await client.init();
+
   const isFolder = fileOrFolderPath.endsWith("/");
 
   await mkdirpInVault(fileOrFolderPath, vault);
@@ -189,7 +259,7 @@ export const downloadFromRemote = async (
     if (password !== "") {
       downloadFile = remoteEncryptedKey;
     }
-    downloadFile = getWebdavPath(downloadFile);
+    downloadFile = getWebdavPath(downloadFile, client.vaultName);
     const remoteContent = await downloadFromRemoteRaw(client, downloadFile);
     let localContent = remoteContent;
     if (password !== "") {
@@ -202,7 +272,7 @@ export const downloadFromRemote = async (
 };
 
 export const deleteFromRemote = async (
-  client: WebDAVClient,
+  client: WrappedWebdavClient,
   fileOrFolderPath: string,
   password: string = "",
   remoteEncryptedKey: string = ""
@@ -214,9 +284,11 @@ export const deleteFromRemote = async (
   if (password !== "") {
     remoteFileName = remoteEncryptedKey;
   }
-  remoteFileName = getWebdavPath(remoteFileName);
+  remoteFileName = getWebdavPath(remoteFileName, client.vaultName);
+
+  await client.init();
   try {
-    await client.deleteFile(remoteFileName);
+    await client.client.deleteFile(remoteFileName);
     // console.log(`delete ${remoteFileName} succeeded`);
   } catch (err) {
     console.error("some error while deleting");
@@ -224,7 +296,8 @@ export const deleteFromRemote = async (
   }
 };
 
-export const checkConnectivity = async (client: WebDAVClient) => {
+export const checkConnectivity = async (client: WrappedWebdavClient) => {
+  await client.init();
   try {
     const results = await getRemoteMeta(client, "/");
     if (results === undefined) {

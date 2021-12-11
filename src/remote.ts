@@ -14,7 +14,7 @@ export class RemoteClient {
   readonly serviceType: SUPPORTED_SERVICES_TYPE;
   readonly s3Client?: s3.S3Client;
   readonly s3Config?: S3Config;
-  readonly webdavClient?: webdav.WebDAVClient;
+  readonly webdavClient?: webdav.WrappedWebdavClient;
   readonly webdavConfig?: WebdavConfig;
   readonly dropboxClient?: dropbox.WrappedDropboxClient;
   readonly dropboxConfig?: DropboxConfig;
@@ -34,8 +34,11 @@ export class RemoteClient {
       this.s3Config = s3Config;
       this.s3Client = s3.getS3Client(this.s3Config);
     } else if (serviceType === "webdav") {
+      if (vaultName === undefined) {
+        throw Error("remember to provide vault name while init webdav client");
+      }
       this.webdavConfig = webdavConfig;
-      this.webdavClient = webdav.getWebdavClient(this.webdavConfig);
+      this.webdavClient = webdav.getWebdavClient(this.webdavConfig, vaultName);
     } else if (serviceType === "dropbox") {
       if (vaultName === undefined || saveUpdatedConfigFunc === undefined) {
         throw Error(

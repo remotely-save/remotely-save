@@ -834,7 +834,9 @@ class RemotelySaveSettingTab extends PluginSettingTab {
           const client = new RemoteClient(
             "webdav",
             undefined,
-            this.plugin.settings.webdav
+            this.plugin.settings.webdav,
+            undefined,
+            this.app.vault.getName()
           );
           const res = await client.checkConnectivity();
           if (res) {
