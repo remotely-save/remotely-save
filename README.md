@@ -74,3 +74,18 @@ Additionally, the plugin author may occasionally visit Obsidian official forum a
   - Popular software NextCloud and OwnCloud do **NOT** enable CORS by default. If you are using any of them, you should evaluate the risk, and find a way to enable CORS, before using this plugin.
   - The plugin is tested successfully under python package [`wsgidav` (version 4.0)](https://github.com/mar10/wsgidav). See [this issue](https://github.com/mar10/wsgidav/issues/239) for some details.
 - Password-based end-to-end encryption is also supported.
+
+## Import And Export Plugin Settings By QR Code
+
+It's often verbose / inconvenient to input credentials on mobile. (On different desktop computers, it's trivial to copy and paste `data.json` across different devices.)
+
+So this plugin has a helper function to export settings as a QR code, then you could use mobile device's camera to import the settings.
+
+Steps:
+
+1. Configure the plugin settings on one device, and make sure the sync functions work. (E.g, you could sync notes using S3 credentials.)
+2. Open plugin settings page. Then scroll down the page, until the section "Import and Export Settings". Click the button "Get QR Code". A new modal should show up and you should see a QR code.
+3. On a second device, make sure the vault name is the same as the first device's.
+4. On that second device, use its camera app, or any apps that support scanning QR codes, to scan the QR code from the first device. (On latest iOS, the system's built in camera app should work. On Android, at least one open source app [Binary Eye](https://github.com/markusfisch/BinaryEye) is tested to be working.)
+5. A link / url / address should be identified in the scan-QR-code app, and you could follow the instruction in the app, and then you should be redirected to open the Obsidian app.
+6. And finally, there should be a new notice in the Obsidian app saying the settings are successfully imported. Otherwise please check the error message in the notice.
