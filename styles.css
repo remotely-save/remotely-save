@@ -1,6 +1,10 @@
 /* set the styles */
 
-.password_second_confirm {
+.password-second-confirm {
+  font-weight: bold;
+}
+
+.password-disclaimer {
   font-weight: bold;
 }
 

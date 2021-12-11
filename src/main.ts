@@ -65,7 +65,7 @@ export default class RemotelySavePlugin extends Plugin {
   syncStatus: SyncStatusType;
 
   async onload() {
-    console.log("loading plugin remotely-save");
+    console.log(`loading plugin ${this.manifest.id}`);
 
     await this.loadSettings();
 
@@ -215,7 +215,7 @@ export default class RemotelySavePlugin extends Plugin {
   }
 
   onunload() {
-    console.log("unloading plugin remotely-save");
+    console.log(`unloading plugin ${this.manifest.id}`);
     this.destroyDBs();
   }
 
@@ -257,20 +257,22 @@ export class PasswordModal extends Modal {
     // contentEl.setText("Add Or change password.");
     contentEl.createEl("h2", { text: "Hold on and PLEASE READ ON..." });
     contentEl.createEl("p", {
-      text: "If the field is not empty, files are enctrypted using the password locally before sent to remote.",
+      text: "If the field is not empty, files would be encrypted locally before being uploaded.",
     });
     contentEl.createEl("p", {
-      text: "If the field is empty, then no password is used, and files would be sent without encryption.",
+      text: "If the field is empty, then files would be uploaded without encryption.",
     });
 
     contentEl.createEl("p", {
-      text: "Attention 1/4: The password itself is stored in PLAIN TEXT LOCALLY and would not be sent to remote by this plugin.",
+      text: "Attention 1/4: The password itself is stored in PLAIN TEXT LOCALLY.",
+      cls: "password-disclaimer",
     });
     contentEl.createEl("p", {
-      text: "Attention 2/4: Non-empty file contents are encrypted using openssl format. File/directory path are also encrypted then applied base32. BUT, some metadata such as file sizes and directory structures are not encrypted or can be easily guessed, and directory path are stored as 0-byte-size object remotely.",
+      text: "Attention 2/4: Some metadata are not encrypted or can be easily guessed. (File sizes are closed to their unencrypted ones, and directory path are stored as 0-byte-size object.)",
+      cls: "password-disclaimer",
     });
     contentEl.createEl("p", {
-      text: "Attention 3/4: Before changing password, you should make sure the remote store (s3/webdav/...) IS EMPTY, or REMOTE FILES WERE ENCRYPTED BY THAT NEW PASSWORD. OTHERWISE SOMETHING BAD WOULD HAPPEN!",
+      text: "Attention 3/4: You should make sure the remote store IS EMPTY, or REMOTE FILES WERE ENCRYPTED BY THAT NEW PASSWORD, to avoid conflictions.",
     });
     contentEl.createEl("p", {
       text: "Attention 4/4: The longer the password, the better.",
@@ -285,7 +287,7 @@ export class PasswordModal extends Modal {
           new Notice("New password saved!");
           this.close();
         });
-        button.setClass("password_second_confirm");
+        button.setClass("password-second-confirm");
       })
       .addButton((button) => {
         button.setButtonText("Go Back");
@@ -328,7 +330,7 @@ export class DropboxAuthModal extends Modal {
     );
 
     contentEl.createEl("p", {
-      text: "Step 1: Visit the following address in a browser, and follow the steps on the web page to authorize.",
+      text: "Step 1: Visit the address in a browser, and follow the steps.",
     });
     contentEl.createEl("p").createEl("a", {
       href: authUrl,
@@ -388,7 +390,7 @@ export class DropboxAuthModal extends Modal {
               this.plugin.settings.dropbox.username === ""
             );
             this.revokeAuthSetting.setDesc(
-              `You've connected as user ${this.plugin.settings.dropbox.username}. If you want to disconnect, click this button`
+              `You've connected as user ${this.plugin.settings.dropbox.username}. If you want to disconnect, click this button.`
             );
             this.close();
           } catch (err) {
@@ -421,15 +423,16 @@ export class ExportSettingsQrCodeModal extends Modal {
       this.plugin.manifest.version
     );
 
-    contentEl.createEl("p", {
+    const div1 = contentEl.createDiv();
+    div1.createEl("p", {
       text: "You can use another device to scan this qrcode.",
     });
-
-    contentEl.createEl("p", {
+    div1.createEl("p", {
       text: "Or, you can click the button to copy the special url.",
     });
 
-    contentEl.createEl(
+    const div2 = contentEl.createDiv();
+    div2.createEl(
       "button",
       {
         text: "Click to copy the special URI",
@@ -442,7 +445,8 @@ export class ExportSettingsQrCodeModal extends Modal {
       }
     );
 
-    contentEl.createEl(
+    const div3 = contentEl.createDiv();
+    div3.createEl(
       "img",
       {
         cls: "qrcode-img",
@@ -507,11 +511,12 @@ class RemotelySaveSettingTab extends PluginSettingTab {
     s3Div.createEl("h2", { text: "Remote For S3 (-compatible)" });
 
     s3Div.createEl("p", {
-      text: "You can use Amazon S3 or another S3-compatible service to sync your vault. Enter your bucket information below.",
+      text: "Disclaimer: This plugin is NOT an official Amazon product.",
+      cls: "s3-disclaimer",
     });
 
     s3Div.createEl("p", {
-      text: "Disclaimer: The infomation is stored in PLAIN TEXT locally. Other malicious/harmful/faulty plugins may or may not be able to read the info. If you see any unintentional access to your S3 bucket, please immediately delete the access key to stop further accessment.",
+      text: "Disclaimer: The information is stored in PLAIN TEXT locally. Other malicious/harmful/faulty plugins could read the info. If you see any unintentional access to your bucket, please immediately delete the access key on your AWS (or other S3-service provider) settings.",
       cls: "s3-disclaimer",
     });
 
@@ -520,7 +525,7 @@ class RemotelySaveSettingTab extends PluginSettingTab {
     });
 
     s3Div.createEl("p", {
-      text: "Some Amazon S3 official docs:",
+      text: "Some Amazon S3 official docs for references:",
     });
 
     const s3LinksUl = s3Div.createEl("div").createEl("ul");
@@ -633,19 +638,17 @@ class RemotelySaveSettingTab extends PluginSettingTab {
     );
     dropboxDiv.createEl("h2", { text: "Remote For Dropbox" });
     dropboxDiv.createEl("p", {
-      text: "Disclaimer: Sync support for Dropbox are more experimental, and s3 functions are more stable now.",
+      text: "Disclaimer: This app is NOT an official Dropbox product.",
       cls: "dropbox-disclaimer",
     });
     dropboxDiv.createEl("p", {
-      text: "Disclaimer: This app is NOT an official Dropbox product. It just uses Dropbox open api.",
+      text: "Disclaimer: The information is stored in PLAIN TEXT locally. Other malicious/harmful/faulty plugins could read the info. If you see any unintentional access to your Dropbox, please immediately disconnect this app on https://www.dropbox.com/account/connected_apps .",
       cls: "dropbox-disclaimer",
     });
     dropboxDiv.createEl("p", {
-      text: "Disclaimer: The infomation is stored in PLAIN TEXT locally. Other malicious/harmful/faulty plugins may or may not be able to read the info. If you see any unintentional access to your Dropbox, please immediately disconnect this app on https://www.dropbox.com/account/connected_apps .",
-      cls: "dropbox-disclaimer",
-    });
-    dropboxDiv.createEl("p", {
-      text: "We will create a folder Apps/remotely-save on your Dropbox. All files/folders sync would happen inside this folder.",
+      text: `We will create and sync inside the folder /Apps/${
+        this.plugin.manifest.id
+      }/${this.app.vault.getName()} on your Dropbox.`,
     });
 
     const dropboxSelectAuthDiv = dropboxDiv.createDiv();
@@ -755,17 +758,16 @@ class RemotelySaveSettingTab extends PluginSettingTab {
     webdavDiv.createEl("h2", { text: "Remote For Webdav" });
 
     webdavDiv.createEl("p", {
-      text: "Disclaimer: Webdav functions are more experimental, and s3 functions are more stable now.",
-      cls: "webdav-disclaimer",
-    });
-
-    webdavDiv.createEl("p", {
-      text: "Disclaimer: The infomation is stored in PLAIN TEXT locally. Other malicious/harmful/faulty plugins may or may not be able to read the info. If you see any unintentional access to your webdav server, please immediately change the username and/or password to stop further accessment.",
+      text: "Disclaimer: The information is stored in PLAIN TEXT locally. Other malicious/harmful/faulty plugins may read the info. If you see any unintentional access to your webdav server, please immediately change the username and password.",
       cls: "webdav-disclaimer",
     });
 
     webdavDiv.createEl("p", {
       text: "You need to configure CORS to allow requests from origin app://obsidian.md and capacitor://localhost and http://localhost",
+    });
+
+    webdavDiv.createEl("p", {
+      text: `We will create and sync inside the folder /${this.app.vault.getName()} on your server.`,
     });
 
     new Setting(webdavDiv)
@@ -809,9 +811,7 @@ class RemotelySaveSettingTab extends PluginSettingTab {
 
     new Setting(webdavDiv)
       .setName("server auth type")
-      .setDesc(
-        "Server auth type. If you do not set password, this option would be ignored."
-      )
+      .setDesc("If no password, this option would be ignored.")
       .addDropdown((dropdown) => {
         dropdown.addOption("basic", "basic");
         // dropdown.addOption("digest", "digest");
@@ -851,13 +851,13 @@ class RemotelySaveSettingTab extends PluginSettingTab {
     // after s3Div and webdavDiv being created
     new Setting(serviceChooserDiv)
       .setName("Choose service")
-      .setDesc("Choose a service, by default s3")
+      .setDesc("Choose a service.")
       .addDropdown(async (dropdown) => {
         const currService = this.plugin.settings.serviceType;
 
-        dropdown.addOption("s3", "s3 (-compatible)");
+        dropdown.addOption("s3", "S3 (-compatible)");
         dropdown.addOption("dropbox", "Dropbox");
-        dropdown.addOption("webdav", "webdav (experimental)");
+        dropdown.addOption("webdav", "Webdav");
         dropdown
           .setValue(this.plugin.settings.serviceType)
           .onChange(async (val: SUPPORTED_SERVICES_TYPE) => {
@@ -884,7 +884,7 @@ class RemotelySaveSettingTab extends PluginSettingTab {
 
     new Setting(importExportDiv)
       .setName("export")
-      .setDesc("export all settings by generating qrcode")
+      .setDesc("Export all settings by generating a qrcode.")
       .addButton(async (button) => {
         button.setButtonText("Get QR Code");
         button.onClick(async () => {
@@ -894,18 +894,18 @@ class RemotelySaveSettingTab extends PluginSettingTab {
 
     new Setting(importExportDiv)
       .setName("import")
-      .setDesc("You should manually open a camera app to scan the QR code");
+      .setDesc(
+        "You should open a camera or scan-qrcode app, to manually scan the QR code."
+      );
 
     const debugDiv = containerEl.createEl("div");
     debugDiv.createEl("h2", { text: "Debug" });
     const syncPlanDiv = debugDiv.createEl("div");
-    syncPlanDiv.createEl("p", {
-      text: "Sync plans are created every time after you trigger sync and before the actual sync. Useful to know what would actually happen in those sync.",
-    });
-
     new Setting(syncPlanDiv)
       .setName("export sync plans")
-      .setDesc("export sync plans")
+      .setDesc(
+        "Sync plans are created every time after you trigger sync and before the actual sync. Useful to know what would actually happen in those sync. Click the button to export sync plans"
+      )
       .addButton(async (button) => {
         button.setButtonText("Export");
         button.onClick(async () => {
@@ -913,7 +913,6 @@ class RemotelySaveSettingTab extends PluginSettingTab {
           new Notice("sync plans history exported");
         });
       });
-
     new Setting(syncPlanDiv)
       .setName("delete sync plans history in db")
       .setDesc("delete sync plans history in db")
@@ -926,13 +925,11 @@ class RemotelySaveSettingTab extends PluginSettingTab {
       });
 
     const syncMappingDiv = debugDiv.createEl("div");
-    syncMappingDiv.createEl("p", {
-      text: "Sync mappings history stores the actual LOCAL last modified time of the REMOTE objects. Clearing it may cause unnecessary data exchanges in next-time sync.",
-    });
-
     new Setting(syncMappingDiv)
       .setName("delete sync mappings history in db")
-      .setDesc("delete sync mappings history in db")
+      .setDesc(
+        "Sync mappings history stores the actual LOCAL last modified time of the REMOTE objects. Clearing it may cause unnecessary data exchanges in next-time sync. Click the button to delete sync mappings history in db"
+      )
       .addButton(async (button) => {
         button.setButtonText("Delete Sync Mappings");
         button.onClick(async () => {
@@ -942,12 +939,11 @@ class RemotelySaveSettingTab extends PluginSettingTab {
       });
 
     const dbsResetDiv = debugDiv.createEl("div");
-    syncMappingDiv.createEl("p", {
-      text: "Reset local internal caches/databases (for debugging purposes). You would want to reload the plugin after resetting this. This option will not empty the {s3, password...} settings.",
-    });
-    new Setting(syncMappingDiv)
+    new Setting(dbsResetDiv)
       .setName("reset local internal cache/databases")
-      .setDesc("reset local internal cache/databases")
+      .setDesc(
+        "Reset local internal caches/databases (for debugging purposes). You would want to reload the plugin after resetting this. This option will not empty the {s3, password...} settings."
+      )
       .addButton(async (button) => {
         button.setButtonText("Reset");
         button.onClick(async () => {
