@@ -12,6 +12,8 @@ if you want to view the source, please visit the github repository of this plugi
 const prod = process.argv[2] === "production";
 
 const DEFAULT_DROPBOX_APP_KEY = process.env.DROPBOX_APP_KEY || "";
+const DEFAULT_ONEDRIVE_CLIENT_ID = process.env.ONEDRIVE_CLIENT_ID || "";
+const DEFAULT_ONEDRIVE_AUTHORITY = process.env.ONEDRIVE_AUTHORITY || "";
 
 esbuild
   .build({
@@ -40,6 +42,8 @@ esbuild
     outfile: "main.js",
     define: {
       "process.env.DEFAULT_DROPBOX_APP_KEY": `"${DEFAULT_DROPBOX_APP_KEY}"`,
+      "process.env.DEFAULT_ONEDRIVE_CLIENT_ID": `"${DEFAULT_ONEDRIVE_CLIENT_ID}"`,
+      "process.env.DEFAULT_ONEDRIVE_AUTHORITY": `"${DEFAULT_ONEDRIVE_AUTHORITY}"`,
     },
   })
   .catch(() => process.exit(1));

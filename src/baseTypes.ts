@@ -3,7 +3,7 @@
  * To avoid circular dependency.
  */
 
-export type SUPPORTED_SERVICES_TYPE = "s3" | "webdav" | "dropbox";
+export type SUPPORTED_SERVICES_TYPE = "s3" | "webdav" | "dropbox" | "onedrive";
 
 export interface S3Config {
   s3Endpoint: string;
@@ -32,10 +32,22 @@ export interface WebdavConfig {
   authType: WebdavAuthType;
 }
 
+export interface OnedriveConfig {
+  accessToken: string;
+  clientID: string;
+  authority: string;
+  refreshToken: string;
+  accessTokenExpiresInSeconds: number;
+  accessTokenExpiresAtTime: number;
+  deltaLink: string;
+  username: string;
+}
+
 export interface RemotelySavePluginSettings {
   s3: S3Config;
   webdav: WebdavConfig;
   dropbox: DropboxConfig;
+  onedrive: OnedriveConfig;
   password: string;
   serviceType: SUPPORTED_SERVICES_TYPE;
 }
@@ -50,6 +62,7 @@ export interface RemoteItem {
 
 export const COMMAND_URI = "remotely-save";
 export const COMMAND_CALLBACK = "remotely-save-cb";
+export const COMMAND_CALLBACK_ONEDRIVE = "remotely-save-cb-onedrive";
 
 export interface UriParams {
   func?: string;

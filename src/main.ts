@@ -31,8 +31,8 @@ import { DEFAULT_S3_CONFIG } from "./remoteForS3";
 import { DEFAULT_WEBDAV_CONFIG } from "./remoteForWebdav";
 import {
   DEFAULT_DROPBOX_CONFIG,
-  getAuthUrlAndVerifier,
-  sendAuthReq,
+  getAuthUrlAndVerifier as getAuthUrlAndVerifierDropbox,
+  sendAuthReq as sendAuthReqDropbox,
   setConfigBySuccessfullAuthInplace,
 } from "./remoteForDropbox";
 
@@ -50,22 +50,48 @@ import type {
 import type { ProcessQrCodeResultType } from "./importExport";
 import { exportQrCodeUri, importQrCodeUri } from "./importExport";
 
+import {
+  getAuthUrlAndVerifier as getAuthUrlAndVerifierOnedrive,
+  sendAuthReq as sendAuthReqOnedrive,
+  DEFAULT_ONEDRIVE_CONFIG,
+  WrappedOnedriveClient,
+  AccessCodeResponseSuccessfulType,
+} from "./remoteForOnedrive";
+
 const DEFAULT_SETTINGS: RemotelySavePluginSettings = {
   s3: DEFAULT_S3_CONFIG,
   webdav: DEFAULT_WEBDAV_CONFIG,
   dropbox: DEFAULT_DROPBOX_CONFIG,
+  onedrive: DEFAULT_ONEDRIVE_CONFIG,
   password: "",
   serviceType: "s3",
 };
+
+interface OAuth2Info {
+  verifier?: string;
+  helperModal?: Modal;
+  authDiv?: HTMLElement;
+  revokeDiv?: HTMLElement;
+  revokeAuthSetting?: Setting;
+}
 
 export default class RemotelySavePlugin extends Plugin {
   settings: RemotelySavePluginSettings;
   // cm: CodeMirror.Editor;
   db: InternalDBs;
   syncStatus: SyncStatusType;
+  oauth2Info: OAuth2Info;
 
   async onload() {
     console.log(`loading plugin ${this.manifest.id}`);
+
+    this.oauth2Info = {
+      verifier: "",
+      helperModal: undefined,
+      authDiv: undefined,
+      revokeDiv: undefined,
+      revokeAuthSetting: undefined,
+    }; // init
 
     await this.loadSettings();
 
@@ -110,6 +136,77 @@ export default class RemotelySavePlugin extends Plugin {
         );
       }
     );
+    this.registerObsidianProtocolHandler(
+      "remotely-save-cb-onedrive",
+      async (inputParams) => {
+        if (inputParams.code !== undefined) {
+          let rsp = await sendAuthReqOnedrive(
+            this.settings.onedrive.clientID,
+            this.settings.onedrive.authority,
+            inputParams.code,
+            this.oauth2Info.verifier
+          );
+
+          if ((rsp as any).error !== undefined) {
+            throw Error(`${JSON.stringify(rsp)}`);
+          }
+
+          if (this.oauth2Info.helperModal !== undefined) {
+            this.oauth2Info.helperModal.contentEl.empty();
+            this.oauth2Info.helperModal.contentEl.createEl("p", {
+              text: "Please wait, the plugin is trying to connect to Onedrive...",
+            });
+          }
+
+          rsp = rsp as AccessCodeResponseSuccessfulType;
+          this.settings.onedrive.accessToken = rsp.access_token;
+          this.settings.onedrive.accessTokenExpiresAtTime =
+            Date.now() + rsp.expires_in - 5 * 60 * 1000;
+          this.settings.onedrive.accessTokenExpiresInSeconds = rsp.expires_in;
+          this.settings.onedrive.refreshToken = rsp.refresh_token;
+          this.saveSettings();
+
+          const self = this;
+          const client = new RemoteClient(
+            "onedrive",
+            undefined,
+            undefined,
+            undefined,
+            this.settings.onedrive,
+            this.app.vault.getName(),
+            () => self.saveSettings()
+          );
+          this.settings.onedrive.username = await client.getUser();
+          this.saveSettings();
+
+          this.oauth2Info.verifier = ""; // reset it
+          this.oauth2Info.helperModal?.close(); // close it
+          this.oauth2Info.helperModal = undefined;
+
+          this.oauth2Info.authDiv?.toggleClass(
+            "onedrive-auth-button-hide",
+            this.settings.onedrive.username !== ""
+          );
+          this.oauth2Info.authDiv = undefined;
+
+          this.oauth2Info.revokeAuthSetting?.setDesc(
+            `You've connected as user ${this.settings.dropbox.username}. If you want to disconnect, click this button.`
+          );
+          this.oauth2Info.revokeAuthSetting = undefined;
+          this.oauth2Info.revokeDiv?.toggleClass(
+            "onedrive-revoke-auth-button-hide",
+            this.settings.onedrive.username === ""
+          );
+          this.oauth2Info.revokeDiv = undefined;
+        } else {
+          throw Error(
+            `do not know how to deal with the callback: ${JSON.stringify(
+              inputParams
+            )}`
+          );
+        }
+      }
+    );
 
     this.addRibbonIcon("switch", "Remotely Save", async () => {
       if (this.syncStatus !== "idle") {
@@ -134,6 +231,7 @@ export default class RemotelySavePlugin extends Plugin {
           this.settings.s3,
           this.settings.webdav,
           this.settings.dropbox,
+          this.settings.onedrive,
           this.app.vault.getName(),
           () => self.saveSettings()
         );
@@ -325,7 +423,7 @@ export class DropboxAuthModal extends Modal {
   async onOpen() {
     let { contentEl } = this;
 
-    const { authUrl, verifier } = await getAuthUrlAndVerifier(
+    const { authUrl, verifier } = await getAuthUrlAndVerifierDropbox(
       this.plugin.settings.dropbox.clientID
     );
 
@@ -358,7 +456,7 @@ export class DropboxAuthModal extends Modal {
         button.onClick(async () => {
           new Notice("Trying to connect to Dropbox");
           try {
-            const authRes = await sendAuthReq(
+            const authRes = await sendAuthReqDropbox(
               this.plugin.settings.dropbox.clientID,
               verifier,
               authCode
@@ -374,6 +472,7 @@ export class DropboxAuthModal extends Modal {
               undefined,
               undefined,
               this.plugin.settings.dropbox,
+              undefined,
               this.app.vault.getName(),
               () => self.plugin.saveSettings()
             );
@@ -399,6 +498,52 @@ export class DropboxAuthModal extends Modal {
           }
         });
       });
+  }
+
+  onClose() {
+    let { contentEl } = this;
+    contentEl.empty();
+  }
+}
+
+export class OnedriveAuthModal extends Modal {
+  readonly plugin: RemotelySavePlugin;
+  readonly authDiv: HTMLDivElement;
+  readonly revokeAuthDiv: HTMLDivElement;
+  readonly revokeAuthSetting: Setting;
+  constructor(
+    app: App,
+    plugin: RemotelySavePlugin,
+    authDiv: HTMLDivElement,
+    revokeAuthDiv: HTMLDivElement,
+    revokeAuthSetting: Setting
+  ) {
+    super(app);
+    this.plugin = plugin;
+    this.authDiv = authDiv;
+    this.revokeAuthDiv = revokeAuthDiv;
+    this.revokeAuthSetting = revokeAuthSetting;
+  }
+
+  async onOpen() {
+    let { contentEl } = this;
+
+    const { authUrl, verifier } = await getAuthUrlAndVerifierOnedrive(
+      this.plugin.settings.onedrive.clientID,
+      this.plugin.settings.onedrive.authority
+    );
+    this.plugin.oauth2Info.verifier = verifier;
+
+    contentEl.createEl("p", {
+      text: "Visit the address in a browser, and follow the steps.",
+    });
+    contentEl.createEl("p", {
+      text: "Finally you should be redirected to Obsidian.",
+    });
+    contentEl.createEl("p").createEl("a", {
+      href: authUrl,
+      text: authUrl,
+    });
   }
 
   onClose() {
@@ -617,11 +762,7 @@ class RemotelySaveSettingTab extends PluginSettingTab {
         button.setButtonText("Check");
         button.onClick(async () => {
           new Notice("Checking...");
-          const client = new RemoteClient(
-            "s3",
-            this.plugin.settings.s3,
-            undefined
-          );
+          const client = new RemoteClient("s3", this.plugin.settings.s3);
           const res = await client.checkConnectivity();
           if (res) {
             new Notice("Great! The bucket can be accessed.");
@@ -659,7 +800,7 @@ class RemotelySaveSettingTab extends PluginSettingTab {
       cls: "dropbox-revoke-auth-button-hide",
     });
 
-    const revokeAuthSetting = new Setting(dropboxRevokeAuthDiv)
+    const dropboxRevokeAuthSetting = new Setting(dropboxRevokeAuthDiv)
       .setName("Revoke Auth")
       .setDesc(
         `You've connected as user ${this.plugin.settings.dropbox.username}. If you want to disconnect, click this button`
@@ -674,6 +815,7 @@ class RemotelySaveSettingTab extends PluginSettingTab {
               undefined,
               undefined,
               this.plugin.settings.dropbox,
+              undefined,
               this.app.vault.getName(),
               () => self.plugin.saveSettings()
             );
@@ -709,7 +851,7 @@ class RemotelySaveSettingTab extends PluginSettingTab {
             this.plugin,
             dropboxAuthDiv,
             dropboxRevokeAuthDiv,
-            revokeAuthSetting
+            dropboxRevokeAuthSetting
           ).open();
         });
       });
@@ -736,6 +878,7 @@ class RemotelySaveSettingTab extends PluginSettingTab {
             undefined,
             undefined,
             this.plugin.settings.dropbox,
+            undefined,
             this.app.vault.getName(),
             () => self.plugin.saveSettings()
           );
@@ -745,6 +888,120 @@ class RemotelySaveSettingTab extends PluginSettingTab {
             new Notice("Great! We can connect to Dropbox!");
           } else {
             new Notice("We cannot connect to Dropbox.");
+          }
+        });
+      });
+
+    const onedriveDiv = containerEl.createEl("div", { cls: "onedrive-hide" });
+    onedriveDiv.toggleClass(
+      "onedrive-hide",
+      this.plugin.settings.serviceType !== "onedrive"
+    );
+    onedriveDiv.createEl("h2", { text: "Remote For Onedrive" });
+    onedriveDiv.createEl("p", {
+      text: "Disclaimer: This app is NOT an official Onedrive product.",
+      cls: "onedrive-disclaimer",
+    });
+    onedriveDiv.createEl("p", {
+      text: "Disclaimer: The information is stored in PLAIN TEXT locally. Other malicious/harmful/faulty plugins could read the info. If you see any unintentional access to your Onedrive, please immediately disconnect this app on https://microsoft.com/consent .",
+      cls: "onedrive-disclaimer",
+    });
+    onedriveDiv.createEl("p", {
+      text: `We will create and sync inside the folder /Apps/${
+        this.plugin.manifest.id
+      }/${this.app.vault.getName()} on your Onedrive.`,
+    });
+
+    const onedriveSelectAuthDiv = onedriveDiv.createDiv();
+    const onedriveAuthDiv = onedriveSelectAuthDiv.createDiv({
+      cls: "onedrive-auth-button-hide",
+    });
+    const onedriveRevokeAuthDiv = onedriveSelectAuthDiv.createDiv({
+      cls: "onedrive-revoke-auth-button-hide",
+    });
+
+    const onedriveRevokeAuthSetting = new Setting(onedriveRevokeAuthDiv)
+      .setName("Revoke Auth")
+      .setDesc(
+        `You've connected as user ${this.plugin.settings.onedrive.username}. If you want to disconnect, click this button`
+      )
+      .addButton(async (button) => {
+        button.setButtonText("Revoke Auth");
+        button.onClick(async () => {
+          try {
+            this.plugin.settings.onedrive = JSON.parse(
+              JSON.stringify(DEFAULT_ONEDRIVE_CONFIG)
+            );
+            await this.plugin.saveSettings();
+            onedriveAuthDiv.toggleClass(
+              "onedrive-auth-button-hide",
+              this.plugin.settings.onedrive.username !== ""
+            );
+            onedriveRevokeAuthDiv.toggleClass(
+              "onedrive-revoke-auth-button-hide",
+              this.plugin.settings.onedrive.username === ""
+            );
+            new Notice("Revoked!");
+          } catch (err) {
+            console.error(err);
+            new Notice("Something goes wrong while revoking");
+          }
+        });
+      });
+
+    new Setting(onedriveAuthDiv)
+      .setName("Auth")
+      .setDesc("Auth")
+      .addButton(async (button) => {
+        button.setButtonText("Auth");
+        button.onClick(async () => {
+          const modal = new OnedriveAuthModal(
+            this.app,
+            this.plugin,
+            onedriveAuthDiv,
+            onedriveRevokeAuthDiv,
+            onedriveRevokeAuthSetting
+          );
+          this.plugin.oauth2Info.helperModal = modal;
+          this.plugin.oauth2Info.authDiv = onedriveAuthDiv;
+          this.plugin.oauth2Info.revokeDiv = onedriveRevokeAuthDiv;
+          this.plugin.oauth2Info.revokeAuthSetting = onedriveRevokeAuthSetting;
+          modal.open();
+        });
+      });
+
+    onedriveAuthDiv.toggleClass(
+      "onedrive-auth-button-hide",
+      this.plugin.settings.onedrive.username !== ""
+    );
+    onedriveRevokeAuthDiv.toggleClass(
+      "onedrive-revoke-auth-button-hide",
+      this.plugin.settings.onedrive.username === ""
+    );
+
+    new Setting(onedriveDiv)
+      .setName("check connectivity")
+      .setDesc("check connectivity")
+      .addButton(async (button) => {
+        button.setButtonText("Check");
+        button.onClick(async () => {
+          new Notice("Checking...");
+          const self = this;
+          const client = new RemoteClient(
+            "onedrive",
+            undefined,
+            undefined,
+            undefined,
+            this.plugin.settings.onedrive,
+            this.app.vault.getName(),
+            () => self.plugin.saveSettings()
+          );
+
+          const res = await client.checkConnectivity();
+          if (res) {
+            new Notice("Great! We can connect to Onedrive!");
+          } else {
+            new Notice("We cannot connect to Onedrive.");
           }
         });
       });
@@ -836,6 +1093,7 @@ class RemotelySaveSettingTab extends PluginSettingTab {
             undefined,
             this.plugin.settings.webdav,
             undefined,
+            undefined,
             this.app.vault.getName()
           );
           const res = await client.checkConnectivity();
@@ -853,11 +1111,10 @@ class RemotelySaveSettingTab extends PluginSettingTab {
       .setName("Choose service")
       .setDesc("Choose a service.")
       .addDropdown(async (dropdown) => {
-        const currService = this.plugin.settings.serviceType;
-
         dropdown.addOption("s3", "S3 (-compatible)");
         dropdown.addOption("dropbox", "Dropbox");
         dropdown.addOption("webdav", "Webdav");
+        dropdown.addOption("onedrive", "OneDrive (alpha)");
         dropdown
           .setValue(this.plugin.settings.serviceType)
           .onChange(async (val: SUPPORTED_SERVICES_TYPE) => {
@@ -869,6 +1126,10 @@ class RemotelySaveSettingTab extends PluginSettingTab {
             dropboxDiv.toggleClass(
               "dropbox-hide",
               this.plugin.settings.serviceType !== "dropbox"
+            );
+            onedriveDiv.toggleClass(
+              "onedrive-hide",
+              this.plugin.settings.serviceType !== "onedrive"
             );
             webdavDiv.toggleClass(
               "webdav-hide",

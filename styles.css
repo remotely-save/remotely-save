@@ -30,6 +30,21 @@
   display: none;
 }
 
+.onedrive-disclaimer {
+  font-weight: bold;
+}
+.onedrive-hide {
+  display: none;
+}
+
+.onedrive-auth-button-hide {
+  display: none;
+}
+
+.onedrive-revoke-auth-button-hide {
+  display: none;
+}
+
 .webdav-disclaimer {
   font-weight: bold;
 }

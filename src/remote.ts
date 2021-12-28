@@ -5,10 +5,12 @@ import type {
   S3Config,
   DropboxConfig,
   WebdavConfig,
+  OnedriveConfig,
 } from "./baseTypes";
 import * as s3 from "./remoteForS3";
 import * as webdav from "./remoteForWebdav";
 import * as dropbox from "./remoteForDropbox";
+import * as onedrive from "./remoteForOnedrive";
 
 export class RemoteClient {
   readonly serviceType: SUPPORTED_SERVICES_TYPE;
@@ -18,12 +20,15 @@ export class RemoteClient {
   readonly webdavConfig?: WebdavConfig;
   readonly dropboxClient?: dropbox.WrappedDropboxClient;
   readonly dropboxConfig?: DropboxConfig;
+  readonly onedriveClient?: onedrive.WrappedOnedriveClient;
+  readonly onedriveConfig?: OnedriveConfig;
 
   constructor(
     serviceType: SUPPORTED_SERVICES_TYPE,
     s3Config?: S3Config,
     webdavConfig?: WebdavConfig,
     dropboxConfig?: DropboxConfig,
+    onedriveConfig?: OnedriveConfig,
     vaultName?: string,
     saveUpdatedConfigFunc?: () => Promise<any>
   ) {
@@ -51,6 +56,18 @@ export class RemoteClient {
         vaultName,
         saveUpdatedConfigFunc
       );
+    } else if (serviceType === "onedrive") {
+      if (vaultName === undefined || saveUpdatedConfigFunc === undefined) {
+        throw Error(
+          "remember to provide vault name and callback while init onedrive client"
+        );
+      }
+      this.onedriveConfig = onedriveConfig;
+      this.onedriveClient = onedrive.getOnedriveClient(
+        this.onedriveConfig,
+        vaultName,
+        saveUpdatedConfigFunc
+      );
     } else {
       throw Error(`not supported service type ${this.serviceType}`);
     }
@@ -67,6 +84,11 @@ export class RemoteClient {
       return await webdav.getRemoteMeta(this.webdavClient, fileOrFolderPath);
     } else if (this.serviceType === "dropbox") {
       return await dropbox.getRemoteMeta(this.dropboxClient, fileOrFolderPath);
+    } else if (this.serviceType === "onedrive") {
+      return await onedrive.getRemoteMeta(
+        this.onedriveClient,
+        fileOrFolderPath
+      );
     } else {
       throw Error(`not supported service type ${this.serviceType}`);
     }
@@ -109,6 +131,16 @@ export class RemoteClient {
         remoteEncryptedKey,
         foldersCreatedBefore
       );
+    } else if (this.serviceType === "onedrive") {
+      return await onedrive.uploadToRemote(
+        this.onedriveClient,
+        fileOrFolderPath,
+        vault,
+        isRecursively,
+        password,
+        remoteEncryptedKey,
+        foldersCreatedBefore
+      );
     } else {
       throw Error(`not supported service type ${this.serviceType}`);
     }
@@ -121,6 +153,8 @@ export class RemoteClient {
       return await webdav.listFromRemote(this.webdavClient, prefix);
     } else if (this.serviceType === "dropbox") {
       return await dropbox.listFromRemote(this.dropboxClient, prefix);
+    } else if (this.serviceType === "onedrive") {
+      return await onedrive.listFromRemote(this.onedriveClient, prefix);
     } else {
       throw Error(`not supported service type ${this.serviceType}`);
     }
@@ -161,6 +195,15 @@ export class RemoteClient {
         password,
         remoteEncryptedKey
       );
+    } else if (this.serviceType === "onedrive") {
+      return await onedrive.downloadFromRemote(
+        this.onedriveClient,
+        fileOrFolderPath,
+        vault,
+        mtime,
+        password,
+        remoteEncryptedKey
+      );
     } else {
       throw Error(`not supported service type ${this.serviceType}`);
     }
@@ -193,6 +236,13 @@ export class RemoteClient {
         password,
         remoteEncryptedKey
       );
+    } else if (this.serviceType === "onedrive") {
+      return await onedrive.deleteFromRemote(
+        this.onedriveClient,
+        fileOrFolderPath,
+        password,
+        remoteEncryptedKey
+      );
     } else {
       throw Error(`not supported service type ${this.serviceType}`);
     }
@@ -205,6 +255,8 @@ export class RemoteClient {
       return await webdav.checkConnectivity(this.webdavClient);
     } else if (this.serviceType === "dropbox") {
       return await dropbox.checkConnectivity(this.dropboxClient);
+    } else if (this.serviceType === "onedrive") {
+      return await onedrive.checkConnectivity(this.onedriveClient);
     } else {
       throw Error(`not supported service type ${this.serviceType}`);
     }
@@ -213,6 +265,8 @@ export class RemoteClient {
   getUser = async () => {
     if (this.serviceType === "dropbox") {
       return await dropbox.getUserDisplayName(this.dropboxClient);
+    } else if (this.serviceType === "onedrive") {
+      return await onedrive.getUserDisplayName(this.onedriveClient);
     } else {
       throw Error(`not supported service type ${this.serviceType}`);
     }
