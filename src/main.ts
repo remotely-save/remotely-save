@@ -219,11 +219,11 @@ export default class RemotelySavePlugin extends Plugin {
       try {
         //console.log(`huh ${this.settings.password}`)
         new Notice(
-          `1/6 Remotely Save Sync Preparing (${this.settings.serviceType})`
+          `1/7 Remotely Save Sync Preparing (${this.settings.serviceType})`
         );
         this.syncStatus = "preparing";
 
-        new Notice("2/6 Starting to fetch remote meta data.");
+        new Notice("2/7 Starting to fetch remote meta data.");
         this.syncStatus = "getting_remote_meta";
         const self = this;
         const client = new RemoteClient(
@@ -238,7 +238,7 @@ export default class RemotelySavePlugin extends Plugin {
         const remoteRsp = await client.listFromRemote();
         // console.log(remoteRsp);
 
-        new Notice("3/6 Starting to fetch local meta data.");
+        new Notice("3/7 Starting to fetch local meta data.");
         this.syncStatus = "getting_local_meta";
         const local = this.app.vault.getAllLoadedFiles();
         const localHistory = await loadDeleteRenameHistoryTable(this.db);
