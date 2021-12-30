@@ -14,6 +14,9 @@ import {
   decryptBase32ToString,
   encryptStringToBase32,
   MAGIC_ENCRYPTED_PREFIX_BASE32,
+  decryptBase64urlToString,
+  encryptStringToBase64url,
+  MAGIC_ENCRYPTED_PREFIX_BASE64URL,
 } from "./encrypt";
 
 export type SyncStatusType =
@@ -85,7 +88,7 @@ export const isPasswordOk = async (
   }
   const santyCheckKey = remote[0].key;
   if (santyCheckKey.startsWith(MAGIC_ENCRYPTED_PREFIX_BASE32)) {
-    // this is encrypted!
+    // this is encrypted using old base32!
     // try to decrypt it using the provided password.
     if (password === "") {
       return {
@@ -95,6 +98,38 @@ export const isPasswordOk = async (
     }
     try {
       const res = await decryptBase32ToString(santyCheckKey, password);
+
+      // additional test
+      // because iOS Safari bypasses decryption with wrong password!
+      if (isVaildText(res)) {
+        return {
+          ok: true,
+          reason: "password_matched",
+        } as PasswordCheckType;
+      } else {
+        return {
+          ok: false,
+          reason: "invalid_text_after_decryption",
+        } as PasswordCheckType;
+      }
+    } catch (error) {
+      return {
+        ok: false,
+        reason: "password_not_matched",
+      } as PasswordCheckType;
+    }
+  }
+  if (santyCheckKey.startsWith(MAGIC_ENCRYPTED_PREFIX_BASE64URL)) {
+    // this is encrypted using new base64url!
+    // try to decrypt it using the provided password.
+    if (password === "") {
+      return {
+        ok: false,
+        reason: "remote_encrypted_local_no_password",
+      } as PasswordCheckType;
+    }
+    try {
+      const res = await decryptBase64urlToString(santyCheckKey, password);
 
       // additional test
       // because iOS Safari bypasses decryption with wrong password!
@@ -145,7 +180,15 @@ const ensembleMixedStates = async (
       const remoteEncryptedKey = entry.key;
       let key = remoteEncryptedKey;
       if (password !== "") {
-        key = await decryptBase32ToString(remoteEncryptedKey, password);
+        if (remoteEncryptedKey.startsWith(MAGIC_ENCRYPTED_PREFIX_BASE32)) {
+          key = await decryptBase32ToString(remoteEncryptedKey, password);
+        } else if (
+          remoteEncryptedKey.startsWith(MAGIC_ENCRYPTED_PREFIX_BASE64URL)
+        ) {
+          key = await decryptBase64urlToString(remoteEncryptedKey, password);
+        } else {
+          throw Error(`unexpected key=${remoteEncryptedKey}`);
+        }
       }
       const backwardMapping = await getSyncMetaMappingByRemoteKey(
         remoteType,
@@ -435,7 +478,10 @@ const dispatchOperationToActual = async (
   if (password !== "") {
     remoteEncryptedKey = state.remote_encrypted_key;
     if (remoteEncryptedKey === undefined || remoteEncryptedKey === "") {
-      remoteEncryptedKey = await encryptStringToBase32(key, password);
+      // the old version uses base32
+      // remoteEncryptedKey = await encryptStringToBase32(key, password);
+      // the new version users base64url
+      remoteEncryptedKey = await encryptStringToBase64url(key, password);
     }
   }
 

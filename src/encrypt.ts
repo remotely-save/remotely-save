@@ -1,4 +1,4 @@
-import { base32, base64 } from "rfc4648";
+import { base32, base64url } from "rfc4648";
 import {
   bufferToArrayBuffer,
   arrayBufferToBuffer,
@@ -10,6 +10,8 @@ const DEFAULT_ITER = 20000;
 
 // base32.stringify(Buffer.from('Salted__'))
 export const MAGIC_ENCRYPTED_PREFIX_BASE32 = "KNQWY5DFMRPV";
+// base64.stringify(Buffer.from('Salted__'))
+export const MAGIC_ENCRYPTED_PREFIX_BASE64URL = "U2FsdGVkX";
 
 const getKeyIVFromPassword = async (
   salt: Uint8Array,
@@ -120,7 +122,7 @@ export const encryptStringToBase32 = async (
     rounds,
     saltHex
   );
-  return base32.stringify(new Uint8Array(enc));
+  return base32.stringify(new Uint8Array(enc), { pad: false });
 };
 
 export const decryptBase32ToString = async (
@@ -130,7 +132,36 @@ export const decryptBase32ToString = async (
 ) => {
   return new TextDecoder().decode(
     await decryptArrayBuffer(
-      bufferToArrayBuffer(base32.parse(text)),
+      bufferToArrayBuffer(base32.parse(text, { loose: true })),
+      password,
+      rounds
+    )
+  );
+};
+
+export const encryptStringToBase64url = async (
+  text: string,
+  password: string,
+  rounds: number = DEFAULT_ITER,
+  saltHex: string = ""
+) => {
+  const enc = await encryptArrayBuffer(
+    bufferToArrayBuffer(new TextEncoder().encode(text)),
+    password,
+    rounds,
+    saltHex
+  );
+  return base64url.stringify(new Uint8Array(enc), { pad: false });
+};
+
+export const decryptBase64urlToString = async (
+  text: string,
+  password: string,
+  rounds: number = DEFAULT_ITER
+) => {
+  return new TextDecoder().decode(
+    await decryptArrayBuffer(
+      bufferToArrayBuffer(base64url.parse(text, { loose: true })),
       password,
       rounds
     )
