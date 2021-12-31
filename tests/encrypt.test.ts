@@ -2,12 +2,13 @@ import * as fs from "fs";
 import * as path from "path";
 import * as chai from "chai";
 import chaiAsPromised from "chai-as-promised";
-import { base64ToBase32, bufferToArrayBuffer } from "../src/misc";
+import { base64ToBase64url, bufferToArrayBuffer } from "../src/misc";
 import {
   decryptArrayBuffer,
   decryptBase32ToString,
   encryptArrayBuffer,
   encryptStringToBase32,
+  encryptStringToBase64url,
 } from "../src/encrypt";
 
 chai.use(chaiAsPromised);
@@ -52,7 +53,7 @@ describe("Encryption tests", () => {
     ).toString("utf-8");
     const password = "somepassword";
     const saltHex = "8302F586FAB491EC";
-    const enc = await encryptStringToBase32(
+    const enc = await encryptStringToBase64url(
       fileContent,
       password,
       undefined,
@@ -65,9 +66,9 @@ describe("Encryption tests", () => {
     const opensslBase64Res =
       "U2FsdGVkX1+DAvWG+rSR7BPXMnlvSSVGMdjsx7kE1CTH+28P+yAZRdDGgFWMGkMd";
     // we output base32, so we need some transformation
-    const opensslBase32Res = base64ToBase32(opensslBase64Res);
+    const opensslBase64urlRes = base64ToBase64url(opensslBase64Res);
 
-    expect(enc).equal(opensslBase32Res);
+    expect(enc).equal(opensslBase64urlRes);
   });
 
   it("should encrypt binary file and get the same result as openssl", async () => {

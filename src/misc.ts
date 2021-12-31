@@ -114,6 +114,14 @@ export const base64ToBase32 = (a: string) => {
   return base32.stringify(Buffer.from(a, "base64"));
 };
 
+export const base64ToBase64url = (a: string, pad: boolean = false) => {
+  let b = a.replace(/\+/g, "-").replace(/\//g, "_");
+  if (!pad) {
+    b = b.replace(/=/g, "");
+  }
+  return b;
+};
+
 /**
  * iOS Safari could decrypt string with invalid password!
  * So we need an extra way to test the decrypted result.
