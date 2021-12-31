@@ -302,6 +302,10 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
 
     containerEl.createEl("h1", { text: "Remotely Save" });
 
+    //////////////////////////////////////////////////
+    // below for general
+    //////////////////////////////////////////////////
+
     const generalDiv = containerEl.createEl("div");
     generalDiv.createEl("h2", { text: "General" });
 
@@ -327,12 +331,20 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
         });
       });
 
+    //////////////////////////////////////////////////
+    // below for general chooser (part 1/2)
+    //////////////////////////////////////////////////
+
     // we need to create the div in advance of any other service divs
     const serviceChooserDiv = generalDiv.createEl("div");
 
+    //////////////////////////////////////////////////
+    // below for s3
+    //////////////////////////////////////////////////
+
     const s3Div = containerEl.createEl("div", { cls: "s3-hide" });
     s3Div.toggleClass("s3-hide", this.plugin.settings.serviceType !== "s3");
-    s3Div.createEl("h2", { text: "Remote For S3 (-compatible)" });
+    s3Div.createEl("h2", { text: "Remote For S3 or compatible" });
 
     s3Div.createEl("p", {
       text: "Disclaimer: This plugin is NOT an official Amazon product.",
@@ -450,6 +462,10 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
           }
         });
       });
+
+    //////////////////////////////////////////////////
+    // below for dropbpx
+    //////////////////////////////////////////////////
 
     const dropboxDiv = containerEl.createEl("div", { cls: "dropbox-hide" });
     dropboxDiv.toggleClass(
@@ -571,6 +587,10 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
         });
       });
 
+    //////////////////////////////////////////////////
+    // below for onedrive
+    //////////////////////////////////////////////////
+
     const onedriveDiv = containerEl.createEl("div", { cls: "onedrive-hide" });
     onedriveDiv.toggleClass(
       "onedrive-hide",
@@ -685,6 +705,10 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
         });
       });
 
+    //////////////////////////////////////////////////
+    // below for webdav
+    //////////////////////////////////////////////////
+
     const webdavDiv = containerEl.createEl("div", { cls: "webdav-hide" });
     webdavDiv.toggleClass(
       "webdav-hide",
@@ -784,15 +808,19 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
         });
       });
 
+    //////////////////////////////////////////////////
+    // below for general chooser (part 2/2)
+    //////////////////////////////////////////////////
+
     // we need to create chooser
-    // after s3Div and webdavDiv being created
+    // after all service-div-s being created
     new Setting(serviceChooserDiv)
       .setName("Choose service")
       .setDesc("Choose a service.")
       .addDropdown(async (dropdown) => {
-        dropdown.addOption("s3", "S3 (-compatible)");
+        dropdown.addOption("s3", "S3 or compatible");
         dropdown.addOption("dropbox", "Dropbox");
-        dropdown.addOption("webdav", "Webdav");
+        dropdown.addOption("webdav", "Webdav (beta)");
         dropdown.addOption("onedrive", "OneDrive (alpha)");
         dropdown
           .setValue(this.plugin.settings.serviceType)
@@ -818,6 +846,10 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
           });
       });
 
+    //////////////////////////////////////////////////
+    // below for import and export functions
+    //////////////////////////////////////////////////
+
     // import and export
     const importExportDiv = containerEl.createEl("div");
     importExportDiv.createEl("h2", { text: "Import and Export Settings" });
@@ -837,6 +869,10 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
       .setDesc(
         "You should open a camera or scan-qrcode app, to manually scan the QR code."
       );
+
+    //////////////////////////////////////////////////
+    // below for debug
+    //////////////////////////////////////////////////
 
     const debugDiv = containerEl.createEl("div");
     debugDiv.createEl("h2", { text: "Debug" });
