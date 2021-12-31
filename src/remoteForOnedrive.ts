@@ -1,30 +1,26 @@
-import * as path from "path";
-import { request, Vault } from "obsidian";
-import { PublicClientApplication, CryptoProvider } from "@azure/msal-node";
-import { COMMAND_CALLBACK_ONEDRIVE } from "./baseTypes";
-import type { OnedriveConfig, RemoteItem } from "./baseTypes";
-
+import { CryptoProvider, PublicClientApplication } from "@azure/msal-node";
 import {
+  AuthenticationProvider,
   Client,
   FileUpload,
-  UploadEventHandlers,
-  AuthenticationProvider,
-  AuthenticationProviderOptions,
-  Range,
   LargeFileUploadSession,
   LargeFileUploadTask,
   LargeFileUploadTaskOptions,
+  Range,
+  UploadEventHandlers,
   UploadResult,
 } from "@microsoft/microsoft-graph-client";
-import type { Drive, DriveItem, User } from "@microsoft/microsoft-graph-types";
+import type { DriveItem, User } from "@microsoft/microsoft-graph-types";
+import { request, Vault } from "obsidian";
+import * as path from "path";
+import type { OnedriveConfig, RemoteItem } from "./baseTypes";
+import { COMMAND_CALLBACK_ONEDRIVE } from "./baseTypes";
+import { decryptArrayBuffer, encryptArrayBuffer } from "./encrypt";
 import {
-  getFolderLevels,
-  getPathFolder,
   getRandomArrayBuffer,
   getRandomIntInclusive,
   mkdirpInVault,
 } from "./misc";
-import { decryptArrayBuffer, encryptArrayBuffer } from "./encrypt";
 
 const SCOPES = ["User.Read", "Files.ReadWrite.AppFolder", "offline_access"];
 const REDIRECT_URI = `obsidian://${COMMAND_CALLBACK_ONEDRIVE}`;

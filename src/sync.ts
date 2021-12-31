@@ -1,23 +1,20 @@
-import { TAbstractFile, TFolder, TFile, Vault } from "obsidian";
-
-import {
-  clearDeleteRenameHistoryOfKey,
-  upsertSyncMetaMappingData,
-  getSyncMetaMappingByRemoteKey,
-} from "./localdb";
-import type { FileFolderHistoryRecord, InternalDBs } from "./localdb";
-
-import { RemoteClient } from "./remote";
-import type { SUPPORTED_SERVICES_TYPE, RemoteItem } from "./baseTypes";
-import { mkdirpInVault, isHiddenPath, isVaildText, setToString } from "./misc";
+import { TAbstractFile, TFile, TFolder, Vault } from "obsidian";
+import type { RemoteItem, SUPPORTED_SERVICES_TYPE } from "./baseTypes";
 import {
   decryptBase32ToString,
-  encryptStringToBase32,
-  MAGIC_ENCRYPTED_PREFIX_BASE32,
   decryptBase64urlToString,
   encryptStringToBase64url,
+  MAGIC_ENCRYPTED_PREFIX_BASE32,
   MAGIC_ENCRYPTED_PREFIX_BASE64URL,
 } from "./encrypt";
+import type { FileFolderHistoryRecord, InternalDBs } from "./localdb";
+import {
+  clearDeleteRenameHistoryOfKey,
+  getSyncMetaMappingByRemoteKey,
+  upsertSyncMetaMappingData,
+} from "./localdb";
+import { isHiddenPath, isVaildText, mkdirpInVault } from "./misc";
+import { RemoteClient } from "./remote";
 
 export type SyncStatusType =
   | "idle"

@@ -1,8 +1,5 @@
-import * as fs from "fs";
-import * as path from "path";
 import { expect } from "chai";
 import { JSDOM } from "jsdom";
-
 import * as misc from "../src/misc";
 
 describe("Misc: hidden file", () => {

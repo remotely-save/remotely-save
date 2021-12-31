@@ -1,34 +1,29 @@
-import { Buffer } from "buffer";
-import { Readable } from "stream";
-
-import { Vault } from "obsidian";
-
-import { Upload } from "@aws-sdk/lib-storage";
-import {
-  S3Client,
-  ListObjectsV2Command,
-  PutObjectCommand,
-  GetObjectCommand,
-  DeleteObjectCommand,
-  HeadObjectCommand,
-  HeadBucketCommand,
-  ListObjectsV2CommandInput,
-  ListObjectsV2CommandOutput,
-  HeadObjectCommandOutput,
-} from "@aws-sdk/client-s3";
-export { S3Client } from "@aws-sdk/client-s3";
-
 import type { _Object } from "@aws-sdk/client-s3";
-
+import {
+  DeleteObjectCommand,
+  GetObjectCommand,
+  HeadBucketCommand,
+  HeadObjectCommand,
+  HeadObjectCommandOutput,
+  ListObjectsV2Command,
+  ListObjectsV2CommandInput,
+  PutObjectCommand,
+  S3Client,
+} from "@aws-sdk/client-s3";
+import { Upload } from "@aws-sdk/lib-storage";
+import { Buffer } from "buffer";
+import * as mime from "mime-types";
+import { Vault } from "obsidian";
+import { Readable } from "stream";
+import { RemoteItem, S3Config } from "./baseTypes";
+import { decryptArrayBuffer, encryptArrayBuffer } from "./encrypt";
 import {
   arrayBufferToBuffer,
   bufferToArrayBuffer,
   mkdirpInVault,
 } from "./misc";
-import * as mime from "mime-types";
 
-import { RemoteItem, S3Config } from "./baseTypes";
-import { decryptArrayBuffer, encryptArrayBuffer } from "./encrypt";
+export { S3Client } from "@aws-sdk/client-s3";
 
 export const DEFAULT_S3_CONFIG = {
   s3Endpoint: "",

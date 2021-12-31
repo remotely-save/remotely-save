@@ -1,18 +1,11 @@
 import { Buffer } from "buffer";
-import { FileStats, Vault } from "obsidian";
+import { Vault } from "obsidian";
+import type { FileStat, WebDAVClient } from "webdav/web";
 import { AuthType, BufferLike, createClient } from "webdav/web";
-import type { WebDAVClient, ResponseDataDetailed, FileStat } from "webdav/web";
-export type { WebDAVClient } from "webdav/web";
-
-import type { RemoteItem, WebdavAuthType, WebdavConfig } from "./baseTypes";
-
-import {
-  arrayBufferToBuffer,
-  bufferToArrayBuffer,
-  mkdirpInVault,
-  getPathFolder,
-} from "./misc";
+import type { RemoteItem, WebdavConfig } from "./baseTypes";
 import { decryptArrayBuffer, encryptArrayBuffer } from "./encrypt";
+import { bufferToArrayBuffer, getPathFolder, mkdirpInVault } from "./misc";
+export type { WebDAVClient } from "webdav/web";
 
 export const DEFAULT_WEBDAV_CONFIG = {
   address: "",

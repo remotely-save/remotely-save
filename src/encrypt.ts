@@ -1,10 +1,5 @@
 import { base32, base64url } from "rfc4648";
-import {
-  bufferToArrayBuffer,
-  arrayBufferToBuffer,
-  hexStringToTypedArray,
-  arrayBufferToHex,
-} from "./misc";
+import { bufferToArrayBuffer, hexStringToTypedArray } from "./misc";
 
 const DEFAULT_ITER = 20000;
 

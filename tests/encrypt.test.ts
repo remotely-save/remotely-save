@@ -1,8 +1,7 @@
-import * as fs from "fs";
-import * as path from "path";
 import * as chai from "chai";
 import chaiAsPromised from "chai-as-promised";
-import { base64ToBase64url, bufferToArrayBuffer } from "../src/misc";
+import * as fs from "fs";
+import * as path from "path";
 import {
   decryptArrayBuffer,
   decryptBase32ToString,
@@ -10,6 +9,7 @@ import {
   encryptStringToBase32,
   encryptStringToBase64url,
 } from "../src/encrypt";
+import { base64ToBase64url, bufferToArrayBuffer } from "../src/misc";
 
 chai.use(chaiAsPromised);
 const expect = chai.expect;

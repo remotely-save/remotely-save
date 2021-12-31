@@ -1,18 +1,11 @@
+import { Dropbox, DropboxAuth, files } from "dropbox";
+import { Vault } from "obsidian";
 import * as path from "path";
-import { FileStats, Vault } from "obsidian";
-
-import { Dropbox, DropboxAuth, DropboxResponse, files } from "dropbox";
-export { Dropbox } from "dropbox";
-import { RemoteItem, DropboxConfig } from "./baseTypes";
-import {
-  arrayBufferToBuffer,
-  bufferToArrayBuffer,
-  mkdirpInVault,
-  getPathFolder,
-  getFolderLevels,
-  setToString,
-} from "./misc";
+import { DropboxConfig, RemoteItem } from "./baseTypes";
 import { decryptArrayBuffer, encryptArrayBuffer } from "./encrypt";
+import { bufferToArrayBuffer, getFolderLevels, mkdirpInVault } from "./misc";
+
+export { Dropbox } from "dropbox";
 
 export const DEFAULT_DROPBOX_CONFIG = {
   accessToken: "",
