@@ -167,6 +167,9 @@ export default class RemotelySavePlugin extends Plugin {
           );
           this.oauth2Info.revokeDiv = undefined;
         } else {
+          new Notice(
+            "Something went wrong from response from OneDrive. Maybe you rejected the auth?"
+          );
           throw Error(
             `do not know how to deal with the callback: ${JSON.stringify(
               inputParams
