@@ -105,6 +105,16 @@ export default class RemotelySavePlugin extends Plugin {
       "remotely-save-cb-onedrive",
       async (inputParams) => {
         if (inputParams.code !== undefined) {
+          if (this.oauth2Info.helperModal !== undefined) {
+            this.oauth2Info.helperModal.contentEl.empty();
+            this.oauth2Info.helperModal.contentEl.createEl("p", {
+              text: "Connecting to Onedrive...",
+            });
+            this.oauth2Info.helperModal.contentEl.createEl("p", {
+              text: "Please DO NOT close this modal.",
+            });
+          }
+
           let rsp = await sendAuthReqOnedrive(
             this.settings.onedrive.clientID,
             this.settings.onedrive.authority,
@@ -114,13 +124,6 @@ export default class RemotelySavePlugin extends Plugin {
 
           if ((rsp as any).error !== undefined) {
             throw Error(`${JSON.stringify(rsp)}`);
-          }
-
-          if (this.oauth2Info.helperModal !== undefined) {
-            this.oauth2Info.helperModal.contentEl.empty();
-            this.oauth2Info.helperModal.contentEl.createEl("p", {
-              text: "Please wait, the plugin is trying to connect to Onedrive...",
-            });
           }
 
           rsp = rsp as AccessCodeResponseSuccessfulType;
