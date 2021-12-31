@@ -155,7 +155,7 @@ export default class RemotelySavePlugin extends Plugin {
           this.oauth2Info.authDiv = undefined;
 
           this.oauth2Info.revokeAuthSetting?.setDesc(
-            `You've connected as user ${this.settings.dropbox.username}. If you want to disconnect, click this button.`
+            `You've connected as user ${this.settings.onedrive.username}. If you want to disconnect, click this button.`
           );
           this.oauth2Info.revokeAuthSetting = undefined;
           this.oauth2Info.revokeDiv?.toggleClass(
