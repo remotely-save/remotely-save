@@ -286,6 +286,12 @@ export default class RemotelySavePlugin extends Plugin {
     if (this.settings.dropbox.clientID === "") {
       this.settings.dropbox.clientID = DEFAULT_SETTINGS.dropbox.clientID;
     }
+    if (this.settings.onedrive.clientID === "") {
+      this.settings.onedrive.clientID = DEFAULT_SETTINGS.onedrive.clientID;
+    }
+    if (this.settings.onedrive.authority === "") {
+      this.settings.onedrive.authority = DEFAULT_SETTINGS.onedrive.authority;
+    }
   }
 
   async saveSettings() {
