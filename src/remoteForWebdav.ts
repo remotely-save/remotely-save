@@ -290,8 +290,8 @@ export const deleteFromRemote = async (
 };
 
 export const checkConnectivity = async (client: WrappedWebdavClient) => {
-  await client.init();
   try {
+    await client.init();
     const results = await getRemoteMeta(client, "/");
     if (results === undefined) {
       return false;

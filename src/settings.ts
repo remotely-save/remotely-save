@@ -809,7 +809,9 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
           if (res) {
             new Notice("Great! The webdav server can be accessed.");
           } else {
-            new Notice("The webdav server cannot be reached.");
+            new Notice(
+              "The webdav server cannot be reached (possible to be any of address/username/password/authtype/CORS errors)."
+            );
           }
         });
       });
