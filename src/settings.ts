@@ -259,6 +259,9 @@ class ExportSettingsQrCodeModal extends Modal {
 
     const div1 = contentEl.createDiv();
     div1.createEl("p", {
+      text: "This exports not-oauth2 settings. (It means that Dropbox, OneDrive info are NOT exported.)",
+    });
+    div1.createEl("p", {
       text: "You can use another device to scan this qrcode.",
     });
     div1.createEl("p", {
@@ -855,11 +858,13 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
 
     // import and export
     const importExportDiv = containerEl.createEl("div");
-    importExportDiv.createEl("h2", { text: "Import and Export Settings" });
+    importExportDiv.createEl("h2", {
+      text: "Import and Export Partial Settings",
+    });
 
     new Setting(importExportDiv)
       .setName("export")
-      .setDesc("Export all settings by generating a qrcode.")
+      .setDesc("Export not-oauth2 settings by generating a qrcode.")
       .addButton(async (button) => {
         button.setButtonText("Get QR Code");
         button.onClick(async () => {

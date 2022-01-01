@@ -1,4 +1,5 @@
 import QRCode from "qrcode";
+import cloneDeep from "lodash/cloneDeep";
 
 import {
   COMMAND_URI,
@@ -11,7 +12,10 @@ export const exportQrCodeUri = async (
   currentVaultName: string,
   pluginVersion: string
 ) => {
-  const data = encodeURIComponent(JSON.stringify(settings));
+  const settings2 = cloneDeep(settings);
+  delete settings2.dropbox;
+  delete settings2.onedrive;
+  const data = encodeURIComponent(JSON.stringify(settings2));
   const vault = encodeURIComponent(currentVaultName);
   const version = encodeURIComponent(pluginVersion);
   const rawUri = `obsidian://${COMMAND_URI}?func=settings&version=${version}&vault=${vault}&data=${data}`;

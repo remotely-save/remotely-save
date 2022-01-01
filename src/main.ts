@@ -96,10 +96,10 @@ export default class RemotelySavePlugin extends Plugin {
       } else {
         const copied = cloneDeep(parsed.result);
         // new Notice(JSON.stringify(copied))
-        this.settings = copied;
+        this.settings = Object.assign({}, this.settings, copied);
         this.saveSettings();
         new Notice(
-          `New settings for ${this.manifest.name} saved. Reopen the plugin Settings to the effect.`
+          `New not-oauth2 settings for ${this.manifest.name} saved. Reopen the plugin Settings to the effect.`
         );
       }
     });
