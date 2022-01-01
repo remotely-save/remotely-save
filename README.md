@@ -88,11 +88,16 @@ Additionally, the plugin author may occasionally visit Obsidian official forum a
 - Your data would be synced to a `${vaultName}` sub folder on your webdav server.
 - Password-based end-to-end encryption is also supported. But please be aware that **the vault name itself is not encrypted**.
 
-## Import And Export Plugin Settings By QR Code
+## Import And Export Not-Oauth2 Plugin Settings By QR Code
 
-It's often verbose / inconvenient to input credentials on mobile. (On different desktop computers, it's trivial to copy and paste `data.json` across different devices.)
+It's often verbose / inconvenient to input not-oauth2 credentials on mobile. (On different desktop computers, it's trivial to copy and paste `data.json` across different devices.)
 
-So this plugin has a helper function to export settings as a QR code, then you could use mobile device's camera to import the settings.
+So this plugin has a helper function to export those settings as a QR code, then you could use mobile device's camera to import the settings.
+
+Attention:
+
+1. Oauth2 - related information is omitted. It means that Dropbox, OneDrive login credentials are NOT included in the QR Code.
+2. Please, NEVER share the QR Code to others. It's as equivalent to the login credentials.
 
 Steps:
 
