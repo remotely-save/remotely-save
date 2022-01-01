@@ -11,9 +11,15 @@ import {
   UploadResult,
 } from "@microsoft/microsoft-graph-client";
 import type { DriveItem, User } from "@microsoft/microsoft-graph-types";
+import cloneDeep from "lodash/cloneDeep";
 import { request, Vault } from "obsidian";
 import * as path from "path";
-import type { OnedriveConfig, RemoteItem } from "./baseTypes";
+import {
+  DropboxConfig,
+  OAUTH2_FORCE_EXPIRE_MILLISECONDS,
+  OnedriveConfig,
+  RemoteItem,
+} from "./baseTypes";
 import { COMMAND_CALLBACK_ONEDRIVE } from "./baseTypes";
 import { decryptArrayBuffer, encryptArrayBuffer } from "./encrypt";
 import {
@@ -34,6 +40,7 @@ export const DEFAULT_ONEDRIVE_CONFIG: OnedriveConfig = {
   accessTokenExpiresAtTime: 0,
   deltaLink: "",
   username: "",
+  credentialsShouldBeDeletedAtTime: 0,
 };
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -171,6 +178,29 @@ export const sendRefreshTokenReq = async (
   } else {
     return rsp2 as AccessCodeResponseSuccessfulType;
   }
+};
+
+export const setConfigBySuccessfullAuthInplace = async (
+  config: OnedriveConfig,
+  authRes: AccessCodeResponseSuccessfulType,
+  saveUpdatedConfigFunc: () => Promise<any> | undefined
+) => {
+  console.log("start updating local info of OneDrive token");
+  config.accessToken = authRes.access_token;
+  config.accessTokenExpiresAtTime =
+    Date.now() + authRes.expires_in - 5 * 60 * 1000;
+  config.accessTokenExpiresInSeconds = authRes.expires_in;
+  config.refreshToken = authRes.refresh_token;
+
+  // manually set it expired after 80 days;
+  config.credentialsShouldBeDeletedAtTime =
+    Date.now() + OAUTH2_FORCE_EXPIRE_MILLISECONDS;
+
+  if (saveUpdatedConfigFunc !== undefined) {
+    await saveUpdatedConfigFunc();
+  }
+
+  console.log("finish updating local info of Onedrive token");
 };
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -405,7 +435,7 @@ export const listFromRemote = async (
 
   while (NEXT_LINK_KEY in res) {
     res = await client.client.api(res[NEXT_LINK_KEY]).get();
-    driveItems.push(...JSON.parse(JSON.stringify(res.value as DriveItem[])));
+    driveItems.push(...cloneDeep(res.value as DriveItem[]));
   }
 
   // lastly we should have delta link?

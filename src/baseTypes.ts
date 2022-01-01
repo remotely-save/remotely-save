@@ -21,6 +21,7 @@ export interface DropboxConfig {
   accessTokenExpiresAtTime: number;
   accountID: string;
   username: string;
+  credentialsShouldBeDeletedAtTime?: number;
 }
 
 export type WebdavAuthType = "digest" | "basic";
@@ -41,6 +42,7 @@ export interface OnedriveConfig {
   accessTokenExpiresAtTime: number;
   deltaLink: string;
   username: string;
+  credentialsShouldBeDeletedAtTime?: number;
 }
 
 export interface RemotelySavePluginSettings {
@@ -71,3 +73,6 @@ export interface UriParams {
   ver?: string;
   data?: string;
 }
+
+// 80 days
+export const OAUTH2_FORCE_EXPIRE_MILLISECONDS = 1000 * 60 * 60 * 24 * 80;

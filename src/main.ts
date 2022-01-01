@@ -1,4 +1,5 @@
 import { Modal, Notice, Plugin, Setting } from "obsidian";
+import cloneDeep from "lodash/cloneDeep";
 import type { RemotelySavePluginSettings } from "./baseTypes";
 import {
   COMMAND_CALLBACK,
@@ -20,12 +21,13 @@ import {
   DEFAULT_DROPBOX_CONFIG,
   getAuthUrlAndVerifier as getAuthUrlAndVerifierDropbox,
   sendAuthReq as sendAuthReqDropbox,
-  setConfigBySuccessfullAuthInplace,
+  setConfigBySuccessfullAuthInplace as setConfigBySuccessfullAuthInplaceDropbox,
 } from "./remoteForDropbox";
 import {
   AccessCodeResponseSuccessfulType,
   DEFAULT_ONEDRIVE_CONFIG,
   sendAuthReq as sendAuthReqOnedrive,
+  setConfigBySuccessfullAuthInplace as setConfigBySuccessfullAuthInplaceOnedrive,
 } from "./remoteForOnedrive";
 import { DEFAULT_S3_CONFIG } from "./remoteForS3";
 import { DEFAULT_WEBDAV_CONFIG } from "./remoteForWebdav";
@@ -69,6 +71,7 @@ export default class RemotelySavePlugin extends Plugin {
     }; // init
 
     await this.loadSettings();
+    await this.checkIfOauthExpires();
 
     await this.prepareDB();
 
@@ -91,7 +94,7 @@ export default class RemotelySavePlugin extends Plugin {
       if (parsed.status === "error") {
         new Notice(parsed.message);
       } else {
-        const copied = JSON.parse(JSON.stringify(parsed.result));
+        const copied = cloneDeep(parsed.result);
         // new Notice(JSON.stringify(copied))
         this.settings = copied;
         this.saveSettings();
@@ -133,7 +136,7 @@ export default class RemotelySavePlugin extends Plugin {
           );
 
           const self = this;
-          setConfigBySuccessfullAuthInplace(
+          setConfigBySuccessfullAuthInplaceDropbox(
             this.settings.dropbox,
             authRes,
             () => self.saveSettings()
@@ -212,15 +215,13 @@ export default class RemotelySavePlugin extends Plugin {
             throw Error(`${JSON.stringify(rsp)}`);
           }
 
-          rsp = rsp as AccessCodeResponseSuccessfulType;
-          this.settings.onedrive.accessToken = rsp.access_token;
-          this.settings.onedrive.accessTokenExpiresAtTime =
-            Date.now() + rsp.expires_in - 5 * 60 * 1000;
-          this.settings.onedrive.accessTokenExpiresInSeconds = rsp.expires_in;
-          this.settings.onedrive.refreshToken = rsp.refresh_token;
-          await this.saveSettings();
-
           const self = this;
+          setConfigBySuccessfullAuthInplaceOnedrive(
+            this.settings.onedrive,
+            rsp as AccessCodeResponseSuccessfulType,
+            () => self.saveSettings()
+          );
+
           const client = new RemoteClient(
             "onedrive",
             undefined,
@@ -372,7 +373,7 @@ export default class RemotelySavePlugin extends Plugin {
   async loadSettings() {
     this.settings = Object.assign(
       {},
-      JSON.parse(JSON.stringify(DEFAULT_SETTINGS)) /* copy an object */,
+      cloneDeep(DEFAULT_SETTINGS),
       await this.loadData()
     );
     if (this.settings.dropbox.clientID === "") {
@@ -388,6 +389,76 @@ export default class RemotelySavePlugin extends Plugin {
 
   async saveSettings() {
     await this.saveData(this.settings);
+  }
+
+  async checkIfOauthExpires() {
+    let needSave: boolean = false;
+    const current = Date.now();
+
+    // fullfill old version settings
+    if (
+      this.settings.dropbox.refreshToken !== "" &&
+      this.settings.dropbox.credentialsShouldBeDeletedAtTime === undefined
+    ) {
+      // It has a refreshToken, but not expire time.
+      // Likely to be a setting from old version.
+      // we set it to a month.
+      this.settings.dropbox.credentialsShouldBeDeletedAtTime =
+        current + 1000 * 60 * 60 * 24 * 30;
+      needSave = true;
+    }
+    if (
+      this.settings.onedrive.refreshToken !== "" &&
+      this.settings.onedrive.credentialsShouldBeDeletedAtTime === undefined
+    ) {
+      this.settings.onedrive.credentialsShouldBeDeletedAtTime =
+        current + 1000 * 60 * 60 * 24 * 30;
+      needSave = true;
+    }
+
+    // check expired or not
+    let dropboxExpired = false;
+    if (
+      this.settings.dropbox.refreshToken !== "" &&
+      current >= this.settings.dropbox.credentialsShouldBeDeletedAtTime
+    ) {
+      dropboxExpired = true;
+      this.settings.dropbox = cloneDeep(DEFAULT_DROPBOX_CONFIG);
+      needSave = true;
+    }
+
+    let onedriveExpired = false;
+    if (
+      this.settings.onedrive.refreshToken !== "" &&
+      current >= this.settings.onedrive.credentialsShouldBeDeletedAtTime
+    ) {
+      onedriveExpired = true;
+      this.settings.onedrive = cloneDeep(DEFAULT_ONEDRIVE_CONFIG);
+      needSave = true;
+    }
+
+    // save back
+    if (needSave) {
+      await this.saveSettings();
+    }
+
+    // send notice
+    if (dropboxExpired && onedriveExpired) {
+      new Notice(
+        `${this.manifest.name}: You haven't manually auth Dropbox and OneDrive for a while, you need to re-auth them again.`,
+        6000
+      );
+    } else if (dropboxExpired) {
+      new Notice(
+        `${this.manifest.name}: You haven't manually auth Dropbox for a while, you need to re-auth it again.`,
+        6000
+      );
+    } else if (onedriveExpired) {
+      new Notice(
+        `${this.manifest.name}: You haven't manually auth OneDrive for a while, you need to re-auth it again.`,
+        6000
+      );
+    }
   }
 
   async prepareDB() {

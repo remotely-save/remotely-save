@@ -5,13 +5,14 @@ import {
   DropboxConfig,
   RemoteItem,
   COMMAND_CALLBACK_DROPBOX,
+  OAUTH2_FORCE_EXPIRE_MILLISECONDS,
 } from "./baseTypes";
 import { decryptArrayBuffer, encryptArrayBuffer } from "./encrypt";
 import { bufferToArrayBuffer, getFolderLevels, mkdirpInVault } from "./misc";
 
 export { Dropbox } from "dropbox";
 
-export const DEFAULT_DROPBOX_CONFIG = {
+export const DEFAULT_DROPBOX_CONFIG: DropboxConfig = {
   accessToken: "",
   clientID: process.env.DEFAULT_DROPBOX_APP_KEY,
   refreshToken: "",
@@ -19,6 +20,7 @@ export const DEFAULT_DROPBOX_CONFIG = {
   accessTokenExpiresAtTime: 0,
   accountID: "",
   username: "",
+  credentialsShouldBeDeletedAtTime: 0,
 };
 
 export const getDropboxPath = (fileOrFolderPath: string, vaultName: string) => {
@@ -231,6 +233,10 @@ export const setConfigBySuccessfullAuthInplace = async (
   config.accessTokenExpiresInSeconds = parseInt(authRes.expires_in);
   config.accessTokenExpiresAtTime =
     Date.now() + parseInt(authRes.expires_in) * 1000 - 10 * 1000;
+
+  // manually set it expired after 80 days;
+  config.credentialsShouldBeDeletedAtTime =
+    Date.now() + OAUTH2_FORCE_EXPIRE_MILLISECONDS;
 
   if (authRes.refresh_token !== undefined) {
     config.refreshToken = authRes.refresh_token;
