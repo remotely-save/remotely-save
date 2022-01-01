@@ -10,13 +10,14 @@ This is yet another unofficial sync plugin for Obsidian. If you like it or find 
 
 ## !!!Caution!!!
 
-As of Dec 2021, the plugin is considered in BETA stage. **DO NOT USE IT for any serious vaults.** **ALWAYS, ALWAYS, backup your vault before using this plugin.**
+As of Jan 2022, the plugin is considered in BETA stage. **DO NOT USE IT for any serious vaults.** **ALWAYS, ALWAYS, backup your vault before using this plugin.**
 
 ## Features
 
 - Supports:
   - Amazon S3 or S3-compatible
   - Dropbox
+  - OneDrive
   - Webdav
 - **Obsidiain Mobile supported.** Vaults can be synced across mobile and desktop devices with the cloud service as the "broker".
 - **[End-to-end encryption](./docs/encryption.md) supported.** Files would be encrypted using openssl format before being sent to the cloud **if** user specify a password.
@@ -65,8 +66,16 @@ Additionally, the plugin author may occasionally visit Obsidian official forum a
 
 - **This plugin's function for Dropbox is not as mature as functions for S3.**
 - **This plugin is NOT an official Dropbox product.** The plugin just uses Dropbox's public API.
-- After the authorization, the plugin can read your name and email (which cannot be unselected on Dropbox api), and read and write files in your Dropbox's `/Apps/remotely-save/${vaultName}` folder.
+- After the authorization, the plugin can read your name and email (which cannot be unselected on Dropbox api), and read and write files in your Dropbox's `/Apps/remotely-save` folder.
 - If you decide to authorize this plugin to connect to Dropbox, please go to plugin's settings, and choose Dropbox then follow the instructions.
+- Password-based end-to-end encryption is also supported. But please be aware that **the vault name itself is not encrypted**.
+
+### OneDrive
+
+- **This plugin's function for OneDrive is not as mature as functions for S3.**
+- **This plugin is NOT an official Microsoft / OneDrive product.** The plugin just uses Microsoft's [OneDrive's public API](https://docs.microsoft.com/en-us/onedrive/developer/rest-api).
+- After the authorization, the plugin can read your name and email, and read and write files in your OneDrive's `/Apps/remotely-save` folder.
+- If you decide to authorize this plugin to connect to OneDrive, please go to plugin's settings, and choose OneDrive then follow the instructions.
 - Password-based end-to-end encryption is also supported. But please be aware that **the vault name itself is not encrypted**.
 
 ### webdav
