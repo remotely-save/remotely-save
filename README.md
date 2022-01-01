@@ -2,7 +2,7 @@
 
 This is yet another unofficial sync plugin for Obsidian. If you like it or find it useful, please consider give it a [star ![GitHub Repo stars](https://img.shields.io/github/stars/fyears/remotely-save?style=social)](https://github.com/fyears/remotely-save) on Github.
 
-[![BuildCI](https://github.com/fyears/remotely-save/actions/workflows/auto-build.yml/badge.svg)](https://github.com/fyears/remotely-save/actions/workflows/auto-build.yml) [![Latest release: 0.2.6)](https://img.shields.io/github/downloads/fyears/remotely-save/0.2.6/main.js)](https://github.com/fyears/remotely-save/releases) [![Previous release: 0.2.5)](https://img.shields.io/github/downloads/fyears/remotely-save/0.2.5/main.js)](https://github.com/fyears/remotely-save/releases)
+[![BuildCI](https://github.com/fyears/remotely-save/actions/workflows/auto-build.yml/badge.svg)](https://github.com/fyears/remotely-save/actions/workflows/auto-build.yml) [![Latest release: 0.2.6)](https://img.shields.io/github/downloads/fyears/remotely-save/0.2.6/main.js?sort=semver)](https://github.com/fyears/remotely-save/releases) [![Previous release: 0.2.5)](https://img.shields.io/github/downloads/fyears/remotely-save/0.2.5/main.js)](https://github.com/fyears/remotely-save/releases)
 
 ## Disclaimer
 
