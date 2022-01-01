@@ -63,6 +63,7 @@ export interface RemoteItem {
 export const COMMAND_URI = "remotely-save";
 export const COMMAND_CALLBACK = "remotely-save-cb";
 export const COMMAND_CALLBACK_ONEDRIVE = "remotely-save-cb-onedrive";
+export const COMMAND_CALLBACK_DROPBOX = "remotely-save-cb-dropbox";
 
 export interface UriParams {
   func?: string;

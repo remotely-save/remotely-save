@@ -1,6 +1,11 @@
 import { Modal, Notice, Plugin, Setting } from "obsidian";
 import type { RemotelySavePluginSettings } from "./baseTypes";
-import { COMMAND_CALLBACK, COMMAND_URI } from "./baseTypes";
+import {
+  COMMAND_CALLBACK,
+  COMMAND_CALLBACK_ONEDRIVE,
+  COMMAND_CALLBACK_DROPBOX,
+  COMMAND_URI,
+} from "./baseTypes";
 import { importQrCodeUri } from "./importExport";
 import type { InternalDBs } from "./localdb";
 import {
@@ -11,7 +16,12 @@ import {
   prepareDBs,
 } from "./localdb";
 import { RemoteClient } from "./remote";
-import { DEFAULT_DROPBOX_CONFIG } from "./remoteForDropbox";
+import {
+  DEFAULT_DROPBOX_CONFIG,
+  getAuthUrlAndVerifier as getAuthUrlAndVerifierDropbox,
+  sendAuthReq as sendAuthReqDropbox,
+  setConfigBySuccessfullAuthInplace,
+} from "./remoteForDropbox";
 import {
   AccessCodeResponseSuccessfulType,
   DEFAULT_ONEDRIVE_CONFIG,
@@ -101,8 +111,84 @@ export default class RemotelySavePlugin extends Plugin {
         );
       }
     );
+
     this.registerObsidianProtocolHandler(
-      "remotely-save-cb-onedrive",
+      COMMAND_CALLBACK_DROPBOX,
+      async (inputParams) => {
+        if (inputParams.code !== undefined) {
+          if (this.oauth2Info.helperModal !== undefined) {
+            this.oauth2Info.helperModal.contentEl.empty();
+            this.oauth2Info.helperModal.contentEl.createEl("p", {
+              text: "Connecting to Dropbox...",
+            });
+            this.oauth2Info.helperModal.contentEl.createEl("p", {
+              text: "Please DO NOT close this modal.",
+            });
+          }
+
+          let authRes = await sendAuthReqDropbox(
+            this.settings.dropbox.clientID,
+            this.oauth2Info.verifier,
+            inputParams.code
+          );
+
+          const self = this;
+          setConfigBySuccessfullAuthInplace(
+            this.settings.dropbox,
+            authRes,
+            () => self.saveSettings()
+          );
+
+          const client = new RemoteClient(
+            "dropbox",
+            undefined,
+            undefined,
+            this.settings.dropbox,
+            undefined,
+            this.app.vault.getName(),
+            () => self.saveSettings()
+          );
+
+          const username = await client.getUser();
+          this.settings.dropbox.username = username;
+          await this.saveSettings();
+
+          new Notice(`Good! We've connected to Dropbox as user ${username}!`);
+
+          this.oauth2Info.verifier = ""; // reset it
+          this.oauth2Info.helperModal?.close(); // close it
+          this.oauth2Info.helperModal = undefined;
+
+          this.oauth2Info.authDiv?.toggleClass(
+            "dropbox-auth-button-hide",
+            this.settings.dropbox.username !== ""
+          );
+          this.oauth2Info.authDiv = undefined;
+
+          this.oauth2Info.revokeAuthSetting?.setDesc(
+            `You've connected as user ${this.settings.dropbox.username}. If you want to disconnect, click this button.`
+          );
+          this.oauth2Info.revokeAuthSetting = undefined;
+          this.oauth2Info.revokeDiv?.toggleClass(
+            "dropbox-revoke-auth-button-hide",
+            this.settings.dropbox.username === ""
+          );
+          this.oauth2Info.revokeDiv = undefined;
+        } else {
+          new Notice(
+            "Something went wrong from response from Dropbox. Maybe you rejected the auth?"
+          );
+          throw Error(
+            `do not know how to deal with the callback: ${JSON.stringify(
+              inputParams
+            )}`
+          );
+        }
+      }
+    );
+
+    this.registerObsidianProtocolHandler(
+      COMMAND_CALLBACK_ONEDRIVE,
       async (inputParams) => {
         if (inputParams.code !== undefined) {
           if (this.oauth2Info.helperModal !== undefined) {
@@ -132,7 +218,7 @@ export default class RemotelySavePlugin extends Plugin {
             Date.now() + rsp.expires_in - 5 * 60 * 1000;
           this.settings.onedrive.accessTokenExpiresInSeconds = rsp.expires_in;
           this.settings.onedrive.refreshToken = rsp.refresh_token;
-          this.saveSettings();
+          await this.saveSettings();
 
           const self = this;
           const client = new RemoteClient(
@@ -145,7 +231,7 @@ export default class RemotelySavePlugin extends Plugin {
             () => self.saveSettings()
           );
           this.settings.onedrive.username = await client.getUser();
-          this.saveSettings();
+          await this.saveSettings();
 
           this.oauth2Info.verifier = ""; // reset it
           this.oauth2Info.helperModal?.close(); // close it

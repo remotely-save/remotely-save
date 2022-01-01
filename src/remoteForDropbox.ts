@@ -1,7 +1,11 @@
 import { Dropbox, DropboxAuth, files } from "dropbox";
 import { Vault } from "obsidian";
 import * as path from "path";
-import { DropboxConfig, RemoteItem } from "./baseTypes";
+import {
+  DropboxConfig,
+  RemoteItem,
+  COMMAND_CALLBACK_DROPBOX,
+} from "./baseTypes";
 import { decryptArrayBuffer, encryptArrayBuffer } from "./encrypt";
 import { bufferToArrayBuffer, getFolderLevels, mkdirpInVault } from "./misc";
 
@@ -153,7 +157,7 @@ export const getAuthUrlAndVerifier = async (appKey: string) => {
   });
   const authUrl = (
     await auth.getAuthenticationUrl(
-      undefined,
+      `obsidian://${COMMAND_CALLBACK_DROPBOX}`,
       undefined,
       "code",
       "offline",
@@ -191,6 +195,7 @@ export const sendAuthReq = async (
       grant_type: "authorization_code",
       code_verifier: verifier,
       client_id: appKey,
+      redirect_uri: `obsidian://${COMMAND_CALLBACK_DROPBOX}`,
     }),
   });
   const resp2 = (await resp1.json()) as DropboxSuccessAuthRes;

@@ -105,78 +105,18 @@ class DropboxAuthModal extends Modal {
     const { authUrl, verifier } = await getAuthUrlAndVerifierDropbox(
       this.plugin.settings.dropbox.clientID
     );
+    this.plugin.oauth2Info.verifier = verifier;
 
     contentEl.createEl("p", {
-      text: "Step 1: Visit the address in a browser, and follow the steps.",
+      text: "Visit the address in a browser, and follow the steps.",
+    });
+    contentEl.createEl("p", {
+      text: "Finally you should be redirected to Obsidian.",
     });
     contentEl.createEl("p").createEl("a", {
       href: authUrl,
       text: authUrl,
     });
-
-    contentEl.createEl("p", {
-      text: 'Step 2: In the end of the web flow, you obtain a long code. Paste it here then click "Submit".',
-    });
-
-    let authCode = "";
-    new Setting(contentEl)
-      .setName("Auth Code from web page")
-      .setDesc('You need to click "Confirm".')
-      .addText((text) =>
-        text
-          .setPlaceholder("")
-          .setValue("")
-          .onChange((val) => {
-            authCode = val.trim();
-          })
-      )
-      .addButton(async (button) => {
-        button.setButtonText("Confirm");
-        button.onClick(async () => {
-          new Notice("Trying to connect to Dropbox");
-          try {
-            const authRes = await sendAuthReqDropbox(
-              this.plugin.settings.dropbox.clientID,
-              verifier,
-              authCode
-            );
-            const self = this;
-            setConfigBySuccessfullAuthInplace(
-              this.plugin.settings.dropbox,
-              authRes,
-              () => self.plugin.saveSettings()
-            );
-            const client = new RemoteClient(
-              "dropbox",
-              undefined,
-              undefined,
-              this.plugin.settings.dropbox,
-              undefined,
-              this.app.vault.getName(),
-              () => self.plugin.saveSettings()
-            );
-            const username = await client.getUser();
-            this.plugin.settings.dropbox.username = username;
-            await this.plugin.saveSettings();
-            new Notice(`Good! We've connected to Dropbox as user ${username}!`);
-            this.authDiv.toggleClass(
-              "dropbox-auth-button-hide",
-              this.plugin.settings.dropbox.username !== ""
-            );
-            this.revokeAuthDiv.toggleClass(
-              "dropbox-revoke-auth-button-hide",
-              this.plugin.settings.dropbox.username === ""
-            );
-            this.revokeAuthSetting.setDesc(
-              `You've connected as user ${this.plugin.settings.dropbox.username}. If you want to disconnect, click this button.`
-            );
-            this.close();
-          } catch (err) {
-            console.error(err);
-            new Notice("Something goes wrong while connecting to Dropbox.");
-          }
-        });
-      });
   }
 
   onClose() {
@@ -541,13 +481,18 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
       .addButton(async (button) => {
         button.setButtonText("Auth");
         button.onClick(async () => {
-          new DropboxAuthModal(
+          const modal = new DropboxAuthModal(
             this.app,
             this.plugin,
             dropboxAuthDiv,
             dropboxRevokeAuthDiv,
             dropboxRevokeAuthSetting
-          ).open();
+          );
+          this.plugin.oauth2Info.helperModal = modal;
+          this.plugin.oauth2Info.authDiv = dropboxAuthDiv;
+          this.plugin.oauth2Info.revokeDiv = dropboxRevokeAuthDiv;
+          this.plugin.oauth2Info.revokeAuthSetting = dropboxRevokeAuthSetting;
+          modal.open();
         });
       });
 
