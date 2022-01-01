@@ -41,18 +41,22 @@ class PasswordModal extends Modal {
     });
 
     contentEl.createEl("p", {
-      text: "Attention 1/4: The password itself is stored in PLAIN TEXT LOCALLY.",
+      text: "Attention 1/5: The vault name is NOT encrypted. The plugin creates a folder with the vault name on some remote services.",
       cls: "password-disclaimer",
     });
     contentEl.createEl("p", {
-      text: "Attention 2/4: Some metadata are not encrypted or can be easily guessed. (File sizes are closed to their unencrypted ones, and directory path are stored as 0-byte-size object.)",
+      text: "Attention 2/5: The password itself is stored in PLAIN TEXT LOCALLY.",
       cls: "password-disclaimer",
     });
     contentEl.createEl("p", {
-      text: "Attention 3/4: You should make sure the remote store IS EMPTY, or REMOTE FILES WERE ENCRYPTED BY THAT NEW PASSWORD, to avoid conflictions.",
+      text: "Attention 3/5: Some metadata are not encrypted or can be easily guessed. (File sizes are closed to their unencrypted ones, and directory path may be stored as 0-byte-size object.)",
+      cls: "password-disclaimer",
     });
     contentEl.createEl("p", {
-      text: "Attention 4/4: The longer the password, the better.",
+      text: "Attention 4/5: You should make sure the remote store IS EMPTY, or REMOTE FILES WERE ENCRYPTED BY THAT NEW PASSWORD, to avoid conflictions.",
+    });
+    contentEl.createEl("p", {
+      text: "Attention 5/5: The longer the password, the better.",
     });
 
     new Setting(contentEl)
