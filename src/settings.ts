@@ -609,7 +609,7 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
     );
     onedriveDiv.createEl("h2", { text: "Remote For Onedrive" });
     onedriveDiv.createEl("p", {
-      text: "Disclaimer: This app is NOT an official Onedrive product.",
+      text: "Disclaimer: This app is NOT an official Microsoft / Onedrive product.",
       cls: "onedrive-disclaimer",
     });
     onedriveDiv.createEl("p", {
