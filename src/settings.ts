@@ -171,6 +171,72 @@ export class OnedriveAuthModal extends Modal {
   }
 }
 
+export class OnedriveRevokeAuthModal extends Modal {
+  readonly plugin: RemotelySavePlugin;
+  readonly authDiv: HTMLDivElement;
+  readonly revokeAuthDiv: HTMLDivElement;
+  constructor(
+    app: App,
+    plugin: RemotelySavePlugin,
+    authDiv: HTMLDivElement,
+    revokeAuthDiv: HTMLDivElement
+  ) {
+    super(app);
+    this.plugin = plugin;
+    this.authDiv = authDiv;
+    this.revokeAuthDiv = revokeAuthDiv;
+  }
+
+  async onOpen() {
+    let { contentEl } = this;
+    contentEl.createEl("p", {
+      text: 'Step 1: Go to the following address, click the "Edit" button for the plugin, then click "Remove these permissions" button on the page.',
+    });
+    const consentUrl = "https://microsoft.com/consent";
+    contentEl.createEl("p").createEl("a", {
+      href: consentUrl,
+      text: consentUrl,
+    });
+
+    contentEl.createEl("p", {
+      text: "Step 2: Click the button below, to clean the locally-saved login credentials.",
+    });
+
+    new Setting(contentEl)
+      .setName("Clean Locally-Saved Login Credentials")
+      .setDesc("You need to click the button.")
+      .addButton(async (button) => {
+        button.setButtonText("Clean");
+        button.onClick(async () => {
+          try {
+            this.plugin.settings.onedrive = JSON.parse(
+              JSON.stringify(DEFAULT_ONEDRIVE_CONFIG)
+            );
+            await this.plugin.saveSettings();
+            this.authDiv.toggleClass(
+              "onedrive-auth-button-hide",
+              this.plugin.settings.onedrive.username !== ""
+            );
+            this.revokeAuthDiv.toggleClass(
+              "onedrive-revoke-auth-button-hide",
+              this.plugin.settings.onedrive.username === ""
+            );
+            new Notice("Cleaned!");
+            this.close();
+          } catch (err) {
+            console.error(err);
+            new Notice("Something goes wrong while revoking");
+          }
+        });
+      });
+  }
+
+  onClose() {
+    let { contentEl } = this;
+    contentEl.empty();
+  }
+}
+
 class ExportSettingsQrCodeModal extends Modal {
   plugin: RemotelySavePlugin;
   constructor(app: App, plugin: RemotelySavePlugin) {
@@ -572,24 +638,12 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
       .addButton(async (button) => {
         button.setButtonText("Revoke Auth");
         button.onClick(async () => {
-          try {
-            this.plugin.settings.onedrive = JSON.parse(
-              JSON.stringify(DEFAULT_ONEDRIVE_CONFIG)
-            );
-            await this.plugin.saveSettings();
-            onedriveAuthDiv.toggleClass(
-              "onedrive-auth-button-hide",
-              this.plugin.settings.onedrive.username !== ""
-            );
-            onedriveRevokeAuthDiv.toggleClass(
-              "onedrive-revoke-auth-button-hide",
-              this.plugin.settings.onedrive.username === ""
-            );
-            new Notice("Revoked!");
-          } catch (err) {
-            console.error(err);
-            new Notice("Something goes wrong while revoking");
-          }
+          new OnedriveRevokeAuthModal(
+            this.app,
+            this.plugin,
+            onedriveAuthDiv,
+            onedriveRevokeAuthDiv
+          ).open();
         });
       });
 
