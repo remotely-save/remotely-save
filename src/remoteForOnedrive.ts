@@ -245,19 +245,33 @@ const getNormPath = (fileOrFolderPath: string, vaultName: string) => {
   return fileOrFolderPath.slice(`${prefix}/`.length);
 };
 
+const constructFromDriveItemToRemoteItemError = (x: DriveItem) => {
+  return `parentPath="${x.parentReference.path}", selfName="${x.name}"`;
+};
+
 const fromDriveItemToRemoteItem = (
   x: DriveItem,
   vaultName: string
 ): RemoteItem => {
   let key = "";
 
-  const COMMON_PREFIX = `/drive/root:/Apps/remotely-save/${vaultName}`;
-  const COMMON_PREFIX_OTHERS = `/drive/items/`;
-  if (`${x.parentReference.path}/${x.name}`.startsWith(COMMON_PREFIX)) {
-    key = `${x.parentReference.path}/${x.name}`.substring(
-      COMMON_PREFIX.length + 1
-    );
-  } else if (x.parentReference.path.startsWith(COMMON_PREFIX_OTHERS)) {
+  // possible prefix:
+  // pure english: /drive/root:/Apps/remotely-save/${vaultName}
+  // or localized, e.g.: /drive/root:/应用/remotely-save/${vaultName}
+  const FIRST_COMMON_PREFIX_REGEX = /^\/drive\/root:\/[^\/]+\/remotely-save\//g;
+
+  // another possibile prefix
+  const SECOND_COMMON_PREFIX_RAW = `/drive/items/`;
+
+  const fullPathOriginal = `${x.parentReference.path}/${x.name}`;
+  const matchFirstPrefixRes = fullPathOriginal.match(FIRST_COMMON_PREFIX_REGEX);
+  if (
+    matchFirstPrefixRes !== null &&
+    fullPathOriginal.startsWith(`${matchFirstPrefixRes[0]}${vaultName}`)
+  ) {
+    const foundPrefix = `${matchFirstPrefixRes[0]}${vaultName}`;
+    key = fullPathOriginal.substring(foundPrefix.length + 1);
+  } else if (x.parentReference.path.startsWith(SECOND_COMMON_PREFIX_RAW)) {
     // it's something like
     // /drive/items/<some_id>!<another_id>:/${vaultName}/<subfolder>
     // with uri encoded!
@@ -270,14 +284,14 @@ const fromDriveItemToRemoteItem = (
       key = x.name;
     } else {
       throw Error(
-        `we meet file/folder and do not know how to deal with it:\n${JSON.stringify(
+        `we meet file/folder and do not know how to deal with it:\n${constructFromDriveItemToRemoteItemError(
           x
         )}`
       );
     }
   } else {
     throw Error(
-      `we meet file/folder and do not know how to deal with it:\n${JSON.stringify(
+      `we meet file/folder and do not know how to deal with it:\n${constructFromDriveItemToRemoteItemError(
         x
       )}`
     );
@@ -431,7 +445,7 @@ export const listFromRemote = async (
   let res = await client.client
     .api(`/drive/special/approot:/${client.vaultName}:/delta`)
     .get();
-  const driveItems = res.value as DriveItem[];
+  let driveItems = res.value as DriveItem[];
 
   while (NEXT_LINK_KEY in res) {
     res = await client.client.api(res[NEXT_LINK_KEY]).get();
@@ -443,6 +457,12 @@ export const listFromRemote = async (
     client.onedriveConfig.deltaLink = res[DELTA_LINK_KEY];
     await client.saveUpdatedConfigFunc();
   }
+
+  driveItems = driveItems.map((x) => {
+    const y = cloneDeep(x);
+    y.parentReference.path = y.parentReference.path.replace("/Apps", "/应用");
+    return y;
+  });
 
   // unify everything to RemoteItem
   const unifiedContents = driveItems
