@@ -158,6 +158,10 @@ export class OnedriveAuthModal extends Modal {
     this.plugin.oauth2Info.verifier = verifier;
 
     contentEl.createEl("p", {
+      text: "Currently only OneDrive for personal is supported. OneDrive for Business is NOT supported (yet).",
+    });
+
+    contentEl.createEl("p", {
       text: "Visit the address in a browser, and follow the steps.",
     });
     contentEl.createEl("p", {
@@ -614,7 +618,7 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
       "onedrive-hide",
       this.plugin.settings.serviceType !== "onedrive"
     );
-    onedriveDiv.createEl("h2", { text: "Remote For Onedrive" });
+    onedriveDiv.createEl("h2", { text: "Remote For Onedrive (for personal)" });
     onedriveDiv.createEl("p", {
       text: "Disclaimer: This app is NOT an official Microsoft / Onedrive product.",
       cls: "onedrive-disclaimer",
@@ -627,6 +631,10 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
       text: `We will create and sync inside the folder /Apps/${
         this.plugin.manifest.id
       }/${this.app.vault.getName()} on your Onedrive.`,
+    });
+
+    onedriveDiv.createEl("p", {
+      text: "Currently only OneDrive for personal is supported. OneDrive for Business is NOT supported (yet).",
     });
 
     const onedriveSelectAuthDiv = onedriveDiv.createDiv();
@@ -829,7 +837,7 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
         dropdown.addOption("s3", "S3 or compatible");
         dropdown.addOption("dropbox", "Dropbox");
         dropdown.addOption("webdav", "Webdav (beta)");
-        dropdown.addOption("onedrive", "OneDrive (alpha)");
+        dropdown.addOption("onedrive", "OneDrive for personal (alpha)");
         dropdown
           .setValue(this.plugin.settings.serviceType)
           .onChange(async (val: SUPPORTED_SERVICES_TYPE) => {

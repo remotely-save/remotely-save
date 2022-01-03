@@ -19,7 +19,7 @@ As of Jan 2022, the plugin is considered in BETA stage. **DO NOT USE IT for any 
 - Supports:
   - Amazon S3 or S3-compatible
   - Dropbox
-  - OneDrive
+  - OneDrive for personal
   - Webdav
 - **Obsidiain Mobile supported.** Vaults can be synced across mobile and desktop devices with the cloud service as the "broker".
 - **[End-to-end encryption](./docs/encryption.md) supported.** Files would be encrypted using openssl format before being sent to the cloud **if** user specify a password.
@@ -72,10 +72,11 @@ Additionally, the plugin author may occasionally visit Obsidian official forum a
 - If you decide to authorize this plugin to connect to Dropbox, please go to plugin's settings, and choose Dropbox then follow the instructions.
 - Password-based end-to-end encryption is also supported. But please be aware that **the vault name itself is not encrypted**.
 
-### OneDrive
+### OneDrive for personal
 
 - **This plugin's function for OneDrive is not as mature as functions for S3.**
 - **This plugin is NOT an official Microsoft / OneDrive product.** The plugin just uses Microsoft's [OneDrive's public API](https://docs.microsoft.com/en-us/onedrive/developer/rest-api).
+- This plugin only works for "OneDrive for personal", and not works for "OneDrive for Business" (yet). See [#11](https://github.com/fyears/remotely-save/issues/11) to further details.
 - After the authorization, the plugin can read your name and email, and read and write files in your OneDrive's `/Apps/remotely-save` folder.
 - If you decide to authorize this plugin to connect to OneDrive, please go to plugin's settings, and choose OneDrive then follow the instructions.
 - Password-based end-to-end encryption is also supported. But please be aware that **the vault name itself is not encrypted**.
