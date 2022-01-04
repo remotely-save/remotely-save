@@ -369,7 +369,7 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
     });
 
     s3Div.createEl("p", {
-      text: "Disclaimer: The information is stored in PLAIN TEXT locally. Other malicious/harmful/faulty plugins could read the info. If you see any unintentional access to your bucket, please immediately delete the access key on your AWS (or other S3-service provider) settings.",
+      text: "Disclaimer: The information is stored in locally. Other malicious/harmful/faulty plugins could read the info. If you see any unintentional access to your bucket, please immediately delete the access key on your AWS (or other S3-service provider) settings.",
       cls: "s3-disclaimer",
     });
 
@@ -495,7 +495,7 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
       cls: "dropbox-disclaimer",
     });
     dropboxDiv.createEl("p", {
-      text: "Disclaimer: The information is stored in PLAIN TEXT locally. Other malicious/harmful/faulty plugins could read the info. If you see any unintentional access to your Dropbox, please immediately disconnect this app on https://www.dropbox.com/account/connected_apps .",
+      text: "Disclaimer: The information is stored in locally. Other malicious/harmful/faulty plugins could read the info. If you see any unintentional access to your Dropbox, please immediately disconnect this app on https://www.dropbox.com/account/connected_apps .",
       cls: "dropbox-disclaimer",
     });
     dropboxDiv.createEl("p", {
@@ -624,7 +624,7 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
       cls: "onedrive-disclaimer",
     });
     onedriveDiv.createEl("p", {
-      text: "Disclaimer: The information is stored in PLAIN TEXT locally. Other malicious/harmful/faulty plugins could read the info. If you see any unintentional access to your Onedrive, please immediately disconnect this app on https://microsoft.com/consent .",
+      text: "Disclaimer: The information is stored locally. Other malicious/harmful/faulty plugins could read the info. If you see any unintentional access to your Onedrive, please immediately disconnect this app on https://microsoft.com/consent .",
       cls: "onedrive-disclaimer",
     });
     onedriveDiv.createEl("p", {
@@ -732,7 +732,7 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
     webdavDiv.createEl("h2", { text: "Remote For Webdav" });
 
     webdavDiv.createEl("p", {
-      text: "Disclaimer: The information is stored in PLAIN TEXT locally. Other malicious/harmful/faulty plugins may read the info. If you see any unintentional access to your webdav server, please immediately change the username and password.",
+      text: "Disclaimer: The information is stored in locally. Other malicious/harmful/faulty plugins may read the info. If you see any unintentional access to your webdav server, please immediately change the username and password.",
       cls: "webdav-disclaimer",
     });
 
