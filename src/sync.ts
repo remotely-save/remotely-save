@@ -16,6 +16,9 @@ import {
 import { isHiddenPath, isVaildText, mkdirpInVault } from "./misc";
 import { RemoteClient } from "./remote";
 
+import * as origLog from "loglevel";
+const log = origLog.getLogger("rs-default");
+
 export type SyncStatusType =
   | "idle"
   | "preparing"
@@ -573,9 +576,10 @@ export const doActualSync = async (
   )) {
     const k2 = k as string;
     const v2 = v as FileOrFolderMixedState;
+    log.debug(`start syncing "${k2}" with plan ${JSON.stringify(v2)}`);
     await dispatchOperationToActual(
-      k as string,
-      v as FileOrFolderMixedState,
+      k2,
+      v2,
       client,
       db,
       vault,

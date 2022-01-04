@@ -20,8 +20,8 @@ import {
   getAuthUrlAndVerifier as getAuthUrlAndVerifierOnedrive,
 } from "./remoteForOnedrive";
 
-import * as origLog from 'loglevel';
-const log = origLog.getLogger('rs-default');
+import * as origLog from "loglevel";
+const log = origLog.getLogger("rs-default");
 
 class PasswordModal extends Modal {
   plugin: RemotelySavePlugin;
@@ -897,6 +897,25 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
 
     const debugDiv = containerEl.createEl("div");
     debugDiv.createEl("h2", { text: "Debug" });
+
+    const setConsoleLogLevelDiv = debugDiv.createDiv("div");
+    new Setting(setConsoleLogLevelDiv)
+      .setName("alter console log level")
+      .setDesc(
+        'By default the log level is "info". You can change to "debug" to get verbose infomation in console.'
+      )
+      .addDropdown(async (dropdown) => {
+        dropdown.addOption("info", "info");
+        dropdown.addOption("debug", "debug");
+        dropdown
+          .setValue(this.plugin.settings.currLogLevel)
+          .onChange(async (val: string) => {
+            this.plugin.settings.currLogLevel = val;
+            log.setLevel(val as any);
+            await this.plugin.saveSettings();
+            log.info(`the log level is changed to ${val}`);
+          });
+      });
     const syncPlanDiv = debugDiv.createEl("div");
     new Setting(syncPlanDiv)
       .setName("export sync plans")
