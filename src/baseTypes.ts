@@ -52,6 +52,7 @@ export interface RemotelySavePluginSettings {
   onedrive: OnedriveConfig;
   password: string;
   serviceType: SUPPORTED_SERVICES_TYPE;
+  currLogLevel?: string;
 }
 
 export interface RemoteItem {

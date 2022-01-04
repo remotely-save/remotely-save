@@ -28,6 +28,9 @@ import {
   mkdirpInVault,
 } from "./misc";
 
+import * as origLog from "loglevel";
+const log = origLog.getLogger("rs-default");
+
 const SCOPES = ["User.Read", "Files.ReadWrite.AppFolder", "offline_access"];
 const REDIRECT_URI = `obsidian://${COMMAND_CALLBACK_ONEDRIVE}`;
 
@@ -117,8 +120,8 @@ export const sendAuthReq = async (
   //   code: authCode,
   //   codeVerifier: verifier, // PKCE Code Verifier
   // });
-  // console.log('authResponse')
-  // console.log(authResponse)
+  // log.info('authResponse')
+  // log.info(authResponse)
   // return authResponse;
 
   // Because of the CORS problem,
@@ -142,7 +145,7 @@ export const sendAuthReq = async (
   });
 
   const rsp2 = JSON.parse(rsp1);
-  // console.log(rsp2);
+  // log.info(rsp2);
 
   if (rsp2.error !== undefined) {
     return rsp2 as AccessCodeResponseFailedType;
@@ -171,7 +174,7 @@ export const sendRefreshTokenReq = async (
   });
 
   const rsp2 = JSON.parse(rsp1);
-  // console.log(rsp2);
+  // log.info(rsp2);
 
   if (rsp2.error !== undefined) {
     return rsp2 as AccessCodeResponseFailedType;
@@ -185,7 +188,7 @@ export const setConfigBySuccessfullAuthInplace = async (
   authRes: AccessCodeResponseSuccessfulType,
   saveUpdatedConfigFunc: () => Promise<any> | undefined
 ) => {
-  console.log("start updating local info of OneDrive token");
+  log.info("start updating local info of OneDrive token");
   config.accessToken = authRes.access_token;
   config.accessTokenExpiresAtTime =
     Date.now() + authRes.expires_in - 5 * 60 * 1000;
@@ -200,7 +203,7 @@ export const setConfigBySuccessfullAuthInplace = async (
     await saveUpdatedConfigFunc();
   }
 
-  console.log("finish updating local info of Onedrive token");
+  log.info("finish updating local info of Onedrive token");
 };
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -352,7 +355,7 @@ class MyAuthProvider implements AuthenticationProvider {
       this.onedriveConfig.accessTokenExpiresAtTime =
         currentTs + r2.expires_in * 1000 - 60 * 2 * 1000;
       await this.saveUpdatedConfigFunc();
-      console.log("Onedrive accessToken updated");
+      log.info("Onedrive accessToken updated");
       return this.onedriveConfig.accessToken;
     }
   };
@@ -388,26 +391,26 @@ export class WrappedOnedriveClient {
     }
 
     // check vault folder
-    // console.log(`checking remote has folder /${this.vaultName}`);
+    // log.info(`checking remote has folder /${this.vaultName}`);
     if (this.vaultFolderExists) {
-      // console.log(`already checked, /${this.vaultName} exist before`)
+      // log.info(`already checked, /${this.vaultName} exist before`)
     } else {
       const k = await this.client.api("/drive/special/approot/children").get();
-      // console.log(k);
+      // log.info(k);
       this.vaultFolderExists =
         (k.value as DriveItem[]).filter((x) => x.name === this.vaultName)
           .length > 0;
       if (!this.vaultFolderExists) {
-        console.log(`remote does not have folder /${this.vaultName}`);
+        log.info(`remote does not have folder /${this.vaultName}`);
         await this.client.api("/drive/special/approot/children").post({
           name: `${this.vaultName}`,
           folder: {},
           "@microsoft.graph.conflictBehavior": "replace",
         });
-        console.log(`remote folder /${this.vaultName} created`);
+        log.info(`remote folder /${this.vaultName} created`);
         this.vaultFolderExists = true;
       } else {
-        // console.log(`remote folder /${this.vaultName} exists`);
+        // log.info(`remote folder /${this.vaultName} exists`);
       }
     }
   };
@@ -479,15 +482,15 @@ export const getRemoteMeta = async (
 ) => {
   await client.init();
   const remotePath = getOnedrivePath(fileOrFolderPath, client.vaultName);
-  // console.log(`remotePath=${remotePath}`);
+  // log.info(`remotePath=${remotePath}`);
   const rsp = await client.client
     .api(remotePath)
     .select("cTag,eTag,fileSystemInfo,folder,file,name,parentReference,size")
     .get();
-  // console.log(rsp);
+  // log.info(rsp);
   const driveItem = rsp as DriveItem;
   const res = fromDriveItemToRemoteItem(driveItem, client.vaultName);
-  // console.log(res);
+  // log.info(res);
   return res;
 };
 
@@ -507,7 +510,7 @@ export const uploadToRemote = async (
     uploadFile = remoteEncryptedKey;
   }
   uploadFile = getOnedrivePath(uploadFile, client.vaultName);
-  // console.log(`uploadFile=${uploadFile}`);
+  // log.info(`uploadFile=${uploadFile}`);
 
   const isFolder = fileOrFolderPath.endsWith("/");
 
@@ -567,7 +570,7 @@ export const uploadToRemote = async (
           uploadEventHandlers: {
             progress: (range?: Range) => {
               // Handle progress event
-              // console.log(
+              // log.info(
               //   `uploading ${range.minValue}-${range.maxValue} of ${fileOrFolderPath}`
               // );
             },
@@ -575,7 +578,7 @@ export const uploadToRemote = async (
         } as LargeFileUploadTaskOptions
       );
       const uploadResult: UploadResult = await task.upload();
-      // console.log(uploadResult)
+      // log.info(uploadResult)
       const res = await getRemoteMeta(client, uploadFile);
       return res;
     }
@@ -594,7 +597,7 @@ export const uploadToRemote = async (
     // so use LargeFileUploadTask instead of OneDriveLargeFileUploadTask
     const progress = (range?: Range) => {
       // Handle progress event
-      // console.log(
+      // log.info(
       //   `uploading ${range.minValue}-${range.maxValue} of ${fileOrFolderPath}`
       // );
     };
@@ -631,7 +634,7 @@ export const uploadToRemote = async (
       options
     );
     const uploadResult: UploadResult = await task.upload();
-    // console.log(uploadResult)
+    // log.info(uploadResult)
     const res = await getRemoteMeta(client, uploadFile);
     return res;
   }

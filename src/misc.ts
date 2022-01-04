@@ -4,6 +4,9 @@ import * as path from "path";
 import { base32, base64url } from "rfc4648";
 import XRegExp from "xregexp";
 
+import * as origLog from "loglevel";
+const log = origLog.getLogger("rs-default");
+
 /**
  * If any part of the file starts with '.' or '_' then it's a hidden file.
  * @param item
@@ -13,7 +16,7 @@ import XRegExp from "xregexp";
 export const isHiddenPath = (item: string, loose: boolean = true) => {
   const k = path.posix.normalize(item); // TODO: only unix path now
   const k2 = k.split("/"); // TODO: only unix path now
-  // console.log(k2)
+  // log.info(k2)
   for (const singlePart of k2) {
     if (singlePart === "." || singlePart === ".." || singlePart === "") {
       continue;
@@ -54,14 +57,14 @@ export const getFolderLevels = (x: string) => {
 };
 
 export const mkdirpInVault = async (thePath: string, vault: Vault) => {
-  // console.log(thePath);
+  // log.info(thePath);
   const foldersToBuild = getFolderLevels(thePath);
-  // console.log(foldersToBuild);
+  // log.info(foldersToBuild);
   for (const folder of foldersToBuild) {
     const r = await vault.adapter.exists(folder);
-    // console.log(r);
+    // log.info(r);
     if (!r) {
-      console.log(`mkdir ${folder}`);
+      log.info(`mkdir ${folder}`);
       await vault.adapter.mkdir(folder);
     }
   }

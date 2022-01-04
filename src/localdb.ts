@@ -6,6 +6,9 @@ import type { SyncPlanType } from "./sync";
 
 export type LocalForage = typeof localforage;
 
+import * as origLog from "loglevel";
+const log = origLog.getLogger("rs-default");
+
 export const DEFAULT_DB_VERSION_NUMBER: number = 20211114;
 export const DEFAULT_DB_NAME = "remotelysavedb";
 export const DEFAULT_TBL_VERSION = "schemaversion";
@@ -78,7 +81,7 @@ export const prepareDBs = async () => {
     await migrateDBs(db, originalVersion, DEFAULT_DB_VERSION_NUMBER);
   }
 
-  console.log("db connected");
+  log.info("db connected");
   return db;
 };
 
@@ -86,10 +89,10 @@ export const destroyDBs = async () => {
   // await localforage.dropInstance({
   //   name: DEFAULT_DB_NAME,
   // });
-  // console.log("db deleted");
+  // log.info("db deleted");
   const req = indexedDB.deleteDatabase(DEFAULT_DB_NAME);
   req.onsuccess = (event) => {
-    console.log("db deleted");
+    log.info("db deleted");
   };
   req.onblocked = (event) => {
     console.warn("trying to delete db but it was blocked");
@@ -128,7 +131,7 @@ export const insertDeleteRecord = async (
   db: InternalDBs,
   fileOrFolder: TAbstractFile
 ) => {
-  // console.log(fileOrFolder);
+  // log.info(fileOrFolder);
   let k: FileFolderHistoryRecord;
   if (fileOrFolder instanceof TFile) {
     k = {
@@ -165,7 +168,7 @@ export const insertRenameRecord = async (
   fileOrFolder: TAbstractFile,
   oldPath: string
 ) => {
-  // console.log(fileOrFolder);
+  // log.info(fileOrFolder);
   let k: FileFolderHistoryRecord;
   if (fileOrFolder instanceof TFile) {
     k = {

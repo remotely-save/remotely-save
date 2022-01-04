@@ -35,6 +35,9 @@ import { RemotelySaveSettingTab } from "./settings";
 import type { SyncStatusType } from "./sync";
 import { doActualSync, getSyncPlan, isPasswordOk } from "./sync";
 
+import * as origLog from "loglevel";
+const log = origLog.getLogger("rs-default");
+
 const DEFAULT_SETTINGS: RemotelySavePluginSettings = {
   s3: DEFAULT_S3_CONFIG,
   webdav: DEFAULT_WEBDAV_CONFIG,
@@ -42,6 +45,7 @@ const DEFAULT_SETTINGS: RemotelySavePluginSettings = {
   onedrive: DEFAULT_ONEDRIVE_CONFIG,
   password: "",
   serviceType: "s3",
+  currLogLevel: "info",
 };
 
 interface OAuth2Info {
@@ -58,9 +62,10 @@ export default class RemotelySavePlugin extends Plugin {
   db: InternalDBs;
   syncStatus: SyncStatusType;
   oauth2Info: OAuth2Info;
+  currLogLevel: string;
 
   async onload() {
-    console.log(`loading plugin ${this.manifest.id}`);
+    log.info(`loading plugin ${this.manifest.id}`);
 
     this.oauth2Info = {
       verifier: "",
@@ -71,6 +76,11 @@ export default class RemotelySavePlugin extends Plugin {
     }; // init
 
     await this.loadSettings();
+
+    if (this.settings.currLogLevel !== undefined) {
+      log.setLevel(this.settings.currLogLevel as any);
+    }
+
     await this.checkIfOauthExpires();
 
     await this.prepareDB();
@@ -275,7 +285,7 @@ export default class RemotelySavePlugin extends Plugin {
       }
 
       try {
-        //console.log(`huh ${this.settings.password}`)
+        //log.info(`huh ${this.settings.password}`)
         new Notice(
           `1/7 Remotely Save Sync Preparing (${this.settings.serviceType})`
         );
@@ -294,14 +304,14 @@ export default class RemotelySavePlugin extends Plugin {
           () => self.saveSettings()
         );
         const remoteRsp = await client.listFromRemote();
-        // console.log(remoteRsp);
+        // log.info(remoteRsp);
 
         new Notice("3/7 Starting to fetch local meta data.");
         this.syncStatus = "getting_local_meta";
         const local = this.app.vault.getAllLoadedFiles();
         const localHistory = await loadDeleteRenameHistoryTable(this.db);
-        // console.log(local);
-        // console.log(localHistory);
+        // log.info(local);
+        // log.info(localHistory);
 
         new Notice("4/7 Checking password correct or not.");
         this.syncStatus = "checking_password";
@@ -324,7 +334,7 @@ export default class RemotelySavePlugin extends Plugin {
           client.serviceType,
           this.settings.password
         );
-        console.log(syncPlan.mixedStates); // for debugging
+        log.info(syncPlan.mixedStates); // for debugging
         await insertSyncPlanRecord(this.db, syncPlan);
 
         // The operations above are read only and kind of safe.
@@ -346,8 +356,8 @@ export default class RemotelySavePlugin extends Plugin {
         this.syncStatus = "idle";
       } catch (error) {
         const msg = `Remotely Save error while ${this.syncStatus}`;
-        console.log(msg);
-        console.log(error);
+        log.info(msg);
+        log.info(error);
         new Notice(msg);
         new Notice(error.message);
         this.syncStatus = "idle";
@@ -357,16 +367,16 @@ export default class RemotelySavePlugin extends Plugin {
     this.addSettingTab(new RemotelySaveSettingTab(this.app, this));
 
     // this.registerDomEvent(document, "click", (evt: MouseEvent) => {
-    //   console.log("click", evt);
+    //   log.info("click", evt);
     // });
 
     // this.registerInterval(
-    //   window.setInterval(() => console.log("setInterval"), 5 * 60 * 1000)
+    //   window.setInterval(() => log.info("setInterval"), 5 * 60 * 1000)
     // );
   }
 
   onunload() {
-    console.log(`unloading plugin ${this.manifest.id}`);
+    log.info(`unloading plugin ${this.manifest.id}`);
     this.destroyDBs();
   }
 

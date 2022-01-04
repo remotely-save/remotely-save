@@ -62,6 +62,7 @@
     "dropbox": "^10.22.0",
     "localforage": "^1.10.0",
     "lodash": "^4.17.21",
+    "loglevel": "^1.8.0",
     "mime-types": "^2.1.33",
     "obsidian": "^0.12.0",
     "path-browserify": "^1.0.1",

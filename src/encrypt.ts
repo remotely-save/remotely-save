@@ -1,6 +1,9 @@
 import { base32, base64url } from "rfc4648";
 import { bufferToArrayBuffer, hexStringToTypedArray } from "./misc";
 
+import * as origLog from "loglevel";
+const log = origLog.getLogger("rs-default");
+
 const DEFAULT_ITER = 20000;
 
 // base32.stringify(Buffer.from('Salted__'))

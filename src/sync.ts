@@ -582,7 +582,7 @@ export const doActualSync = async (
       password,
       foldersCreatedBefore
     );
-    // console.log(`finished ${k}, with ${setToString(foldersCreatedBefore)}`);
+    // log.info(`finished ${k}, with ${setToString(foldersCreatedBefore)}`);
   }
   // await Promise.all(
   //   Object.entries(keyStates)

@@ -12,6 +12,9 @@ import { bufferToArrayBuffer, getFolderLevels, mkdirpInVault } from "./misc";
 
 export { Dropbox } from "dropbox";
 
+import * as origLog from "loglevel";
+const log = origLog.getLogger("rs-default");
+
 export const DEFAULT_DROPBOX_CONFIG: DropboxConfig = {
   accessToken: "",
   clientID: process.env.DEFAULT_DROPBOX_APP_KEY,
@@ -208,7 +211,7 @@ export const sendRefreshTokenReq = async (
   appKey: string,
   refreshToken: string
 ) => {
-  console.log("start auto getting refreshed Dropbox access token.");
+  log.info("start auto getting refreshed Dropbox access token.");
   const resp1 = await fetch("https://api.dropboxapi.com/oauth2/token", {
     method: "POST",
     body: new URLSearchParams({
@@ -218,7 +221,7 @@ export const sendRefreshTokenReq = async (
     }),
   });
   const resp2 = (await resp1.json()) as DropboxSuccessAuthRes;
-  console.log("finish auto getting refreshed Dropbox access token.");
+  log.info("finish auto getting refreshed Dropbox access token.");
   return resp2;
 };
 
@@ -227,7 +230,7 @@ export const setConfigBySuccessfullAuthInplace = async (
   authRes: DropboxSuccessAuthRes,
   saveUpdatedConfigFunc: () => Promise<any> | undefined
 ) => {
-  console.log("start updating local info of Dropbox token");
+  log.info("start updating local info of Dropbox token");
 
   config.accessToken = authRes.access_token;
   config.accessTokenExpiresInSeconds = parseInt(authRes.expires_in);
@@ -249,7 +252,7 @@ export const setConfigBySuccessfullAuthInplace = async (
     await saveUpdatedConfigFunc();
   }
 
-  console.log("finish updating local info of Dropbox token");
+  log.info("finish updating local info of Dropbox token");
 };
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -308,9 +311,9 @@ export class WrappedDropboxClient {
     }
 
     // check vault folder
-    // console.log(`checking remote has folder /${this.vaultName}`);
+    // log.info(`checking remote has folder /${this.vaultName}`);
     if (this.vaultFolderExists) {
-      // console.log(`already checked, /${this.vaultName} exist before`)
+      // log.info(`already checked, /${this.vaultName} exist before`)
     } else {
       const res = await this.dropbox.filesListFolder({
         path: "",
@@ -323,14 +326,14 @@ export class WrappedDropboxClient {
         }
       }
       if (!this.vaultFolderExists) {
-        console.log(`remote does not have folder /${this.vaultName}`);
+        log.info(`remote does not have folder /${this.vaultName}`);
         await this.dropbox.filesCreateFolderV2({
           path: `/${this.vaultName}`,
         });
-        console.log(`remote folder /${this.vaultName} created`);
+        log.info(`remote folder /${this.vaultName} created`);
         this.vaultFolderExists = true;
       } else {
-        // console.log(`remote folder /${this.vaultName} exists`);
+        // log.info(`remote folder /${this.vaultName} exists`);
       }
     }
 
@@ -489,7 +492,7 @@ export const listFromRemote = async (
   if (res.status !== 200) {
     throw Error(JSON.stringify(res));
   }
-  // console.log(res);
+  // log.info(res);
 
   const contents = res.result.entries;
   const unifiedContents = contents

@@ -20,6 +20,9 @@ import {
   getAuthUrlAndVerifier as getAuthUrlAndVerifierOnedrive,
 } from "./remoteForOnedrive";
 
+import * as origLog from 'loglevel';
+const log = origLog.getLogger('rs-default');
+
 class PasswordModal extends Modal {
   plugin: RemotelySavePlugin;
   newPassword: string;

@@ -25,6 +25,9 @@ import {
 
 export { S3Client } from "@aws-sdk/client-s3";
 
+import * as origLog from "loglevel";
+const log = origLog.getLogger("rs-default");
+
 export const DEFAULT_S3_CONFIG = {
   s3Endpoint: "",
   s3Region: "",
@@ -150,7 +153,7 @@ export const uploadToRemote = async (
       },
     });
     upload.on("httpUploadProgress", (progress) => {
-      // console.log(progress);
+      // log.info(progress);
     });
     await upload.done();
 
