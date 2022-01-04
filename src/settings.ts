@@ -170,6 +170,21 @@ export class OnedriveAuthModal extends Modal {
     contentEl.createEl("p", {
       text: "Finally you should be redirected to Obsidian.",
     });
+
+    const div2 = contentEl.createDiv();
+    div2.createEl(
+      "button",
+      {
+        text: "Click to copy the auth url",
+      },
+      (el) => {
+        el.onclick = async () => {
+          await navigator.clipboard.writeText(authUrl);
+          new Notice("the auth url copied to clipboard!");
+        };
+      }
+    );
+
     contentEl.createEl("p").createEl("a", {
       href: authUrl,
       text: authUrl,
