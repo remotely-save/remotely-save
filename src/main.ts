@@ -34,6 +34,7 @@ import { DEFAULT_WEBDAV_CONFIG } from "./remoteForWebdav";
 import { RemotelySaveSettingTab } from "./settings";
 import type { SyncStatusType } from "./sync";
 import { doActualSync, getSyncPlan, isPasswordOk } from "./sync";
+import { messyConfigToNormal, normalConfigToMessy } from "./configPersist";
 
 import * as origLog from "loglevel";
 const log = origLog.getLogger("rs-default");
@@ -384,7 +385,7 @@ export default class RemotelySavePlugin extends Plugin {
     this.settings = Object.assign(
       {},
       cloneDeep(DEFAULT_SETTINGS),
-      await this.loadData()
+      messyConfigToNormal(await this.loadData())
     );
     if (this.settings.dropbox.clientID === "") {
       this.settings.dropbox.clientID = DEFAULT_SETTINGS.dropbox.clientID;
@@ -398,7 +399,7 @@ export default class RemotelySavePlugin extends Plugin {
   }
 
   async saveSettings() {
-    await this.saveData(this.settings);
+    await this.saveData(normalConfigToMessy(this.settings));
   }
 
   async checkIfOauthExpires() {

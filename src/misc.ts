@@ -199,3 +199,12 @@ export const getRandomArrayBuffer = (byteLength: number) => {
   const k = window.crypto.getRandomValues(new Uint8Array(byteLength));
   return bufferToArrayBuffer(k);
 };
+
+/**
+ * https://stackoverflow.com/questions/958908
+ * @param x
+ * @returns
+ */
+export const reverseString = (x: string) => {
+  return [...x].reverse().join("");
+};
