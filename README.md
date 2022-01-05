@@ -4,7 +4,7 @@ This is yet another unofficial sync plugin for Obsidian. If you like it or find 
 
 [![BuildCI](https://github.com/fyears/remotely-save/actions/workflows/auto-build.yml/badge.svg)](https://github.com/fyears/remotely-save/actions/workflows/auto-build.yml)
 
-[![Latest release: 0.2.7)](https://img.shields.io/github/downloads/fyears/remotely-save/0.2.7/main.js?sort=semver)](https://github.com/fyears/remotely-save/releases) [![Old release: 0.2.6)](https://img.shields.io/github/downloads/fyears/remotely-save/0.2.6/main.js?sort=semver)](https://github.com/fyears/remotely-save/releases) [![Old release: 0.2.5)](https://img.shields.io/github/downloads/fyears/remotely-save/0.2.5/main.js)](https://github.com/fyears/remotely-save/releases)
+[![release: 0.2.9)](https://img.shields.io/github/downloads/fyears/remotely-save/0.2.9/main.js?sort=semver)](https://github.com/fyears/remotely-save/releases) [![Old release: 0.2.8)](https://img.shields.io/github/downloads/fyears/remotely-save/0.2.8/main.js?sort=semver)](https://github.com/fyears/remotely-save/releases) [![Old release: 0.2.7)](https://img.shields.io/github/downloads/fyears/remotely-save/0.2.7/main.js?sort=semver)](https://github.com/fyears/remotely-save/releases) [![Old release: 0.2.6)](https://img.shields.io/github/downloads/fyears/remotely-save/0.2.6/main.js?sort=semver)](https://github.com/fyears/remotely-save/releases) [![Old release: 0.2.5)](https://img.shields.io/github/downloads/fyears/remotely-save/0.2.5/main.js)](https://github.com/fyears/remotely-save/releases)
 
 ## Disclaimer
 
