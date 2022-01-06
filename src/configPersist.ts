@@ -18,10 +18,14 @@ interface MessyConfigType {
  * this should accept the result after loadData();
  */
 export const messyConfigToNormal = (
-  x: MessyConfigType | RemotelySavePluginSettings
-): RemotelySavePluginSettings => {
+  x: MessyConfigType | RemotelySavePluginSettings | null | undefined
+): RemotelySavePluginSettings | null | undefined => {
   log.debug("loading, original config on disk:");
   log.debug(x);
+  if (x === null || x === undefined) {
+    log.debug("the messy config is null or undefined, skip");
+    return x as any;
+  }
   if ("readme" in x && "d" in x) {
     // we should decode
     const y = JSON.parse(
@@ -45,7 +49,13 @@ export const messyConfigToNormal = (
 /**
  * this should accept the result of original config
  */
-export const normalConfigToMessy = (x: RemotelySavePluginSettings) => {
+export const normalConfigToMessy = (
+  x: RemotelySavePluginSettings | null | undefined
+) => {
+  if (x === null || x === undefined) {
+    log.debug("the normal config is null or undefined, skip");
+    return x;
+  }
   const y = {
     readme: DEFAULT_README,
     d: reverseString(
