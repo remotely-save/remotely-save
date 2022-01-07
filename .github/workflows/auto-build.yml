@@ -15,6 +15,11 @@ jobs:
 
     environment: env-for-buildci
 
+    env:
+      DROPBOX_APP_KEY: ${{secrets.DROPBOX_APP_KEY}}
+      ONEDRIVE_CLIENT_ID: ${{secrets.ONEDRIVE_CLIENT_ID}}
+      ONEDRIVE_AUTHORITY: ${{secrets.ONEDRIVE_AUTHORITY}}
+
     strategy:
       matrix:
         node-version: [16.x]
