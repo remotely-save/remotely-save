@@ -1,6 +1,6 @@
 import { App, Modal, Notice, PluginSettingTab, Setting } from "obsidian";
 import type { SUPPORTED_SERVICES_TYPE, WebdavAuthType } from "./baseTypes";
-import { exportSyncPlansToFiles } from "./debugMode";
+import { exportVaultSyncPlansToFiles } from "./debugMode";
 import { exportQrCodeUri } from "./importExport";
 import {
   clearAllSyncMetaMapping,
@@ -19,6 +19,7 @@ import {
   DEFAULT_ONEDRIVE_CONFIG,
   getAuthUrlAndVerifier as getAuthUrlAndVerifierOnedrive,
 } from "./remoteForOnedrive";
+import { messyConfigToNormal } from "./configPersist";
 
 import * as origLog from "loglevel";
 const log = origLog.getLogger("rs-default");
@@ -946,6 +947,24 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
             log.info(`the log level is changed to ${val}`);
           });
       });
+    const outputCurrSettingsDiv = debugDiv.createDiv("div");
+    new Setting(outputCurrSettingsDiv)
+      .setName("output current settings from disk to console")
+      .setDesc(
+        "The settings save on disk in encoded. Click this to see the decoded settings in console."
+      )
+      .addButton(async (button) => {
+        button.setButtonText("Output");
+        button.onClick(async () => {
+          const c = messyConfigToNormal(await this.plugin.loadData());
+          if (c.currLogLevel === "debug") {
+            // no need to ouput it again because debug mode already output it
+          } else {
+            log.info(c);
+          }
+          new Notice("Finished outputing in console.");
+        });
+      });
     const syncPlanDiv = debugDiv.createEl("div");
     new Setting(syncPlanDiv)
       .setName("export sync plans")
@@ -955,7 +974,11 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
       .addButton(async (button) => {
         button.setButtonText("Export");
         button.onClick(async () => {
-          await exportSyncPlansToFiles(this.plugin.db, this.app.vault);
+          await exportVaultSyncPlansToFiles(
+            this.plugin.db,
+            this.app.vault,
+            this.plugin.settings.vaultRandomID
+          );
           new Notice("sync plans history exported");
         });
       });

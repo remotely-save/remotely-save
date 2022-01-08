@@ -65,6 +65,7 @@
     "lodash": "^4.17.21",
     "loglevel": "^1.8.0",
     "mime-types": "^2.1.33",
+    "nanoid": "^3.1.30",
     "obsidian": "^0.12.0",
     "path-browserify": "^1.0.1",
     "process": "^0.11.10",

@@ -1,5 +1,6 @@
 import { Modal, Notice, Plugin, Setting } from "obsidian";
 import cloneDeep from "lodash/cloneDeep";
+import { nanoid } from "nanoid";
 import type { RemotelySavePluginSettings } from "./baseTypes";
 import {
   COMMAND_CALLBACK,
@@ -10,10 +11,10 @@ import {
 import { importQrCodeUri } from "./importExport";
 import type { InternalDBs } from "./localdb";
 import {
-  insertDeleteRecord,
-  insertRenameRecord,
-  insertSyncPlanRecord,
-  loadDeleteRenameHistoryTable,
+  insertDeleteRecordByVault,
+  insertRenameRecordByVault,
+  insertSyncPlanRecordByVault,
+  loadDeleteRenameHistoryTableByVault,
   prepareDBs,
 } from "./localdb";
 import { RemoteClient } from "./remote";
@@ -47,6 +48,7 @@ const DEFAULT_SETTINGS: RemotelySavePluginSettings = {
   password: "",
   serviceType: "s3",
   currLogLevel: "info",
+  vaultRandomID: "",
 };
 
 interface OAuth2Info {
@@ -86,6 +88,7 @@ export default class RemotelySavePlugin extends Plugin {
     }
 
     await this.checkIfOauthExpires();
+    await this.checkIfVaultIDAssigned(); // MUST before prepareDB()
 
     await this.prepareDB();
 
@@ -93,13 +96,22 @@ export default class RemotelySavePlugin extends Plugin {
 
     this.registerEvent(
       this.app.vault.on("delete", async (fileOrFolder) => {
-        await insertDeleteRecord(this.db, fileOrFolder);
+        await insertDeleteRecordByVault(
+          this.db,
+          fileOrFolder,
+          this.settings.vaultRandomID
+        );
       })
     );
 
     this.registerEvent(
       this.app.vault.on("rename", async (fileOrFolder, oldPath) => {
-        await insertRenameRecord(this.db, fileOrFolder, oldPath);
+        await insertRenameRecordByVault(
+          this.db,
+          fileOrFolder,
+          oldPath,
+          this.settings.vaultRandomID
+        );
       })
     );
 
@@ -316,7 +328,10 @@ export default class RemotelySavePlugin extends Plugin {
         new Notice("3/7 Starting to fetch local meta data.");
         this.syncStatus = "getting_local_meta";
         const local = this.app.vault.getAllLoadedFiles();
-        const localHistory = await loadDeleteRenameHistoryTable(this.db);
+        const localHistory = await loadDeleteRenameHistoryTableByVault(
+          this.db,
+          this.settings.vaultRandomID
+        );
         // log.info(local);
         // log.info(localHistory);
 
@@ -338,11 +353,16 @@ export default class RemotelySavePlugin extends Plugin {
           local,
           localHistory,
           this.db,
+          this.settings.vaultRandomID,
           client.serviceType,
           this.settings.password
         );
         log.info(syncPlan.mixedStates); // for debugging
-        await insertSyncPlanRecord(this.db, syncPlan);
+        await insertSyncPlanRecordByVault(
+          this.db,
+          syncPlan,
+          this.settings.vaultRandomID
+        );
 
         // The operations above are read only and kind of safe.
         // The operations below begins to write or delete (!!!) something.
@@ -353,6 +373,7 @@ export default class RemotelySavePlugin extends Plugin {
         await doActualSync(
           client,
           this.db,
+          this.settings.vaultRandomID,
           this.app.vault,
           syncPlan,
           this.settings.password,
@@ -481,8 +502,18 @@ export default class RemotelySavePlugin extends Plugin {
     }
   }
 
+  async checkIfVaultIDAssigned() {
+    if (
+      this.settings.vaultRandomID === undefined ||
+      this.settings.vaultRandomID === ""
+    ) {
+      this.settings.vaultRandomID = nanoid();
+      await this.saveSettings();
+    }
+  }
+
   async prepareDB() {
-    this.db = await prepareDBs();
+    this.db = await prepareDBs(this.settings.vaultRandomID);
   }
 
   destroyDBs() {
@@ -495,7 +526,7 @@ export default class RemotelySavePlugin extends Plugin {
     pathName: string,
     decision: string
   ) {
-    const msg = `${i}/${totalCount}, ${decision}, ${pathName}`;
+    const msg = `syncing progress=${i}/${totalCount},decision=${decision},path=${pathName}`;
     this.currSyncMsg = msg;
   }
 }
