@@ -64,6 +64,7 @@ export default class RemotelySavePlugin extends Plugin {
   syncStatus: SyncStatusType;
   oauth2Info: OAuth2Info;
   currLogLevel: string;
+  currSyncMsg?: string;
 
   async onload() {
     log.info(`loading plugin ${this.manifest.id}`);
@@ -75,6 +76,8 @@ export default class RemotelySavePlugin extends Plugin {
       revokeDiv: undefined,
       revokeAuthSetting: undefined,
     }; // init
+
+    this.currSyncMsg = "";
 
     await this.loadSettings();
 
@@ -282,6 +285,9 @@ export default class RemotelySavePlugin extends Plugin {
         new Notice(
           `Remotely Save already running in stage ${this.syncStatus}!`
         );
+        if (this.currSyncMsg !== undefined && this.currSyncMsg !== "") {
+          new Notice(this.currSyncMsg);
+        }
         return;
       }
 
@@ -349,10 +355,13 @@ export default class RemotelySavePlugin extends Plugin {
           this.db,
           this.app.vault,
           syncPlan,
-          this.settings.password
+          this.settings.password,
+          (i: number, totalCount: number, pathName: string, decision: string) =>
+            self.setCurrSyncMsg(i, totalCount, pathName, decision)
         );
 
         new Notice("7/7 Remotely Save finish!");
+        this.currSyncMsg = "";
         this.syncStatus = "finish";
         this.syncStatus = "idle";
       } catch (error) {
@@ -478,5 +487,15 @@ export default class RemotelySavePlugin extends Plugin {
 
   destroyDBs() {
     /* destroyDBs(this.db); */
+  }
+
+  async setCurrSyncMsg(
+    i: number,
+    totalCount: number,
+    pathName: string,
+    decision: string
+  ) {
+    const msg = `${i}/${totalCount}, ${decision}, ${pathName}`;
+    this.currSyncMsg = msg;
   }
 }

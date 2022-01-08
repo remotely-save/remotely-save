@@ -567,16 +567,23 @@ export const doActualSync = async (
   db: InternalDBs,
   vault: Vault,
   syncPlan: SyncPlanType,
-  password: string = ""
+  password: string = "",
+  callbackSyncProcess?: any
 ) => {
   const keyStates = syncPlan.mixedStates;
   const foldersCreatedBefore = new Set<string>();
+  let i = 0;
+  const totalCount = Object.keys(keyStates).length || 0;
   for (const [k, v] of Object.entries(keyStates).sort(
     ([k1, v1], [k2, v2]) => k2.length - k1.length
   )) {
+    i += 1;
     const k2 = k as string;
     const v2 = v as FileOrFolderMixedState;
     log.debug(`start syncing "${k2}" with plan ${JSON.stringify(v2)}`);
+    if (callbackSyncProcess !== undefined) {
+      await callbackSyncProcess(i, totalCount, k2, v2.decision);
+    }
     await dispatchOperationToActual(
       k2,
       v2,
@@ -586,7 +593,7 @@ export const doActualSync = async (
       password,
       foldersCreatedBefore
     );
-    // log.info(`finished ${k}, with ${setToString(foldersCreatedBefore)}`);
+    log.info(`finished ${k2}`);
   }
   // await Promise.all(
   //   Object.entries(keyStates)
