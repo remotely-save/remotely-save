@@ -9,6 +9,8 @@ if you want to view the source, please visit the github repository of this plugi
 */
 `;
 
+console.log(`esbuild version = ${esbuild.version}`);
+
 const prod = process.argv[2] === "production";
 
 const DEFAULT_DROPBOX_APP_KEY = process.env.DROPBOX_APP_KEY || "";
