@@ -9,9 +9,9 @@ import {
 } from "./encrypt";
 import type { FileFolderHistoryRecord, InternalDBs } from "./localdb";
 import {
-  clearDeleteRenameHistoryOfKey,
-  getSyncMetaMappingByRemoteKey,
-  upsertSyncMetaMappingData,
+  clearDeleteRenameHistoryOfKeyAndVault,
+  getSyncMetaMappingByRemoteKeyAndVault,
+  upsertSyncMetaMappingDataByVault,
 } from "./localdb";
 import { isHiddenPath, isVaildText, mkdirpInVault } from "./misc";
 import { RemoteClient } from "./remote";
@@ -170,6 +170,7 @@ const ensembleMixedStates = async (
   local: TAbstractFile[],
   deleteHistory: FileFolderHistoryRecord[],
   db: InternalDBs,
+  vaultRandomID: string,
   remoteType: SUPPORTED_SERVICES_TYPE,
   password: string = ""
 ) => {
@@ -190,12 +191,13 @@ const ensembleMixedStates = async (
           throw Error(`unexpected key=${remoteEncryptedKey}`);
         }
       }
-      const backwardMapping = await getSyncMetaMappingByRemoteKey(
+      const backwardMapping = await getSyncMetaMappingByRemoteKeyAndVault(
         remoteType,
         db,
         key,
         entry.lastModified,
-        entry.etag
+        entry.etag,
+        vaultRandomID
       );
 
       let r = {} as FileOrFolderMixedState;
@@ -443,6 +445,7 @@ export const getSyncPlan = async (
   local: TAbstractFile[],
   deleteHistory: FileFolderHistoryRecord[],
   db: InternalDBs,
+  vaultRandomID: string,
   remoteType: SUPPORTED_SERVICES_TYPE,
   password: string = ""
 ) => {
@@ -451,6 +454,7 @@ export const getSyncPlan = async (
     local,
     deleteHistory,
     db,
+    vaultRandomID,
     remoteType,
     password
   );
@@ -467,6 +471,7 @@ export const getSyncPlan = async (
 
 const dispatchOperationToActual = async (
   key: string,
+  vaultRandomID: string,
   state: FileOrFolderMixedState,
   client: RemoteClient,
   db: InternalDBs,
@@ -501,7 +506,7 @@ const dispatchOperationToActual = async (
       password,
       remoteEncryptedKey
     );
-    await clearDeleteRenameHistoryOfKey(db, state.key);
+    await clearDeleteRenameHistoryOfKeyAndVault(db, state.key, vaultRandomID);
   } else if (state.decision === "upload_clearhist") {
     const remoteObjMeta = await client.uploadToRemote(
       state.key,
@@ -511,7 +516,7 @@ const dispatchOperationToActual = async (
       remoteEncryptedKey,
       foldersCreatedBefore
     );
-    await upsertSyncMetaMappingData(
+    await upsertSyncMetaMappingDataByVault(
       client.serviceType,
       db,
       state.key,
@@ -520,9 +525,10 @@ const dispatchOperationToActual = async (
       state.key,
       remoteObjMeta.lastModified,
       remoteObjMeta.size,
-      remoteObjMeta.etag
+      remoteObjMeta.etag,
+      vaultRandomID
     );
-    await clearDeleteRenameHistoryOfKey(db, state.key);
+    await clearDeleteRenameHistoryOfKeyAndVault(db, state.key, vaultRandomID);
   } else if (state.decision === "download") {
     await mkdirpInVault(state.key, vault);
     await client.downloadFromRemote(
@@ -534,7 +540,7 @@ const dispatchOperationToActual = async (
     );
   } else if (state.decision === "delremote_clearhist") {
     await client.deleteFromRemote(state.key, password, remoteEncryptedKey);
-    await clearDeleteRenameHistoryOfKey(db, state.key);
+    await clearDeleteRenameHistoryOfKeyAndVault(db, state.key, vaultRandomID);
   } else if (state.decision === "upload") {
     const remoteObjMeta = await client.uploadToRemote(
       state.key,
@@ -544,7 +550,7 @@ const dispatchOperationToActual = async (
       remoteEncryptedKey,
       foldersCreatedBefore
     );
-    await upsertSyncMetaMappingData(
+    await upsertSyncMetaMappingDataByVault(
       client.serviceType,
       db,
       state.key,
@@ -553,10 +559,11 @@ const dispatchOperationToActual = async (
       state.key,
       remoteObjMeta.lastModified,
       remoteObjMeta.size,
-      remoteObjMeta.etag
+      remoteObjMeta.etag,
+      vaultRandomID
     );
   } else if (state.decision === "clearhist") {
-    await clearDeleteRenameHistoryOfKey(db, state.key);
+    await clearDeleteRenameHistoryOfKeyAndVault(db, state.key, vaultRandomID);
   } else {
     throw Error("this should never happen!");
   }
@@ -565,6 +572,7 @@ const dispatchOperationToActual = async (
 export const doActualSync = async (
   client: RemoteClient,
   db: InternalDBs,
+  vaultRandomID: string,
   vault: Vault,
   syncPlan: SyncPlanType,
   password: string = "",
@@ -586,6 +594,7 @@ export const doActualSync = async (
     }
     await dispatchOperationToActual(
       k2,
+      vaultRandomID,
       v2,
       client,
       db,

@@ -53,6 +53,7 @@ export interface RemotelySavePluginSettings {
   password: string;
   serviceType: SUPPORTED_SERVICES_TYPE;
   currLogLevel?: string;
+  vaultRandomID?: string;
 }
 
 export interface RemoteItem {
