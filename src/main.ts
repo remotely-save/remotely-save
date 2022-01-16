@@ -1,6 +1,7 @@
-import { Modal, Notice, Plugin, Setting } from "obsidian";
+import { Modal, Notice, Plugin, Setting, addIcon } from "obsidian";
 import cloneDeep from "lodash/cloneDeep";
 import { nanoid } from "nanoid";
+import feather from "feather-icons";
 import type { RemotelySavePluginSettings } from "./baseTypes";
 import {
   COMMAND_CALLBACK,
@@ -70,6 +71,17 @@ export default class RemotelySavePlugin extends Plugin {
 
   async onload() {
     log.info(`loading plugin ${this.manifest.id}`);
+
+    const iconNameSyncWait = `${this.manifest.id}-sync-wait`;
+    const iconNameSyncRunning = `${this.manifest.id}-sync-running`;
+    addIcon(
+      iconNameSyncWait,
+      feather.icons["rotate-ccw"].toSvg({ width: 100, height: 100 })
+    );
+    addIcon(
+      iconNameSyncRunning,
+      feather.icons["refresh-ccw"].toSvg({ width: 100, height: 100 })
+    );
 
     this.oauth2Info = {
       verifier: "",
@@ -292,7 +304,7 @@ export default class RemotelySavePlugin extends Plugin {
       }
     );
 
-    this.addRibbonIcon("switch", "Remotely Save", async () => {
+    this.addRibbonIcon(iconNameSyncWait, "Remotely Save", async () => {
       if (this.syncStatus !== "idle") {
         new Notice(
           `Remotely Save already running in stage ${this.syncStatus}!`
