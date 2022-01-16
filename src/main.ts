@@ -1,4 +1,4 @@
-import { Modal, Notice, Plugin, Setting, addIcon } from "obsidian";
+import { Modal, Notice, Plugin, Setting, addIcon, setIcon } from "obsidian";
 import cloneDeep from "lodash/cloneDeep";
 import { nanoid } from "nanoid";
 import feather from "feather-icons";
@@ -50,6 +50,7 @@ const DEFAULT_SETTINGS: RemotelySavePluginSettings = {
   serviceType: "s3",
   currLogLevel: "info",
   vaultRandomID: "",
+  autoRunEveryMilliseconds: -1,
 };
 
 interface OAuth2Info {
@@ -60,6 +61,19 @@ interface OAuth2Info {
   revokeAuthSetting?: Setting;
 }
 
+type SyncTriggerSourceType = "manual" | "auto";
+
+const iconNameSyncWait = `remotely-save-sync-wait`;
+const iconNameSyncRunning = `remotely-save-sync-running`;
+const iconSvgSyncWait = feather.icons["rotate-ccw"].toSvg({
+  width: 100,
+  height: 100,
+});
+const iconSvgSyncRunning = feather.icons["refresh-ccw"].toSvg({
+  width: 100,
+  height: 100,
+});
+
 export default class RemotelySavePlugin extends Plugin {
   settings: RemotelySavePluginSettings;
   // cm: CodeMirror.Editor;
@@ -68,20 +82,161 @@ export default class RemotelySavePlugin extends Plugin {
   oauth2Info: OAuth2Info;
   currLogLevel: string;
   currSyncMsg?: string;
+  syncRibbon?: HTMLElement;
+  autoRunIntervalID?: number;
+
+  async syncRun(triggerSource: SyncTriggerSourceType = "manual") {
+    const getNotice = (x: string) => {
+      // only show notices in manual mode
+      // no notice in auto mode
+      if (triggerSource === "manual") {
+        new Notice(x);
+      }
+    };
+    if (this.syncStatus !== "idle") {
+      // here the notice is shown regardless of triggerSource
+      new Notice(`Remotely Save already running in stage ${this.syncStatus}!`);
+      if (this.currSyncMsg !== undefined && this.currSyncMsg !== "") {
+        new Notice(this.currSyncMsg);
+      }
+      return;
+    }
+
+    let originLabel = `${this.manifest.name}`;
+    if (this.syncRibbon !== undefined) {
+      originLabel = this.syncRibbon.getAttribute("aria-label");
+    }
+
+    try {
+      log.info(
+        `${
+          this.manifest.id
+        }-${Date.now()}: start sync, triggerSource=${triggerSource}`
+      );
+
+      if (this.syncRibbon !== undefined) {
+        setIcon(this.syncRibbon, iconNameSyncRunning);
+        this.syncRibbon.setAttribute(
+          "aria-label",
+          `${this.manifest.name}: ${triggerSource} syncing`
+        );
+      }
+
+      //log.info(`huh ${this.settings.password}`)
+      getNotice(
+        `1/7 Remotely Save Sync Preparing (${this.settings.serviceType})`
+      );
+      this.syncStatus = "preparing";
+
+      getNotice("2/7 Starting to fetch remote meta data.");
+      this.syncStatus = "getting_remote_meta";
+      const self = this;
+      const client = new RemoteClient(
+        this.settings.serviceType,
+        this.settings.s3,
+        this.settings.webdav,
+        this.settings.dropbox,
+        this.settings.onedrive,
+        this.app.vault.getName(),
+        () => self.saveSettings()
+      );
+      const remoteRsp = await client.listFromRemote();
+      // log.info(remoteRsp);
+
+      getNotice("3/7 Starting to fetch local meta data.");
+      this.syncStatus = "getting_local_meta";
+      const local = this.app.vault.getAllLoadedFiles();
+      const localHistory = await loadDeleteRenameHistoryTableByVault(
+        this.db,
+        this.settings.vaultRandomID
+      );
+      // log.info(local);
+      // log.info(localHistory);
+
+      getNotice("4/7 Checking password correct or not.");
+      this.syncStatus = "checking_password";
+      const passwordCheckResult = await isPasswordOk(
+        remoteRsp.Contents,
+        this.settings.password
+      );
+      if (!passwordCheckResult.ok) {
+        getNotice("something goes wrong while checking password");
+        throw Error(passwordCheckResult.reason);
+      }
+
+      getNotice("5/7 Starting to generate sync plan.");
+      this.syncStatus = "generating_plan";
+      const syncPlan = await getSyncPlan(
+        remoteRsp.Contents,
+        local,
+        localHistory,
+        this.db,
+        this.settings.vaultRandomID,
+        client.serviceType,
+        this.settings.password
+      );
+      log.info(syncPlan.mixedStates); // for debugging
+      await insertSyncPlanRecordByVault(
+        this.db,
+        syncPlan,
+        this.settings.vaultRandomID
+      );
+
+      // The operations above are read only and kind of safe.
+      // The operations below begins to write or delete (!!!) something.
+
+      getNotice("6/7 Remotely Save Sync data exchanging!");
+
+      this.syncStatus = "syncing";
+      await doActualSync(
+        client,
+        this.db,
+        this.settings.vaultRandomID,
+        this.app.vault,
+        syncPlan,
+        this.settings.password,
+        (i: number, totalCount: number, pathName: string, decision: string) =>
+          self.setCurrSyncMsg(i, totalCount, pathName, decision)
+      );
+
+      getNotice("7/7 Remotely Save finish!");
+      this.currSyncMsg = "";
+      this.syncStatus = "finish";
+      this.syncStatus = "idle";
+
+      if (this.syncRibbon !== undefined) {
+        setIcon(this.syncRibbon, iconNameSyncWait);
+        this.syncRibbon.setAttribute("aria-label", originLabel);
+      }
+
+      log.info(
+        `${
+          this.manifest.id
+        }-${Date.now()}: finish sync, triggerSource=${triggerSource}`
+      );
+    } catch (error) {
+      const msg = `${
+        this.manifest.id
+      }-${Date.now()}: abort sync, triggerSource=${triggerSource}, error while ${
+        this.syncStatus
+      }`;
+      log.info(msg);
+      log.info(error);
+      getNotice(msg);
+      getNotice(error.message);
+      this.syncStatus = "idle";
+      if (this.syncRibbon !== undefined) {
+        setIcon(this.syncRibbon, iconNameSyncWait);
+        this.syncRibbon.setAttribute("aria-label", originLabel);
+      }
+    }
+  }
 
   async onload() {
     log.info(`loading plugin ${this.manifest.id}`);
 
-    const iconNameSyncWait = `${this.manifest.id}-sync-wait`;
-    const iconNameSyncRunning = `${this.manifest.id}-sync-running`;
-    addIcon(
-      iconNameSyncWait,
-      feather.icons["rotate-ccw"].toSvg({ width: 100, height: 100 })
-    );
-    addIcon(
-      iconNameSyncRunning,
-      feather.icons["refresh-ccw"].toSvg({ width: 100, height: 100 })
-    );
+    addIcon(iconNameSyncWait, iconSvgSyncWait);
+    addIcon(iconNameSyncRunning, iconSvgSyncRunning);
 
     this.oauth2Info = {
       verifier: "",
@@ -304,108 +459,11 @@ export default class RemotelySavePlugin extends Plugin {
       }
     );
 
-    this.addRibbonIcon(iconNameSyncWait, "Remotely Save", async () => {
-      if (this.syncStatus !== "idle") {
-        new Notice(
-          `Remotely Save already running in stage ${this.syncStatus}!`
-        );
-        if (this.currSyncMsg !== undefined && this.currSyncMsg !== "") {
-          new Notice(this.currSyncMsg);
-        }
-        return;
-      }
-
-      try {
-        //log.info(`huh ${this.settings.password}`)
-        new Notice(
-          `1/7 Remotely Save Sync Preparing (${this.settings.serviceType})`
-        );
-        this.syncStatus = "preparing";
-
-        new Notice("2/7 Starting to fetch remote meta data.");
-        this.syncStatus = "getting_remote_meta";
-        const self = this;
-        const client = new RemoteClient(
-          this.settings.serviceType,
-          this.settings.s3,
-          this.settings.webdav,
-          this.settings.dropbox,
-          this.settings.onedrive,
-          this.app.vault.getName(),
-          () => self.saveSettings()
-        );
-        const remoteRsp = await client.listFromRemote();
-        // log.info(remoteRsp);
-
-        new Notice("3/7 Starting to fetch local meta data.");
-        this.syncStatus = "getting_local_meta";
-        const local = this.app.vault.getAllLoadedFiles();
-        const localHistory = await loadDeleteRenameHistoryTableByVault(
-          this.db,
-          this.settings.vaultRandomID
-        );
-        // log.info(local);
-        // log.info(localHistory);
-
-        new Notice("4/7 Checking password correct or not.");
-        this.syncStatus = "checking_password";
-        const passwordCheckResult = await isPasswordOk(
-          remoteRsp.Contents,
-          this.settings.password
-        );
-        if (!passwordCheckResult.ok) {
-          new Notice("something goes wrong while checking password");
-          throw Error(passwordCheckResult.reason);
-        }
-
-        new Notice("5/7 Starting to generate sync plan.");
-        this.syncStatus = "generating_plan";
-        const syncPlan = await getSyncPlan(
-          remoteRsp.Contents,
-          local,
-          localHistory,
-          this.db,
-          this.settings.vaultRandomID,
-          client.serviceType,
-          this.settings.password
-        );
-        log.info(syncPlan.mixedStates); // for debugging
-        await insertSyncPlanRecordByVault(
-          this.db,
-          syncPlan,
-          this.settings.vaultRandomID
-        );
-
-        // The operations above are read only and kind of safe.
-        // The operations below begins to write or delete (!!!) something.
-
-        new Notice("6/7 Remotely Save Sync data exchanging!");
-
-        this.syncStatus = "syncing";
-        await doActualSync(
-          client,
-          this.db,
-          this.settings.vaultRandomID,
-          this.app.vault,
-          syncPlan,
-          this.settings.password,
-          (i: number, totalCount: number, pathName: string, decision: string) =>
-            self.setCurrSyncMsg(i, totalCount, pathName, decision)
-        );
-
-        new Notice("7/7 Remotely Save finish!");
-        this.currSyncMsg = "";
-        this.syncStatus = "finish";
-        this.syncStatus = "idle";
-      } catch (error) {
-        const msg = `Remotely Save error while ${this.syncStatus}`;
-        log.info(msg);
-        log.info(error);
-        new Notice(msg);
-        new Notice(error.message);
-        this.syncStatus = "idle";
-      }
-    });
+    this.syncRibbon = this.addRibbonIcon(
+      iconNameSyncWait,
+      `${this.manifest.name}`,
+      async () => this.syncRun("manual")
+    );
 
     this.addSettingTab(new RemotelySaveSettingTab(this.app, this));
 
@@ -413,9 +471,17 @@ export default class RemotelySavePlugin extends Plugin {
     //   log.info("click", evt);
     // });
 
-    // this.registerInterval(
-    //   window.setInterval(() => log.info("setInterval"), 5 * 60 * 1000)
-    // );
+    if (
+      this.settings.autoRunEveryMilliseconds !== undefined &&
+      this.settings.autoRunEveryMilliseconds !== null &&
+      this.settings.autoRunEveryMilliseconds > 0
+    ) {
+      const intervalID = window.setInterval(() => {
+        this.syncRun("auto");
+      }, this.settings.autoRunEveryMilliseconds);
+      this.autoRunIntervalID = intervalID;
+      this.registerInterval(intervalID);
+    }
   }
 
   onunload() {

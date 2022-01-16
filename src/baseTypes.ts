@@ -54,6 +54,7 @@ export interface RemotelySavePluginSettings {
   serviceType: SUPPORTED_SERVICES_TYPE;
   currLogLevel?: string;
   vaultRandomID?: string;
+  autoRunEveryMilliseconds?: number;
 }
 
 export interface RemoteItem {

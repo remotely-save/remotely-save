@@ -382,6 +382,46 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
         });
       });
 
+    const scheduleDiv = generalDiv.createEl("div");
+    new Setting(scheduleDiv)
+      .setName("schedule for auto run")
+      .setDesc(
+        "The plugin trys to schedule the running after every interval. Battery may be impacted."
+      )
+      .addDropdown((dropdown) => {
+        dropdown.addOption("-1", "(no auto run)");
+        dropdown.addOption(`${1000 * 60 * 1}`, "every 1 minute");
+        dropdown.addOption(`${1000 * 60 * 5}`, "every 5 minutes");
+        dropdown.addOption(`${1000 * 60 * 10}`, "every 10 minutes");
+        dropdown.addOption(`${1000 * 60 * 30}`, "every 30 minutes");
+
+        dropdown
+          .setValue(`${this.plugin.settings.autoRunEveryMilliseconds}`)
+          .onChange(async (val: string) => {
+            const realVal = parseInt(val);
+            this.plugin.settings.autoRunEveryMilliseconds = realVal;
+            await this.plugin.saveSettings();
+            if (
+              (realVal === undefined || realVal === null || realVal <= 0) &&
+              this.plugin.autoRunIntervalID !== undefined
+            ) {
+              // clear
+              window.clearInterval(this.plugin.autoRunIntervalID);
+              this.plugin.autoRunIntervalID = undefined;
+            } else if (
+              realVal !== undefined &&
+              realVal !== null &&
+              realVal > 0
+            ) {
+              const intervalID = window.setInterval(() => {
+                this.plugin.syncRun("auto");
+              }, realVal);
+              this.plugin.autoRunIntervalID = intervalID;
+              this.plugin.registerInterval(intervalID);
+            }
+          });
+      });
+
     //////////////////////////////////////////////////
     // below for general chooser (part 1/2)
     //////////////////////////////////////////////////
