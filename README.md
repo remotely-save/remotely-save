@@ -62,7 +62,7 @@ Additionally, the plugin author may occasionally visit Obsidian official forum a
 - Download and enable this plugin.
 - Enter your information to the settings of this plugin.
 - If you want to enable end-to-end encryption, also set a password in settings. If you do not specify a password, the files and folders are synced in plain, original content to the cloud.
-- Click the new "switch" icon on the ribbon (the left sidebar), **every time** you want to sync your vault between local and remote. (No "auto sync" yet.)
+- Click the new "circle arrow" icon on the ribbon (the left sidebar), **every time** you want to sync your vault between local and remote. (Or, you could configure auto sync in the settings panel (See next chapter).) While syncing, the icon becomes "two half-circle arrows".
 - **Be patient while syncing.** Especially in the first-time sync.
 
 ### Dropbox
