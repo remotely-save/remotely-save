@@ -23,6 +23,7 @@ As of Jan 2022, the plugin is considered in BETA stage. **DO NOT USE IT for any 
   - Webdav
 - **Obsidiain Mobile supported.** Vaults can be synced across mobile and desktop devices with the cloud service as the "broker".
 - **[End-to-end encryption](./docs/encryption.md) supported.** Files would be encrypted using openssl format before being sent to the cloud **if** user specify a password.
+- **Scheduled auto sync supported.**
 - **[Minimal Intrusive](./docs/minimal_intrusive_design.md).**
 - **Fully open source under [Apache-2.0 License](./LICENSE).**
 - **[Sync Algorithm open](./docs/sync_algorithm.md) for discussion.**
@@ -90,6 +91,12 @@ Additionally, the plugin author may occasionally visit Obsidian official forum a
   - The plugin is tested successfully under python package [`wsgidav` (version 4.0)](https://github.com/mar10/wsgidav). See [this issue](https://github.com/mar10/wsgidav/issues/239) for some details.
 - Your data would be synced to a `${vaultName}` sub folder on your webdav server.
 - Password-based end-to-end encryption is also supported. But please be aware that **the vault name itself is not encrypted**.
+
+## Scheduled Auto Sync
+
+- You can configure auto syncing every N minutes in settings.
+- In auto sync mode, if any error occurs, the plugin would **fail silently**.
+- Auto sync only works when Obsidian is being opened. It's **technically impossible** to auto sync while Obsidian is in background, because the plugin just works in the browser environment provided by Obsidian.
 
 ## Import And Export Not-Oauth2 Plugin Settings By QR Code
 
