@@ -4,7 +4,9 @@ This is yet another unofficial sync plugin for Obsidian. If you like it or find 
 
 [![BuildCI](https://github.com/fyears/remotely-save/actions/workflows/auto-build.yml/badge.svg)](https://github.com/fyears/remotely-save/actions/workflows/auto-build.yml)
 
-[![total downloads auto count)](https://remotely-save.github.io/auto-download-stats/totalDownloads.svg)](https://github.com/fyears/remotely-save/releases)
+[![total downloads auto count](https://remotely-save.github.io/auto-download-stats/totalDownloads.svg)](https://github.com/fyears/remotely-save/releases)
+
+[![downloads of latest version](https://remotely-save.github.io/auto-download-stats/latestVersionDownloads.svg)](https://github.com/fyears/remotely-save/releases)
 
 ## Disclaimer
 
