@@ -31,6 +31,7 @@ export interface WebdavConfig {
   username: string;
   password: string;
   authType: WebdavAuthType;
+  manualRecursive: boolean;
 }
 
 export interface OnedriveConfig {

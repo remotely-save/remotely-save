@@ -2,6 +2,9 @@ import { Buffer } from "buffer";
 import { Vault } from "obsidian";
 import type { FileStat, WebDAVClient } from "webdav/web";
 import { AuthType, BufferLike, createClient } from "webdav/web";
+import { Queue } from "@fyears/tsqueue";
+import chunk from "lodash/chunk";
+import flatten from "lodash/flatten";
 import type { RemoteItem, WebdavConfig } from "./baseTypes";
 import { decryptArrayBuffer, encryptArrayBuffer } from "./encrypt";
 import { bufferToArrayBuffer, getPathFolder, mkdirpInVault } from "./misc";
@@ -15,6 +18,7 @@ export const DEFAULT_WEBDAV_CONFIG = {
   username: "",
   password: "",
   authType: "basic",
+  manualRecursive: false,
 } as WebdavConfig;
 
 const getWebdavPath = (fileOrFolderPath: string, vaultName: string) => {
@@ -199,14 +203,51 @@ export const listFromRemote = async (
     throw Error("prefix not supported");
   }
   await client.init();
-  const contents = (await client.client.getDirectoryContents(
-    `/${client.vaultName}`,
-    {
-      deep: true,
-      details: false /* no need for verbose details here */,
-      glob: "/**" /* avoid dot files by using glob */,
+
+  let contents = [] as FileStat[];
+  if (client.webdavConfig.manualRecursive) {
+    // the remote doesn't support infinity propfind,
+    // we need to do a bfs here
+    const q = new Queue([`/${client.vaultName}`]);
+    const CHUNK_SIZE = 10;
+    while (q.length > 0) {
+      const itemsToFetch = [];
+      while (q.length > 0) {
+        itemsToFetch.push(q.pop());
+      }
+      const itemsToFetchChunks = chunk(itemsToFetch, CHUNK_SIZE);
+      // log.debug(itemsToFetchChunks);
+      const subContents = [] as FileStat[];
+      for (const singleChunk of itemsToFetchChunks) {
+        const r = singleChunk.map((x) => {
+          return client.client.getDirectoryContents(x, {
+            deep: false,
+            details: false /* no need for verbose details here */,
+            glob: "/**" /* avoid dot files by using glob */,
+          }) as Promise<FileStat[]>;
+        });
+        const r2 = flatten(await Promise.all(r));
+        subContents.push(...r2);
+      }
+      for (let i = 0; i < subContents.length; ++i) {
+        const f = subContents[i];
+        contents.push(f);
+        if (f.type === "directory") {
+          q.push(f.filename);
+        }
+      }
     }
-  )) as FileStat[];
+  } else {
+    // the remote supports infinity propfind
+    contents = (await client.client.getDirectoryContents(
+      `/${client.vaultName}`,
+      {
+        deep: true,
+        details: false /* no need for verbose details here */,
+        glob: "/**" /* avoid dot files by using glob */,
+      }
+    )) as FileStat[];
+  }
   return {
     Contents: contents.map((x) =>
       fromWebdavItemToRemoteItem(x, client.vaultName)

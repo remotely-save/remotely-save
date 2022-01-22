@@ -54,6 +54,7 @@
     "@aws-sdk/lib-storage": "^3.40.1",
     "@aws-sdk/signature-v4-crt": "^3.37.0",
     "@azure/msal-node": "^1.4.0",
+    "@fyears/tsqueue": "^1.0.1",
     "@microsoft/microsoft-graph-client": "^3.0.1",
     "acorn": "^8.5.0",
     "assert": "^2.0.0",

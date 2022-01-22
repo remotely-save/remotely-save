@@ -873,6 +873,32 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
       });
 
     new Setting(webdavDiv)
+      .setName("server supports infinity propfind or not")
+      .setDesc(
+        "The plugin needs to get all files and folders recursively using probfind. If your webdav server only supports depth='1' (such as NGINX), you need to adjust the setting here, then the plugin consumes more network requests, but better than not working."
+      )
+      .addDropdown((dropdown) => {
+        dropdown.addOption("infinity", "supports depth='infinity'");
+        dropdown.addOption("1", "only supports depth='1'");
+
+        type Depth = "1" | "infinity";
+        dropdown
+          .setValue(
+            this.plugin.settings.webdav.manualRecursive === false
+              ? "infinity"
+              : "1"
+          )
+          .onChange(async (val: Depth) => {
+            if (val === "1") {
+              this.plugin.settings.webdav.manualRecursive = true;
+            } else if (val === "infinity") {
+              this.plugin.settings.webdav.manualRecursive = false;
+            }
+            await this.plugin.saveSettings();
+          });
+      });
+
+    new Setting(webdavDiv)
       .setName("check connectivity")
       .setDesc("check connectivity")
       .addButton(async (button) => {
