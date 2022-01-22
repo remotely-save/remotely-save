@@ -262,19 +262,31 @@ const fromDriveItemToRemoteItem = (
   // pure english: /drive/root:/Apps/remotely-save/${vaultName}
   // or localized, e.g.: /drive/root:/应用/remotely-save/${vaultName}
   const FIRST_COMMON_PREFIX_REGEX = /^\/drive\/root:\/[^\/]+\/remotely-save\//g;
+  // or the root is absolute path /Livefolders,
+  // e.g.: /Livefolders/应用/remotely-save/${vaultName}
+  const SECOND_COMMON_PREFIX_REGEX = /^\/Livefolders\/[^\/]+\/remotely-save\//g;
 
   // another possibile prefix
-  const SECOND_COMMON_PREFIX_RAW = `/drive/items/`;
+  const THIRD_COMMON_PREFIX_RAW = `/drive/items/`;
 
   const fullPathOriginal = `${x.parentReference.path}/${x.name}`;
   const matchFirstPrefixRes = fullPathOriginal.match(FIRST_COMMON_PREFIX_REGEX);
+  const matchSecondPrefixRes = fullPathOriginal.match(
+    SECOND_COMMON_PREFIX_REGEX
+  );
   if (
     matchFirstPrefixRes !== null &&
     fullPathOriginal.startsWith(`${matchFirstPrefixRes[0]}${vaultName}`)
   ) {
     const foundPrefix = `${matchFirstPrefixRes[0]}${vaultName}`;
     key = fullPathOriginal.substring(foundPrefix.length + 1);
-  } else if (x.parentReference.path.startsWith(SECOND_COMMON_PREFIX_RAW)) {
+  } else if (
+    matchSecondPrefixRes !== null &&
+    fullPathOriginal.startsWith(`${matchSecondPrefixRes[0]}${vaultName}`)
+  ) {
+    const foundPrefix = `${matchSecondPrefixRes[0]}${vaultName}`;
+    key = fullPathOriginal.substring(foundPrefix.length + 1);
+  } else if (x.parentReference.path.startsWith(THIRD_COMMON_PREFIX_RAW)) {
     // it's something like
     // /drive/items/<some_id>!<another_id>:/${vaultName}/<subfolder>
     // with uri encoded!
