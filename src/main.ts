@@ -465,6 +465,15 @@ export default class RemotelySavePlugin extends Plugin {
       async () => this.syncRun("manual")
     );
 
+    this.addCommand({
+      id: "start-sync",
+      name: "start sync",
+      icon: iconNameSyncWait,
+      callback: async () => {
+        this.syncRun("manual");
+      },
+    });
+
     this.addSettingTab(new RemotelySaveSettingTab(this.app, this));
 
     // this.registerDomEvent(document, "click", (evt: MouseEvent) => {

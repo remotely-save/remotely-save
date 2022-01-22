@@ -23,7 +23,7 @@ As of Jan 2022, the plugin is considered in BETA stage. **DO NOT USE IT for any 
   - Webdav
 - **Obsidiain Mobile supported.** Vaults can be synced across mobile and desktop devices with the cloud service as the "broker".
 - **[End-to-end encryption](./docs/encryption.md) supported.** Files would be encrypted using openssl format before being sent to the cloud **if** user specify a password.
-- **Scheduled auto sync supported.** Manual sync is also supported, of course.
+- **Scheduled auto sync supported.** You can also manually trigger the sync using sidebar ribbon, or using the command from the command palette (or even bind the hot key combination to the command then press the hot key combination).
 - **[Minimal Intrusive](./docs/minimal_intrusive_design.md).**
 - **Fully open source under [Apache-2.0 License](./LICENSE).**
 - **[Sync Algorithm open](./docs/sync_algorithm.md) for discussion.**
@@ -61,7 +61,7 @@ Additionally, the plugin author may occasionally visit Obsidian official forum a
 - Download and enable this plugin.
 - Enter your information to the settings of this plugin.
 - If you want to enable end-to-end encryption, also set a password in settings. If you do not specify a password, the files and folders are synced in plain, original content to the cloud.
-- Click the new "circle arrow" icon on the ribbon (the left sidebar), **every time** you want to sync your vault between local and remote. (Or, you could configure auto sync in the settings panel (See next chapter).) While syncing, the icon becomes "two half-circle arrows".
+- Click the new "circle arrow" icon on the ribbon (the left sidebar), **every time** you want to sync your vault between local and remote. (Or, you could configure auto sync in the settings panel (See next chapter).) While syncing, the icon becomes "two half-circle arrows". Besides clicking the icon on the sidebar ribbon, you can also activate the corresponding command in the command palette.
 - **Be patient while syncing.** Especially in the first-time sync.
 
 ### Dropbox
