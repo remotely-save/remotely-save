@@ -498,6 +498,18 @@ const dispatchOperationToActual = async (
     throw Error(`unknown decision in ${JSON.stringify(state)}`);
   } else if (state.decision === "skip") {
     // do nothing
+  } else if (
+    client.serviceType === "onedrive" &&
+    state.size_local === 0 &&
+    !state.key.endsWith("/") &&
+    password === "" &&
+    (state.decision === "upload" || state.decision === "upload_clearhist")
+  ) {
+    // TODO: it's ugly, any other way to deal with empty file for onedrive?
+    // do nothing, skip empty file without encryption
+    // if it's empty folder, or it's encrypted file/folder, it continues to be uploaded.
+    // this branch should be earlier than normal upload / upload_clearhist branches.
+    log.debug(`skip empty file ${state.key} uploading for OneDrive`);
   } else if (state.decision === "download_clearhist") {
     await client.downloadFromRemote(
       state.key,
