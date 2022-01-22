@@ -143,61 +143,61 @@ export default class RemotelySavePlugin extends Plugin {
       const remoteRsp = await client.listFromRemote();
       log.info(remoteRsp);
 
-      // getNotice("3/7 Starting to fetch local meta data.");
-      // this.syncStatus = "getting_local_meta";
-      // const local = this.app.vault.getAllLoadedFiles();
-      // const localHistory = await loadDeleteRenameHistoryTableByVault(
-      //   this.db,
-      //   this.settings.vaultRandomID
-      // );
-      // // log.info(local);
-      // // log.info(localHistory);
+      getNotice("3/7 Starting to fetch local meta data.");
+      this.syncStatus = "getting_local_meta";
+      const local = this.app.vault.getAllLoadedFiles();
+      const localHistory = await loadDeleteRenameHistoryTableByVault(
+        this.db,
+        this.settings.vaultRandomID
+      );
+      // log.info(local);
+      // log.info(localHistory);
 
-      // getNotice("4/7 Checking password correct or not.");
-      // this.syncStatus = "checking_password";
-      // const passwordCheckResult = await isPasswordOk(
-      //   remoteRsp.Contents,
-      //   this.settings.password
-      // );
-      // if (!passwordCheckResult.ok) {
-      //   getNotice("something goes wrong while checking password");
-      //   throw Error(passwordCheckResult.reason);
-      // }
+      getNotice("4/7 Checking password correct or not.");
+      this.syncStatus = "checking_password";
+      const passwordCheckResult = await isPasswordOk(
+        remoteRsp.Contents,
+        this.settings.password
+      );
+      if (!passwordCheckResult.ok) {
+        getNotice("something goes wrong while checking password");
+        throw Error(passwordCheckResult.reason);
+      }
 
-      // getNotice("5/7 Starting to generate sync plan.");
-      // this.syncStatus = "generating_plan";
-      // const syncPlan = await getSyncPlan(
-      //   remoteRsp.Contents,
-      //   local,
-      //   localHistory,
-      //   this.db,
-      //   this.settings.vaultRandomID,
-      //   client.serviceType,
-      //   this.settings.password
-      // );
-      // log.info(syncPlan.mixedStates); // for debugging
-      // await insertSyncPlanRecordByVault(
-      //   this.db,
-      //   syncPlan,
-      //   this.settings.vaultRandomID
-      // );
+      getNotice("5/7 Starting to generate sync plan.");
+      this.syncStatus = "generating_plan";
+      const syncPlan = await getSyncPlan(
+        remoteRsp.Contents,
+        local,
+        localHistory,
+        this.db,
+        this.settings.vaultRandomID,
+        client.serviceType,
+        this.settings.password
+      );
+      log.info(syncPlan.mixedStates); // for debugging
+      await insertSyncPlanRecordByVault(
+        this.db,
+        syncPlan,
+        this.settings.vaultRandomID
+      );
 
-      // // The operations above are read only and kind of safe.
-      // // The operations below begins to write or delete (!!!) something.
+      // The operations above are read only and kind of safe.
+      // The operations below begins to write or delete (!!!) something.
 
-      // getNotice("6/7 Remotely Save Sync data exchanging!");
+      getNotice("6/7 Remotely Save Sync data exchanging!");
 
-      // this.syncStatus = "syncing";
-      // await doActualSync(
-      //   client,
-      //   this.db,
-      //   this.settings.vaultRandomID,
-      //   this.app.vault,
-      //   syncPlan,
-      //   this.settings.password,
-      //   (i: number, totalCount: number, pathName: string, decision: string) =>
-      //     self.setCurrSyncMsg(i, totalCount, pathName, decision)
-      // );
+      this.syncStatus = "syncing";
+      await doActualSync(
+        client,
+        this.db,
+        this.settings.vaultRandomID,
+        this.app.vault,
+        syncPlan,
+        this.settings.password,
+        (i: number, totalCount: number, pathName: string, decision: string) =>
+          self.setCurrSyncMsg(i, totalCount, pathName, decision)
+      );
 
       getNotice("7/7 Remotely Save finish!");
       this.currSyncMsg = "";
