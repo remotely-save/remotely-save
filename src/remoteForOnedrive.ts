@@ -313,7 +313,7 @@ const fromDriveItemToRemoteItem = (
     lastModified: Date.parse(x.fileSystemInfo.lastModifiedDateTime),
     size: isFolder ? 0 : x.size,
     remoteType: "onedrive",
-    etag: x.eTag || x.cTag || "",
+    etag: x.cTag || "", // do NOT use x.eTag because it changes if meta changes
   };
 };
 
