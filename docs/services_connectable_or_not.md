@@ -21,7 +21,7 @@ The list is for information purposes only.
 | Seafile                                                                               | ?           |       | ?         |                   |                                                              |
 | `rclone serve webdav`                                                                 | No          |       | No        |                   | No CORS support.                                             |
 | [Nutstore 坚果云](https://www.jianguoyun.com/)                                        | No          |       | No        |                   | No CORS support.                                             |
-| (TeraCLOUD](https://teracloud.jp/en/)                                                 | No          |       | No        |                   | No CORS support.                                             |
+| [TeraCLOUD](https://teracloud.jp/en/)                                                 | No          |       | No        |                   | No CORS support.                                             |
 | Dropbox                                                                               | Yes         |       |           | Yes               |                                                              |
 | OneDrive for personal                                                                 | Yes         |       |           | Yes               |                                                              |
 | OneDrive for Business                                                                 | In the plan |       |           | ?                 |                                                              |
