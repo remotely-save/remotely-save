@@ -1,6 +1,6 @@
 # Limitations From The Browser Environment: CORS Issue
 
-The plugin is developed for the browser environment. The "fake" browser behind the scenes also follows CORS policy.
+The plugin is developed for the browser environment. The "fake" browser behind the scenes also follows the CORS policy.
 
 [MDN has a doc about CORS.](https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS)
 
