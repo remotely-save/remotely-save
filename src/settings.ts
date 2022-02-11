@@ -487,7 +487,9 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
 
     new Setting(s3Div)
       .setName("s3Region")
-      .setDesc("s3Region")
+      .setDesc(
+        "s3Region: If you are not sure what to enter, you could try the vaule: us-east-1"
+      )
       .addText((text) =>
         text
           .setPlaceholder("")
