@@ -37,6 +37,7 @@ As of Jan 2022, the plugin is considered in BETA stage. **DO NOT USE IT for any 
 - **No Conflict resolution. No content-diff-and-patch algorithm.** All files and folders are compared using their local and remote "last modified time" and those with later "last modified time" wins.
 - **Cloud services cost you money.** Always be aware of the costs and pricing.
 - **All files or folder starting with `.` (dot) or `_` (underscore) are treated as hidden files, and would NOT be synced.** It's useful if you have some files just staying locally. But this strategy also means that themes / other plugins / settings of this plugin would neither be synced.
+- **Some limitations from the browser environment.** More technical details are [in the doc](./docs/browser_env.md).
 
 ## Questions, Suggestions, Or Bugs
 
