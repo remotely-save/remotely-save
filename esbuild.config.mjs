@@ -32,6 +32,8 @@ esbuild
       "electron",
       "fs",
       "crypto",
+      "tls",
+      "net",
       // ...builtins
     ],
     format: "cjs",

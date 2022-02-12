@@ -15,7 +15,8 @@
     "path": "path-browserify",
     "process": "process/browser",
     "stream": "stream-browserify",
-    "crypto": "crypto-browserify"
+    "crypto": "crypto-browserify",
+    "url": "url/"
   },
   "source": "main.ts",
   "keywords": [],
@@ -53,7 +54,7 @@
     "@aws-sdk/client-s3": "^3.37.0",
     "@aws-sdk/lib-storage": "^3.40.1",
     "@aws-sdk/signature-v4-crt": "^3.37.0",
-    "@azure/msal-node": "1.5.0",
+    "@azure/msal-node": "^1.6.0",
     "@fyears/tsqueue": "^1.0.1",
     "@microsoft/microsoft-graph-client": "^3.0.1",
     "acorn": "^8.5.0",
@@ -76,6 +77,7 @@
     "rfc4648": "^1.5.0",
     "rimraf": "^3.0.2",
     "stream-browserify": "^3.0.0",
+    "url": "^0.11.0",
     "util": "^0.12.4",
     "webdav": "^4.7.0",
     "webdav-fs": "^4.0.0",
