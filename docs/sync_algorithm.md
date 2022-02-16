@@ -4,9 +4,9 @@
 
 We have three record sources:
 
-1. Local files
-2. Remote files
-3. Local "delete-or-rename" history.
+1. Local files. By scanning all files in the vault locally. Actually Obsidian provides an api directly returning this.
+2. Remote files. By scanning all files on the remote service. Some services provide an api directly returning this, and some other services require the plugin scanning the folders recursively.
+3. Local "delete-or-rename" history. It's recorded by using Obsidian's tracking api. So if users delete or rename files/folders outside Obsidian, we could do nothing.
 
 Assuming all sources are reliable.
 
