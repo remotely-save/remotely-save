@@ -8,7 +8,9 @@ To solve the issue, we have some options:
 
 1. The server side needs to return the header `Access-Control-Allow-Origin` allowing the origins `app://obsidian.md` and `capacitor://localhost` and `http://localhost`. Sometimes in the future, the header `Access-Control-Expose-Headers` with some values being set might be also needed.
 
-   [Here is an example configuration for Amazon S3.](./s3_cors_configure.md)
+   Example configurations:
+   - [Amazon S3](./s3_cors_configure.md)
+   - [Apache (e.g. Nextcloud)](./apache_cors_configure.md)
 
    However, some cloud services do not allow configuring or exposing these headers. (Notably most public WebDAV services.)
 
