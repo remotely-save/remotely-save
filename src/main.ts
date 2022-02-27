@@ -34,11 +34,13 @@ import {
 import { DEFAULT_S3_CONFIG } from "./remoteForS3";
 import { DEFAULT_WEBDAV_CONFIG } from "./remoteForWebdav";
 import { RemotelySaveSettingTab } from "./settings";
-import type { SyncStatusType } from "./sync";
+import { fetchMetadataFile, parseRemoteItems, SyncStatusType } from "./sync";
 import { doActualSync, getSyncPlan, isPasswordOk } from "./sync";
 import { messyConfigToNormal, normalConfigToMessy } from "./configPersist";
 
 import * as origLog from "loglevel";
+import { DeletionOnRemote, MetadataOnRemote } from "./metadataOnRemote";
+import { SyncAlgoV2Modal } from "./syncAlgoV2Notice";
 const log = origLog.getLogger("rs-default");
 
 const DEFAULT_SETTINGS: RemotelySavePluginSettings = {
@@ -51,6 +53,7 @@ const DEFAULT_SETTINGS: RemotelySavePluginSettings = {
   currLogLevel: "info",
   vaultRandomID: "",
   autoRunEveryMilliseconds: -1,
+  agreeToUploadExtraMetadata: false,
 };
 
 interface OAuth2Info {
@@ -61,7 +64,7 @@ interface OAuth2Info {
   revokeAuthSetting?: Setting;
 }
 
-type SyncTriggerSourceType = "manual" | "auto";
+type SyncTriggerSourceType = "manual" | "auto" | "dry";
 
 const iconNameSyncWait = `remotely-save-sync-wait`;
 const iconNameSyncRunning = `remotely-save-sync-running`;
@@ -89,7 +92,7 @@ export default class RemotelySavePlugin extends Plugin {
     const getNotice = (x: string) => {
       // only show notices in manual mode
       // no notice in auto mode
-      if (triggerSource === "manual") {
+      if (triggerSource === "manual" || triggerSource === "dry") {
         new Notice(x);
       }
     };
@@ -122,14 +125,22 @@ export default class RemotelySavePlugin extends Plugin {
         );
       }
 
+      const MAX_STEPS = 8;
+
+      if (triggerSource === "dry") {
+        getNotice(
+          `0/${MAX_STEPS} Remotely Save running in dry mode, not actual file changes would happen.`
+        );
+      }
+
       //log.info(`huh ${this.settings.password}`)
       getNotice(
-        `1/7 Remotely Save Sync Preparing (${this.settings.serviceType})`
+        `1/${MAX_STEPS} Remotely Save Sync Preparing (${this.settings.serviceType})`
       );
       this.syncStatus = "preparing";
 
-      getNotice("2/7 Starting to fetch remote meta data.");
-      this.syncStatus = "getting_remote_meta";
+      getNotice(`2/${MAX_STEPS} Starting to fetch remote meta data.`);
+      this.syncStatus = "getting_remote_files_list";
       const self = this;
       const client = new RemoteClient(
         this.settings.serviceType,
@@ -143,17 +154,7 @@ export default class RemotelySavePlugin extends Plugin {
       const remoteRsp = await client.listFromRemote();
       log.info(remoteRsp);
 
-      getNotice("3/7 Starting to fetch local meta data.");
-      this.syncStatus = "getting_local_meta";
-      const local = this.app.vault.getAllLoadedFiles();
-      const localHistory = await loadDeleteRenameHistoryTableByVault(
-        this.db,
-        this.settings.vaultRandomID
-      );
-      // log.info(local);
-      // log.info(localHistory);
-
-      getNotice("4/7 Checking password correct or not.");
+      getNotice(`3/${MAX_STEPS} Checking password correct or not.`);
       this.syncStatus = "checking_password";
       const passwordCheckResult = await isPasswordOk(
         remoteRsp.Contents,
@@ -164,43 +165,81 @@ export default class RemotelySavePlugin extends Plugin {
         throw Error(passwordCheckResult.reason);
       }
 
-      getNotice("5/7 Starting to generate sync plan.");
-      this.syncStatus = "generating_plan";
-      const syncPlan = await getSyncPlan(
+      getNotice(`4/${MAX_STEPS} Trying to fetch extra meta data from remote.`);
+      this.syncStatus = "getting_remote_extra_meta";
+      const { remoteStates, metadataFile } = await parseRemoteItems(
         remoteRsp.Contents,
-        local,
-        localHistory,
         this.db,
         this.settings.vaultRandomID,
         client.serviceType,
         this.settings.password
       );
-      log.info(syncPlan.mixedStates); // for debugging
-      await insertSyncPlanRecordByVault(
+      const origMetadataOnRemote = await fetchMetadataFile(
+        metadataFile,
+        client,
+        this.app.vault,
+        this.settings.password
+      );
+
+      getNotice(`5/${MAX_STEPS} Starting to fetch local meta data.`);
+      this.syncStatus = "getting_local_meta";
+      const local = this.app.vault.getAllLoadedFiles();
+      const localHistory = await loadDeleteRenameHistoryTableByVault(
         this.db,
-        syncPlan,
         this.settings.vaultRandomID
       );
+      // log.info(local);
+      // log.info(localHistory);
 
-      // The operations above are read only and kind of safe.
+      getNotice(`6/${MAX_STEPS} Starting to generate sync plan.`);
+      this.syncStatus = "generating_plan";
+      const { plan, sortedKeys, deletions } = await getSyncPlan(
+        remoteStates,
+        local,
+        origMetadataOnRemote.deletions,
+        localHistory,
+        client.serviceType,
+        this.settings.password
+      );
+      log.info(plan.mixedStates); // for debugging
+      if (triggerSource !== "dry") {
+        await insertSyncPlanRecordByVault(
+          this.db,
+          plan,
+          this.settings.vaultRandomID
+        );
+      }
+
+      // The operations above are almost read only and kind of safe.
       // The operations below begins to write or delete (!!!) something.
 
-      getNotice("6/7 Remotely Save Sync data exchanging!");
+      if (triggerSource !== "dry") {
+        getNotice(`7/${MAX_STEPS} Remotely Save Sync data exchanging!`);
 
-      this.syncStatus = "syncing";
-      await doActualSync(
-        client,
-        this.db,
-        this.settings.vaultRandomID,
-        this.app.vault,
-        syncPlan,
-        this.settings.password,
-        (i: number, totalCount: number, pathName: string, decision: string) =>
-          self.setCurrSyncMsg(i, totalCount, pathName, decision)
-      );
+        this.syncStatus = "syncing";
+        await doActualSync(
+          client,
+          this.db,
+          this.settings.vaultRandomID,
+          this.app.vault,
+          plan,
+          sortedKeys,
+          metadataFile,
+          origMetadataOnRemote,
+          deletions,
+          (key: string) => self.trash(key),
+          this.settings.password,
+          (i: number, totalCount: number, pathName: string, decision: string) =>
+            self.setCurrSyncMsg(i, totalCount, pathName, decision)
+        );
+      } else {
+        this.syncStatus = "syncing";
+        getNotice(
+          `7/${MAX_STEPS} Remotely Save real sync is skipped in dry run mode.`
+        );
+      }
 
-      getNotice("7/7 Remotely Save finish!");
-      this.currSyncMsg = "";
+      getNotice(`8/${MAX_STEPS} Remotely Save finish!`);
       this.syncStatus = "finish";
       this.syncStatus = "idle";
 
@@ -474,22 +513,24 @@ export default class RemotelySavePlugin extends Plugin {
       },
     });
 
+    this.addCommand({
+      id: "start-sync-dry-run",
+      name: "start sync (dry run only)",
+      icon: iconNameSyncWait,
+      callback: async () => {
+        this.syncRun("dry");
+      },
+    });
+
     this.addSettingTab(new RemotelySaveSettingTab(this.app, this));
 
     // this.registerDomEvent(document, "click", (evt: MouseEvent) => {
     //   log.info("click", evt);
     // });
 
-    if (
-      this.settings.autoRunEveryMilliseconds !== undefined &&
-      this.settings.autoRunEveryMilliseconds !== null &&
-      this.settings.autoRunEveryMilliseconds > 0
-    ) {
-      const intervalID = window.setInterval(() => {
-        this.syncRun("auto");
-      }, this.settings.autoRunEveryMilliseconds);
-      this.autoRunIntervalID = intervalID;
-      this.registerInterval(intervalID);
+    if (!this.settings.agreeToUploadExtraMetadata) {
+      const syncAlgoV2Modal = new SyncAlgoV2Modal(this.app, this);
+      syncAlgoV2Modal.open();
     }
   }
 
@@ -602,8 +643,33 @@ export default class RemotelySavePlugin extends Plugin {
     }
   }
 
+  async trash(x: string) {
+    if (!(await this.app.vault.adapter.trashSystem(x))) {
+      await this.app.vault.adapter.trashLocal(x);
+    }
+  }
+
   async prepareDB() {
     this.db = await prepareDBs(this.settings.vaultRandomID);
+  }
+
+  enableAutoSyncIfSet() {
+    if (
+      this.settings.autoRunEveryMilliseconds !== undefined &&
+      this.settings.autoRunEveryMilliseconds !== null &&
+      this.settings.autoRunEveryMilliseconds > 0
+    ) {
+      const intervalID = window.setInterval(() => {
+        this.syncRun("auto");
+      }, this.settings.autoRunEveryMilliseconds);
+      this.autoRunIntervalID = intervalID;
+      this.registerInterval(intervalID);
+    }
+  }
+
+  async saveAgreeToUseNewSyncAlgorithm() {
+    this.settings.agreeToUploadExtraMetadata = true;
+    await this.saveSettings();
   }
 
   destroyDBs() {

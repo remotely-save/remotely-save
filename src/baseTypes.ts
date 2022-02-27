@@ -80,3 +80,35 @@ export interface UriParams {
 
 // 80 days
 export const OAUTH2_FORCE_EXPIRE_MILLISECONDS = 1000 * 60 * 60 * 24 * 80;
+
+type DecisionTypeForFile =
+  | "skipUploading" // special, mtimeLocal === mtimeRemote
+  | "uploadLocalDelHistToRemote" // "delLocalIfExists && delRemoteIfExists && cleanLocalDelHist && uploadLocalDelHistToRemote"
+  | "keepRemoteDelHist" // "delLocalIfExists && delRemoteIfExists && cleanLocalDelHist && keepRemoteDelHist"
+  | "uploadLocalToRemote" // "skipLocal && uploadLocalToRemote && cleanLocalDelHist && cleanRemoteDelHist"
+  | "downloadRemoteToLocal"; // "downloadRemoteToLocal && skipRemote && cleanLocalDelHist && cleanRemoteDelHist"
+
+type DecisionTypeForFolder =
+  | "createFolder"
+  | "uploadLocalDelHistToRemoteFolder"
+  | "keepRemoteDelHistFolder"
+  | "skipFolder";
+
+export type DecisionType = DecisionTypeForFile | DecisionTypeForFolder;
+
+export interface FileOrFolderMixedState {
+  key: string;
+  existLocal?: boolean;
+  existRemote?: boolean;
+  mtimeLocal?: number;
+  mtimeRemote?: number;
+  deltimeLocal?: number;
+  deltimeRemote?: number;
+  sizeLocal?: number;
+  sizeRemote?: number;
+  changeMtimeUsingMapping?: boolean;
+  decision?: DecisionType;
+  decisionBranch?: number;
+  syncDone?: "done";
+  remoteEncryptedKey?: string;
+}

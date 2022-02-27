@@ -1,5 +1,10 @@
 import { TAbstractFile, TFile, TFolder, Vault } from "obsidian";
-import type { RemoteItem, SUPPORTED_SERVICES_TYPE } from "./baseTypes";
+import type {
+  RemoteItem,
+  SUPPORTED_SERVICES_TYPE,
+  DecisionType,
+  FileOrFolderMixedState,
+} from "./baseTypes";
 import {
   decryptBase32ToString,
   decryptBase64urlToString,
@@ -13,48 +18,39 @@ import {
   getSyncMetaMappingByRemoteKeyAndVault,
   upsertSyncMetaMappingDataByVault,
 } from "./localdb";
-import { isHiddenPath, isVaildText, mkdirpInVault } from "./misc";
+import {
+  isHiddenPath,
+  isVaildText,
+  mkdirpInVault,
+  getFolderLevels,
+  getParentFolder,
+} from "./misc";
 import { RemoteClient } from "./remote";
+import {
+  MetadataOnRemote,
+  DeletionOnRemote,
+  serializeMetadataOnRemote,
+  deserializeMetadataOnRemote,
+  DEFAULT_FILE_NAME_FOR_METADATAONREMOTE,
+  DEFAULT_FILE_NAME_FOR_METADATAONREMOTE2,
+  isEqualMetadataOnRemote,
+} from "./metadataOnRemote";
 
 import * as origLog from "loglevel";
+import { padEnd } from "lodash";
 const log = origLog.getLogger("rs-default");
 
 export type SyncStatusType =
   | "idle"
   | "preparing"
-  | "getting_remote_meta"
+  | "getting_remote_files_list"
+  | "getting_remote_extra_meta"
   | "getting_local_meta"
   | "checking_password"
   | "generating_plan"
   | "syncing"
+  | "cleaning"
   | "finish";
-
-type DecisionType =
-  | "undecided"
-  | "unknown"
-  | "upload_clearhist"
-  | "download_clearhist"
-  | "delremote_clearhist"
-  | "download"
-  | "upload"
-  | "clearhist"
-  | "mkdirplocal"
-  | "skip";
-
-interface FileOrFolderMixedState {
-  key: string;
-  exist_local?: boolean;
-  exist_remote?: boolean;
-  mtime_local?: number;
-  mtime_remote?: number;
-  delete_time_local?: number;
-  size_local?: number;
-  size_remote?: number;
-  decision?: DecisionType;
-  syncDone?: "done";
-  decision_branch?: number;
-  remote_encrypted_key?: string;
-}
 
 export interface SyncPlanType {
   ts: number;
@@ -165,73 +161,125 @@ export const isPasswordOk = async (
   }
 };
 
-const ensembleMixedStates = async (
+export const parseRemoteItems = async (
   remote: RemoteItem[],
-  local: TAbstractFile[],
-  deleteHistory: FileFolderHistoryRecord[],
   db: InternalDBs,
   vaultRandomID: string,
   remoteType: SUPPORTED_SERVICES_TYPE,
   password: string = ""
 ) => {
-  const results = {} as Record<string, FileOrFolderMixedState>;
+  const remoteStates = [] as FileOrFolderMixedState[];
+  let metadataFile: FileOrFolderMixedState = undefined;
+  if (remote === undefined) {
+    return {
+      remoteStates: remoteStates,
+      metadataFile: metadataFile,
+    };
+  }
 
-  if (remote !== undefined) {
-    for (const entry of remote) {
-      const remoteEncryptedKey = entry.key;
-      let key = remoteEncryptedKey;
-      if (password !== "") {
-        if (remoteEncryptedKey.startsWith(MAGIC_ENCRYPTED_PREFIX_BASE32)) {
-          key = await decryptBase32ToString(remoteEncryptedKey, password);
-        } else if (
-          remoteEncryptedKey.startsWith(MAGIC_ENCRYPTED_PREFIX_BASE64URL)
-        ) {
-          key = await decryptBase64urlToString(remoteEncryptedKey, password);
-        } else {
-          throw Error(`unexpected key=${remoteEncryptedKey}`);
-        }
-      }
-      const backwardMapping = await getSyncMetaMappingByRemoteKeyAndVault(
-        remoteType,
-        db,
-        key,
-        entry.lastModified,
-        entry.etag,
-        vaultRandomID
-      );
-
-      let r = {} as FileOrFolderMixedState;
-      if (backwardMapping !== undefined) {
-        key = backwardMapping.localKey;
-        r = {
-          key: key,
-          exist_remote: true,
-          mtime_remote: backwardMapping.localMtime || entry.lastModified,
-          size_remote: backwardMapping.localSize || entry.size,
-          remote_encrypted_key: remoteEncryptedKey,
-        };
+  for (const entry of remote) {
+    const remoteEncryptedKey = entry.key;
+    let key = remoteEncryptedKey;
+    if (password !== "") {
+      if (remoteEncryptedKey.startsWith(MAGIC_ENCRYPTED_PREFIX_BASE32)) {
+        key = await decryptBase32ToString(remoteEncryptedKey, password);
+      } else if (
+        remoteEncryptedKey.startsWith(MAGIC_ENCRYPTED_PREFIX_BASE64URL)
+      ) {
+        key = await decryptBase64urlToString(remoteEncryptedKey, password);
       } else {
-        r = {
-          key: key,
-          exist_remote: true,
-          mtime_remote: entry.lastModified,
-          size_remote: entry.size,
-          remote_encrypted_key: remoteEncryptedKey,
-        };
-      }
-      if (isHiddenPath(key)) {
-        continue;
-      }
-      if (results.hasOwnProperty(key)) {
-        results[key].key = r.key;
-        results[key].exist_remote = r.exist_remote;
-        results[key].mtime_remote = r.mtime_remote;
-        results[key].size_remote = r.size_remote;
-        results[key].remote_encrypted_key = r.remote_encrypted_key;
-      } else {
-        results[key] = r;
+        throw Error(`unexpected key=${remoteEncryptedKey}`);
       }
     }
+    const backwardMapping = await getSyncMetaMappingByRemoteKeyAndVault(
+      remoteType,
+      db,
+      key,
+      entry.lastModified,
+      entry.etag,
+      vaultRandomID
+    );
+
+    let r = {} as FileOrFolderMixedState;
+    if (backwardMapping !== undefined) {
+      key = backwardMapping.localKey;
+      r = {
+        key: key,
+        existRemote: true,
+        mtimeRemote: backwardMapping.localMtime || entry.lastModified,
+        sizeRemote: backwardMapping.localSize || entry.size,
+        remoteEncryptedKey: remoteEncryptedKey,
+        changeMtimeUsingMapping: true,
+      };
+    } else {
+      r = {
+        key: key,
+        existRemote: true,
+        mtimeRemote: entry.lastModified,
+        sizeRemote: entry.size,
+        remoteEncryptedKey: remoteEncryptedKey,
+        changeMtimeUsingMapping: false,
+      };
+    }
+
+    if (r.key === DEFAULT_FILE_NAME_FOR_METADATAONREMOTE) {
+      metadataFile = Object.assign({}, r);
+    }
+    if (r.key === DEFAULT_FILE_NAME_FOR_METADATAONREMOTE2) {
+      throw Error(
+        `A reserved file name ${r.key} has been found. You may upgrade the plugin to latest version to try to deal with it.`
+      );
+    }
+
+    remoteStates.push(r);
+  }
+  return {
+    remoteStates: remoteStates,
+    metadataFile: metadataFile,
+  };
+};
+
+export const fetchMetadataFile = async (
+  metadataFile: FileOrFolderMixedState,
+  client: RemoteClient,
+  vault: Vault,
+  password: string = ""
+) => {
+  if (metadataFile === undefined) {
+    log.debug("no metadata file, so no fetch");
+    return {
+      deletions: [],
+    } as MetadataOnRemote;
+  }
+
+  const buf = await client.downloadFromRemote(
+    metadataFile.key,
+    vault,
+    metadataFile.mtimeRemote,
+    password,
+    metadataFile.remoteEncryptedKey,
+    true
+  );
+  const metadata = deserializeMetadataOnRemote(buf);
+  return metadata;
+};
+
+const ensembleMixedStates = async (
+  remoteStates: FileOrFolderMixedState[],
+  local: TAbstractFile[],
+  remoteDeleteHistory: DeletionOnRemote[],
+  localDeleteHistory: FileFolderHistoryRecord[]
+) => {
+  const results = {} as Record<string, FileOrFolderMixedState>;
+
+  for (const r of remoteStates) {
+    const key = r.key;
+
+    if (isHiddenPath(key)) {
+      continue;
+    }
+    results[key] = r;
+    results[key].existLocal = false;
   }
 
   for (const entry of local) {
@@ -244,17 +292,17 @@ const ensembleMixedStates = async (
     } else if (entry instanceof TFile) {
       r = {
         key: entry.path,
-        exist_local: true,
-        mtime_local: entry.stat.mtime,
-        size_local: entry.stat.size,
+        existLocal: true,
+        mtimeLocal: entry.stat.mtime,
+        sizeLocal: entry.stat.size,
       };
     } else if (entry instanceof TFolder) {
       key = `${entry.path}/`;
       r = {
         key: key,
-        exist_local: true,
-        mtime_local: undefined,
-        size_local: 0,
+        existLocal: true,
+        mtimeLocal: undefined,
+        sizeLocal: 0,
       };
     } else {
       throw Error(`unexpected ${entry}`);
@@ -265,15 +313,34 @@ const ensembleMixedStates = async (
     }
     if (results.hasOwnProperty(key)) {
       results[key].key = r.key;
-      results[key].exist_local = r.exist_local;
-      results[key].mtime_local = r.mtime_local;
-      results[key].size_local = r.size_local;
+      results[key].existLocal = r.existLocal;
+      results[key].mtimeLocal = r.mtimeLocal;
+      results[key].sizeLocal = r.sizeLocal;
     } else {
       results[key] = r;
+      results[key].existRemote = false;
     }
   }
 
-  for (const entry of deleteHistory) {
+  for (const entry of remoteDeleteHistory) {
+    const key = entry.key;
+    const r = {
+      key: key,
+      deltimeRemote: entry.actionWhen,
+    } as FileOrFolderMixedState;
+
+    if (results.hasOwnProperty(key)) {
+      results[key].key = r.key;
+      results[key].deltimeRemote = r.deltimeRemote;
+    } else {
+      results[key] = r;
+
+      results[key].existLocal = false;
+      results[key].existRemote = false;
+    }
+  }
+
+  for (const entry of localDeleteHistory) {
     let key = entry.key;
     if (entry.keyType === "folder") {
       if (!entry.key.endsWith("/")) {
@@ -287,7 +354,7 @@ const ensembleMixedStates = async (
 
     const r = {
       key: key,
-      delete_time_local: entry.actionWhen,
+      deltimeLocal: entry.actionWhen,
     } as FileOrFolderMixedState;
 
     if (isHiddenPath(key)) {
@@ -295,193 +362,363 @@ const ensembleMixedStates = async (
     }
     if (results.hasOwnProperty(key)) {
       results[key].key = r.key;
-      results[key].delete_time_local = r.delete_time_local;
+      results[key].deltimeLocal = r.deltimeLocal;
     } else {
       results[key] = r;
+
+      results[key].existLocal = false;
+      results[key].existRemote = false;
     }
   }
 
   return results;
 };
 
-const getOperation = (
+const assignOperationToFileInplace = (
   origRecord: FileOrFolderMixedState,
-  inplace: boolean = false,
+  keptFolder: Set<string>,
   password: string = ""
 ) => {
   let r = origRecord;
-  if (!inplace) {
-    r = Object.assign({}, origRecord);
+
+  // files and folders are treated differently
+  // here we only check files
+  if (r.key.endsWith("/")) {
+    return r;
   }
 
-  if (r.mtime_local === 0) {
-    r.mtime_local = undefined;
-  }
-  if (r.mtime_remote === 0) {
-    r.mtime_remote = undefined;
-  }
-  if (r.delete_time_local === 0) {
-    r.delete_time_local = undefined;
-  }
-  if (r.exist_local === undefined) {
-    r.exist_local = false;
-  }
-  if (r.exist_remote === undefined) {
-    r.exist_remote = false;
-  }
-  r.decision = "unknown";
+  // we find the max date from four sources
 
-  if (
-    r.exist_remote &&
-    r.exist_local &&
-    r.mtime_remote !== undefined &&
-    r.mtime_local !== undefined &&
-    r.mtime_remote > r.mtime_local
-  ) {
-    r.decision = "download_clearhist";
-    r.decision_branch = 1;
-  } else if (
-    r.exist_remote &&
-    r.exist_local &&
-    r.mtime_remote !== undefined &&
-    r.mtime_local !== undefined &&
-    r.mtime_remote < r.mtime_local
-  ) {
-    r.decision = "upload_clearhist";
-    r.decision_branch = 2;
-  } else if (
-    r.exist_remote &&
-    r.exist_local &&
-    r.mtime_remote !== undefined &&
-    r.mtime_local !== undefined &&
-    r.mtime_remote === r.mtime_local &&
-    password === "" &&
-    r.size_local === r.size_remote
-  ) {
-    r.decision = "skip";
-    r.decision_branch = 3;
-  } else if (
-    r.exist_remote &&
-    r.exist_local &&
-    r.mtime_remote !== undefined &&
-    r.mtime_local !== undefined &&
-    r.mtime_remote === r.mtime_local &&
-    password === "" &&
-    r.size_local !== r.size_remote
-  ) {
-    r.decision = "upload_clearhist";
-    r.decision_branch = 4;
-  } else if (
-    r.exist_remote &&
-    r.exist_local &&
-    r.mtime_remote !== undefined &&
-    r.mtime_local !== undefined &&
-    r.mtime_remote === r.mtime_local &&
-    password !== ""
-  ) {
-    // if we have encryption,
-    // the size is always unequal
-    // only mtime(s) are reliable
-    r.decision = "skip";
-    r.decision_branch = 5;
-  } else if (r.exist_remote && r.exist_local && r.mtime_local === undefined) {
-    // this must be a folder!
-    if (!r.key.endsWith("/")) {
-      throw Error(`${r.key} is not a folder but lacks local mtime`);
+  // 0. find anything inconsistent
+  if (r.existLocal && (r.mtimeLocal === undefined || r.mtimeLocal <= 0)) {
+    throw Error(
+      `Error: File ${r.key} has a last modified time <=0 or undefined in the local file system. It's abnormal and the plugin stops.`
+    );
+  }
+  if (r.existRemote && (r.mtimeRemote === undefined || r.mtimeRemote <= 0)) {
+    throw Error(
+      `Error: File ${r.key} has a last modified time <=0 or undefined on the remote service. It's abnormal and the plugin stops.`
+    );
+  }
+  if (r.deltimeLocal !== undefined && r.deltimeLocal <= 0) {
+    throw Error(
+      `Error: File ${r.key} has a local deletion time <=0. It's abnormal and the plugin stops.`
+    );
+  }
+  if (r.deltimeRemote !== undefined && r.deltimeRemote <= 0) {
+    throw Error(
+      `Error: File ${r.key} has a remote deletion time <=0. It's abnormal and the plugin stops.`
+    );
+  }
+
+  // 1. mtimeLocal
+  if (r.existLocal) {
+    const mtimeRemote = r.existRemote ? r.mtimeRemote : -1;
+    const deltime_remote = r.deltimeRemote !== undefined ? r.deltimeRemote : -1;
+    const deltimeLocal = r.deltimeLocal !== undefined ? r.deltimeLocal : -1;
+    if (
+      r.mtimeLocal >= mtimeRemote &&
+      r.mtimeLocal >= deltimeLocal &&
+      r.mtimeLocal >= deltime_remote
+    ) {
+      if (r.mtimeLocal === r.mtimeRemote) {
+        // mtime the same
+        if (password === "") {
+          // no password, we can also compare the sizes!
+          if (r.sizeLocal === r.sizeRemote) {
+            r.decision = "skipUploading";
+            r.decisionBranch = 1;
+          } else {
+            r.decision = "uploadLocalToRemote";
+            r.decisionBranch = 2;
+          }
+        } else {
+          // we have password, then the sizes are always unequal
+          // we can only rely on mtime
+          r.decision = "skipUploading";
+          r.decisionBranch = 3;
+        }
+      } else {
+        r.decision = "uploadLocalToRemote";
+        r.decisionBranch = 4;
+      }
+      keptFolder.add(getParentFolder(r.key));
+      return r;
     }
-    r.decision = "skip";
-    r.decision_branch = 6;
-  } else if (
-    r.exist_remote &&
-    !r.exist_local &&
-    r.mtime_remote !== undefined &&
-    r.mtime_local === undefined &&
-    r.delete_time_local !== undefined &&
-    r.mtime_remote >= r.delete_time_local
-  ) {
-    r.decision = "download_clearhist";
-    r.decision_branch = 7;
-  } else if (
-    r.exist_remote &&
-    !r.exist_local &&
-    r.mtime_remote !== undefined &&
-    r.mtime_local === undefined &&
-    r.delete_time_local !== undefined &&
-    r.mtime_remote < r.delete_time_local
-  ) {
-    r.decision = "delremote_clearhist";
-    r.decision_branch = 8;
-  } else if (
-    r.exist_remote &&
-    !r.exist_local &&
-    r.mtime_remote !== undefined &&
-    r.mtime_local === undefined &&
-    r.delete_time_local == undefined
-  ) {
-    r.decision = "download";
-    r.decision_branch = 9;
-  } else if (!r.exist_remote && r.exist_local && r.mtime_remote === undefined) {
-    r.decision = "upload_clearhist";
-    r.decision_branch = 10;
-  } else if (
-    !r.exist_remote &&
-    !r.exist_local &&
-    r.mtime_remote === undefined &&
-    r.mtime_local === undefined
-  ) {
-    r.decision = "clearhist";
-    r.decision_branch = 11;
   }
 
-  if (r.decision === "unknown") {
-    throw Error(`unknown decision for ${JSON.stringify(r)}`);
+  // 2. mtimeRemote
+  if (r.existRemote) {
+    const mtimeLocal = r.existLocal ? r.mtimeLocal : -1;
+    const deltime_remote = r.deltimeRemote !== undefined ? r.deltimeRemote : -1;
+    const deltimeLocal = r.deltimeLocal !== undefined ? r.deltimeLocal : -1;
+    if (
+      r.mtimeRemote > mtimeLocal &&
+      r.mtimeRemote >= deltimeLocal &&
+      r.mtimeRemote >= deltime_remote
+    ) {
+      r.decision = "downloadRemoteToLocal";
+      r.decisionBranch = 5;
+      keptFolder.add(getParentFolder(r.key));
+      return r;
+    }
   }
 
+  // 3. deltimeLocal
+  if (r.deltimeLocal !== undefined && r.deltimeLocal !== 0) {
+    const mtimeLocal = r.existLocal ? r.mtimeLocal : -1;
+    const mtimeRemote = r.existRemote ? r.mtimeRemote : -1;
+    const deltime_remote = r.deltimeRemote !== undefined ? r.deltimeRemote : -1;
+    if (
+      r.deltimeLocal >= mtimeLocal &&
+      r.deltimeLocal >= mtimeRemote &&
+      r.deltimeLocal >= deltime_remote
+    ) {
+      r.decision = "uploadLocalDelHistToRemote";
+      r.decisionBranch = 6;
+      if (r.existLocal || r.existRemote) {
+        // actual deletion would happen
+      }
+      return r;
+    }
+  }
+
+  // 4. deltime_remote
+  if (r.deltimeRemote !== undefined && r.deltimeRemote !== 0) {
+    const mtimeLocal = r.existLocal ? r.mtimeLocal : -1;
+    const mtimeRemote = r.existRemote ? r.mtimeRemote : -1;
+    const deltimeLocal = r.deltimeLocal !== undefined ? r.deltimeLocal : -1;
+    if (
+      r.deltimeRemote >= mtimeLocal &&
+      r.deltimeRemote >= mtimeRemote &&
+      r.deltimeRemote >= deltimeLocal
+    ) {
+      r.decision = "keepRemoteDelHist";
+      r.decisionBranch = 7;
+      if (r.existLocal || r.existRemote) {
+        // actual deletion would happen
+      }
+      return r;
+    }
+  }
+
+  throw Error(`no decision for ${JSON.stringify(r)}`);
+};
+
+const assignOperationToFolderInplace = (
+  origRecord: FileOrFolderMixedState,
+  keptFolder: Set<string>,
+  password: string = ""
+) => {
+  let r = origRecord;
+
+  // files and folders are treated differently
+  // here we only check folders
+  if (!r.key.endsWith("/")) {
+    return r;
+  }
+
+  if (!keptFolder.has(r.key)) {
+    // the folder does NOT have any must-be-kept children!
+
+    if (r.deltimeLocal !== undefined || r.deltimeRemote !== undefined) {
+      // it has some deletion "commands"
+      if (
+        r.deltimeLocal !== undefined &&
+        r.deltimeLocal >= (r.deltimeRemote !== undefined ? r.deltimeRemote : -1)
+      ) {
+        r.decision = "uploadLocalDelHistToRemoteFolder";
+        r.decisionBranch = 8;
+      } else {
+        r.decision = "keepRemoteDelHistFolder";
+        r.decisionBranch = 9;
+      }
+    } else {
+      // it does not have any deletion commands
+      // keep it as is, and create it if necessary
+      keptFolder.add(getParentFolder(r.key));
+      if (r.existLocal && r.existRemote) {
+        r.decision = "skipFolder";
+        r.decisionBranch = 10;
+      } else if (r.existLocal || r.existRemote) {
+        r.decision = "createFolder";
+        r.decisionBranch = 11;
+      } else {
+        throw Error(
+          `Error: Folder ${r.key} doesn't exist locally and remotely but is marked must be kept. Abort.`
+        );
+      }
+    }
+  } else {
+    // the folder has some must be kept children!
+    // so itself and its parent folder must be kept
+    keptFolder.add(getParentFolder(r.key));
+    if (r.existLocal && r.existRemote) {
+      r.decision = "skipFolder";
+      r.decisionBranch = 12;
+    } else if (r.existLocal || r.existRemote) {
+      r.decision = "createFolder";
+      r.decisionBranch = 13;
+    } else {
+      throw Error(
+        `Error: Folder ${r.key} doesn't exist locally and remotely but is marked must be kept. Abort.`
+      );
+    }
+  }
+
+  // save the memory, save the world!
+  // we have dealt with it, so we don't need it any more.
+  keptFolder.delete(r.key);
   return r;
 };
 
+const DELETION_DECISIONS: Set<DecisionType> = new Set([
+  "uploadLocalDelHistToRemote",
+  "keepRemoteDelHist",
+  "uploadLocalDelHistToRemoteFolder",
+  "keepRemoteDelHistFolder",
+]);
+
 export const getSyncPlan = async (
-  remote: RemoteItem[],
+  remoteStates: FileOrFolderMixedState[],
   local: TAbstractFile[],
-  deleteHistory: FileFolderHistoryRecord[],
-  db: InternalDBs,
-  vaultRandomID: string,
+  remoteDeleteHistory: DeletionOnRemote[],
+  localDeleteHistory: FileFolderHistoryRecord[],
   remoteType: SUPPORTED_SERVICES_TYPE,
   password: string = ""
 ) => {
   const mixedStates = await ensembleMixedStates(
-    remote,
+    remoteStates,
     local,
-    deleteHistory,
-    db,
-    vaultRandomID,
-    remoteType,
-    password
+    remoteDeleteHistory,
+    localDeleteHistory
   );
-  for (const [key, val] of Object.entries(mixedStates)) {
-    getOperation(val, true, password);
+
+  const sortedKeys = Object.keys(mixedStates).sort(
+    (k1, k2) => k2.length - k1.length
+  );
+
+  const deletions: DeletionOnRemote[] = [];
+
+  const keptFolder = new Set<string>();
+  for (let i = 0; i < sortedKeys.length; ++i) {
+    const key = sortedKeys[i];
+    const val = mixedStates[key];
+
+    if (key.endsWith("/")) {
+      // decide some folders
+      // because the keys are sorted by length
+      // so all the children must have been shown up before in the iteration
+      assignOperationToFolderInplace(val, keptFolder, password);
+    } else {
+      // get all operations of files
+      // and at the same time get some helper info for folders
+      assignOperationToFileInplace(val, keptFolder, password);
+    }
+
+    if (DELETION_DECISIONS.has(val.decision)) {
+      if (val.decision === "uploadLocalDelHistToRemote") {
+        deletions.push({
+          key: key,
+          actionWhen: val.deltimeLocal,
+        });
+      } else if (val.decision === "keepRemoteDelHist") {
+        deletions.push({
+          key: key,
+          actionWhen: val.deltimeRemote,
+        });
+      } else if (val.decision === "uploadLocalDelHistToRemoteFolder") {
+        deletions.push({
+          key: key,
+          actionWhen: val.deltimeLocal,
+        });
+      } else if (val.decision === "keepRemoteDelHistFolder") {
+        deletions.push({
+          key: key,
+          actionWhen: val.deltimeRemote,
+        });
+      } else {
+        throw Error(`do not know how to delete for decision ${val.decision}`);
+      }
+    }
   }
+
   const plan = {
     ts: Date.now(),
     remoteType: remoteType,
     mixedStates: mixedStates,
   } as SyncPlanType;
-  return plan;
+  return {
+    plan: plan,
+    sortedKeys: sortedKeys,
+    deletions: deletions,
+  };
+};
+
+const uploadExtraMeta = async (
+  client: RemoteClient,
+  metadataFile: FileOrFolderMixedState | undefined,
+  origMetadata: MetadataOnRemote | undefined,
+  deletions: DeletionOnRemote[],
+  password: string = ""
+) => {
+  if (deletions === undefined || deletions.length === 0) {
+    return;
+  }
+
+  const key = DEFAULT_FILE_NAME_FOR_METADATAONREMOTE;
+  let remoteEncryptedKey = key;
+
+  if (password !== "") {
+    if (metadataFile === undefined) {
+      remoteEncryptedKey = undefined;
+    } else {
+      remoteEncryptedKey = metadataFile.remoteEncryptedKey;
+    }
+    if (remoteEncryptedKey === undefined || remoteEncryptedKey === "") {
+      // remoteEncryptedKey = await encryptStringToBase32(key, password);
+      remoteEncryptedKey = await encryptStringToBase64url(key, password);
+    }
+  }
+
+  const newMetadata: MetadataOnRemote = {
+    deletions: deletions,
+  };
+
+  if (isEqualMetadataOnRemote(origMetadata, newMetadata)) {
+    log.debug(
+      "metadata are the same, no need to re-generate and re-upload it."
+    );
+    return;
+  }
+
+  const resultText = serializeMetadataOnRemote(newMetadata);
+
+  await client.uploadToRemote(
+    key,
+    undefined,
+    false,
+    password,
+    remoteEncryptedKey,
+    undefined,
+    true,
+    resultText
+  );
 };
 
 const dispatchOperationToActual = async (
   key: string,
   vaultRandomID: string,
-  state: FileOrFolderMixedState,
+  r: FileOrFolderMixedState,
   client: RemoteClient,
   db: InternalDBs,
   vault: Vault,
-  password: string = "",
-  foldersCreatedBefore: Set<string> | undefined = undefined
+  localDeleteFunc: any,
+  password: string = ""
 ) => {
   let remoteEncryptedKey = key;
   if (password !== "") {
-    remoteEncryptedKey = state.remote_encrypted_key;
+    remoteEncryptedKey = r.remoteEncryptedKey;
     if (remoteEncryptedKey === undefined || remoteEncryptedKey === "") {
       // the old version uses base32
       // remoteEncryptedKey = await encryptStringToBase32(key, password);
@@ -490,94 +727,114 @@ const dispatchOperationToActual = async (
     }
   }
 
-  if (
-    state.decision === undefined ||
-    state.decision === "unknown" ||
-    state.decision === "undecided"
-  ) {
-    throw Error(`unknown decision in ${JSON.stringify(state)}`);
-  } else if (state.decision === "skip") {
-    // do nothing
-  } else if (
-    client.serviceType === "onedrive" &&
-    state.size_local === 0 &&
-    !state.key.endsWith("/") &&
-    password === "" &&
-    (state.decision === "upload" || state.decision === "upload_clearhist")
-  ) {
-    // TODO: it's ugly, any other way to deal with empty file for onedrive?
-    // do nothing, skip empty file without encryption
-    // if it's empty folder, or it's encrypted file/folder, it continues to be uploaded.
-    // this branch should be earlier than normal upload / upload_clearhist branches.
-    log.debug(`skip empty file ${state.key} uploading for OneDrive`);
-  } else if (state.decision === "download_clearhist") {
+  if (r.decision === undefined) {
+    throw Error(`unknown decision in ${JSON.stringify(r)}`);
+  } else if (r.decision === "skipUploading") {
+    // do nothing!
+  } else if (r.decision === "uploadLocalDelHistToRemote") {
+    if (r.existLocal) {
+      await localDeleteFunc(r.key);
+    }
+    if (r.existRemote) {
+      await client.deleteFromRemote(r.key, password, remoteEncryptedKey);
+    }
+    await clearDeleteRenameHistoryOfKeyAndVault(db, r.key, vaultRandomID);
+  } else if (r.decision === "keepRemoteDelHist") {
+    if (r.existLocal) {
+      await localDeleteFunc(r.key);
+    }
+    if (r.existRemote) {
+      await client.deleteFromRemote(r.key, password, remoteEncryptedKey);
+    }
+    await clearDeleteRenameHistoryOfKeyAndVault(db, r.key, vaultRandomID);
+  } else if (r.decision === "uploadLocalToRemote") {
+    if (
+      client.serviceType === "onedrive" &&
+      r.sizeLocal === 0 &&
+      password === ""
+    ) {
+      // special treatment for empty files for OneDrive
+      // TODO: it's ugly, any other way?
+      // special treatment for OneDrive: do nothing, skip empty file without encryption
+      // if it's empty folder, or it's encrypted file/folder, it continues to be uploaded.
+    } else {
+      const remoteObjMeta = await client.uploadToRemote(
+        r.key,
+        vault,
+        false,
+        password,
+        remoteEncryptedKey
+      );
+      await upsertSyncMetaMappingDataByVault(
+        client.serviceType,
+        db,
+        r.key,
+        r.mtimeLocal,
+        r.sizeLocal,
+        r.key,
+        remoteObjMeta.lastModified,
+        remoteObjMeta.size,
+        remoteObjMeta.etag,
+        vaultRandomID
+      );
+    }
+    await clearDeleteRenameHistoryOfKeyAndVault(db, r.key, vaultRandomID);
+  } else if (r.decision === "downloadRemoteToLocal") {
+    await mkdirpInVault(r.key, vault); /* should be unnecessary */
     await client.downloadFromRemote(
-      state.key,
+      r.key,
       vault,
-      state.mtime_remote,
+      r.mtimeRemote,
       password,
       remoteEncryptedKey
     );
-    await clearDeleteRenameHistoryOfKeyAndVault(db, state.key, vaultRandomID);
-  } else if (state.decision === "upload_clearhist") {
-    const remoteObjMeta = await client.uploadToRemote(
-      state.key,
-      vault,
-      false,
-      password,
-      remoteEncryptedKey,
-      foldersCreatedBefore
-    );
-    await upsertSyncMetaMappingDataByVault(
-      client.serviceType,
-      db,
-      state.key,
-      state.mtime_local,
-      state.size_local,
-      state.key,
-      remoteObjMeta.lastModified,
-      remoteObjMeta.size,
-      remoteObjMeta.etag,
-      vaultRandomID
-    );
-    await clearDeleteRenameHistoryOfKeyAndVault(db, state.key, vaultRandomID);
-  } else if (state.decision === "download") {
-    await mkdirpInVault(state.key, vault);
-    await client.downloadFromRemote(
-      state.key,
-      vault,
-      state.mtime_remote,
-      password,
-      remoteEncryptedKey
-    );
-  } else if (state.decision === "delremote_clearhist") {
-    await client.deleteFromRemote(state.key, password, remoteEncryptedKey);
-    await clearDeleteRenameHistoryOfKeyAndVault(db, state.key, vaultRandomID);
-  } else if (state.decision === "upload") {
-    const remoteObjMeta = await client.uploadToRemote(
-      state.key,
-      vault,
-      false,
-      password,
-      remoteEncryptedKey,
-      foldersCreatedBefore
-    );
-    await upsertSyncMetaMappingDataByVault(
-      client.serviceType,
-      db,
-      state.key,
-      state.mtime_local,
-      state.size_local,
-      state.key,
-      remoteObjMeta.lastModified,
-      remoteObjMeta.size,
-      remoteObjMeta.etag,
-      vaultRandomID
-    );
-  } else if (state.decision === "clearhist") {
-    await clearDeleteRenameHistoryOfKeyAndVault(db, state.key, vaultRandomID);
+    await clearDeleteRenameHistoryOfKeyAndVault(db, r.key, vaultRandomID);
+  } else if (r.decision === "createFolder") {
+    if (!r.existLocal) {
+      await mkdirpInVault(r.key, vault);
+    }
+    if (!r.existRemote) {
+      const remoteObjMeta = await client.uploadToRemote(
+        r.key,
+        vault,
+        false,
+        password,
+        remoteEncryptedKey
+      );
+      await upsertSyncMetaMappingDataByVault(
+        client.serviceType,
+        db,
+        r.key,
+        r.mtimeLocal,
+        r.sizeLocal,
+        r.key,
+        remoteObjMeta.lastModified,
+        remoteObjMeta.size,
+        remoteObjMeta.etag,
+        vaultRandomID
+      );
+    }
+    await clearDeleteRenameHistoryOfKeyAndVault(db, r.key, vaultRandomID);
+  } else if (r.decision === "uploadLocalDelHistToRemoteFolder") {
+    if (r.existLocal) {
+      await localDeleteFunc(r.key);
+    }
+    if (r.existRemote) {
+      await client.deleteFromRemote(r.key, password, remoteEncryptedKey);
+    }
+    await clearDeleteRenameHistoryOfKeyAndVault(db, r.key, vaultRandomID);
+  } else if (r.decision === "keepRemoteDelHistFolder") {
+    if (r.existLocal) {
+      await localDeleteFunc(r.key);
+    }
+    if (r.existRemote) {
+      await client.deleteFromRemote(r.key, password, remoteEncryptedKey);
+    }
+    await clearDeleteRenameHistoryOfKeyAndVault(db, r.key, vaultRandomID);
+  } else if (r.decision === "skipFolder") {
+    // do nothing!
   } else {
-    throw Error("this should never happen!");
+    throw Error(`unknown decision in ${JSON.stringify(r)}`);
   }
 };
 
@@ -587,47 +844,63 @@ export const doActualSync = async (
   vaultRandomID: string,
   vault: Vault,
   syncPlan: SyncPlanType,
+  sortedKeys: string[],
+  metadataFile: FileOrFolderMixedState,
+  origMetadata: MetadataOnRemote,
+  deletions: DeletionOnRemote[],
+  localDeleteFunc: any,
   password: string = "",
   callbackSyncProcess?: any
 ) => {
-  const keyStates = syncPlan.mixedStates;
-  const foldersCreatedBefore = new Set<string>();
+  const mixedStates = syncPlan.mixedStates;
   let i = 0;
-  const totalCount = Object.keys(keyStates).length || 0;
-  for (const [k, v] of Object.entries(keyStates).sort(
-    ([k1, v1], [k2, v2]) => k2.length - k1.length
-  )) {
-    i += 1;
-    const k2 = k as string;
-    const v2 = v as FileOrFolderMixedState;
-    log.debug(`start syncing "${k2}" with plan ${JSON.stringify(v2)}`);
+  const totalCount = sortedKeys.length || 0;
+
+  log.debug(`start syncing extra data firstly`);
+  await uploadExtraMeta(
+    client,
+    metadataFile,
+    origMetadata,
+    deletions,
+    password
+  );
+  log.debug(`finish syncing extra data firstly`);
+
+  for (let i = 0; i < sortedKeys.length; ++i) {
+    const key = sortedKeys[i];
+    const val = mixedStates[key];
+
+    log.debug(`start syncing "${key}" with plan ${JSON.stringify(val)}`);
+
     if (callbackSyncProcess !== undefined) {
-      await callbackSyncProcess(i, totalCount, k2, v2.decision);
+      await callbackSyncProcess(i, totalCount, key, val.decision);
     }
+
     await dispatchOperationToActual(
-      k2,
+      key,
       vaultRandomID,
-      v2,
+      val,
       client,
       db,
       vault,
-      password,
-      foldersCreatedBefore
+      localDeleteFunc,
+      password
     );
-    log.info(`finished ${k2}`);
+    log.debug(`finished ${key}`);
+
+    // await Promise.all(
+    //   Object.entries(mixedStates).map(async ([k, v]) =>
+    //     dispatchOperationToActual(
+    //       k as string,
+    //       vaultRandomID,
+    //       v as FileOrFolderMixedState,
+    //       client,
+    //       db,
+    //       vault,
+    //       localDeleteFunc,
+    //       password
+    //     )
+    //   )
+    // );
   }
-  // await Promise.all(
-  //   Object.entries(keyStates)
-  //     .map(async ([k, v]) =>
-  //       dispatchOperationToActual(
-  //         k as string,
-  //         v as FileOrFolderMixedState,
-  //         client,
-  //         db,
-  //         vault,
-  //         password,
-  //         foldersCreatedBefore
-  //       )
-  //     )
-  // );
 };

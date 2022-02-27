@@ -624,7 +624,9 @@ export const uploadToRemote = async (
   isRecursively: boolean = false,
   password: string = "",
   remoteEncryptedKey: string = "",
-  foldersCreatedBefore: Set<string> | undefined = undefined
+  foldersCreatedBefore: Set<string> | undefined = undefined,
+  uploadRaw: boolean = false,
+  rawContent: string | ArrayBuffer = ""
 ) => {
   await client.init();
 
@@ -640,6 +642,9 @@ export const uploadToRemote = async (
   if (isFolder && isRecursively) {
     throw Error("upload function doesn't implement recursive function yet!");
   } else if (isFolder && !isRecursively) {
+    if (uploadRaw) {
+      throw Error(`you specify uploadRaw, but you also provide a folder key!`);
+    }
     // folder
     if (password === "") {
       // if not encrypted, mkdir a remote folder
@@ -682,7 +687,16 @@ export const uploadToRemote = async (
   } else {
     // file
     // we ignore isRecursively parameter here
-    const localContent = await vault.adapter.readBinary(fileOrFolderPath);
+    let localContent = undefined;
+    if (uploadRaw) {
+      if (typeof rawContent === "string") {
+        localContent = new TextEncoder().encode(rawContent);
+      } else {
+        localContent = rawContent;
+      }
+    } else {
+      localContent = await vault.adapter.readBinary(fileOrFolderPath);
+    }
     let remoteContent = localContent;
     if (password !== "") {
       remoteContent = await encryptArrayBuffer(localContent, password);
@@ -751,17 +765,21 @@ export const downloadFromRemote = async (
   vault: Vault,
   mtime: number,
   password: string = "",
-  remoteEncryptedKey: string = ""
+  remoteEncryptedKey: string = "",
+  skipSaving: boolean = false
 ) => {
   await client.init();
 
   const isFolder = fileOrFolderPath.endsWith("/");
 
-  await mkdirpInVault(fileOrFolderPath, vault);
+  if (!skipSaving) {
+    await mkdirpInVault(fileOrFolderPath, vault);
+  }
 
   if (isFolder) {
     // mkdirp locally is enough
     // do nothing here
+    return new ArrayBuffer(0);
   } else {
     let downloadFile = fileOrFolderPath;
     if (password !== "") {
@@ -773,9 +791,12 @@ export const downloadFromRemote = async (
     if (password !== "") {
       localContent = await decryptArrayBuffer(remoteContent, password);
     }
-    await vault.adapter.writeBinary(fileOrFolderPath, localContent, {
-      mtime: mtime,
-    });
+    if (!skipSaving) {
+      await vault.adapter.writeBinary(fileOrFolderPath, localContent, {
+        mtime: mtime,
+      });
+    }
+    return localContent;
   }
 };
 

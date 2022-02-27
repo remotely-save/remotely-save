@@ -38,7 +38,7 @@ export const isHiddenPath = (item: string, loose: boolean = true) => {
  * @param x string
  * @returns string[] might be empty
  */
-export const getFolderLevels = (x: string) => {
+export const getFolderLevels = (x: string, addEndingSlash: boolean = false) => {
   const res: string[] = [];
 
   if (x === "" || x === "/") {
@@ -48,10 +48,14 @@ export const getFolderLevels = (x: string) => {
   const y1 = x.split("/");
   let i = 0;
   for (let index = 0; index + 1 < y1.length; index++) {
-    const k = y1.slice(0, index + 1).join("/");
-    if (k !== "" && k !== "/") {
-      res.push(k);
+    let k = y1.slice(0, index + 1).join("/");
+    if (k === "" || k === "/") {
+      continue;
     }
+    if (addEndingSlash) {
+      k = `${k}/`;
+    }
+    res.push(k);
   }
   return res;
 };
@@ -155,6 +159,24 @@ export const getPathFolder = (a: string) => {
   }
   const b = path.posix.dirname(a);
   return b.endsWith("/") ? b : `${b}/`;
+};
+
+/**
+ * If input is already a folder, returns its folder;
+ * And if input is a file, returns its direname.
+ * @param a
+ * @returns
+ */
+export const getParentFolder = (a: string) => {
+  const b = path.posix.dirname(a);
+  if (b === "." || b === "/") {
+    // the root
+    return "/";
+  }
+  if (b.endsWith("/")) {
+    return b;
+  }
+  return `${b}/`;
 };
 
 /**

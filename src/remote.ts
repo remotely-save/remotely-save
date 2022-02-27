@@ -102,7 +102,9 @@ export class RemoteClient {
     isRecursively: boolean = false,
     password: string = "",
     remoteEncryptedKey: string = "",
-    foldersCreatedBefore: Set<string> | undefined = undefined
+    foldersCreatedBefore: Set<string> | undefined = undefined,
+    uploadRaw: boolean = false,
+    rawContent: string | ArrayBuffer = ""
   ) => {
     if (this.serviceType === "s3") {
       return await s3.uploadToRemote(
@@ -112,7 +114,9 @@ export class RemoteClient {
         vault,
         isRecursively,
         password,
-        remoteEncryptedKey
+        remoteEncryptedKey,
+        uploadRaw,
+        rawContent
       );
     } else if (this.serviceType === "webdav") {
       return await webdav.uploadToRemote(
@@ -121,7 +125,9 @@ export class RemoteClient {
         vault,
         isRecursively,
         password,
-        remoteEncryptedKey
+        remoteEncryptedKey,
+        uploadRaw,
+        rawContent
       );
     } else if (this.serviceType === "dropbox") {
       return await dropbox.uploadToRemote(
@@ -131,7 +137,9 @@ export class RemoteClient {
         isRecursively,
         password,
         remoteEncryptedKey,
-        foldersCreatedBefore
+        foldersCreatedBefore,
+        uploadRaw,
+        rawContent
       );
     } else if (this.serviceType === "onedrive") {
       return await onedrive.uploadToRemote(
@@ -141,7 +149,9 @@ export class RemoteClient {
         isRecursively,
         password,
         remoteEncryptedKey,
-        foldersCreatedBefore
+        foldersCreatedBefore,
+        uploadRaw,
+        rawContent
       );
     } else {
       throw Error(`not supported service type ${this.serviceType}`);
@@ -167,7 +177,8 @@ export class RemoteClient {
     vault: Vault,
     mtime: number,
     password: string = "",
-    remoteEncryptedKey: string = ""
+    remoteEncryptedKey: string = "",
+    skipSaving: boolean = false
   ) => {
     if (this.serviceType === "s3") {
       return await s3.downloadFromRemote(
@@ -177,7 +188,8 @@ export class RemoteClient {
         vault,
         mtime,
         password,
-        remoteEncryptedKey
+        remoteEncryptedKey,
+        skipSaving
       );
     } else if (this.serviceType === "webdav") {
       return await webdav.downloadFromRemote(
@@ -186,7 +198,8 @@ export class RemoteClient {
         vault,
         mtime,
         password,
-        remoteEncryptedKey
+        remoteEncryptedKey,
+        skipSaving
       );
     } else if (this.serviceType === "dropbox") {
       return await dropbox.downloadFromRemote(
@@ -195,7 +208,8 @@ export class RemoteClient {
         vault,
         mtime,
         password,
-        remoteEncryptedKey
+        remoteEncryptedKey,
+        skipSaving
       );
     } else if (this.serviceType === "onedrive") {
       return await onedrive.downloadFromRemote(
@@ -204,7 +218,8 @@ export class RemoteClient {
         vault,
         mtime,
         password,
-        remoteEncryptedKey
+        remoteEncryptedKey,
+        skipSaving
       );
     } else {
       throw Error(`not supported service type ${this.serviceType}`);
