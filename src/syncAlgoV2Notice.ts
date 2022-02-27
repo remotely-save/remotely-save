@@ -20,7 +20,7 @@ export class SyncAlgoV2Modal extends Modal {
     const texts = [
       "Welcome to use Remotely Save!",
 
-      "From this version 0.3.0, a new algorithm has been developed, but it needs uploading extra meta data files _remotely-save-metadata-on-remote.{json,bin} to YOUR configured cloud destinations, besides your notes.",
+      "From version 0.3.0, a new algorithm has been developed, but it needs uploading extra meta data files _remotely-save-metadata-on-remote.{json,bin} to YOUR configured cloud destinations, besides your notes.",
 
       "So that, for example, the second device can know that what files/folders have been deleted on the first device by reading those files.",
 
