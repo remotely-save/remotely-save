@@ -1,0 +1,37 @@
+name: Feature Request
+description: Some idea about new features
+title: "[Feature Request]: "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to fill out this bug report!
+  - type: textarea
+    id: what-are-you-expecting
+    attributes:
+      label: What feature are you suggesting?
+      description: What feature are you suggesting?
+    validations:
+      required: true
+  - type: dropdown
+    id: service
+    attributes:
+      label: What remote cloud services are you using, or suggesting adding the feature to?
+      multiple: true
+      options:
+        - S3
+        - OneDrive for personal
+        - Dropbox
+        - webdav
+        - others
+    validations:
+      required: false
+  - type: checkboxes
+    id: ensure-no-sensitive-information
+    attributes:
+      label: Ensure no sensitive information
+      description: By submitting this issue, you ensure that no sensitive information is submitted in the issue.
+      options:
+        - label: I ensure that no sensitive information is submitted in the issue.
+          required: true
