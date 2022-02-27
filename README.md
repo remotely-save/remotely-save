@@ -29,7 +29,7 @@ As of Jan 2022, the plugin is considered in BETA stage. **DO NOT USE IT for any 
 - **Scheduled auto sync supported.** You can also manually trigger the sync using sidebar ribbon, or using the command from the command palette (or even bind the hot key combination to the command then press the hot key combination).
 - **[Minimal Intrusive](./docs/minimal_intrusive_design.md).**
 - **Fully open source under [Apache-2.0 License](./LICENSE).**
-- **[Sync Algorithm open](./docs/sync_algorithm.md) for discussion.**
+- **[Sync Algorithm open](./docs/sync_algorithm_v2.md) for discussion.**
 
 ## Limitations
 
