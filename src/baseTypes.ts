@@ -56,6 +56,7 @@ export interface RemotelySavePluginSettings {
   currLogLevel?: string;
   vaultRandomID?: string;
   autoRunEveryMilliseconds?: number;
+  agreeToUploadExtraMetadata?: boolean;
 }
 
 export interface RemoteItem {
