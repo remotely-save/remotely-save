@@ -182,7 +182,7 @@ export const uploadToRemote = async (
     let localContent = undefined;
     if (uploadRaw) {
       if (typeof rawContent === "string") {
-        localContent = new TextEncoder().encode(rawContent);
+        localContent = new TextEncoder().encode(rawContent).buffer;
       } else {
         localContent = rawContent;
       }
