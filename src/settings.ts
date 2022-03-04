@@ -488,7 +488,7 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
     new Setting(s3Div)
       .setName("s3Region")
       .setDesc(
-        "s3Region: If you are not sure what to enter, you could try the vaule: us-east-1"
+        "s3Region: If you are not sure what to enter, you could try the value: us-east-1"
       )
       .addText((text) =>
         text
@@ -538,6 +538,20 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
             await this.plugin.saveSettings();
           })
       );
+      
+    new Setting(s3Div)
+      .setName("s3 URL Style")
+      .setDesc("Whether to use virtual-hosted style URLs (e.g. https://bucket.s3.amazonaws.com/) or path style URLs (e.g. https://s3.amazonaws.com/bucket/) for S3 objects.")
+      .addDropdown((dropdown) => {
+        dropdown.addOption("virtualHostedStyle", "Virtual Hosted Style");
+        dropdown.addOption("pathStyle", "Path Style");
+        dropdown
+          .setValue(this.plugin.settings.s3.forcePathStyle ? "pathStyle": "virtualHostedStyle")
+          .onChange(async (val: string) => {
+            this.plugin.settings.s3.forcePathStyle = (val == "pathStyle");
+            await this.plugin.saveSettings();
+          });
+      });
 
     new Setting(s3Div)
       .setName("check connectivity")
