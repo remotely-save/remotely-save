@@ -205,7 +205,8 @@ export const listFromRemote = async (
     confCmd.ContinuationToken = rsp.NextContinuationToken;
     if (
       isTruncated &&
-      (confCmd.ContinuationToken === undefined || confCmd.ContinuationToken === "")
+      (confCmd.ContinuationToken === undefined ||
+        confCmd.ContinuationToken === "")
     ) {
       throw Error("isTruncated is true but no continuationToken provided");
     }
