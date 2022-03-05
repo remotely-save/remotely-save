@@ -156,13 +156,20 @@ const fixLastModifiedTimeInplace = (allFilesFolders: RemoteItem[]) => {
 // see https://dropbox.tech/developers/pkce--what-and-why-
 ////////////////////////////////////////////////////////////////////////////////
 
-export const getAuthUrlAndVerifier = async (appKey: string) => {
+export const getAuthUrlAndVerifier = async (
+  appKey: string,
+  needManualPatse: boolean = false
+) => {
   const auth = new DropboxAuth({
     clientId: appKey,
   });
+
+  const callback = needManualPatse
+    ? undefined
+    : `obsidian://${COMMAND_CALLBACK_DROPBOX}`;
   const authUrl = (
     await auth.getAuthenticationUrl(
-      `obsidian://${COMMAND_CALLBACK_DROPBOX}`,
+      callback,
       undefined,
       "code",
       "offline",

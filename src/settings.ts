@@ -1,4 +1,11 @@
-import { App, Modal, Notice, PluginSettingTab, Setting } from "obsidian";
+import {
+  App,
+  Modal,
+  Notice,
+  PluginSettingTab,
+  Setting,
+  Platform,
+} from "obsidian";
 import type { SUPPORTED_SERVICES_TYPE, WebdavAuthType } from "./baseTypes";
 import { exportVaultSyncPlansToFiles } from "./debugMode";
 import { exportQrCodeUri } from "./importExport";
@@ -110,17 +117,45 @@ class DropboxAuthModal extends Modal {
   async onOpen() {
     let { contentEl } = this;
 
-    const { authUrl, verifier } = await getAuthUrlAndVerifierDropbox(
-      this.plugin.settings.dropbox.clientID
-    );
-    this.plugin.oauth2Info.verifier = verifier;
+    let needManualPatse = false;
+    const userAgent = window.navigator.userAgent.toLocaleLowerCase() || "";
+    // some users report that,
+    // the Linux would open another instance Obsidian if jumping back,
+    // so fallback to manual paste on Linux
+    if (
+      Platform.isDesktopApp &&
+      !Platform.isMacOS &&
+      (/linux/.test(userAgent) ||
+        /ubuntu/.test(userAgent) ||
+        /debian/.test(userAgent) ||
+        /fedora/.test(userAgent) ||
+        /centos/.test(userAgent))
+    ) {
+      needManualPatse = true;
+    }
 
-    contentEl.createEl("p", {
-      text: "Visit the address in a browser, and follow the steps.",
-    });
-    contentEl.createEl("p", {
-      text: "Finally you should be redirected to Obsidian.",
-    });
+    const { authUrl, verifier } = await getAuthUrlAndVerifierDropbox(
+      this.plugin.settings.dropbox.clientID,
+      needManualPatse
+    );
+
+    if (needManualPatse) {
+      contentEl.createEl("p", {
+        text: "Step 1: Visit the address in a browser, and follow the steps.",
+      });
+      contentEl.createEl("p", {
+        text: 'Step 2: In the end of the web flow, you obtain a long code. Paste it here then click "Submit".',
+      });
+    } else {
+      this.plugin.oauth2Info.verifier = verifier;
+
+      contentEl.createEl("p", {
+        text: "Visit the address in a browser, and follow the steps.",
+      });
+      contentEl.createEl("p", {
+        text: "Finally you should be redirected to Obsidian.",
+      });
+    }
 
     const div2 = contentEl.createDiv();
     div2.createEl(
@@ -140,6 +175,70 @@ class DropboxAuthModal extends Modal {
       href: authUrl,
       text: authUrl,
     });
+
+    if (needManualPatse) {
+      let authCode = "";
+      new Setting(contentEl)
+        .setName("Auth Code from web page")
+        .setDesc('You need to click "Confirm".')
+        .addText((text) =>
+          text
+            .setPlaceholder("")
+            .setValue("")
+            .onChange((val) => {
+              authCode = val.trim();
+            })
+        )
+        .addButton(async (button) => {
+          button.setButtonText("Confirm");
+          button.onClick(async () => {
+            new Notice("Trying to connect to Dropbox");
+            try {
+              const authRes = await sendAuthReqDropbox(
+                this.plugin.settings.dropbox.clientID,
+                verifier,
+                authCode
+              );
+              const self = this;
+              setConfigBySuccessfullAuthInplace(
+                this.plugin.settings.dropbox,
+                authRes,
+                () => self.plugin.saveSettings()
+              );
+              const client = new RemoteClient(
+                "dropbox",
+                undefined,
+                undefined,
+                this.plugin.settings.dropbox,
+                undefined,
+                this.app.vault.getName(),
+                () => self.plugin.saveSettings()
+              );
+              const username = await client.getUser();
+              this.plugin.settings.dropbox.username = username;
+              await this.plugin.saveSettings();
+              new Notice(
+                `Good! We've connected to Dropbox as user ${username}!`
+              );
+              this.authDiv.toggleClass(
+                "dropbox-auth-button-hide",
+                this.plugin.settings.dropbox.username !== ""
+              );
+              this.revokeAuthDiv.toggleClass(
+                "dropbox-revoke-auth-button-hide",
+                this.plugin.settings.dropbox.username === ""
+              );
+              this.revokeAuthSetting.setDesc(
+                `You've connected as user ${this.plugin.settings.dropbox.username}. If you want to disconnect, click this button.`
+              );
+              this.close();
+            } catch (err) {
+              console.error(err);
+              new Notice("Something goes wrong while connecting to Dropbox.");
+            }
+          });
+        });
+    }
   }
 
   onClose() {
