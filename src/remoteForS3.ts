@@ -190,7 +190,6 @@ export const listFromRemote = async (
   const contents = [] as _Object[];
 
   let isTruncated = true;
-  let continuationToken = "";
   do {
     const rsp = await s3Client.send(new ListObjectsV2Command(confCmd));
 
@@ -206,7 +205,7 @@ export const listFromRemote = async (
     confCmd.ContinuationToken = rsp.NextContinuationToken;
     if (
       isTruncated &&
-      (continuationToken === undefined || continuationToken === "")
+      (confCmd.ContinuationToken === undefined || confCmd.ContinuationToken === "")
     ) {
       throw Error("isTruncated is true but no continuationToken provided");
     }
