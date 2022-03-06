@@ -301,7 +301,7 @@ const ensembleMixedStates = async (
       r = {
         key: entry.path,
         existLocal: true,
-        mtimeLocal: entry.stat.mtime,
+        mtimeLocal: Math.max(entry.stat.mtime, entry.stat.ctime),
         sizeLocal: entry.stat.size,
       };
     } else if (entry instanceof TFolder) {
