@@ -113,3 +113,5 @@ export interface FileOrFolderMixedState {
   syncDone?: "done";
   remoteEncryptedKey?: string;
 }
+
+export const API_VER_STAT_FOLDER = "0.13.27";

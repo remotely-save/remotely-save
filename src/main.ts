@@ -199,6 +199,7 @@ export default class RemotelySavePlugin extends Plugin {
         origMetadataOnRemote.deletions,
         localHistory,
         client.serviceType,
+        this.app.vault,
         this.settings.password
       );
       log.info(plan.mixedStates); // for debugging

@@ -1,9 +1,16 @@
-import { TAbstractFile, TFile, TFolder, Vault } from "obsidian";
-import type {
+import {
+  TAbstractFile,
+  TFile,
+  TFolder,
+  Vault,
+  requireApiVersion,
+} from "obsidian";
+import {
   RemoteItem,
   SUPPORTED_SERVICES_TYPE,
   DecisionType,
   FileOrFolderMixedState,
+  API_VER_STAT_FOLDER,
 } from "./baseTypes";
 import {
   decryptBase32ToString,
@@ -505,9 +512,10 @@ const assignOperationToFileInplace = (
   throw Error(`no decision for ${JSON.stringify(r)}`);
 };
 
-const assignOperationToFolderInplace = (
+const assignOperationToFolderInplace = async (
   origRecord: FileOrFolderMixedState,
   keptFolder: Set<string>,
+  vault: Vault,
   password: string = ""
 ) => {
   let r = origRecord;
@@ -523,10 +531,42 @@ const assignOperationToFolderInplace = (
 
     if (r.deltimeLocal !== undefined || r.deltimeRemote !== undefined) {
       // it has some deletion "commands"
-      if (
-        r.deltimeLocal !== undefined &&
-        r.deltimeLocal >= (r.deltimeRemote !== undefined ? r.deltimeRemote : -1)
-      ) {
+
+      const deltimeLocal = r.deltimeLocal !== undefined ? r.deltimeLocal : -1;
+      const deltimeRemote =
+        r.deltimeRemote !== undefined ? r.deltimeRemote : -1;
+
+      // if it was created after deletion, we should keep it as is
+      if (requireApiVersion(API_VER_STAT_FOLDER)) {
+        if (r.existLocal) {
+          try {
+            const { ctime, mtime } = await vault.adapter.stat(r.key);
+            const cmtime = Math.max(ctime, mtime);
+            if (
+              cmtime > 0 &&
+              cmtime >= deltimeLocal &&
+              cmtime >= deltimeRemote
+            ) {
+              keptFolder.add(getParentFolder(r.key));
+              if (r.existLocal && r.existRemote) {
+                r.decision = "skipFolder";
+                r.decisionBranch = 14;
+              } else if (r.existLocal || r.existRemote) {
+                r.decision = "createFolder";
+                r.decisionBranch = 15;
+              } else {
+                throw Error(
+                  `Error: Folder ${r.key} doesn't exist locally and remotely but is marked must be kept. Abort.`
+                );
+              }
+            }
+          } catch (error) {
+            // pass
+          }
+        }
+      }
+
+      if (deltimeLocal > 0 && deltimeLocal > deltimeRemote) {
         r.decision = "uploadLocalDelHistToRemoteFolder";
         r.decisionBranch = 8;
       } else {
@@ -585,6 +625,7 @@ export const getSyncPlan = async (
   remoteDeleteHistory: DeletionOnRemote[],
   localDeleteHistory: FileFolderHistoryRecord[],
   remoteType: SUPPORTED_SERVICES_TYPE,
+  vault: Vault,
   password: string = ""
 ) => {
   const mixedStates = await ensembleMixedStates(
@@ -609,7 +650,7 @@ export const getSyncPlan = async (
       // decide some folders
       // because the keys are sorted by length
       // so all the children must have been shown up before in the iteration
-      assignOperationToFolderInplace(val, keptFolder, password);
+      await assignOperationToFolderInplace(val, keptFolder, vault, password);
     } else {
       // get all operations of files
       // and at the same time get some helper info for folders

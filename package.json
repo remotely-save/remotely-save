@@ -1,6 +1,6 @@
 {
   "name": "remotely-save",
-  "version": "0.3.2",
+  "version": "0.3.3",
   "description": "This is yet another sync plugin for Obsidian app.",
   "scripts": {
     "dev2": "node esbuild.config.mjs",
@@ -70,7 +70,7 @@
     "loglevel": "^1.8.0",
     "mime-types": "^2.1.33",
     "nanoid": "^3.1.30",
-    "obsidian": "^0.12.0",
+    "obsidian": "^0.13.26",
     "path-browserify": "^1.0.1",
     "process": "^0.11.10",
     "qrcode": "^1.5.0",
