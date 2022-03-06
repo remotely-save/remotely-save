@@ -56,6 +56,7 @@ export interface RemotelySavePluginSettings {
   currLogLevel?: string;
   vaultRandomID?: string;
   autoRunEveryMilliseconds?: number;
+  initRunAfterMilliseconds?: number;
   agreeToUploadExtraMetadata?: boolean;
   concurrency?: number;
 }

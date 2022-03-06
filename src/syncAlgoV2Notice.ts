@@ -60,6 +60,7 @@ export class SyncAlgoV2Modal extends Modal {
       log.info("agree to use the new algorithm");
       this.plugin.saveAgreeToUseNewSyncAlgorithm();
       this.plugin.enableAutoSyncIfSet();
+      this.plugin.enableInitSyncIfSet();
     } else {
       log.info("do not agree to use the new algorithm");
       this.plugin.unload();

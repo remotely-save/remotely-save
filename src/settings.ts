@@ -521,6 +521,31 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
           });
       });
 
+    const runOnceStartUpDiv = generalDiv.createEl("div");
+    new Setting(runOnceStartUpDiv)
+      .setName("run once on start up automatically")
+      .setDesc(
+        `This settings allows setting running ONCE on start up automatically. This will take effect on NEXT start up after changing. This setting, is different from "schedule for auto run" which starts syncing after EVERY interval.`
+      )
+      .addDropdown((dropdown) => {
+        dropdown.addOption("-1", "(not set)");
+        dropdown.addOption(
+          `${1000 * 10 * 1}`,
+          "sync once after 10 seconds of start up"
+        );
+        dropdown.addOption(
+          `${1000 * 30 * 1}`,
+          "sync once after 30 seconds of start up"
+        );
+        dropdown
+          .setValue(`${this.plugin.settings.initRunAfterMilliseconds}`)
+          .onChange(async (val: string) => {
+            const realVal = parseInt(val);
+            this.plugin.settings.initRunAfterMilliseconds = realVal;
+            await this.plugin.saveSettings();
+          });
+      });
+
     const concurrencyDiv = generalDiv.createEl("div");
     new Setting(concurrencyDiv)
       .setName("Concurrency")

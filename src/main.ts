@@ -53,6 +53,7 @@ const DEFAULT_SETTINGS: RemotelySavePluginSettings = {
   currLogLevel: "info",
   vaultRandomID: "",
   autoRunEveryMilliseconds: -1,
+  initRunAfterMilliseconds: -1,
   agreeToUploadExtraMetadata: false,
   concurrency: 5,
 };
@@ -65,7 +66,7 @@ interface OAuth2Info {
   revokeAuthSetting?: Setting;
 }
 
-type SyncTriggerSourceType = "manual" | "auto" | "dry";
+type SyncTriggerSourceType = "manual" | "auto" | "dry" | "autoOnceInit";
 
 const iconNameSyncWait = `remotely-save-sync-wait`;
 const iconNameSyncRunning = `remotely-save-sync-running`;
@@ -534,6 +535,9 @@ export default class RemotelySavePlugin extends Plugin {
     if (!this.settings.agreeToUploadExtraMetadata) {
       const syncAlgoV2Modal = new SyncAlgoV2Modal(this.app, this);
       syncAlgoV2Modal.open();
+    } else {
+      this.enableAutoSyncIfSet();
+      this.enableInitSyncIfSet();
     }
   }
 
@@ -662,11 +666,27 @@ export default class RemotelySavePlugin extends Plugin {
       this.settings.autoRunEveryMilliseconds !== null &&
       this.settings.autoRunEveryMilliseconds > 0
     ) {
-      const intervalID = window.setInterval(() => {
-        this.syncRun("auto");
-      }, this.settings.autoRunEveryMilliseconds);
-      this.autoRunIntervalID = intervalID;
-      this.registerInterval(intervalID);
+      this.app.workspace.onLayoutReady(() => {
+        const intervalID = window.setInterval(() => {
+          this.syncRun("auto");
+        }, this.settings.autoRunEveryMilliseconds);
+        this.autoRunIntervalID = intervalID;
+        this.registerInterval(intervalID);
+      });
+    }
+  }
+
+  enableInitSyncIfSet() {
+    if (
+      this.settings.initRunAfterMilliseconds !== undefined &&
+      this.settings.initRunAfterMilliseconds !== null &&
+      this.settings.initRunAfterMilliseconds > 0
+    ) {
+      this.app.workspace.onLayoutReady(() => {
+        window.setTimeout(() => {
+          this.syncRun("autoOnceInit");
+        }, this.settings.initRunAfterMilliseconds);
+      });
     }
   }
 
