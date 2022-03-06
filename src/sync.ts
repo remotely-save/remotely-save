@@ -937,12 +937,18 @@ export const doActualSync = async (
   } else {
     let realCounter = 0;
 
-    log.debug(`1. create all folders from shadowest to deepest`);
+    log.debug(
+      `1. create all folders from shadowest to deepest, also check undefined decision`
+    );
     for (let i = sortedKeys.length - 1; i >= 0; --i) {
       const key = sortedKeys[i];
       const val = mixedStates[key];
 
-      if (val.decision === "skipFolder" || val.decision === "createFolder") {
+      if (
+        val.decision === undefined ||
+        val.decision === "skipFolder" ||
+        val.decision === "createFolder"
+      ) {
         log.debug(`start syncing "${key}" with plan ${JSON.stringify(val)}`);
 
         if (callbackSyncProcess !== undefined) {
