@@ -5,6 +5,7 @@ import {
   Vault,
   requireApiVersion,
 } from "obsidian";
+import PQueue from "p-queue";
 import {
   RemoteItem,
   SUPPORTED_SERVICES_TYPE,
@@ -891,10 +892,10 @@ export const doActualSync = async (
   deletions: DeletionOnRemote[],
   localDeleteFunc: any,
   password: string = "",
+  concurrency: number = 1,
   callbackSyncProcess?: any
 ) => {
   const mixedStates = syncPlan.mixedStates;
-  let i = 0;
   const totalCount = sortedKeys.length || 0;
 
   log.debug(`start syncing extra data firstly`);
@@ -907,41 +908,139 @@ export const doActualSync = async (
   );
   log.debug(`finish syncing extra data firstly`);
 
-  for (let i = 0; i < sortedKeys.length; ++i) {
-    const key = sortedKeys[i];
-    const val = mixedStates[key];
+  log.debug(`concurrency === ${concurrency}`);
+  if (concurrency === 1) {
+    // run everything in sequence
+    // good old way
+    for (let i = 0; i < sortedKeys.length; ++i) {
+      const key = sortedKeys[i];
+      const val = mixedStates[key];
 
-    log.debug(`start syncing "${key}" with plan ${JSON.stringify(val)}`);
+      log.debug(`start syncing "${key}" with plan ${JSON.stringify(val)}`);
 
-    if (callbackSyncProcess !== undefined) {
-      await callbackSyncProcess(i, totalCount, key, val.decision);
+      if (callbackSyncProcess !== undefined) {
+        await callbackSyncProcess(i, totalCount, key, val.decision);
+      }
+
+      await dispatchOperationToActual(
+        key,
+        vaultRandomID,
+        val,
+        client,
+        db,
+        vault,
+        localDeleteFunc,
+        password
+      );
+      log.debug(`finished ${key}`);
+    }
+  } else {
+    let realCounter = 0;
+
+    log.debug(`1. create all folders from shadowest to deepest`);
+    for (let i = sortedKeys.length - 1; i >= 0; --i) {
+      const key = sortedKeys[i];
+      const val = mixedStates[key];
+
+      if (val.decision === "skipFolder" || val.decision === "createFolder") {
+        log.debug(`start syncing "${key}" with plan ${JSON.stringify(val)}`);
+
+        if (callbackSyncProcess !== undefined) {
+          await callbackSyncProcess(realCounter, totalCount, key, val.decision);
+        }
+        realCounter += 1;
+
+        await dispatchOperationToActual(
+          key,
+          vaultRandomID,
+          val,
+          client,
+          db,
+          vault,
+          localDeleteFunc,
+          password
+        );
+        log.debug(`finished ${key}`);
+      }
     }
 
-    await dispatchOperationToActual(
-      key,
-      vaultRandomID,
-      val,
-      client,
-      db,
-      vault,
-      localDeleteFunc,
-      password
-    );
-    log.debug(`finished ${key}`);
+    log.debug(`2. delete files and folders from deepest to shadowest`);
+    for (let i = 0; i < sortedKeys.length; ++i) {
+      const key = sortedKeys[i];
+      const val = mixedStates[key];
+      if (
+        val.decision === "uploadLocalDelHistToRemoteFolder" ||
+        val.decision === "keepRemoteDelHistFolder"
+      ) {
+        log.debug(`start syncing "${key}" with plan ${JSON.stringify(val)}`);
 
-    // await Promise.all(
-    //   Object.entries(mixedStates).map(async ([k, v]) =>
-    //     dispatchOperationToActual(
-    //       k as string,
-    //       vaultRandomID,
-    //       v as FileOrFolderMixedState,
-    //       client,
-    //       db,
-    //       vault,
-    //       localDeleteFunc,
-    //       password
-    //     )
-    //   )
-    // );
+        if (callbackSyncProcess !== undefined) {
+          await callbackSyncProcess(realCounter, totalCount, key, val.decision);
+        }
+        realCounter += 1;
+
+        await dispatchOperationToActual(
+          key,
+          vaultRandomID,
+          val,
+          client,
+          db,
+          vault,
+          localDeleteFunc,
+          password
+        );
+        log.debug(`finished ${key}`);
+      }
+    }
+
+    log.debug(
+      `3. upload or download files in parallel, with the desired concurrency=${concurrency}`
+    );
+    const queue = new PQueue({ concurrency: concurrency, autoStart: true });
+
+    // const commands: any[] = [];
+
+    for (let i = 0; i < sortedKeys.length; ++i) {
+      const key = sortedKeys[i];
+      const val = mixedStates[key];
+      if (
+        val.decision === "skipUploading" ||
+        val.decision === "uploadLocalDelHistToRemote" ||
+        val.decision === "keepRemoteDelHist" ||
+        val.decision === "uploadLocalToRemote" ||
+        val.decision === "downloadRemoteToLocal"
+      ) {
+        const fn = async () => {
+          log.debug(`start syncing "${key}" with plan ${JSON.stringify(val)}`);
+
+          if (callbackSyncProcess !== undefined) {
+            await callbackSyncProcess(
+              realCounter,
+              totalCount,
+              key,
+              val.decision
+            );
+
+            realCounter += 1;
+          }
+
+          await dispatchOperationToActual(
+            key,
+            vaultRandomID,
+            val,
+            client,
+            db,
+            vault,
+            localDeleteFunc,
+            password
+          );
+
+          log.debug(`finished ${key}`);
+        };
+        queue.add(fn);
+      }
+    }
+
+    await queue.onIdle();
   }
 };

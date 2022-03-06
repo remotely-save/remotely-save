@@ -521,6 +521,27 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
           });
       });
 
+    const concurrencyDiv = generalDiv.createEl("div");
+    new Setting(concurrencyDiv)
+      .setName("Concurrency")
+      .setDesc(
+        "How many files do you want to download or upload in parallel at most?"
+      )
+      .addDropdown((dropdown) => {
+        dropdown.addOption("1", "1");
+        dropdown.addOption("2", "2");
+        dropdown.addOption("5", "5");
+        dropdown.addOption("10", "10");
+
+        dropdown
+          .setValue(`${this.plugin.settings.concurrency}`)
+          .onChange(async (val) => {
+            const realVal = parseInt(val);
+            this.plugin.settings.concurrency = realVal;
+            await this.plugin.saveSettings();
+          });
+      });
+
     //////////////////////////////////////////////////
     // below for general chooser (part 1/2)
     //////////////////////////////////////////////////

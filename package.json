@@ -71,6 +71,7 @@
     "mime-types": "^2.1.33",
     "nanoid": "^3.1.30",
     "obsidian": "^0.13.26",
+    "p-queue": "^7.2.0",
     "path-browserify": "^1.0.1",
     "process": "^0.11.10",
     "qrcode": "^1.5.0",

@@ -54,6 +54,7 @@ const DEFAULT_SETTINGS: RemotelySavePluginSettings = {
   vaultRandomID: "",
   autoRunEveryMilliseconds: -1,
   agreeToUploadExtraMetadata: false,
+  concurrency: 5,
 };
 
 interface OAuth2Info {
@@ -230,6 +231,7 @@ export default class RemotelySavePlugin extends Plugin {
           deletions,
           (key: string) => self.trash(key),
           this.settings.password,
+          this.settings.concurrency,
           (i: number, totalCount: number, pathName: string, decision: string) =>
             self.setCurrSyncMsg(i, totalCount, pathName, decision)
         );

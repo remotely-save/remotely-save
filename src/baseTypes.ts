@@ -57,6 +57,7 @@ export interface RemotelySavePluginSettings {
   vaultRandomID?: string;
   autoRunEveryMilliseconds?: number;
   agreeToUploadExtraMetadata?: boolean;
+  concurrency?: number;
 }
 
 export interface RemoteItem {
