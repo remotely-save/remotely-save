@@ -550,13 +550,16 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
     new Setting(concurrencyDiv)
       .setName("Concurrency")
       .setDesc(
-        "How many files do you want to download or upload in parallel at most?"
+        "How many files do you want to download or upload in parallel at most? By default it's set to 5. If you meet any problems such as rate limit, you can reduce the concurrency to a lower value."
       )
       .addDropdown((dropdown) => {
         dropdown.addOption("1", "1");
         dropdown.addOption("2", "2");
-        dropdown.addOption("5", "5");
+        dropdown.addOption("3", "3");
+        dropdown.addOption("5", "5 (default)");
         dropdown.addOption("10", "10");
+        dropdown.addOption("15", "15");
+        dropdown.addOption("20", "20");
 
         dropdown
           .setValue(`${this.plugin.settings.concurrency}`)
