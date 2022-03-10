@@ -11,11 +11,26 @@ import {
   S3Client,
 } from "@aws-sdk/client-s3";
 import { Upload } from "@aws-sdk/lib-storage";
+import { HttpHandler, HttpRequest, HttpResponse } from "@aws-sdk/protocol-http";
+import {
+  FetchHttpHandler,
+  FetchHttpHandlerOptions,
+} from "@aws-sdk/fetch-http-handler";
+// @ts-ignore
+import { requestTimeout } from "@aws-sdk/fetch-http-handler/dist-es/request-timeout";
+import { buildQueryString } from "@aws-sdk/querystring-builder";
+import { HeaderBag, HttpHandlerOptions, Provider } from "@aws-sdk/types";
 import { Buffer } from "buffer";
 import * as mime from "mime-types";
-import { Vault } from "obsidian";
+import {
+  Vault,
+  requestUrl,
+  RequestUrlParam,
+  RequestUrlResponse,
+  requireApiVersion,
+} from "obsidian";
 import { Readable } from "stream";
-import { RemoteItem, S3Config } from "./baseTypes";
+import { API_VER_REQURL, RemoteItem, S3Config } from "./baseTypes";
 import { decryptArrayBuffer, encryptArrayBuffer } from "./encrypt";
 import {
   arrayBufferToBuffer,
@@ -28,12 +43,117 @@ export { S3Client } from "@aws-sdk/client-s3";
 import * as origLog from "loglevel";
 const log = origLog.getLogger("rs-default");
 
+////////////////////////////////////////////////////////////////////////////////
+// special handler using Obsidian requestUrl
+////////////////////////////////////////////////////////////////////////////////
+
+/**
+ * This is close to origin implementation of FetchHttpHandler
+ * https://github.com/aws/aws-sdk-js-v3/blob/main/packages/fetch-http-handler/src/fetch-http-handler.ts
+ * that is released under Apache 2 License.
+ * But this uses Obsidian requestUrl instead.
+ */
+class ObsHttpHandler extends FetchHttpHandler {
+  requestTimeoutInMs: number;
+  constructor(options?: FetchHttpHandlerOptions) {
+    super(options);
+    this.requestTimeoutInMs =
+      options === undefined ? undefined : options.requestTimeout;
+  }
+  async handle(
+    request: HttpRequest,
+    { abortSignal }: HttpHandlerOptions = {}
+  ): Promise<{ response: HttpResponse }> {
+    if (abortSignal?.aborted) {
+      const abortError = new Error("Request aborted");
+      abortError.name = "AbortError";
+      return Promise.reject(abortError);
+    }
+
+    let path = request.path;
+    if (request.query) {
+      const queryString = buildQueryString(request.query);
+      if (queryString) {
+        path += `?${queryString}`;
+      }
+    }
+
+    const { port, method } = request;
+    const url = `${request.protocol}//${request.hostname}${
+      port ? `:${port}` : ""
+    }${path}`;
+    const body =
+      method === "GET" || method === "HEAD" ? undefined : request.body;
+
+    const transformedHeaders = { ...request.headers };
+    delete transformedHeaders["host"];
+    delete transformedHeaders["Host"];
+    delete transformedHeaders["content-length"];
+    delete transformedHeaders["Content-Length"];
+
+    let contentType: string = undefined;
+    if (transformedHeaders["content-type"] !== undefined) {
+      contentType = transformedHeaders["content-type"];
+    }
+
+    let transformedBody: any = body;
+    if (ArrayBuffer.isView(body)) {
+      transformedBody = bufferToArrayBuffer(body);
+    }
+
+    const param: RequestUrlParam = {
+      body: transformedBody,
+      headers: transformedHeaders,
+      method: method,
+      url: url,
+      contentType: contentType,
+    };
+
+    const raceOfPromises = [
+      requestUrl(param).then((rsp) => {
+        const stream = new ReadableStream<Uint8Array>({
+          start(controller) {
+            controller.enqueue(new Uint8Array(rsp.arrayBuffer));
+            controller.close();
+          },
+        });
+        return {
+          response: new HttpResponse({
+            headers: rsp.headers,
+            statusCode: rsp.status,
+            body: stream,
+          }),
+        };
+      }),
+      requestTimeout(this.requestTimeoutInMs),
+    ];
+
+    if (abortSignal) {
+      raceOfPromises.push(
+        new Promise<never>((resolve, reject) => {
+          abortSignal.onabort = () => {
+            const abortError = new Error("Request aborted");
+            abortError.name = "AbortError";
+            reject(abortError);
+          };
+        })
+      );
+    }
+    return Promise.race(raceOfPromises);
+  }
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// other stuffs
+////////////////////////////////////////////////////////////////////////////////
+
 export const DEFAULT_S3_CONFIG = {
   s3Endpoint: "",
   s3Region: "",
   s3AccessKeyID: "",
   s3SecretAccessKey: "",
   s3BucketName: "",
+  bypassCorsLocally: true,
 };
 
 export type S3ObjectType = _Object;
@@ -66,15 +186,29 @@ export const getS3Client = (s3Config: S3Config) => {
   if (!(endpoint.startsWith("http://") || endpoint.startsWith("https://"))) {
     endpoint = `https://${endpoint}`;
   }
-  const s3Client = new S3Client({
-    region: s3Config.s3Region,
-    endpoint: endpoint,
-    credentials: {
-      accessKeyId: s3Config.s3AccessKeyID,
-      secretAccessKey: s3Config.s3SecretAccessKey,
-    },
-  });
-  return s3Client;
+
+  if (requireApiVersion(API_VER_REQURL) && s3Config.bypassCorsLocally) {
+    const s3Client = new S3Client({
+      region: s3Config.s3Region,
+      endpoint: endpoint,
+      credentials: {
+        accessKeyId: s3Config.s3AccessKeyID,
+        secretAccessKey: s3Config.s3SecretAccessKey,
+      },
+      requestHandler: new ObsHttpHandler(),
+    });
+    return s3Client;
+  } else {
+    const s3Client = new S3Client({
+      region: s3Config.s3Region,
+      endpoint: endpoint,
+      credentials: {
+        accessKeyId: s3Config.s3AccessKeyID,
+        secretAccessKey: s3Config.s3SecretAccessKey,
+      },
+    });
+    return s3Client;
+  }
 };
 
 export const getRemoteMeta = async (
@@ -152,12 +286,13 @@ export const uploadToRemote = async (
     if (password !== "") {
       remoteContent = await encryptArrayBuffer(localContent, password);
     }
-    const body = arrayBufferToBuffer(remoteContent);
 
+    const bytesIn5MB = 5242880;
+    const body = new Uint8Array(remoteContent);
     const upload = new Upload({
       client: s3Client,
       queueSize: 20, // concurrency
-      partSize: 5242880, // minimal 5MB by default
+      partSize: bytesIn5MB, // minimal 5MB by default
       leavePartsOnError: false,
       params: {
         Bucket: s3Config.s3BucketName,

@@ -5,8 +5,13 @@ import {
   PluginSettingTab,
   Setting,
   Platform,
+  requireApiVersion,
 } from "obsidian";
-import type { SUPPORTED_SERVICES_TYPE, WebdavAuthType } from "./baseTypes";
+import {
+  API_VER_REQURL,
+  SUPPORTED_SERVICES_TYPE,
+  WebdavAuthType,
+} from "./baseTypes";
 import { exportVaultSyncPlansToFiles } from "./debugMode";
 import { exportQrCodeUri } from "./importExport";
 import {
@@ -595,9 +600,11 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
       cls: "s3-disclaimer",
     });
 
-    s3Div.createEl("p", {
-      text: "You need to configure CORS to allow requests from origin app://obsidian.md and capacitor://localhost and http://localhost",
-    });
+    if (!requireApiVersion(API_VER_REQURL)) {
+      s3Div.createEl("p", {
+        text: "You need to configure CORS to allow requests from origin app://obsidian.md and capacitor://localhost and http://localhost",
+      });
+    }
 
     s3Div.createEl("p", {
       text: "Some Amazon S3 official docs for references:",
@@ -615,10 +622,12 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
       text: "Access key ID and Secret access key info",
     });
 
-    s3LinksUl.createEl("li").createEl("a", {
-      href: "https://docs.aws.amazon.com/AmazonS3/latest/userguide/enabling-cors-examples.html",
-      text: "Configuring CORS",
-    });
+    if (!requireApiVersion(API_VER_REQURL)) {
+      s3LinksUl.createEl("li").createEl("a", {
+        href: "https://docs.aws.amazon.com/AmazonS3/latest/userguide/enabling-cors-examples.html",
+        text: "Configuring CORS",
+      });
+    }
 
     new Setting(s3Div)
       .setName("s3Endpoint")
@@ -686,6 +695,34 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
             await this.plugin.saveSettings();
           })
       );
+
+    if (requireApiVersion(API_VER_REQURL)) {
+      new Setting(s3Div)
+        .setName("bypass CORS issue locally")
+        .setDesc(
+          `The plugin allows skipping server CORS config in new version (Obsidian>=${API_VER_REQURL}). If you encounter any issues, please disable this setting and config CORS (app://obsidian.md and capacitor://localhost and http://localhost) on server.`
+        )
+        .addDropdown((dropdown) => {
+          dropdown
+            .addOption("disable", "disable")
+            .addOption("enable", "enable");
+
+          dropdown
+            .setValue(
+              `${
+                this.plugin.settings.s3.bypassCorsLocally ? "enable" : "disable"
+              }`
+            )
+            .onChange(async (value) => {
+              if (value === "enable") {
+                this.plugin.settings.s3.bypassCorsLocally = true;
+              } else {
+                this.plugin.settings.s3.bypassCorsLocally = false;
+              }
+              await this.plugin.saveSettings();
+            });
+        });
+    }
 
     new Setting(s3Div)
       .setName("check connectivity")
@@ -960,9 +997,11 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
       cls: "webdav-disclaimer",
     });
 
-    webdavDiv.createEl("p", {
-      text: "You need to configure CORS to allow requests from origin app://obsidian.md and capacitor://localhost and http://localhost",
-    });
+    if (!requireApiVersion(API_VER_REQURL)) {
+      webdavDiv.createEl("p", {
+        text: "You need to configure CORS to allow requests from origin app://obsidian.md and capacitor://localhost and http://localhost",
+      });
+    }
 
     webdavDiv.createEl("p", {
       text: `We will create and sync inside the folder /${this.app.vault.getName()} on your server.`,
@@ -1010,9 +1049,20 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
     new Setting(webdavDiv)
       .setName("server auth type")
       .setDesc("If no password, this option would be ignored.")
-      .addDropdown((dropdown) => {
+      .addDropdown(async (dropdown) => {
         dropdown.addOption("basic", "basic");
-        // dropdown.addOption("digest", "digest");
+        if (requireApiVersion(API_VER_REQURL)) {
+          dropdown.addOption("digest", "digest");
+        }
+
+        // new version config, copied to old version, we need to reset it
+        if (
+          !requireApiVersion(API_VER_REQURL) &&
+          this.plugin.settings.webdav.authType !== "basic"
+        ) {
+          this.plugin.settings.webdav.authType = "basic";
+          await this.plugin.saveSettings();
+        }
 
         dropdown
           .setValue(this.plugin.settings.webdav.authType)
@@ -1067,8 +1117,13 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
           if (res) {
             new Notice("Great! The webdav server can be accessed.");
           } else {
+            let corsErrMsg = "/CORS";
+            if (requireApiVersion(API_VER_REQURL)) {
+              corsErrMsg = "";
+            }
+
             new Notice(
-              "The webdav server cannot be reached (possible to be any of address/username/password/authtype/CORS errors)."
+              `The webdav server cannot be reached (possible to be any of address/username/password/authtype${corsErrMsg} errors).`
             );
           }
         });

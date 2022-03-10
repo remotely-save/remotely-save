@@ -1,17 +1,116 @@
 import { Buffer } from "buffer";
-import { Vault } from "obsidian";
-import type { FileStat, WebDAVClient } from "webdav/web";
-import { AuthType, BufferLike, createClient } from "webdav/web";
+import { Vault, request, requestUrl, requireApiVersion } from "obsidian";
+
 import { Queue } from "@fyears/tsqueue";
 import chunk from "lodash/chunk";
 import flatten from "lodash/flatten";
-import type { RemoteItem, WebdavConfig } from "./baseTypes";
+import { getReasonPhrase } from "http-status-codes";
+import { API_VER_REQURL, RemoteItem, WebdavConfig } from "./baseTypes";
 import { decryptArrayBuffer, encryptArrayBuffer } from "./encrypt";
 import { bufferToArrayBuffer, getPathFolder, mkdirpInVault } from "./misc";
-export type { WebDAVClient } from "webdav/web";
 
 import * as origLog from "loglevel";
 const log = origLog.getLogger("rs-default");
+
+import type {
+  FileStat,
+  WebDAVClient,
+  RequestOptionsWithState,
+  Response,
+  ResponseDataDetailed,
+} from "webdav/web";
+import { getPatcher } from "webdav/web";
+if (requireApiVersion(API_VER_REQURL)) {
+  getPatcher().patch(
+    "request",
+    async (
+      options: RequestOptionsWithState
+    ): Promise<Response | ResponseDataDetailed<any>> => {
+      const transformedHeaders = { ...options.headers };
+      delete transformedHeaders["host"];
+      delete transformedHeaders["Host"];
+      delete transformedHeaders["content-length"];
+      delete transformedHeaders["Content-Length"];
+      const r = await requestUrl({
+        url: options.url,
+        method: options.method,
+        body: options.data as string | ArrayBuffer,
+        headers: transformedHeaders,
+      });
+
+      let r2: Response | ResponseDataDetailed<any> = undefined;
+      if (options.responseType === undefined) {
+        r2 = {
+          data: undefined,
+          status: r.status,
+          statusText: getReasonPhrase(r.status),
+          headers: r.headers,
+        };
+      } else if (options.responseType === "json") {
+        r2 = {
+          data: r.json,
+          status: r.status,
+          statusText: getReasonPhrase(r.status),
+          headers: r.headers,
+        };
+      } else if (options.responseType === "text") {
+        r2 = {
+          data: r.text,
+          status: r.status,
+          statusText: getReasonPhrase(r.status),
+          headers: r.headers,
+        };
+      } else if (options.responseType === "arraybuffer") {
+        r2 = {
+          data: r.arrayBuffer,
+          status: r.status,
+          statusText: getReasonPhrase(r.status),
+          headers: r.headers,
+        };
+      } else {
+        throw Error(
+          `do not know how to deal with responseType = ${options.responseType}`
+        );
+      }
+      return r2;
+    }
+  );
+}
+// getPatcher().patch("request", (options: any) => {
+//   // console.log("using fetch");
+//   const r = fetch(options.url, {
+//     method: options.method,
+//     body: options.data as any,
+//     headers: options.headers,
+//     signal: options.signal,
+//   })
+//     .then((rsp) => {
+//       if (options.responseType === undefined) {
+//         return Promise.all([undefined, rsp]);
+//       }
+//       if (options.responseType === "json") {
+//         return Promise.all([rsp.json(), rsp]);
+//       }
+//       if (options.responseType === "text") {
+//         return Promise.all([rsp.text(), rsp]);
+//       }
+//       if (options.responseType === "arraybuffer") {
+//         return Promise.all([rsp.arrayBuffer(), rsp]);
+//       }
+//     })
+//     .then(([d, r]) => {
+//       return {
+//         data: d,
+//         status: r.status,
+//         statusText: r.statusText,
+//         headers: r.headers,
+//       };
+//     });
+//   // console.log("using fetch");
+//   return r;
+// });
+import { AuthType, BufferLike, createClient } from "webdav/web";
+export type { WebDAVClient } from "webdav/web";
 
 export const DEFAULT_WEBDAV_CONFIG = {
   address: "",
@@ -169,7 +268,7 @@ export const uploadToRemote = async (
       // if encrypted, upload a fake file with the encrypted file name
       await client.client.putFileContents(uploadFile, "", {
         overwrite: true,
-        onUploadProgress: (progress) => {
+        onUploadProgress: (progress: any) => {
           // log.info(`Uploaded ${progress.loaded} bytes of ${progress.total}`);
         },
       });
@@ -200,7 +299,7 @@ export const uploadToRemote = async (
     }
     await client.client.putFileContents(uploadFile, remoteContent, {
       overwrite: true,
-      onUploadProgress: (progress) => {
+      onUploadProgress: (progress: any) => {
         log.info(`Uploaded ${progress.loaded} bytes of ${progress.total}`);
       },
     });

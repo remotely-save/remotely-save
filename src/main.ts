@@ -154,7 +154,7 @@ export default class RemotelySavePlugin extends Plugin {
         () => self.saveSettings()
       );
       const remoteRsp = await client.listFromRemote();
-      log.info(remoteRsp);
+      log.debug(remoteRsp);
 
       getNotice(`3/${MAX_STEPS} Checking password correct or not.`);
       this.syncStatus = "checking_password";

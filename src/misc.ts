@@ -79,7 +79,9 @@ export const mkdirpInVault = async (thePath: string, vault: Vault) => {
  * @param b Buffer
  * @returns ArrayBuffer
  */
-export const bufferToArrayBuffer = (b: Buffer | Uint8Array) => {
+export const bufferToArrayBuffer = (
+  b: Buffer | Uint8Array | ArrayBufferView
+) => {
   return b.buffer.slice(b.byteOffset, b.byteOffset + b.byteLength);
 };
 
@@ -229,4 +231,32 @@ export const getRandomArrayBuffer = (byteLength: number) => {
  */
 export const reverseString = (x: string) => {
   return [...x].reverse().join("");
+};
+
+export interface SplitRange {
+  partNum: number; // startting from 1
+  start: number;
+  end: number; // exclusive
+}
+export const getSplitRanges = (bytesTotal: number, bytesEachPart: number) => {
+  const res: SplitRange[] = [];
+  if (bytesEachPart >= bytesTotal) {
+    res.push({
+      partNum: 1,
+      start: 0,
+      end: bytesTotal,
+    });
+    return res;
+  }
+  const remainder = bytesTotal % bytesEachPart;
+  const howMany =
+    Math.floor(bytesTotal / bytesEachPart) + (remainder === 0 ? 0 : 1);
+  for (let i = 0; i < howMany; ++i) {
+    res.push({
+      partNum: i + 1,
+      start: bytesEachPart * i,
+      end: Math.min(bytesEachPart * (i + 1), bytesTotal),
+    });
+  }
+  return res;
 };

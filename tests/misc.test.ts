@@ -180,3 +180,56 @@ describe("Misc: extract svg", () => {
     expect(y).to.equal("<rect/><g/>");
   });
 });
+
+describe("Misc: get split ranges", () => {
+  it("should deal with big parts", () => {
+    const k = misc.getSplitRanges(10, 20);
+    const k2: misc.SplitRange[] = [
+      {
+        partNum: 1,
+        start: 0,
+        end: 10,
+      },
+    ];
+    expect(k).to.deep.equal(k2);
+  });
+
+  it("should deal with 0 remainder", () => {
+    const k = misc.getSplitRanges(20, 10);
+    const k2: misc.SplitRange[] = [
+      {
+        partNum: 1,
+        start: 0,
+        end: 10,
+      },
+      {
+        partNum: 2,
+        start: 10,
+        end: 20,
+      },
+    ];
+    expect(k).to.deep.equal(k2);
+  });
+
+  it("should deal with not-0 remainder", () => {
+    const k = misc.getSplitRanges(25, 10);
+    const k2: misc.SplitRange[] = [
+      {
+        partNum: 1,
+        start: 0,
+        end: 10,
+      },
+      {
+        partNum: 2,
+        start: 10,
+        end: 20,
+      },
+      {
+        partNum: 3,
+        start: 20,
+        end: 25,
+      },
+    ];
+    expect(k).to.deep.equal(k2);
+  });
+});

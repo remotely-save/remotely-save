@@ -7,8 +7,9 @@ import type {
 } from "@microsoft/microsoft-graph-types";
 import cloneDeep from "lodash/cloneDeep";
 import * as origLog from "loglevel";
-import { request, Vault } from "obsidian";
+import { request, requestUrl, requireApiVersion, Vault } from "obsidian";
 import {
+  API_VER_REQURL,
   COMMAND_CALLBACK_ONEDRIVE,
   OAUTH2_FORCE_EXPIRE_MILLISECONDS,
   OnedriveConfig,
@@ -482,28 +483,45 @@ export class WrappedOnedriveClient {
   deleteJson = async (pathFragOrig: string) => {
     const theUrl = this.buildUrl(pathFragOrig);
     log.debug(`deleteJson, theUrl=${theUrl}`);
-    // TODO: delete does not have response, so Obsidian request may have error
-    // currently downgraded to fetch()!
-    await fetch(theUrl, {
-      method: "DELETE",
-      headers: {
-        Authorization: `Bearer ${await this.authGetter.getAccessToken()}`,
-      },
-    });
+    if (requireApiVersion(API_VER_REQURL)) {
+      await requestUrl({
+        url: theUrl,
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${await this.authGetter.getAccessToken()}`,
+        },
+      });
+    } else {
+      await fetch(theUrl, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${await this.authGetter.getAccessToken()}`,
+        },
+      });
+    }
   };
 
   putArrayBuffer = async (pathFragOrig: string, payload: ArrayBuffer) => {
     const theUrl = this.buildUrl(pathFragOrig);
     log.debug(`putArrayBuffer, theUrl=${theUrl}`);
-    // TODO: Obsidian doesn't support ArrayBuffer
-    // currently downgraded to fetch()!
-    await fetch(theUrl, {
-      method: "PUT",
-      body: payload,
-      headers: {
-        Authorization: `Bearer ${await this.authGetter.getAccessToken()}`,
-      },
-    });
+    if (requireApiVersion(API_VER_REQURL)) {
+      await requestUrl({
+        url: theUrl,
+        method: "PUT",
+        body: payload,
+        headers: {
+          Authorization: `Bearer ${await this.authGetter.getAccessToken()}`,
+        },
+      });
+    } else {
+      await fetch(theUrl, {
+        method: "PUT",
+        body: payload,
+        headers: {
+          Authorization: `Bearer ${await this.authGetter.getAccessToken()}`,
+        },
+      });
+    }
   };
 
   /**
@@ -527,7 +545,7 @@ export class WrappedOnedriveClient {
         rangeEnd - 1
       }, len=${rangeEnd - rangeStart}, size=${size}`
     );
-    // TODO: Obsidian doesn't support ArrayBuffer
+    // obsidian requestUrl doesn't support setting Content-Length
     // currently downgraded to fetch()!
     // AND, NO AUTH HEADER here!
     const res = await fetch(theUrl, {
@@ -539,8 +557,7 @@ export class WrappedOnedriveClient {
         "Content-Type": "application/octet-stream",
       },
     });
-
-    return res.json() as DriveItem | UploadSession;
+    return (await res.json()) as DriveItem | UploadSession;
   };
 }
 
@@ -704,40 +721,52 @@ export const uploadToRemote = async (
 
     // no need to create parent folders firstly, cool!
 
-    // upload large files!
-    // ref: https://docs.microsoft.com/en-us/onedrive/developer/rest-api/api/driveitem_createuploadsession?view=odsp-graph-online
-
-    // 1. create uploadSession
-    // uploadFile already starts with /drive/special/approot:/${vaultName}
-    const s: UploadSession = await client.postJson(
-      `${uploadFile}:/createUploadSession`,
-      {
-        item: {
-          "@microsoft.graph.conflictBehavior": "replace",
-        },
-      }
-    );
-    const uploadUrl = s.uploadUrl;
-    log.debug("uploadSession = ");
-    log.debug(s);
-
-    // 2. upload by ranges
-    // convert to uint8
-    const uint8 = new Uint8Array(remoteContent);
     // hard code range size
     const MIN_UNIT = 327680; // bytes in msft doc, about 0.32768 MB
     const RANGE_SIZE = MIN_UNIT * 20; // about 6.5536 MB
-    // upload the ranges one by one
-    let rangeStart = 0;
-    while (rangeStart < uint8.byteLength) {
-      await client.putUint8ArrayByRange(
-        uploadUrl,
-        uint8,
-        rangeStart,
-        Math.min(rangeStart + RANGE_SIZE, uint8.byteLength),
-        uint8.byteLength
+
+    if (remoteContent.byteLength <= RANGE_SIZE) {
+      // directly using put!
+      await client.putArrayBuffer(
+        `${uploadFile}:/content?${new URLSearchParams({
+          "@microsoft.graph.conflictBehavior": "replace",
+        })}`,
+        remoteContent
       );
-      rangeStart += RANGE_SIZE;
+    } else {
+      // upload large files!
+      // ref: https://docs.microsoft.com/en-us/onedrive/developer/rest-api/api/driveitem_createuploadsession?view=odsp-graph-online
+
+      // 1. create uploadSession
+      // uploadFile already starts with /drive/special/approot:/${vaultName}
+      const s: UploadSession = await client.postJson(
+        `${uploadFile}:/createUploadSession`,
+        {
+          item: {
+            "@microsoft.graph.conflictBehavior": "replace",
+          },
+        }
+      );
+      const uploadUrl = s.uploadUrl;
+      log.debug("uploadSession = ");
+      log.debug(s);
+
+      // 2. upload by ranges
+      // convert to uint8
+      const uint8 = new Uint8Array(remoteContent);
+
+      // upload the ranges one by one
+      let rangeStart = 0;
+      while (rangeStart < uint8.byteLength) {
+        await client.putUint8ArrayByRange(
+          uploadUrl,
+          uint8,
+          rangeStart,
+          Math.min(rangeStart + RANGE_SIZE, uint8.byteLength),
+          uint8.byteLength
+        );
+        rangeStart += RANGE_SIZE;
+      }
     }
 
     const res = await getRemoteMeta(client, uploadFile);
@@ -755,8 +784,13 @@ const downloadFromRemoteRaw = async (
     `${key}?$select=@microsoft.graph.downloadUrl`
   );
   const downloadUrl: string = rsp["@microsoft.graph.downloadUrl"];
-  const content = await (await fetch(downloadUrl)).arrayBuffer();
-  return content;
+  if (requireApiVersion(API_VER_REQURL)) {
+    const content = (await requestUrl({ url: downloadUrl })).arrayBuffer;
+    return content;
+  } else {
+    const content = await (await fetch(downloadUrl)).arrayBuffer();
+    return content;
+  }
 };
 
 export const downloadFromRemote = async (
