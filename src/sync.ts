@@ -540,39 +540,34 @@ const assignOperationToFolderInplace = async (
       // if it was created after deletion, we should keep it as is
       if (requireApiVersion(API_VER_STAT_FOLDER)) {
         if (r.existLocal) {
-          try {
-            const { ctime, mtime } = await vault.adapter.stat(r.key);
-            const cmtime = Math.max(ctime, mtime);
-            if (
-              cmtime > 0 &&
-              cmtime >= deltimeLocal &&
-              cmtime >= deltimeRemote
-            ) {
-              keptFolder.add(getParentFolder(r.key));
-              if (r.existLocal && r.existRemote) {
-                r.decision = "skipFolder";
-                r.decisionBranch = 14;
-              } else if (r.existLocal || r.existRemote) {
-                r.decision = "createFolder";
-                r.decisionBranch = 15;
-              } else {
-                throw Error(
-                  `Error: Folder ${r.key} doesn't exist locally and remotely but is marked must be kept. Abort.`
-                );
-              }
+          const { ctime, mtime } = await vault.adapter.stat(r.key);
+          const cmtime = Math.max(ctime, mtime);
+          if (cmtime > 0 && cmtime >= deltimeLocal && cmtime >= deltimeRemote) {
+            keptFolder.add(getParentFolder(r.key));
+            if (r.existLocal && r.existRemote) {
+              r.decision = "skipFolder";
+              r.decisionBranch = 14;
+            } else if (r.existLocal || r.existRemote) {
+              r.decision = "createFolder";
+              r.decisionBranch = 15;
+            } else {
+              throw Error(
+                `Error: Folder ${r.key} doesn't exist locally and remotely but is marked must be kept. Abort.`
+              );
             }
-          } catch (error) {
-            // pass
           }
         }
       }
 
-      if (deltimeLocal > 0 && deltimeLocal > deltimeRemote) {
-        r.decision = "uploadLocalDelHistToRemoteFolder";
-        r.decisionBranch = 8;
-      } else {
-        r.decision = "keepRemoteDelHistFolder";
-        r.decisionBranch = 9;
+      if (r.decision === undefined) {
+        // not yet decided by the above reason
+        if (deltimeLocal > 0 && deltimeLocal > deltimeRemote) {
+          r.decision = "uploadLocalDelHistToRemoteFolder";
+          r.decisionBranch = 8;
+        } else {
+          r.decision = "keepRemoteDelHistFolder";
+          r.decisionBranch = 9;
+        }
       }
     } else {
       // it does not have any deletion commands
