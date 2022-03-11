@@ -17,6 +17,8 @@ We list all combinations mutually exclusive and collectively exhaustive.
 
 ### Files
 
+In short, we collect four timestamps, and respect the max timestamp and its corresponding operation.
+
 | t1             | t2             | t3             | t4             | local file to do | remote file to do | local del history to do | remote del history to do | equal to sync v2 branch |
 | -------------- | -------------- | -------------- | -------------- | ---------------- | ----------------- | ----------------------- | ------------------------ | ----------------------- |
 | mtime_remote   | mtime_local    | deltime_remote | deltime_local  | del_if_exists    | del_if_exists     | clean                   | upload_local_del_history |                         |

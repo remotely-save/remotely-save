@@ -101,6 +101,10 @@ Additionally, the plugin author may occasionally visit Obsidian official forum a
 - In auto sync mode, if any error occurs, the plugin would **fail silently**.
 - Auto sync only works when Obsidian is being opened. It's **technically impossible** to auto sync while Obsidian is in background, because the plugin just works in the browser environment provided by Obsidian.
 
+## How To Debug
+
+See [here](./docs/how_to_debug/README.md) for more details.
+
 ## Bonus: Import And Export Not-Oauth2 Plugin Settings By QR Code
 
 See [here](./docs/import_export_some_settings.md) for more details.
