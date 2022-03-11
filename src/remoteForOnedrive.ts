@@ -17,6 +17,7 @@ import {
 } from "./baseTypes";
 import { decryptArrayBuffer, encryptArrayBuffer } from "./encrypt";
 import {
+  bufferToArrayBuffer,
   getRandomArrayBuffer,
   getRandomIntInclusive,
   mkdirpInVault,
@@ -545,19 +546,31 @@ export class WrappedOnedriveClient {
         rangeEnd - 1
       }, len=${rangeEnd - rangeStart}, size=${size}`
     );
-    // obsidian requestUrl doesn't support setting Content-Length
-    // currently downgraded to fetch()!
-    // AND, NO AUTH HEADER here!
-    const res = await fetch(theUrl, {
-      method: "PUT",
-      body: payload.subarray(rangeStart, rangeEnd),
-      headers: {
-        "Content-Length": `${rangeEnd - rangeStart}`,
-        "Content-Range": `bytes ${rangeStart}-${rangeEnd - 1}/${size}`,
-        "Content-Type": "application/octet-stream",
-      },
-    });
-    return (await res.json()) as DriveItem | UploadSession;
+    // NO AUTH HEADER here!
+    if (requireApiVersion(API_VER_REQURL)) {
+      const res = await requestUrl({
+        url: theUrl,
+        method: "PUT",
+        body: bufferToArrayBuffer(payload.subarray(rangeStart, rangeEnd)),
+        headers: {
+          // no "Content-Length" allowed here
+          "Content-Range": `bytes ${rangeStart}-${rangeEnd - 1}/${size}`,
+          "Content-Type": "application/octet-stream",
+        },
+      });
+      return res.json as DriveItem | UploadSession;
+    } else {
+      const res = await fetch(theUrl, {
+        method: "PUT",
+        body: payload.subarray(rangeStart, rangeEnd),
+        headers: {
+          "Content-Length": `${rangeEnd - rangeStart}`,
+          "Content-Range": `bytes ${rangeStart}-${rangeEnd - 1}/${size}`,
+          "Content-Type": "application/octet-stream",
+        },
+      });
+      return (await res.json()) as DriveItem | UploadSession;
+    }
   };
 }
 
