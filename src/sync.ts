@@ -976,7 +976,9 @@ export const doActualSync = async (
       const val = mixedStates[key];
       if (
         val.decision === "uploadLocalDelHistToRemoteFolder" ||
-        val.decision === "keepRemoteDelHistFolder"
+        val.decision === "keepRemoteDelHistFolder" ||
+        val.decision === "uploadLocalDelHistToRemote" ||
+        val.decision === "keepRemoteDelHist"
       ) {
         log.debug(`start syncing "${key}" with plan ${JSON.stringify(val)}`);
 
@@ -1011,8 +1013,6 @@ export const doActualSync = async (
       const val = mixedStates[key];
       if (
         val.decision === "skipUploading" ||
-        val.decision === "uploadLocalDelHistToRemote" ||
-        val.decision === "keepRemoteDelHist" ||
         val.decision === "uploadLocalToRemote" ||
         val.decision === "downloadRemoteToLocal"
       ) {
