@@ -41,11 +41,17 @@ export class RemoteClient {
       this.s3Config = s3Config;
       this.s3Client = s3.getS3Client(this.s3Config);
     } else if (serviceType === "webdav") {
-      if (vaultName === undefined) {
-        throw Error("remember to provide vault name while init webdav client");
+      if (vaultName === undefined || saveUpdatedConfigFunc === undefined) {
+        throw Error(
+          "remember to provide vault name and callback while init webdav client"
+        );
       }
       this.webdavConfig = webdavConfig;
-      this.webdavClient = webdav.getWebdavClient(this.webdavConfig, vaultName);
+      this.webdavClient = webdav.getWebdavClient(
+        this.webdavConfig,
+        vaultName,
+        saveUpdatedConfigFunc
+      );
     } else if (serviceType === "dropbox") {
       if (vaultName === undefined || saveUpdatedConfigFunc === undefined) {
         throw Error(

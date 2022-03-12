@@ -1076,7 +1076,7 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
     new Setting(webdavDiv)
       .setName("depth header sent to servers")
       .setDesc(
-        "Webdav servers should be configured to allow requests with header Depth being '1' or 'infinity'. The plugin needs to know this info. If you are not sure what's this, choose \"auto\"."
+        "Webdav servers should be configured to allow requests with header Depth being '1' or 'Infinity'. The plugin needs to know this info. If you are not sure what's this, choose \"auto\"."
       )
       .addDropdown((dropdown) => {
         dropdown.addOption("auto", "auto detect");
@@ -1084,29 +1084,31 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
         dropdown.addOption("manual_infinity", "only supports depth='infinity'");
 
         let initVal = "auto";
-        const autoOptions: Set<WebdavDepthType> = new Set(["auto_unknown", "auto_1", "auto_infinity"]);
+        const autoOptions: Set<WebdavDepthType> = new Set([
+          "auto_unknown",
+          "auto_1",
+          "auto_infinity",
+        ]);
         if (autoOptions.has(this.plugin.settings.webdav.depth)) {
           initVal = "auto";
         } else {
           initVal = this.plugin.settings.webdav.depth || "auto";
         }
 
-        type DepthOption = "auto" | "manual_1" | "manual_infinity"
-        dropdown
-          .setValue( initVal)
-          .onChange(async (val: DepthOption) => {
-            if (val === "auto") {
-              this.plugin.settings.webdav.depth = "auto_unknown";
-              this.plugin.settings.webdav.manualRecursive = false;
-            } else if (val === "manual_1") {
-              this.plugin.settings.webdav.depth = "manual_1";
-              this.plugin.settings.webdav.manualRecursive = true;
-            } else if (val === "manual_infinity") {
-              this.plugin.settings.webdav.depth = "manual_infinity";
-              this.plugin.settings.webdav.manualRecursive = false;
-            }
-            await this.plugin.saveSettings();
-          });
+        type DepthOption = "auto" | "manual_1" | "manual_infinity";
+        dropdown.setValue(initVal).onChange(async (val: DepthOption) => {
+          if (val === "auto") {
+            this.plugin.settings.webdav.depth = "auto_unknown";
+            this.plugin.settings.webdav.manualRecursive = false;
+          } else if (val === "manual_1") {
+            this.plugin.settings.webdav.depth = "manual_1";
+            this.plugin.settings.webdav.manualRecursive = true;
+          } else if (val === "manual_infinity") {
+            this.plugin.settings.webdav.depth = "manual_infinity";
+            this.plugin.settings.webdav.manualRecursive = false;
+          }
+          await this.plugin.saveSettings();
+        });
       });
 
     new Setting(webdavDiv)
@@ -1116,13 +1118,15 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
         button.setButtonText("Check");
         button.onClick(async () => {
           new Notice("Checking...");
+          const self = this;
           const client = new RemoteClient(
             "webdav",
             undefined,
             this.plugin.settings.webdav,
             undefined,
             undefined,
-            this.app.vault.getName()
+            this.app.vault.getName(),
+            () => self.plugin.saveSettings()
           );
           const res = await client.checkConnectivity();
           if (res) {

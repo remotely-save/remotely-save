@@ -118,6 +118,7 @@ export const DEFAULT_WEBDAV_CONFIG = {
   password: "",
   authType: "basic",
   manualRecursive: false,
+  depth: "auto_unknown",
 } as WebdavConfig;
 
 const getWebdavPath = (fileOrFolderPath: string, vaultName: string) => {
@@ -166,10 +167,16 @@ export class WrappedWebdavClient {
   vaultName: string;
   client: WebDAVClient;
   vaultFolderExists: boolean;
-  constructor(webdavConfig: WebdavConfig, vaultName: string) {
+  saveUpdatedConfigFunc: () => Promise<any>;
+  constructor(
+    webdavConfig: WebdavConfig,
+    vaultName: string,
+    saveUpdatedConfigFunc: () => Promise<any>
+  ) {
     this.webdavConfig = webdavConfig;
     this.vaultName = vaultName;
     this.vaultFolderExists = false;
+    this.saveUpdatedConfigFunc = saveUpdatedConfigFunc;
   }
 
   init = async () => {
@@ -208,14 +215,68 @@ export class WrappedWebdavClient {
         this.vaultFolderExists = true;
       }
     }
+
+    // adjust depth parameter
+    if (this.webdavConfig.depth === "auto_unknown") {
+      let testPassed = false;
+      try {
+        const res = await this.client.customRequest(`/${this.vaultName}`, {
+          method: "PROPFIND",
+          headers: {
+            Depth: "Infinity",
+          },
+          responseType: "text",
+        });
+        if (res.status === 403) {
+          throw Error("not support Infinity, get 403");
+        } else {
+          testPassed = true;
+          this.webdavConfig.depth = "auto_infinity";
+          this.webdavConfig.manualRecursive = false;
+        }
+      } catch (error) {
+        testPassed = false;
+      }
+      if (!testPassed) {
+        try {
+          const res = await this.client.customRequest(`/${this.vaultName}`, {
+            method: "PROPFIND",
+            headers: {
+              Depth: "1",
+            },
+            responseType: "text",
+          });
+          testPassed = true;
+          this.webdavConfig.depth = "auto_1";
+          this.webdavConfig.manualRecursive = true;
+        } catch (error) {
+          testPassed = false;
+        }
+      }
+      if (testPassed) {
+        // the depth option has been changed
+        // save the setting
+        if (this.saveUpdatedConfigFunc !== undefined) {
+          await this.saveUpdatedConfigFunc();
+          log.info(
+            `webdav depth="auto_unknown" is changed to ${this.webdavConfig.depth}`
+          );
+        }
+      }
+    }
   };
 }
 
 export const getWebdavClient = (
   webdavConfig: WebdavConfig,
-  vaultName: string
+  vaultName: string,
+  saveUpdatedConfigFunc: () => Promise<any>
 ) => {
-  return new WrappedWebdavClient(webdavConfig, vaultName);
+  return new WrappedWebdavClient(
+    webdavConfig,
+    vaultName,
+    saveUpdatedConfigFunc
+  );
 };
 
 export const getRemoteMeta = async (
@@ -318,7 +379,10 @@ export const listFromRemote = async (
   await client.init();
 
   let contents = [] as FileStat[];
-  if (client.webdavConfig.manualRecursive) {
+  if (
+    client.webdavConfig.depth === "auto_1" ||
+    client.webdavConfig.depth === "manual_1"
+  ) {
     // the remote doesn't support infinity propfind,
     // we need to do a bfs here
     const q = new Queue([`/${client.vaultName}`]);

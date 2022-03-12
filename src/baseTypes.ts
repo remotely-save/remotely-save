@@ -26,7 +26,12 @@ export interface DropboxConfig {
 }
 
 export type WebdavAuthType = "digest" | "basic";
-export type WebdavDepthType = "auto_unknown" | "auto_1" | "auto_infinity" | "manual_1" | "manual_infinity";
+export type WebdavDepthType =
+  | "auto_unknown"
+  | "auto_1"
+  | "auto_infinity"
+  | "manual_1"
+  | "manual_infinity";
 
 export interface WebdavConfig {
   address: string;
