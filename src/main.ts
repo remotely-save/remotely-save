@@ -564,6 +564,9 @@ export default class RemotelySavePlugin extends Plugin {
     if (this.settings.webdav.manualRecursive === undefined) {
       this.settings.webdav.manualRecursive = false;
     }
+    if (this.settings.webdav.depth === undefined) {
+      this.settings.webdav.depth = "auto_unknown";
+    }
   }
 
   async saveSettings() {

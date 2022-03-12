@@ -11,6 +11,7 @@ import {
   API_VER_REQURL,
   SUPPORTED_SERVICES_TYPE,
   WebdavAuthType,
+  WebdavDepthType,
 } from "./baseTypes";
 import { exportVaultSyncPlansToFiles } from "./debugMode";
 import { exportQrCodeUri } from "./importExport";
@@ -1073,25 +1074,35 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
       });
 
     new Setting(webdavDiv)
-      .setName("server supports infinity propfind or not")
+      .setName("depth header sent to servers")
       .setDesc(
-        "The plugin needs to get all files and folders recursively using probfind. If your webdav server only supports depth='1' (such as NGINX), you need to adjust the setting here, then the plugin consumes more network requests, but better than not working."
+        "Webdav servers should be configured to allow requests with header Depth being '1' or 'infinity'. The plugin needs to know this info. If you are not sure what's this, choose \"auto\"."
       )
       .addDropdown((dropdown) => {
-        dropdown.addOption("infinity", "supports depth='infinity'");
-        dropdown.addOption("1", "only supports depth='1'");
+        dropdown.addOption("auto", "auto detect");
+        dropdown.addOption("manual_1", "only supports depth='1'");
+        dropdown.addOption("manual_infinity", "only supports depth='infinity'");
 
-        type Depth = "1" | "infinity";
+        let initVal = "auto";
+        const autoOptions: Set<WebdavDepthType> = new Set(["auto_unknown", "auto_1", "auto_infinity"]);
+        if (autoOptions.has(this.plugin.settings.webdav.depth)) {
+          initVal = "auto";
+        } else {
+          initVal = this.plugin.settings.webdav.depth || "auto";
+        }
+
+        type DepthOption = "auto" | "manual_1" | "manual_infinity"
         dropdown
-          .setValue(
-            this.plugin.settings.webdav.manualRecursive === false
-              ? "infinity"
-              : "1"
-          )
-          .onChange(async (val: Depth) => {
-            if (val === "1") {
+          .setValue( initVal)
+          .onChange(async (val: DepthOption) => {
+            if (val === "auto") {
+              this.plugin.settings.webdav.depth = "auto_unknown";
+              this.plugin.settings.webdav.manualRecursive = false;
+            } else if (val === "manual_1") {
+              this.plugin.settings.webdav.depth = "manual_1";
               this.plugin.settings.webdav.manualRecursive = true;
-            } else if (val === "infinity") {
+            } else if (val === "manual_infinity") {
+              this.plugin.settings.webdav.depth = "manual_infinity";
               this.plugin.settings.webdav.manualRecursive = false;
             }
             await this.plugin.saveSettings();
