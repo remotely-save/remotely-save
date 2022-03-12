@@ -300,6 +300,9 @@ export default class RemotelySavePlugin extends Plugin {
     await this.checkIfOauthExpires();
     await this.checkIfVaultIDAssigned(); // MUST before prepareDB()
 
+    // no need to await this
+    this.tryToAddIgnoreFile();
+
     await this.prepareDB();
 
     this.syncStatus = "idle";
@@ -710,5 +713,40 @@ export default class RemotelySavePlugin extends Plugin {
   ) {
     const msg = `syncing progress=${i}/${totalCount},decision=${decision},path=${pathName}`;
     this.currSyncMsg = msg;
+  }
+
+  async tryToAddIgnoreFile() {
+    const pluginConfigDir =
+      this.manifest.dir ||
+      `${this.app.vault.configDir}/plugins/${this.manifest.dir}`;
+    const pluginConfigDirExists = await this.app.vault.adapter.exists(
+      pluginConfigDir
+    );
+    if (!pluginConfigDirExists) {
+      // what happened?
+      return;
+    }
+    const ignoreFile = `${pluginConfigDir}/.gitignore`;
+    const ignoreFileExists = await this.app.vault.adapter.exists(ignoreFile);
+
+    const contentText = "data.json\n";
+
+    try {
+      if (ignoreFileExists) {
+        // check empty, if empty, we can write it
+        // if not empty, we do nothing
+        const content = (await this.app.vault.adapter.read(ignoreFile)).trim();
+        if (content === "") {
+          // no need to await writing
+          this.app.vault.adapter.write(ignoreFile, contentText);
+        }
+      } else {
+        // not exists, directly create
+        // no need to await
+        this.app.vault.adapter.write(ignoreFile, contentText);
+      }
+    } catch (error) {
+      // just skip
+    }
   }
 }
