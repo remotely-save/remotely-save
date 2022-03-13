@@ -384,6 +384,59 @@ export class OnedriveRevokeAuthModal extends Modal {
   }
 }
 
+class SyncConfigDirModal extends Modal {
+  plugin: RemotelySavePlugin;
+  saveDropdownFunc: () => void;
+  constructor(
+    app: App,
+    plugin: RemotelySavePlugin,
+    saveDropdownFunc: () => void
+  ) {
+    super(app);
+    this.plugin = plugin;
+    this.saveDropdownFunc = saveDropdownFunc;
+  }
+
+  async onOpen() {
+    let { contentEl } = this;
+
+    const texts = [
+      "Attention 1/3: This only syncs (copies) the whole Obsidian config dir, not other . folders or files. It also doesn't understand the inner structure of the config dir.",
+      "Attention 2/3: After the config dir is synced, plugins settings might be corrupted, and Obsidian might need to be restarted to load the new settings.",
+      "Attention 3/3: The deletion (uninstallation) operations of or inside Obsidian config dir cannot be tracked. So if you want to uninstall a plugin, you need to manually uninstall it on all device, before next sync.",
+      "If you are agreed to take your own risk, please click the following second confirm button.",
+    ];
+    for (const t of texts) {
+      contentEl.createEl("p", {
+        text: t,
+      });
+    }
+
+    new Setting(contentEl)
+      .addButton((button) => {
+        button.setButtonText("The Second Confirm To Enable.");
+        button.onClick(async () => {
+          this.plugin.settings.syncConfigDir = true;
+          await this.plugin.saveSettings();
+          this.saveDropdownFunc();
+          new Notice("You've enabled syncing config folder!");
+          this.close();
+        });
+      })
+      .addButton((button) => {
+        button.setButtonText("Go Back");
+        button.onClick(() => {
+          this.close();
+        });
+      });
+  }
+
+  onClose() {
+    let { contentEl } = this;
+    contentEl.empty();
+  }
+}
+
 class ExportSettingsQrCodeModal extends Modal {
   plugin: RemotelySavePlugin;
   constructor(app: App, plugin: RemotelySavePlugin) {
@@ -548,30 +601,6 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
           .onChange(async (val: string) => {
             const realVal = parseInt(val);
             this.plugin.settings.initRunAfterMilliseconds = realVal;
-            await this.plugin.saveSettings();
-          });
-      });
-
-    const concurrencyDiv = generalDiv.createEl("div");
-    new Setting(concurrencyDiv)
-      .setName("Concurrency")
-      .setDesc(
-        "How many files do you want to download or upload in parallel at most? By default it's set to 5. If you meet any problems such as rate limit, you can reduce the concurrency to a lower value."
-      )
-      .addDropdown((dropdown) => {
-        dropdown.addOption("1", "1");
-        dropdown.addOption("2", "2");
-        dropdown.addOption("3", "3");
-        dropdown.addOption("5", "5 (default)");
-        dropdown.addOption("10", "10");
-        dropdown.addOption("15", "15");
-        dropdown.addOption("20", "20");
-
-        dropdown
-          .setValue(`${this.plugin.settings.concurrency}`)
-          .onChange(async (val) => {
-            const realVal = parseInt(val);
-            this.plugin.settings.concurrency = realVal;
             await this.plugin.saveSettings();
           });
       });
@@ -1179,6 +1208,92 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
               this.plugin.settings.serviceType !== "webdav"
             );
             await this.plugin.saveSettings();
+          });
+      });
+
+    //////////////////////////////////////////////////
+    // below for advanced settings
+    //////////////////////////////////////////////////
+    const advDiv = containerEl.createEl("div");
+    advDiv.createEl("h2", {
+      text: "Advanced Settings",
+    });
+
+    const concurrencyDiv = advDiv.createEl("div");
+    new Setting(concurrencyDiv)
+      .setName("Concurrency")
+      .setDesc(
+        "How many files do you want to download or upload in parallel at most? By default it's set to 5. If you meet any problems such as rate limit, you can reduce the concurrency to a lower value."
+      )
+      .addDropdown((dropdown) => {
+        dropdown.addOption("1", "1");
+        dropdown.addOption("2", "2");
+        dropdown.addOption("3", "3");
+        dropdown.addOption("5", "5 (default)");
+        dropdown.addOption("10", "10");
+        dropdown.addOption("15", "15");
+        dropdown.addOption("20", "20");
+
+        dropdown
+          .setValue(`${this.plugin.settings.concurrency}`)
+          .onChange(async (val) => {
+            const realVal = parseInt(val);
+            this.plugin.settings.concurrency = realVal;
+            await this.plugin.saveSettings();
+          });
+      });
+
+    const syncUnderscoreItemsDiv = advDiv.createEl("div");
+    new Setting(syncUnderscoreItemsDiv)
+      .setName("sync _ files or folders")
+      .setDesc(`Sync files or folders startting with _ ("underscore") or not.`)
+      .addDropdown((dropdown) => {
+        dropdown.addOption("disable", "disable");
+        dropdown.addOption("enable", "enable");
+        dropdown
+          .setValue(
+            `${this.plugin.settings.syncUnderscoreItems ? "enable" : "disable"}`
+          )
+          .onChange(async (val) => {
+            this.plugin.settings.syncUnderscoreItems = val === "enable";
+            await this.plugin.saveSettings();
+          });
+      });
+
+    const syncConfigDirDiv = advDiv.createEl("div");
+    new Setting(syncConfigDirDiv)
+      .setName("sync config dir (experimental)")
+      .setDesc(
+        `Sync config dir ${this.app.vault.configDir} or not. Please be aware that this may impact all your plugins' or Obsidian's settings, and may require you restart Obsidian after sync. Enable this at your own risk.`
+      )
+      .addDropdown((dropdown) => {
+        dropdown.addOption("disable", "disable");
+        dropdown.addOption("enable", "enable");
+
+        const bridge = {
+          secondConfirm: false,
+        };
+        dropdown
+          .setValue(
+            `${this.plugin.settings.syncConfigDir ? "enable" : "disable"}`
+          )
+          .onChange(async (val) => {
+            if (val === "enable" && !bridge.secondConfirm) {
+              dropdown.setValue("disable");
+              const modal = new SyncConfigDirModal(
+                this.app,
+                this.plugin,
+                () => {
+                  bridge.secondConfirm = true;
+                  dropdown.setValue("enable");
+                }
+              );
+              modal.open();
+            } else {
+              bridge.secondConfirm = false;
+              this.plugin.settings.syncConfigDir = false;
+              await this.plugin.saveSettings();
+            }
           });
       });
 

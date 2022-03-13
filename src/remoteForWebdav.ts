@@ -400,7 +400,10 @@ export const listFromRemote = async (
           return client.client.getDirectoryContents(x, {
             deep: false,
             details: false /* no need for verbose details here */,
-            glob: "/**" /* avoid dot files by using glob */,
+            // TODO: to support .obsidian,
+            // we need to load all files including dot,
+            // anyway to reduce the resources?
+            // glob: "/**" /* avoid dot files by using glob */,
           }) as Promise<FileStat[]>;
         });
         const r2 = flatten(await Promise.all(r));
@@ -421,7 +424,10 @@ export const listFromRemote = async (
       {
         deep: true,
         details: false /* no need for verbose details here */,
-        glob: "/**" /* avoid dot files by using glob */,
+        // TODO: to support .obsidian,
+        // we need to load all files including dot,
+        // anyway to reduce the resources?
+        // glob: "/**" /* avoid dot files by using glob */,
       }
     )) as FileStat[];
   }

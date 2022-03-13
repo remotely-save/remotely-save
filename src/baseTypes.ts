@@ -67,6 +67,8 @@ export interface RemotelySavePluginSettings {
   initRunAfterMilliseconds?: number;
   agreeToUploadExtraMetadata?: boolean;
   concurrency?: number;
+  syncConfigDir?: boolean;
+  syncUnderscoreItems?: boolean;
 }
 
 export interface RemoteItem {

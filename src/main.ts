@@ -37,6 +37,7 @@ import { RemotelySaveSettingTab } from "./settings";
 import { fetchMetadataFile, parseRemoteItems, SyncStatusType } from "./sync";
 import { doActualSync, getSyncPlan, isPasswordOk } from "./sync";
 import { messyConfigToNormal, normalConfigToMessy } from "./configPersist";
+import { ObsConfigDirFileType, listFilesInObsFolder } from "./obsFolderLister";
 
 import * as origLog from "loglevel";
 import { DeletionOnRemote, MetadataOnRemote } from "./metadataOnRemote";
@@ -56,6 +57,8 @@ const DEFAULT_SETTINGS: RemotelySavePluginSettings = {
   initRunAfterMilliseconds: -1,
   agreeToUploadExtraMetadata: false,
   concurrency: 5,
+  syncConfigDir: false,
+  syncUnderscoreItems: false,
 };
 
 interface OAuth2Info {
@@ -190,6 +193,14 @@ export default class RemotelySavePlugin extends Plugin {
         this.db,
         this.settings.vaultRandomID
       );
+      let localConfigDirContents: ObsConfigDirFileType[] = undefined;
+      if (this.settings.syncConfigDir) {
+        localConfigDirContents = await listFilesInObsFolder(
+          this.app.vault.configDir,
+          this.app.vault,
+          this.manifest.id
+        );
+      }
       // log.info(local);
       // log.info(localHistory);
 
@@ -198,10 +209,14 @@ export default class RemotelySavePlugin extends Plugin {
       const { plan, sortedKeys, deletions } = await getSyncPlan(
         remoteStates,
         local,
+        localConfigDirContents,
         origMetadataOnRemote.deletions,
         localHistory,
         client.serviceType,
         this.app.vault,
+        this.settings.syncConfigDir,
+        this.app.vault.configDir,
+        this.settings.syncUnderscoreItems,
         this.settings.password
       );
       log.info(plan.mixedStates); // for debugging

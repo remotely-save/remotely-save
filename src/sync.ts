@@ -46,6 +46,7 @@ import {
 
 import * as origLog from "loglevel";
 import { padEnd } from "lodash";
+import { isInsideObsFolder, ObsConfigDirFileType } from "./obsFolderLister";
 const log = origLog.getLogger("rs-default");
 
 export type SyncStatusType =
@@ -272,18 +273,39 @@ export const fetchMetadataFile = async (
   return metadata;
 };
 
+const isSkipItem = (
+  key: string,
+  syncConfigDir: boolean,
+  syncUnderscoreItems: boolean,
+  configDir: string
+) => {
+  if (syncConfigDir && isInsideObsFolder(key, configDir)) {
+    return false;
+  }
+  return (
+    isHiddenPath(key, true, false) ||
+    (!syncUnderscoreItems && isHiddenPath(key, false, true)) ||
+    key === DEFAULT_FILE_NAME_FOR_METADATAONREMOTE ||
+    key === DEFAULT_FILE_NAME_FOR_METADATAONREMOTE2
+  );
+};
+
 const ensembleMixedStates = async (
   remoteStates: FileOrFolderMixedState[],
   local: TAbstractFile[],
+  localConfigDirContents: ObsConfigDirFileType[] | undefined,
   remoteDeleteHistory: DeletionOnRemote[],
-  localDeleteHistory: FileFolderHistoryRecord[]
+  localDeleteHistory: FileFolderHistoryRecord[],
+  syncConfigDir: boolean,
+  configDir: string,
+  syncUnderscoreItems: boolean
 ) => {
   const results = {} as Record<string, FileOrFolderMixedState>;
 
   for (const r of remoteStates) {
     const key = r.key;
 
-    if (isHiddenPath(key)) {
+    if (isSkipItem(key, syncConfigDir, syncUnderscoreItems, configDir)) {
       continue;
     }
     results[key] = r;
@@ -316,9 +338,10 @@ const ensembleMixedStates = async (
       throw Error(`unexpected ${entry}`);
     }
 
-    if (isHiddenPath(key)) {
+    if (isSkipItem(key, syncConfigDir, syncUnderscoreItems, configDir)) {
       continue;
     }
+
     if (results.hasOwnProperty(key)) {
       results[key].key = r.key;
       results[key].existLocal = r.existLocal;
@@ -330,12 +353,38 @@ const ensembleMixedStates = async (
     }
   }
 
+  if (syncConfigDir && localConfigDirContents !== undefined) {
+    for (const entry of localConfigDirContents) {
+      const key = entry.key;
+      const r: FileOrFolderMixedState = {
+        key: key,
+        existLocal: true,
+        mtimeLocal: Math.max(entry.mtime, entry.ctime),
+        sizeLocal: entry.size,
+      };
+
+      if (results.hasOwnProperty(key)) {
+        results[key].key = r.key;
+        results[key].existLocal = r.existLocal;
+        results[key].mtimeLocal = r.mtimeLocal;
+        results[key].sizeLocal = r.sizeLocal;
+      } else {
+        results[key] = r;
+        results[key].existRemote = false;
+      }
+    }
+  }
+
   for (const entry of remoteDeleteHistory) {
     const key = entry.key;
     const r = {
       key: key,
       deltimeRemote: entry.actionWhen,
     } as FileOrFolderMixedState;
+
+    if (isSkipItem(key, syncConfigDir, syncUnderscoreItems, configDir)) {
+      continue;
+    }
 
     if (results.hasOwnProperty(key)) {
       results[key].key = r.key;
@@ -365,9 +414,10 @@ const ensembleMixedStates = async (
       deltimeLocal: entry.actionWhen,
     } as FileOrFolderMixedState;
 
-    if (isHiddenPath(key)) {
+    if (isSkipItem(key, syncConfigDir, syncUnderscoreItems, configDir)) {
       continue;
     }
+
     if (results.hasOwnProperty(key)) {
       results[key].key = r.key;
       results[key].deltimeLocal = r.deltimeLocal;
@@ -618,17 +668,25 @@ const DELETION_DECISIONS: Set<DecisionType> = new Set([
 export const getSyncPlan = async (
   remoteStates: FileOrFolderMixedState[],
   local: TAbstractFile[],
+  localConfigDirContents: ObsConfigDirFileType[] | undefined,
   remoteDeleteHistory: DeletionOnRemote[],
   localDeleteHistory: FileFolderHistoryRecord[],
   remoteType: SUPPORTED_SERVICES_TYPE,
   vault: Vault,
+  syncConfigDir: boolean,
+  configDir: string,
+  syncUnderscoreItems: boolean,
   password: string = ""
 ) => {
   const mixedStates = await ensembleMixedStates(
     remoteStates,
     local,
+    localConfigDirContents,
     remoteDeleteHistory,
-    localDeleteHistory
+    localDeleteHistory,
+    syncConfigDir,
+    configDir,
+    syncUnderscoreItems
   );
 
   const sortedKeys = Object.keys(mixedStates).sort(

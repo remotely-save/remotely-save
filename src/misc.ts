@@ -10,10 +10,18 @@ const log = origLog.getLogger("rs-default");
 /**
  * If any part of the file starts with '.' or '_' then it's a hidden file.
  * @param item
- * @param loose
+ * @param dot
+ * @param underscore
  * @returns
  */
-export const isHiddenPath = (item: string, loose: boolean = true) => {
+export const isHiddenPath = (
+  item: string,
+  dot: boolean = true,
+  underscore: boolean = true
+) => {
+  if (!(dot || underscore)) {
+    throw Error("parameter error for isHiddenPath");
+  }
   const k = path.posix.normalize(item); // TODO: only unix path now
   const k2 = k.split("/"); // TODO: only unix path now
   // log.info(k2)
@@ -21,10 +29,10 @@ export const isHiddenPath = (item: string, loose: boolean = true) => {
     if (singlePart === "." || singlePart === ".." || singlePart === "") {
       continue;
     }
-    if (singlePart[0] === ".") {
+    if (dot && singlePart[0] === ".") {
       return true;
     }
-    if (loose && singlePart[0] === "_") {
+    if (underscore && singlePart[0] === "_") {
       return true;
     }
   }

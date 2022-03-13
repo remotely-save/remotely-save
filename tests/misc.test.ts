@@ -21,7 +21,7 @@ describe("Misc: hidden file", () => {
 
     item = "_hidden_loose";
     expect(misc.isHiddenPath(item)).to.be.true;
-    expect(misc.isHiddenPath(item, false)).to.be.false;
+    expect(misc.isHiddenPath(item, true, false)).to.be.false;
 
     item = "/sdd/_hidden_loose";
     expect(misc.isHiddenPath(item)).to.be.true;
@@ -30,10 +30,21 @@ describe("Misc: hidden file", () => {
     expect(misc.isHiddenPath(item)).to.be.true;
 
     item = "what/../_hidden_loose/what/what/what";
-    expect(misc.isHiddenPath(item, false)).to.be.false;
+    expect(misc.isHiddenPath(item, true, false)).to.be.false;
 
     item = "what/../_hidden_loose/../.hidden/what/what/what";
-    expect(misc.isHiddenPath(item, false)).to.be.true;
+    expect(misc.isHiddenPath(item, true, false)).to.be.true;
+
+    item = "what/../_hidden_loose/../.hidden/what/what/what";
+    expect(misc.isHiddenPath(item, false, true)).to.be.false;
+
+    item = "what/_hidden_loose/what/what/what";
+    expect(misc.isHiddenPath(item, false, true)).to.be.true;
+    expect(misc.isHiddenPath(item, true, false)).to.be.false;
+
+    item = "what/.hidden/what/what/what";
+    expect(misc.isHiddenPath(item, false, true)).to.be.false;
+    expect(misc.isHiddenPath(item, true, false)).to.be.true;
   });
 });
 
