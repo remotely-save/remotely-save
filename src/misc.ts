@@ -268,3 +268,12 @@ export const getSplitRanges = (bytesTotal: number, bytesEachPart: number) => {
   }
   return res;
 };
+
+/**
+ * https://stackoverflow.com/questions/332422
+ * @param obj anything
+ * @returns string of the name of the object
+ */
+export const getTypeName = (obj: any) => {
+  return Object.prototype.toString.call(obj).slice(8, -1);
+};
