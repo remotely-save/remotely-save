@@ -154,6 +154,7 @@ export const DEFAULT_S3_CONFIG = {
   s3SecretAccessKey: "",
   s3BucketName: "",
   bypassCorsLocally: true,
+  partsConcurrency: 20,
 };
 
 export type S3ObjectType = _Object;
@@ -291,7 +292,7 @@ export const uploadToRemote = async (
     const body = new Uint8Array(remoteContent);
     const upload = new Upload({
       client: s3Client,
-      queueSize: 20, // concurrency
+      queueSize: s3Config.partsConcurrency, // concurrency
       partSize: bytesIn5MB, // minimal 5MB by default
       leavePartsOnError: false,
       params: {

@@ -12,6 +12,7 @@ export interface S3Config {
   s3SecretAccessKey: string;
   s3BucketName: string;
   bypassCorsLocally?: boolean;
+  partsConcurrency?: number;
 }
 
 export interface DropboxConfig {

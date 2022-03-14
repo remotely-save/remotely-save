@@ -585,6 +585,9 @@ export default class RemotelySavePlugin extends Plugin {
     if (this.settings.webdav.depth === undefined) {
       this.settings.webdav.depth = "auto_unknown";
     }
+    if (this.settings.s3.partsConcurrency === undefined) {
+      this.settings.s3.partsConcurrency = 20;
+    }
   }
 
   async saveSettings() {

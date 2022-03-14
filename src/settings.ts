@@ -754,6 +754,30 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
         });
     }
 
+    const partsConcurrencyDiv = s3Div.createEl("div");
+    new Setting(partsConcurrencyDiv)
+      .setName("Parts Concurrency")
+      .setDesc(
+        "Large files are split into small parts to upload in S3. How many parts do you want to upload in parallel at most?"
+      )
+      .addDropdown((dropdown) => {
+        dropdown.addOption("1", "1");
+        dropdown.addOption("2", "2");
+        dropdown.addOption("3", "3");
+        dropdown.addOption("5", "5");
+        dropdown.addOption("10", "10");
+        dropdown.addOption("15", "15");
+        dropdown.addOption("20", "20 (default)");
+
+        dropdown
+          .setValue(`${this.plugin.settings.s3.partsConcurrency}`)
+          .onChange(async (val) => {
+            const realVal = parseInt(val);
+            this.plugin.settings.s3.partsConcurrency = realVal;
+            await this.plugin.saveSettings();
+          });
+      });
+
     new Setting(s3Div)
       .setName("check connectivity")
       .setDesc("check connectivity")
