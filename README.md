@@ -23,7 +23,7 @@ As of Jan 2022, the plugin is considered in BETA stage. **DO NOT USE IT for any 
   - Dropbox
   - OneDrive for personal
   - Webdav
-  - A list of connectable / not-connectable / in-the-plan / never-possible services are noted down [here](./docs/services_connectable_or_not.md).
+  - [Here](./docs/services_connectable_or_not.md) shows more connectable (or not-connectable) services in details.
 - **Obsidian Mobile supported.** Vaults can be synced across mobile and desktop devices with the cloud service as the "broker".
 - **[End-to-end encryption](./docs/encryption.md) supported.** Files would be encrypted using openssl format before being sent to the cloud **if** user specify a password.
 - **Scheduled auto sync supported.** You can also manually trigger the sync using sidebar ribbon, or using the command from the command palette (or even bind the hot key combination to the command then press the hot key combination).
