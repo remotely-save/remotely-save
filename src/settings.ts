@@ -1209,8 +1209,8 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
       .addDropdown(async (dropdown) => {
         dropdown.addOption("s3", "S3 or compatible");
         dropdown.addOption("dropbox", "Dropbox");
-        dropdown.addOption("webdav", "Webdav (beta)");
-        dropdown.addOption("onedrive", "OneDrive for personal (alpha)");
+        dropdown.addOption("webdav", "Webdav");
+        dropdown.addOption("onedrive", "OneDrive for personal");
         dropdown
           .setValue(this.plugin.settings.serviceType)
           .onChange(async (val: SUPPORTED_SERVICES_TYPE) => {
