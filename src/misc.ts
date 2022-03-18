@@ -277,3 +277,25 @@ export const getSplitRanges = (bytesTotal: number, bytesEachPart: number) => {
 export const getTypeName = (obj: any) => {
   return Object.prototype.toString.call(obj).slice(8, -1);
 };
+
+/**
+ * Startting from 1
+ * @param x
+ * @returns
+ */
+export const atWhichLevel = (x: string) => {
+  if (
+    x === undefined ||
+    x === "" ||
+    x === "." ||
+    x === ".." ||
+    x.startsWith("/")
+  ) {
+    throw Error(`do not know which level for ${x}`);
+  }
+  let y = x;
+  if (x.endsWith("/")) {
+    y = x.slice(0, -1);
+  }
+  return y.split("/").length;
+};

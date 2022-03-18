@@ -244,3 +244,25 @@ describe("Misc: get split ranges", () => {
     expect(k).to.deep.equal(k2);
   });
 });
+
+describe("Misc: at which level", () => {
+  it("should throw error on some parameters", () => {
+    expect(() => misc.atWhichLevel(undefined)).to.throw();
+    expect(() => misc.atWhichLevel("")).to.throw();
+    expect(() => misc.atWhichLevel("..")).to.throw();
+    expect(() => misc.atWhichLevel(".")).to.throw();
+    expect(() => misc.atWhichLevel("/")).to.throw();
+    expect(() => misc.atWhichLevel("/xxyy")).to.throw();
+  });
+
+  it("should treat folders correctly", () => {
+    expect(misc.atWhichLevel("x/")).to.be.equal(1);
+    expect(misc.atWhichLevel("x/y/")).to.be.equal(2);
+  });
+
+  it("should treat files correctly", () => {
+    expect(misc.atWhichLevel("x.md")).to.be.equal(1);
+    expect(misc.atWhichLevel("x/y.md")).to.be.equal(2);
+    expect(misc.atWhichLevel("x/y/z.md")).to.be.equal(3);
+  });
+});
