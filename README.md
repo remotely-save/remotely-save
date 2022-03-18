@@ -14,7 +14,7 @@ This is yet another unofficial sync plugin for Obsidian. If you like it or find 
 
 ## !!!Caution!!!
 
-As of Jan 2022, the plugin is considered in BETA stage. **DO NOT USE IT for any serious vaults.** **ALWAYS, ALWAYS, backup your vault before using this plugin.**
+**ALWAYS, ALWAYS, backup your vault before using this plugin.**
 
 ## Features
 
@@ -35,8 +35,7 @@ As of Jan 2022, the plugin is considered in BETA stage. **DO NOT USE IT for any 
 
 - **To support deltions sync, extra metadata will also be uploaded.** See [Minimal Intrusive](./docs/minimal_intrusive_design.md).
 - **No Conflict resolution. No content-diff-and-patch algorithm.** All files and folders are compared using their local and remote "last modified time" and those with later "last modified time" wins.
-- **Cloud services cost you money.** Always be aware of the costs and pricing.
-- **All files or folder starting with `.` (dot) or `_` (underscore) are treated as hidden files, and would NOT be synced.** It's useful if you have some files just staying locally. But this strategy also means that themes / other plugins / settings of this plugin would neither be synced.
+- **Cloud services cost you money.** Always be aware of the costs and pricing. Specifically, all the operations, including but not limited to downloading, uploading, listing all files, calling any api, storage sizes, may or may not cost you money.
 - **Some limitations from the browser environment.** More technical details are [in the doc](./docs/browser_env.md).
 
 ## Questions, Suggestions, Or Bugs
@@ -72,7 +71,6 @@ Additionally, the plugin author may occasionally visit Obsidian official forum a
 
 ### Dropbox
 
-- **This plugin's function for Dropbox is not as mature as functions for S3.**
 - **This plugin is NOT an official Dropbox product.** The plugin just uses Dropbox's public API.
 - After the authorization, the plugin can read your name and email (which cannot be unselected on Dropbox api), and read and write files in your Dropbox's `/Apps/remotely-save` folder.
 - If you decide to authorize this plugin to connect to Dropbox, please go to plugin's settings, and choose Dropbox then follow the instructions.
@@ -80,7 +78,6 @@ Additionally, the plugin author may occasionally visit Obsidian official forum a
 
 ### OneDrive for personal
 
-- **This plugin's function for OneDrive is not as mature as functions for S3.**
 - **This plugin is NOT an official Microsoft / OneDrive product.** The plugin just uses Microsoft's [OneDrive's public API](https://docs.microsoft.com/en-us/onedrive/developer/rest-api).
 - This plugin only works for "OneDrive for personal", and not works for "OneDrive for Business" (yet). See [#11](https://github.com/fyears/remotely-save/issues/11) to further details.
 - After the authorization, the plugin can read your name and email, and read and write files in your OneDrive's `/Apps/remotely-save` folder.
@@ -89,7 +86,6 @@ Additionally, the plugin author may occasionally visit Obsidian official forum a
 
 ### webdav
 
-- **webdav support is considered experimental.**
 - About CORS:
   - If you are using Obsidian >= 0.13.25, you can skip this CORS part.
   - If you are using Obsidian < 0.13.25:
@@ -104,6 +100,12 @@ Additionally, the plugin author may occasionally visit Obsidian official forum a
 - You can configure auto syncing every N minutes in settings.
 - In auto sync mode, if any error occurs, the plugin would **fail silently**.
 - Auto sync only works when Obsidian is being opened. It's **technically impossible** to auto sync while Obsidian is in background, because the plugin just works in the browser environment provided by Obsidian.
+
+## How To Deal With Hidden Files Or Folders
+
+**By default, all files or folder starting with `.` (dot) or `_` (underscore) are treated as hidden files, and would NOT be synced.** It's useful if you have some files just staying locally. But this strategy also means that themes / other plugins / settings of this plugin would neither be synced.
+
+In the latest version, you can change the settings to allow syncing `_` files or folders, as well as `.obsidian` special config folder (but not any other `.` files or folders).
 
 ## How To Debug
 
