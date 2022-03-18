@@ -73,7 +73,7 @@ Additionally, the plugin author may occasionally visit Obsidian official forum a
 
 - **This plugin is NOT an official Dropbox product.** The plugin just uses Dropbox's public API.
 - After the authorization, the plugin can read your name and email (which cannot be unselected on Dropbox api), and read and write files in your Dropbox's `/Apps/remotely-save` folder.
-- If you decide to authorize this plugin to connect to Dropbox, please go to plugin's settings, and choose Dropbox then follow the instructions.
+- If you decide to authorize this plugin to connect to Dropbox, please go to plugin's settings, and choose Dropbox then follow the instructions. [More with screenshot is here](./docs/dropbox_review_material/README.md).
 - Password-based end-to-end encryption is also supported. But please be aware that **the vault name itself is not encrypted**.
 
 ### OneDrive for personal
