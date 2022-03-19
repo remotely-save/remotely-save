@@ -984,7 +984,8 @@ const splitThreeSteps = (syncPlan: SyncPlanType, sortedKeys: string[]) => {
     }
   }
 
-  // the deletionOps should be run from shadowest to deepest
+  // the deletionOps should be run from max level to min level
+  // right now it is sorted by level from min to max (NOT length of key!)
   // so we need to reverse it!
   deletionOps.reverse(); // inplace reverse
 

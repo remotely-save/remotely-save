@@ -1288,7 +1288,7 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
     new Setting(syncConfigDirDiv)
       .setName("sync config dir (experimental)")
       .setDesc(
-        `Sync config dir ${this.app.vault.configDir} or not. Please be aware that this may impact all your plugins' or Obsidian's settings, and may require you restart Obsidian after sync. Enable this at your own risk.`
+        `Sync config dir ${this.app.vault.configDir} or not (inner folder .git and node_modules would be ignored). Please be aware that this may impact all your plugins' or Obsidian's settings, and may require you restart Obsidian after sync. Enable this at your own risk.`
       )
       .addDropdown((dropdown) => {
         dropdown.addOption("disable", "disable");
