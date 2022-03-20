@@ -114,6 +114,8 @@
   "settings_s3_bypasscorslocally_desc": "The plugin allows skipping server CORS config in new version (Obsidian>={{ver}}). If you encounter any issues, please disable this setting and config CORS (app://obsidian.md and capacitor://localhost and http://localhost) on server.",
   "settings_s3_parts": "Parts Concurrency",
   "settings_s3_parts_desc": "Large files are split into small parts to upload in S3. How many parts do you want to upload in parallel at most?",
+  "settings_s3_urlstyle": "S3 URL style",
+  "settings_s3_urlstyle_desc": "Whether to force path-style URLs for S3 objects (e.g., https://s3.amazonaws.com/*/ instead of https://*.s3.amazonaws.com/).",
   "settings_s3_connect_succ": "Great! The bucket can be accessed.",
   "settings_s3_connect_fail": "The S3 bucket cannot be reached.",
 
