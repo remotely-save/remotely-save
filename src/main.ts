@@ -1,7 +1,7 @@
 import { Modal, Notice, Plugin, Setting, addIcon, setIcon } from "obsidian";
 import cloneDeep from "lodash/cloneDeep";
 import { nanoid } from "nanoid";
-import feather from "feather-icons";
+import { createElement, RotateCcw, RefreshCcw } from "lucide";
 import type { RemotelySavePluginSettings } from "./baseTypes";
 import {
   COMMAND_CALLBACK,
@@ -76,14 +76,13 @@ type SyncTriggerSourceType = "manual" | "auto" | "dry" | "autoOnceInit";
 
 const iconNameSyncWait = `remotely-save-sync-wait`;
 const iconNameSyncRunning = `remotely-save-sync-running`;
-const iconSvgSyncWait = feather.icons["rotate-ccw"].toSvg({
-  width: 100,
-  height: 100,
-});
-const iconSvgSyncRunning = feather.icons["refresh-ccw"].toSvg({
-  width: 100,
-  height: 100,
-});
+
+const iconSvgSyncWait = createElement(RotateCcw);
+iconSvgSyncWait.setAttribute("width", "100");
+iconSvgSyncWait.setAttribute("height", "100");
+const iconSvgSyncRunning = createElement(RefreshCcw);
+iconSvgSyncRunning.setAttribute("width", "100");
+iconSvgSyncRunning.setAttribute("height", "100");
 
 export default class RemotelySavePlugin extends Plugin {
   settings: RemotelySavePluginSettings;
@@ -345,8 +344,8 @@ export default class RemotelySavePlugin extends Plugin {
   async onload() {
     log.info(`loading plugin ${this.manifest.id}`);
 
-    addIcon(iconNameSyncWait, iconSvgSyncWait);
-    addIcon(iconNameSyncRunning, iconSvgSyncRunning);
+    addIcon(iconNameSyncWait, iconSvgSyncWait.outerHTML);
+    addIcon(iconNameSyncRunning, iconSvgSyncRunning.outerHTML);
 
     this.oauth2Info = {
       verifier: "",
