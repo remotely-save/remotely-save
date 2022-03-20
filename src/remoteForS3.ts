@@ -155,6 +155,7 @@ export const DEFAULT_S3_CONFIG = {
   s3BucketName: "",
   bypassCorsLocally: true,
   partsConcurrency: 20,
+  forcePathStyle: false,
 };
 
 export type S3ObjectType = _Object;
@@ -192,6 +193,7 @@ export const getS3Client = (s3Config: S3Config) => {
     const s3Client = new S3Client({
       region: s3Config.s3Region,
       endpoint: endpoint,
+      forcePathStyle: s3Config.forcePathStyle,
       credentials: {
         accessKeyId: s3Config.s3AccessKeyID,
         secretAccessKey: s3Config.s3SecretAccessKey,
@@ -203,6 +205,7 @@ export const getS3Client = (s3Config: S3Config) => {
     const s3Client = new S3Client({
       region: s3Config.s3Region,
       endpoint: endpoint,
+      forcePathStyle: s3Config.forcePathStyle,
       credentials: {
         accessKeyId: s3Config.s3AccessKeyID,
         secretAccessKey: s3Config.s3SecretAccessKey,
