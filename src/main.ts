@@ -38,6 +38,8 @@ import { fetchMetadataFile, parseRemoteItems, SyncStatusType } from "./sync";
 import { doActualSync, getSyncPlan, isPasswordOk } from "./sync";
 import { messyConfigToNormal, normalConfigToMessy } from "./configPersist";
 import { ObsConfigDirFileType, listFilesInObsFolder } from "./obsFolderLister";
+import { I18n } from "./i18n";
+import type { LangType, LangTypeAndAuto, TransItemType } from "./i18n";
 
 import * as origLog from "loglevel";
 import { DeletionOnRemote, MetadataOnRemote } from "./metadataOnRemote";
@@ -59,6 +61,7 @@ const DEFAULT_SETTINGS: RemotelySavePluginSettings = {
   concurrency: 5,
   syncConfigDir: false,
   syncUnderscoreItems: false,
+  lang: "auto",
 };
 
 interface OAuth2Info {
@@ -92,8 +95,13 @@ export default class RemotelySavePlugin extends Plugin {
   currSyncMsg?: string;
   syncRibbon?: HTMLElement;
   autoRunIntervalID?: number;
+  i18n: I18n;
 
   async syncRun(triggerSource: SyncTriggerSourceType = "manual") {
+    const t = (x: TransItemType, vars?: any) => {
+      return this.i18n.t(x, vars);
+    };
+
     const getNotice = (x: string) => {
       // only show notices in manual mode
       // no notice in auto mode
@@ -103,7 +111,12 @@ export default class RemotelySavePlugin extends Plugin {
     };
     if (this.syncStatus !== "idle") {
       // here the notice is shown regardless of triggerSource
-      new Notice(`Remotely Save already running in stage ${this.syncStatus}!`);
+      new Notice(
+        t("syncrun_alreadyrunning", {
+          pluginName: this.manifest.name,
+          syncStatus: this.syncStatus,
+        })
+      );
       if (this.currSyncMsg !== undefined && this.currSyncMsg !== "") {
         new Notice(this.currSyncMsg);
       }
@@ -126,7 +139,10 @@ export default class RemotelySavePlugin extends Plugin {
         setIcon(this.syncRibbon, iconNameSyncRunning);
         this.syncRibbon.setAttribute(
           "aria-label",
-          `${this.manifest.name}: ${triggerSource} syncing`
+          t("syncrun_syncingribbon", {
+            pluginName: this.manifest.name,
+            triggerSource: triggerSource,
+          })
         );
       }
 
@@ -134,17 +150,26 @@ export default class RemotelySavePlugin extends Plugin {
 
       if (triggerSource === "dry") {
         getNotice(
-          `0/${MAX_STEPS} Remotely Save running in dry mode, not actual file changes would happen.`
+          t("syncrun_step0", {
+            maxSteps: `${MAX_STEPS}`,
+          })
         );
       }
 
       //log.info(`huh ${this.settings.password}`)
       getNotice(
-        `1/${MAX_STEPS} Remotely Save Sync Preparing (${this.settings.serviceType})`
+        t("syncrun_step1", {
+          maxSteps: `${MAX_STEPS}`,
+          serviceType: this.settings.serviceType,
+        })
       );
       this.syncStatus = "preparing";
 
-      getNotice(`2/${MAX_STEPS} Starting to fetch remote meta data.`);
+      getNotice(
+        t("syncrun_step2", {
+          maxSteps: `${MAX_STEPS}`,
+        })
+      );
       this.syncStatus = "getting_remote_files_list";
       const self = this;
       const client = new RemoteClient(
@@ -159,18 +184,26 @@ export default class RemotelySavePlugin extends Plugin {
       const remoteRsp = await client.listFromRemote();
       log.debug(remoteRsp);
 
-      getNotice(`3/${MAX_STEPS} Checking password correct or not.`);
+      getNotice(
+        t("syncrun_step3", {
+          maxSteps: `${MAX_STEPS}`,
+        })
+      );
       this.syncStatus = "checking_password";
       const passwordCheckResult = await isPasswordOk(
         remoteRsp.Contents,
         this.settings.password
       );
       if (!passwordCheckResult.ok) {
-        getNotice("something goes wrong while checking password");
+        getNotice(t("syncrun_passworderr"));
         throw Error(passwordCheckResult.reason);
       }
 
-      getNotice(`4/${MAX_STEPS} Trying to fetch extra meta data from remote.`);
+      getNotice(
+        t("syncrun_step4", {
+          maxSteps: `${MAX_STEPS}`,
+        })
+      );
       this.syncStatus = "getting_remote_extra_meta";
       const { remoteStates, metadataFile } = await parseRemoteItems(
         remoteRsp.Contents,
@@ -186,7 +219,11 @@ export default class RemotelySavePlugin extends Plugin {
         this.settings.password
       );
 
-      getNotice(`5/${MAX_STEPS} Starting to fetch local meta data.`);
+      getNotice(
+        t("syncrun_step5", {
+          maxSteps: `${MAX_STEPS}`,
+        })
+      );
       this.syncStatus = "getting_local_meta";
       const local = this.app.vault.getAllLoadedFiles();
       const localHistory = await loadDeleteRenameHistoryTableByVault(
@@ -204,7 +241,11 @@ export default class RemotelySavePlugin extends Plugin {
       // log.info(local);
       // log.info(localHistory);
 
-      getNotice(`6/${MAX_STEPS} Starting to generate sync plan.`);
+      getNotice(
+        t("syncrun_step6", {
+          maxSteps: `${MAX_STEPS}`,
+        })
+      );
       this.syncStatus = "generating_plan";
       const { plan, sortedKeys, deletions } = await getSyncPlan(
         remoteStates,
@@ -232,7 +273,11 @@ export default class RemotelySavePlugin extends Plugin {
       // The operations below begins to write or delete (!!!) something.
 
       if (triggerSource !== "dry") {
-        getNotice(`7/${MAX_STEPS} Remotely Save Sync data exchanging!`);
+        getNotice(
+          t("syncrun_step7", {
+            maxSteps: `${MAX_STEPS}`,
+          })
+        );
 
         this.syncStatus = "syncing";
         await doActualSync(
@@ -254,11 +299,17 @@ export default class RemotelySavePlugin extends Plugin {
       } else {
         this.syncStatus = "syncing";
         getNotice(
-          `7/${MAX_STEPS} Remotely Save real sync is skipped in dry run mode.`
+          t("syncrun_step7skip", {
+            maxSteps: `${MAX_STEPS}`,
+          })
         );
       }
 
-      getNotice(`8/${MAX_STEPS} Remotely Save finish!`);
+      getNotice(
+        t("syncrun_step8", {
+          maxSteps: `${MAX_STEPS}`,
+        })
+      );
       this.syncStatus = "finish";
       this.syncStatus = "idle";
 
@@ -273,11 +324,12 @@ export default class RemotelySavePlugin extends Plugin {
         }-${Date.now()}: finish sync, triggerSource=${triggerSource}`
       );
     } catch (error) {
-      const msg = `${
-        this.manifest.id
-      }-${Date.now()}: abort sync, triggerSource=${triggerSource}, error while ${
-        this.syncStatus
-      }`;
+      const msg = t("syncrun_abort", {
+        manifestID: this.manifest.id,
+        theDate: `${Date.now()}`,
+        triggerSource: triggerSource,
+        syncStatus: this.syncStatus,
+      });
       log.info(msg);
       log.info(error);
       getNotice(msg);
@@ -307,6 +359,15 @@ export default class RemotelySavePlugin extends Plugin {
     this.currSyncMsg = "";
 
     await this.loadSettings();
+
+    // lang should be load early, but after settings
+    this.i18n = new I18n(this.settings.lang, async (lang: LangTypeAndAuto) => {
+      this.settings.lang = lang;
+      await this.saveSettings();
+    });
+    const t = (x: TransItemType, vars?: any) => {
+      return this.i18n.t(x, vars);
+    };
 
     if (this.settings.currLogLevel !== undefined) {
       log.setLevel(this.settings.currLogLevel as any);
@@ -353,7 +414,9 @@ export default class RemotelySavePlugin extends Plugin {
         this.settings = Object.assign({}, this.settings, copied);
         this.saveSettings();
         new Notice(
-          `New not-oauth2 settings for ${this.manifest.name} saved. Reopen the plugin Settings to the effect.`
+          t("protocol_saveqr", {
+            manifestName: this.manifest.name,
+          })
         );
       }
     });
@@ -362,9 +425,9 @@ export default class RemotelySavePlugin extends Plugin {
       COMMAND_CALLBACK,
       async (inputParams) => {
         new Notice(
-          `Your uri call a callback that's not supported yet: ${JSON.stringify(
-            inputParams
-          )}`
+          t("protocol_callbacknotsupported", {
+            params: JSON.stringify(inputParams),
+          })
         );
       }
     );
@@ -375,12 +438,14 @@ export default class RemotelySavePlugin extends Plugin {
         if (inputParams.code !== undefined) {
           if (this.oauth2Info.helperModal !== undefined) {
             this.oauth2Info.helperModal.contentEl.empty();
-            this.oauth2Info.helperModal.contentEl.createEl("p", {
-              text: "Connecting to Dropbox...",
-            });
-            this.oauth2Info.helperModal.contentEl.createEl("p", {
-              text: "Please DO NOT close this modal.",
-            });
+
+            t("protocol_dropbox_connecting")
+              .split("\n")
+              .forEach((val) => {
+                this.oauth2Info.helperModal.contentEl.createEl("p", {
+                  text: val,
+                });
+              });
           }
 
           let authRes = await sendAuthReqDropbox(
@@ -410,7 +475,11 @@ export default class RemotelySavePlugin extends Plugin {
           this.settings.dropbox.username = username;
           await this.saveSettings();
 
-          new Notice(`Good! We've connected to Dropbox as user ${username}!`);
+          new Notice(
+            t("protocol_dropbox_connect_succ", {
+              username: username,
+            })
+          );
 
           this.oauth2Info.verifier = ""; // reset it
           this.oauth2Info.helperModal?.close(); // close it
@@ -423,7 +492,9 @@ export default class RemotelySavePlugin extends Plugin {
           this.oauth2Info.authDiv = undefined;
 
           this.oauth2Info.revokeAuthSetting?.setDesc(
-            `You've connected as user ${this.settings.dropbox.username}. If you want to disconnect, click this button.`
+            t("protocol_dropbox_connect_succ_revoke", {
+              username: this.settings.dropbox.username,
+            })
           );
           this.oauth2Info.revokeAuthSetting = undefined;
           this.oauth2Info.revokeDiv?.toggleClass(
@@ -432,13 +503,11 @@ export default class RemotelySavePlugin extends Plugin {
           );
           this.oauth2Info.revokeDiv = undefined;
         } else {
-          new Notice(
-            "Something went wrong from response from Dropbox. Maybe you rejected the auth?"
-          );
+          new Notice(t("protocol_dropbox_connect_fail"));
           throw Error(
-            `do not know how to deal with the callback: ${JSON.stringify(
-              inputParams
-            )}`
+            t("protocol_dropbox_connect_unknown", {
+              params: JSON.stringify(inputParams),
+            })
           );
         }
       }
@@ -450,12 +519,14 @@ export default class RemotelySavePlugin extends Plugin {
         if (inputParams.code !== undefined) {
           if (this.oauth2Info.helperModal !== undefined) {
             this.oauth2Info.helperModal.contentEl.empty();
-            this.oauth2Info.helperModal.contentEl.createEl("p", {
-              text: "Connecting to Onedrive...",
-            });
-            this.oauth2Info.helperModal.contentEl.createEl("p", {
-              text: "Please DO NOT close this modal.",
-            });
+
+            t("protocol_onedrive_connecting")
+              .split("\n")
+              .forEach((val) => {
+                this.oauth2Info.helperModal.contentEl.createEl("p", {
+                  text: val,
+                });
+              });
           }
 
           let rsp = await sendAuthReqOnedrive(
@@ -499,7 +570,9 @@ export default class RemotelySavePlugin extends Plugin {
           this.oauth2Info.authDiv = undefined;
 
           this.oauth2Info.revokeAuthSetting?.setDesc(
-            `You've connected as user ${this.settings.onedrive.username}. If you want to disconnect, click this button.`
+            t("protocol_onedrive_connect_succ_revoke", {
+              username: this.settings.onedrive.username,
+            })
           );
           this.oauth2Info.revokeAuthSetting = undefined;
           this.oauth2Info.revokeDiv?.toggleClass(
@@ -508,13 +581,11 @@ export default class RemotelySavePlugin extends Plugin {
           );
           this.oauth2Info.revokeDiv = undefined;
         } else {
-          new Notice(
-            "Something went wrong from response from OneDrive. Maybe you rejected the auth?"
-          );
+          new Notice(t("protocol_onedrive_connect_fail"));
           throw Error(
-            `do not know how to deal with the callback: ${JSON.stringify(
-              inputParams
-            )}`
+            t("protocol_onedrive_connect_unknown", {
+              params: JSON.stringify(inputParams),
+            })
           );
         }
       }
@@ -528,7 +599,7 @@ export default class RemotelySavePlugin extends Plugin {
 
     this.addCommand({
       id: "start-sync",
-      name: "start sync",
+      name: t("command_startsync"),
       icon: iconNameSyncWait,
       callback: async () => {
         this.syncRun("manual");
@@ -537,7 +608,7 @@ export default class RemotelySavePlugin extends Plugin {
 
     this.addCommand({
       id: "start-sync-dry-run",
-      name: "start sync (dry run only)",
+      name: t("command_drynrun"),
       icon: iconNameSyncWait,
       callback: async () => {
         this.syncRun("dry");

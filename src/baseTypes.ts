@@ -3,6 +3,8 @@
  * To avoid circular dependency.
  */
 
+import type { LangType, LangTypeAndAuto } from "./i18n";
+
 export type SUPPORTED_SERVICES_TYPE = "s3" | "webdav" | "dropbox" | "onedrive";
 
 export interface S3Config {
@@ -70,6 +72,7 @@ export interface RemotelySavePluginSettings {
   concurrency?: number;
   syncConfigDir?: boolean;
   syncUnderscoreItems?: boolean;
+  lang?: LangTypeAndAuto;
 }
 
 export interface RemoteItem {

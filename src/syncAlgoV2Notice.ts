@@ -1,5 +1,6 @@
 import { App, Modal, Notice, PluginSettingTab, Setting } from "obsidian";
 import type RemotelySavePlugin from "./main"; // unavoidable
+import type { TransItemType } from "./i18n";
 import * as origLog from "loglevel";
 const log = origLog.getLogger("rs-default");
 
@@ -13,40 +14,33 @@ export class SyncAlgoV2Modal extends Modal {
   }
   onOpen() {
     let { contentEl } = this;
+    const t = (x: TransItemType, vars?: any) => {
+      return this.plugin.i18n.t(x, vars);
+    };
+
     contentEl.createEl("h2", {
-      text: "Remotely Save has a better sync algorithm",
+      text: t("syncalgov2_title"),
     });
 
-    const texts = [
-      "Welcome to use Remotely Save!",
-
-      "From version 0.3.0, a new algorithm has been developed, but it needs uploading extra meta data files _remotely-save-metadata-on-remote.{json,bin} to YOUR configured cloud destinations, besides your notes.",
-
-      "So that, for example, the second device can know that what files/folders have been deleted on the first device by reading those files.",
-
-      'If you agree, plase click the button "agree", and enjoy the plugin! AND PLEASE REMEMBER TO BACKUP YOUR VAULT FIRSTLY!',
-
-      'If you do not agree, you should stop using the current and later versions of Remotely Save. You could consider manually install the old version 0.2.14 which uses old algorithm and does not upload any extra meta data files. By clicking the "Do not agree" button, the plugin will unload itself, and you need to manually disable it in Obsidian settings.',
-    ];
-
     const ul = contentEl.createEl("ul");
-
-    for (const t of texts) {
-      ul.createEl("li", {
-        text: t,
+    t("syncalgov2_texts")
+      .split("\n")
+      .forEach((val) => {
+        ul.createEl("li", {
+          text: val,
+        });
       });
-    }
 
     new Setting(contentEl)
       .addButton((button) => {
-        button.setButtonText("Agree");
+        button.setButtonText(t("syncalgov2_button_agree"));
         button.onClick(async () => {
           this.agree = true;
           this.close();
         });
       })
       .addButton((button) => {
-        button.setButtonText("Do not agree");
+        button.setButtonText(t("syncalgov2_button_disagree"));
         button.onClick(() => {
           this.close();
         });

@@ -33,6 +33,7 @@ import {
   getAuthUrlAndVerifier as getAuthUrlAndVerifierOnedrive,
 } from "./remoteForOnedrive";
 import { messyConfigToNormal } from "./configPersist";
+import type { TransItemType } from "./i18n";
 
 import * as origLog from "loglevel";
 const log = origLog.getLogger("rs-default");
@@ -48,47 +49,53 @@ class PasswordModal extends Modal {
 
   onOpen() {
     let { contentEl } = this;
-    // contentEl.setText("Add Or change password.");
-    contentEl.createEl("h2", { text: "Hold on and PLEASE READ ON..." });
-    contentEl.createEl("p", {
-      text: "If the field is not empty, files would be encrypted locally before being uploaded.",
-    });
-    contentEl.createEl("p", {
-      text: "If the field is empty, then files would be uploaded without encryption.",
-    });
 
-    contentEl.createEl("p", {
-      text: "Attention 1/5: The vault name is NOT encrypted. The plugin creates a folder with the vault name on some remote services.",
-      cls: "password-disclaimer",
-    });
-    contentEl.createEl("p", {
-      text: "Attention 2/5: The password itself is stored in PLAIN TEXT LOCALLY.",
-      cls: "password-disclaimer",
-    });
-    contentEl.createEl("p", {
-      text: "Attention 3/5: Some metadata are not encrypted or can be easily guessed. (File sizes are closed to their unencrypted ones, and directory path may be stored as 0-byte-size object.)",
-      cls: "password-disclaimer",
-    });
-    contentEl.createEl("p", {
-      text: "Attention 4/5: You should make sure the remote store IS EMPTY, or REMOTE FILES WERE ENCRYPTED BY THAT NEW PASSWORD, to avoid conflictions.",
-    });
-    contentEl.createEl("p", {
-      text: "Attention 5/5: The longer the password, the better.",
+    const t = (x: TransItemType, vars?: any) => {
+      return this.plugin.i18n.t(x, vars);
+    };
+
+    // contentEl.setText("Add Or change password.");
+    contentEl.createEl("h2", { text: t("modal_password_title") });
+    t("modal_password_shortdesc")
+      .split("\n")
+      .forEach((val, idx) => {
+        contentEl.createEl("p", {
+          text: val,
+        });
+      });
+
+    [
+      t("modal_password_attn1"),
+      t("modal_password_attn2"),
+      t("modal_password_attn3"),
+      t("modal_password_attn4"),
+      t("modal_password_attn5"),
+    ].forEach((val, idx) => {
+      if (idx < 3) {
+        contentEl.createEl("p", {
+          text: val,
+          cls: "password-disclaimer",
+        });
+      } else {
+        contentEl.createEl("p", {
+          text: val,
+        });
+      }
     });
 
     new Setting(contentEl)
       .addButton((button) => {
-        button.setButtonText("The Second Confirm to change password.");
+        button.setButtonText(t("modal_password_secondconfirm"));
         button.onClick(async () => {
           this.plugin.settings.password = this.newPassword;
           await this.plugin.saveSettings();
-          new Notice("New password saved!");
+          new Notice(t("modal_password_notice"));
           this.close();
         });
         button.setClass("password-second-confirm");
       })
       .addButton((button) => {
-        button.setButtonText("Go Back");
+        button.setButtonText(t("goback"));
         button.onClick(() => {
           this.close();
         });
@@ -123,6 +130,10 @@ class DropboxAuthModal extends Modal {
   async onOpen() {
     let { contentEl } = this;
 
+    const t = (x: TransItemType, vars?: any) => {
+      return this.plugin.i18n.t(x, vars);
+    };
+
     let needManualPatse = false;
     const userAgent = window.navigator.userAgent.toLocaleLowerCase() || "";
     // some users report that,
@@ -146,33 +157,35 @@ class DropboxAuthModal extends Modal {
     );
 
     if (needManualPatse) {
-      contentEl.createEl("p", {
-        text: "Step 1: Visit the address in a browser, and follow the steps.",
-      });
-      contentEl.createEl("p", {
-        text: 'Step 2: In the end of the web flow, you obtain a long code. Paste it here then click "Submit".',
-      });
+      t("modal_dropboxauth_manualsteps")
+        .split("\n")
+        .forEach((val) => {
+          contentEl.createEl("p", {
+            text: val,
+          });
+        });
     } else {
       this.plugin.oauth2Info.verifier = verifier;
 
-      contentEl.createEl("p", {
-        text: "Visit the address in a browser, and follow the steps.",
-      });
-      contentEl.createEl("p", {
-        text: "Finally you should be redirected to Obsidian.",
-      });
+      t("modal_dropboxauth_autosteps")
+        .split("\n")
+        .forEach((val) => {
+          contentEl.createEl("p", {
+            text: val,
+          });
+        });
     }
 
     const div2 = contentEl.createDiv();
     div2.createEl(
       "button",
       {
-        text: "Click to copy the auth url",
+        text: t("modal_dropboxauth_copybutton"),
       },
       (el) => {
         el.onclick = async () => {
           await navigator.clipboard.writeText(authUrl);
-          new Notice("the auth url copied to clipboard!");
+          new Notice(t("modal_dropboxauth_copynotice"));
         };
       }
     );
@@ -185,8 +198,8 @@ class DropboxAuthModal extends Modal {
     if (needManualPatse) {
       let authCode = "";
       new Setting(contentEl)
-        .setName("Auth Code from web page")
-        .setDesc('You need to click "Confirm".')
+        .setName(t("modal_dropboxauth_maualinput"))
+        .setDesc(t("modal_dropboxauth_maualinput_desc"))
         .addText((text) =>
           text
             .setPlaceholder("")
@@ -196,9 +209,9 @@ class DropboxAuthModal extends Modal {
             })
         )
         .addButton(async (button) => {
-          button.setButtonText("Confirm");
+          button.setButtonText(t("submit"));
           button.onClick(async () => {
-            new Notice("Trying to connect to Dropbox");
+            new Notice(t("modal_dropboxauth_maualinput_notice"));
             try {
               const authRes = await sendAuthReqDropbox(
                 this.plugin.settings.dropbox.clientID,
@@ -224,7 +237,9 @@ class DropboxAuthModal extends Modal {
               this.plugin.settings.dropbox.username = username;
               await this.plugin.saveSettings();
               new Notice(
-                `Good! We've connected to Dropbox as user ${username}!`
+                t("modal_dropboxauth_maualinput_conn_succ", {
+                  username: username,
+                })
               );
               this.authDiv.toggleClass(
                 "dropbox-auth-button-hide",
@@ -235,12 +250,14 @@ class DropboxAuthModal extends Modal {
                 this.plugin.settings.dropbox.username === ""
               );
               this.revokeAuthSetting.setDesc(
-                `You've connected as user ${this.plugin.settings.dropbox.username}. If you want to disconnect, click this button.`
+                t("modal_dropboxauth_maualinput_conn_succ_revoke", {
+                  username: this.plugin.settings.dropbox.username,
+                })
               );
               this.close();
             } catch (err) {
               console.error(err);
-              new Notice("Something goes wrong while connecting to Dropbox.");
+              new Notice(t("modal_dropboxauth_maualinput_conn_fail"));
             }
           });
         });
@@ -281,27 +298,27 @@ export class OnedriveAuthModal extends Modal {
     );
     this.plugin.oauth2Info.verifier = verifier;
 
-    contentEl.createEl("p", {
-      text: "Currently only OneDrive for personal is supported. OneDrive for Business is NOT supported (yet).",
-    });
+    const t = (x: TransItemType, vars?: any) => {
+      return this.plugin.i18n.t(x, vars);
+    };
 
-    contentEl.createEl("p", {
-      text: "Visit the address in a browser, and follow the steps.",
-    });
-    contentEl.createEl("p", {
-      text: "Finally you should be redirected to Obsidian.",
-    });
-
+    t("modal_onedriveauth_shortdesc")
+      .split("\n")
+      .forEach((val) => {
+        contentEl.createEl("p", {
+          text: val,
+        });
+      });
     const div2 = contentEl.createDiv();
     div2.createEl(
       "button",
       {
-        text: "Click to copy the auth url",
+        text: t("modal_onedriveauth_copybutton"),
       },
       (el) => {
         el.onclick = async () => {
           await navigator.clipboard.writeText(authUrl);
-          new Notice("the auth url copied to clipboard!");
+          new Notice(t("modal_onedriveauth_copynotice"));
         };
       }
     );
@@ -336,8 +353,12 @@ export class OnedriveRevokeAuthModal extends Modal {
 
   async onOpen() {
     let { contentEl } = this;
+    const t = (x: TransItemType, vars?: any) => {
+      return this.plugin.i18n.t(x, vars);
+    };
+
     contentEl.createEl("p", {
-      text: 'Step 1: Go to the following address, click the "Edit" button for the plugin, then click "Remove these permissions" button on the page.',
+      text: t("modal_onedriverevokeauth_step1"),
     });
     const consentUrl = "https://microsoft.com/consent";
     contentEl.createEl("p").createEl("a", {
@@ -346,14 +367,14 @@ export class OnedriveRevokeAuthModal extends Modal {
     });
 
     contentEl.createEl("p", {
-      text: "Step 2: Click the button below, to clean the locally-saved login credentials.",
+      text: t("modal_onedriverevokeauth_step2"),
     });
 
     new Setting(contentEl)
-      .setName("Clean Locally-Saved Login Credentials")
-      .setDesc("You need to click the button.")
+      .setName(t("modal_onedriverevokeauth_clean"))
+      .setDesc(t("modal_onedriverevokeauth_clean_desc"))
       .addButton(async (button) => {
-        button.setButtonText("Clean");
+        button.setButtonText(t("modal_onedriverevokeauth_clean_button"));
         button.onClick(async () => {
           try {
             this.plugin.settings.onedrive = JSON.parse(
@@ -368,11 +389,11 @@ export class OnedriveRevokeAuthModal extends Modal {
               "onedrive-revoke-auth-button-hide",
               this.plugin.settings.onedrive.username === ""
             );
-            new Notice("Cleaned!");
+            new Notice(t("modal_onedriverevokeauth_clean_notice"));
             this.close();
           } catch (err) {
             console.error(err);
-            new Notice("Something goes wrong while revoking");
+            new Notice(t("modal_onedriverevokeauth_clean_fail"));
           }
         });
       });
@@ -400,31 +421,31 @@ class SyncConfigDirModal extends Modal {
   async onOpen() {
     let { contentEl } = this;
 
-    const texts = [
-      "Attention 1/3: This only syncs (copies) the whole Obsidian config dir, not other . folders or files. It also doesn't understand the inner structure of the config dir.",
-      "Attention 2/3: After the config dir is synced, plugins settings might be corrupted, and Obsidian might need to be restarted to load the new settings.",
-      "Attention 3/3: The deletion (uninstallation) operations of or inside Obsidian config dir cannot be tracked. So if you want to uninstall a plugin, you need to manually uninstall it on all device, before next sync.",
-      "If you are agreed to take your own risk, please click the following second confirm button.",
-    ];
-    for (const t of texts) {
-      contentEl.createEl("p", {
-        text: t,
+    const t = (x: TransItemType, vars?: any) => {
+      return this.plugin.i18n.t(x, vars);
+    };
+
+    t("modal_syncconfig_attn")
+      .split("\n")
+      .forEach((val) => {
+        contentEl.createEl("p", {
+          text: val,
+        });
       });
-    }
 
     new Setting(contentEl)
       .addButton((button) => {
-        button.setButtonText("The Second Confirm To Enable.");
+        button.setButtonText(t("modal_syncconfig_secondconfirm"));
         button.onClick(async () => {
           this.plugin.settings.syncConfigDir = true;
           await this.plugin.saveSettings();
           this.saveDropdownFunc();
-          new Notice("You've enabled syncing config folder!");
+          new Notice(t("modal_syncconfig_notice"));
           this.close();
         });
       })
       .addButton((button) => {
-        button.setButtonText("Go Back");
+        button.setButtonText(t("goback"));
         button.onClick(() => {
           this.close();
         });
@@ -447,6 +468,10 @@ class ExportSettingsQrCodeModal extends Modal {
   async onOpen() {
     let { contentEl } = this;
 
+    const t = (x: TransItemType, vars?: any) => {
+      return this.plugin.i18n.t(x, vars);
+    };
+
     const { rawUri, imgUri } = await exportQrCodeUri(
       this.plugin.settings,
       this.app.vault.getName(),
@@ -454,26 +479,24 @@ class ExportSettingsQrCodeModal extends Modal {
     );
 
     const div1 = contentEl.createDiv();
-    div1.createEl("p", {
-      text: "This exports not-oauth2 settings. (It means that Dropbox, OneDrive info are NOT exported.)",
-    });
-    div1.createEl("p", {
-      text: "You can use another device to scan this qrcode.",
-    });
-    div1.createEl("p", {
-      text: "Or, you can click the button to copy the special url.",
-    });
+    t("modal_qr_shortdesc")
+      .split("\n")
+      .forEach((val) => {
+        div1.createEl("p", {
+          text: val,
+        });
+      });
 
     const div2 = contentEl.createDiv();
     div2.createEl(
       "button",
       {
-        text: "Click to copy the special URI",
+        text: t("modal_qr_button"),
       },
       (el) => {
         el.onclick = async () => {
           await navigator.clipboard.writeText(rawUri);
-          new Notice("special uri copied to clipboard!");
+          new Notice(t("modal_qr_button_notice"));
         };
       }
     );
@@ -509,6 +532,10 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
 
     containerEl.empty();
 
+    const t = (x: TransItemType, vars?: any) => {
+      return this.plugin.i18n.t(x, vars);
+    };
+
     containerEl.createEl("h1", { text: "Remotely Save" });
 
     //////////////////////////////////////////////////
@@ -516,15 +543,13 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
     //////////////////////////////////////////////////
 
     const generalDiv = containerEl.createEl("div");
-    generalDiv.createEl("h2", { text: "General" });
+    generalDiv.createEl("h2", { text: t("settings_general") });
 
     const passwordDiv = generalDiv.createEl("div");
     let newPassword = `${this.plugin.settings.password}`;
     new Setting(passwordDiv)
-      .setName("encryption password")
-      .setDesc(
-        'Password for E2E encryption. Empty for no password. You need to click "Confirm".'
-      )
+      .setName(t("settings_password"))
+      .setDesc(t("settings_password_desc"))
       .addText((text) =>
         text
           .setPlaceholder("")
@@ -534,7 +559,7 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
           })
       )
       .addButton(async (button) => {
-        button.setButtonText("Confirm");
+        button.setButtonText(t("confirm"));
         button.onClick(async () => {
           new PasswordModal(this.app, this.plugin, newPassword).open();
         });
@@ -542,16 +567,14 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
 
     const scheduleDiv = generalDiv.createEl("div");
     new Setting(scheduleDiv)
-      .setName("schedule for auto run")
-      .setDesc(
-        "The plugin trys to schedule the running after every interval. Battery may be impacted."
-      )
+      .setName(t("settings_autorun"))
+      .setDesc(t("settings_autorun_desc"))
       .addDropdown((dropdown) => {
-        dropdown.addOption("-1", "(no auto run)");
-        dropdown.addOption(`${1000 * 60 * 1}`, "every 1 minute");
-        dropdown.addOption(`${1000 * 60 * 5}`, "every 5 minutes");
-        dropdown.addOption(`${1000 * 60 * 10}`, "every 10 minutes");
-        dropdown.addOption(`${1000 * 60 * 30}`, "every 30 minutes");
+        dropdown.addOption("-1", t("settings_autorun_notset"));
+        dropdown.addOption(`${1000 * 60 * 1}`, t("settings_autorun_1min"));
+        dropdown.addOption(`${1000 * 60 * 5}`, t("settings_autorun_5min"));
+        dropdown.addOption(`${1000 * 60 * 10}`, t("settings_autorun_10min"));
+        dropdown.addOption(`${1000 * 60 * 30}`, t("settings_autorun_30min"));
 
         dropdown
           .setValue(`${this.plugin.settings.autoRunEveryMilliseconds}`)
@@ -582,19 +605,17 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
 
     const runOnceStartUpDiv = generalDiv.createEl("div");
     new Setting(runOnceStartUpDiv)
-      .setName("run once on start up automatically")
-      .setDesc(
-        `This settings allows setting running ONCE on start up automatically. This will take effect on NEXT start up after changing. This setting, is different from "schedule for auto run" which starts syncing after EVERY interval.`
-      )
+      .setName(t("settings_runoncestartup"))
+      .setDesc(t("settings_runoncestartup_desc"))
       .addDropdown((dropdown) => {
-        dropdown.addOption("-1", "(not set)");
+        dropdown.addOption("-1", t("settings_runoncestartup_notset"));
         dropdown.addOption(
           `${1000 * 10 * 1}`,
-          "sync once after 10 seconds of start up"
+          t("settings_runoncestartup_10sec")
         );
         dropdown.addOption(
           `${1000 * 30 * 1}`,
-          "sync once after 30 seconds of start up"
+          t("settings_runoncestartup_30sec")
         );
         dropdown
           .setValue(`${this.plugin.settings.initRunAfterMilliseconds}`)
@@ -618,50 +639,50 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
 
     const s3Div = containerEl.createEl("div", { cls: "s3-hide" });
     s3Div.toggleClass("s3-hide", this.plugin.settings.serviceType !== "s3");
-    s3Div.createEl("h2", { text: "Remote For S3 or compatible" });
+    s3Div.createEl("h2", { text: t("settings_s3") });
 
-    s3Div.createEl("p", {
-      text: "Disclaimer: This plugin is NOT an official Amazon product.",
-      cls: "s3-disclaimer",
-    });
-
-    s3Div.createEl("p", {
-      text: "Disclaimer: The information is stored in locally. Other malicious/harmful/faulty plugins could read the info. If you see any unintentional access to your bucket, please immediately delete the access key on your AWS (or other S3-service provider) settings.",
-      cls: "s3-disclaimer",
-    });
+    for (const c of [
+      t("settings_s3_disclaimer1"),
+      t("settings_s3_disclaimer2"),
+    ]) {
+      s3Div.createEl("p", {
+        text: c,
+        cls: "s3-disclaimer",
+      });
+    }
 
     if (!requireApiVersion(API_VER_REQURL)) {
       s3Div.createEl("p", {
-        text: "You need to configure CORS to allow requests from origin app://obsidian.md and capacitor://localhost and http://localhost",
+        text: t("settings_s3_cors"),
       });
     }
 
     s3Div.createEl("p", {
-      text: "Some Amazon S3 official docs for references:",
+      text: t("settings_s3_prod"),
     });
 
     const s3LinksUl = s3Div.createEl("div").createEl("ul");
 
     s3LinksUl.createEl("li").createEl("a", {
       href: "https://docs.aws.amazon.com/general/latest/gr/s3.html",
-      text: "Endpoint and region info",
+      text: t("settings_s3_prod1"),
     });
 
     s3LinksUl.createEl("li").createEl("a", {
       href: "https://docs.aws.amazon.com/sdk-for-javascript/v3/developer-guide/getting-your-credentials.html",
-      text: "Access key ID and Secret access key info",
+      text: t("settings_s3_prod2"),
     });
 
     if (!requireApiVersion(API_VER_REQURL)) {
       s3LinksUl.createEl("li").createEl("a", {
         href: "https://docs.aws.amazon.com/AmazonS3/latest/userguide/enabling-cors-examples.html",
-        text: "Configuring CORS",
+        text: t("settings_s3_prod3"),
       });
     }
 
     new Setting(s3Div)
-      .setName("s3Endpoint")
-      .setDesc("s3Endpoint")
+      .setName(t("settings_s3_endpoint"))
+      .setDesc(t("settings_s3_endpoint"))
       .addText((text) =>
         text
           .setPlaceholder("")
@@ -673,10 +694,8 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
       );
 
     new Setting(s3Div)
-      .setName("s3Region")
-      .setDesc(
-        "s3Region: If you are not sure what to enter, you could try the vaule: us-east-1"
-      )
+      .setName(t("settings_s3_region"))
+      .setDesc(t("settings_s3_region_desc"))
       .addText((text) =>
         text
           .setPlaceholder("")
@@ -688,8 +707,8 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
       );
 
     new Setting(s3Div)
-      .setName("s3AccessKeyID")
-      .setDesc("s3AccessKeyID")
+      .setName(t("settings_s3_accesskeyid"))
+      .setDesc(t("settings_s3_accesskeyid"))
       .addText((text) =>
         text
           .setPlaceholder("")
@@ -701,8 +720,8 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
       );
 
     new Setting(s3Div)
-      .setName("s3SecretAccessKey")
-      .setDesc("s3SecretAccessKey")
+      .setName(t("settings_s3_secretaccesskey"))
+      .setDesc(t("settings_s3_secretaccesskey"))
       .addText((text) =>
         text
           .setPlaceholder("")
@@ -714,8 +733,8 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
       );
 
     new Setting(s3Div)
-      .setName("s3BucketName")
-      .setDesc("s3BucketName")
+      .setName(t("settings_s3_bucketname"))
+      .setDesc(t("settings_s3_bucketname"))
       .addText((text) =>
         text
           .setPlaceholder("")
@@ -728,14 +747,16 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
 
     if (requireApiVersion(API_VER_REQURL)) {
       new Setting(s3Div)
-        .setName("bypass CORS issue locally")
+        .setName(t("settings_s3_bypasscorslocally"))
         .setDesc(
-          `The plugin allows skipping server CORS config in new version (Obsidian>=${API_VER_REQURL}). If you encounter any issues, please disable this setting and config CORS (app://obsidian.md and capacitor://localhost and http://localhost) on server.`
+          t("settings_s3_bypasscorslocally_desc", {
+            ver: API_VER_REQURL,
+          })
         )
         .addDropdown((dropdown) => {
           dropdown
-            .addOption("disable", "disable")
-            .addOption("enable", "enable");
+            .addOption("disable", t("disable"))
+            .addOption("enable", t("enable"));
 
           dropdown
             .setValue(
@@ -756,10 +777,8 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
 
     const partsConcurrencyDiv = s3Div.createEl("div");
     new Setting(partsConcurrencyDiv)
-      .setName("Parts Concurrency")
-      .setDesc(
-        "Large files are split into small parts to upload in S3. How many parts do you want to upload in parallel at most?"
-      )
+      .setName(t("settings_s3_parts"))
+      .setDesc(t("settings_s3_parts_desc"))
       .addDropdown((dropdown) => {
         dropdown.addOption("1", "1");
         dropdown.addOption("2", "2");
@@ -779,18 +798,18 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
       });
 
     new Setting(s3Div)
-      .setName("check connectivity")
-      .setDesc("check connectivity")
+      .setName(t("settings_checkonnectivity"))
+      .setDesc(t("settings_checkonnectivity_desc"))
       .addButton(async (button) => {
-        button.setButtonText("Check");
+        button.setButtonText(t("settings_checkonnectivity_button"));
         button.onClick(async () => {
-          new Notice("Checking...");
+          new Notice(t("settings_checkonnectivity_checking"));
           const client = new RemoteClient("s3", this.plugin.settings.s3);
           const res = await client.checkConnectivity();
           if (res) {
-            new Notice("Great! The bucket can be accessed.");
+            new Notice(t("settings_s3_connect_succ"));
           } else {
-            new Notice("The S3 bucket cannot be reached.");
+            new Notice(t("settings_s3_connect_fail"));
           }
         });
       });
@@ -804,19 +823,21 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
       "dropbox-hide",
       this.plugin.settings.serviceType !== "dropbox"
     );
-    dropboxDiv.createEl("h2", { text: "Remote For Dropbox" });
+    dropboxDiv.createEl("h2", { text: t("settings_dropbox") });
+    for (const c of [
+      t("settings_dropbox_disclaimer1"),
+      t("settings_dropbox_disclaimer2"),
+    ]) {
+      dropboxDiv.createEl("p", {
+        text: c,
+        cls: "dropbox-disclaimer",
+      });
+    }
     dropboxDiv.createEl("p", {
-      text: "Disclaimer: This app is NOT an official Dropbox product.",
-      cls: "dropbox-disclaimer",
-    });
-    dropboxDiv.createEl("p", {
-      text: "Disclaimer: The information is stored in locally. Other malicious/harmful/faulty plugins could read the info. If you see any unintentional access to your Dropbox, please immediately disconnect this app on https://www.dropbox.com/account/connected_apps .",
-      cls: "dropbox-disclaimer",
-    });
-    dropboxDiv.createEl("p", {
-      text: `We will create and sync inside the folder /Apps/${
-        this.plugin.manifest.id
-      }/${this.app.vault.getName()} on your Dropbox.`,
+      text: t("settings_dropbox_folder", {
+        pluginID: this.plugin.manifest.id,
+        vaultName: this.app.vault.getName(),
+      }),
     });
 
     const dropboxSelectAuthDiv = dropboxDiv.createDiv();
@@ -828,12 +849,14 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
     });
 
     const dropboxRevokeAuthSetting = new Setting(dropboxRevokeAuthDiv)
-      .setName("Revoke Auth")
+      .setName(t("settings_dropbox_revoke"))
       .setDesc(
-        `You've connected as user ${this.plugin.settings.dropbox.username}. If you want to disconnect, click this button`
+        t("settings_dropbox_revoke_desc", {
+          username: this.plugin.settings.dropbox.username,
+        })
       )
       .addButton(async (button) => {
-        button.setButtonText("Revoke Auth");
+        button.setButtonText(t("settings_dropbox_revoke_button"));
         button.onClick(async () => {
           try {
             const self = this;
@@ -859,19 +882,19 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
               "dropbox-revoke-auth-button-hide",
               this.plugin.settings.dropbox.username === ""
             );
-            new Notice("Revoked!");
+            new Notice(t("settings_dropbox_revoke_notice"));
           } catch (err) {
             console.error(err);
-            new Notice("Something goes wrong while revoking");
+            new Notice(t("settings_dropbox_revoke_noticeerr"));
           }
         });
       });
 
     new Setting(dropboxAuthDiv)
-      .setName("Auth")
-      .setDesc("Auth")
+      .setName(t("settings_dropbox_auth"))
+      .setDesc(t("settings_dropbox_auth_desc"))
       .addButton(async (button) => {
-        button.setButtonText("Auth");
+        button.setButtonText(t("settings_dropbox_auth_button"));
         button.onClick(async () => {
           const modal = new DropboxAuthModal(
             this.app,
@@ -898,12 +921,12 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
     );
 
     new Setting(dropboxDiv)
-      .setName("check connectivity")
-      .setDesc("check connectivity")
+      .setName(t("settings_checkonnectivity"))
+      .setDesc(t("settings_checkonnectivity_desc"))
       .addButton(async (button) => {
-        button.setButtonText("Check");
+        button.setButtonText(t("settings_checkonnectivity_button"));
         button.onClick(async () => {
-          new Notice("Checking...");
+          new Notice(t("settings_checkonnectivity_checking"));
           const self = this;
           const client = new RemoteClient(
             "dropbox",
@@ -917,9 +940,9 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
 
           const res = await client.checkConnectivity();
           if (res) {
-            new Notice("Great! We can connect to Dropbox!");
+            new Notice(t("settings_dropbox_connect_succ"));
           } else {
-            new Notice("We cannot connect to Dropbox.");
+            new Notice(t("settings_dropbox_connect_fail"));
           }
         });
       });
@@ -933,23 +956,26 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
       "onedrive-hide",
       this.plugin.settings.serviceType !== "onedrive"
     );
-    onedriveDiv.createEl("h2", { text: "Remote For Onedrive (for personal)" });
+    onedriveDiv.createEl("h2", { text: t("settings_onedrive") });
+    for (const c of [
+      t("settings_onedrive_disclaimer1"),
+      t("settings_onedrive_disclaimer2"),
+    ]) {
+      onedriveDiv.createEl("p", {
+        text: c,
+        cls: "onedrive-disclaimer",
+      });
+    }
+
     onedriveDiv.createEl("p", {
-      text: "Disclaimer: This app is NOT an official Microsoft / Onedrive product.",
-      cls: "onedrive-disclaimer",
-    });
-    onedriveDiv.createEl("p", {
-      text: "Disclaimer: The information is stored locally. Other malicious/harmful/faulty plugins could read the info. If you see any unintentional access to your Onedrive, please immediately disconnect this app on https://microsoft.com/consent .",
-      cls: "onedrive-disclaimer",
-    });
-    onedriveDiv.createEl("p", {
-      text: `We will create and sync inside the folder /Apps/${
-        this.plugin.manifest.id
-      }/${this.app.vault.getName()} on your Onedrive.`,
+      text: t("settings_onedrive_folder", {
+        pluginID: this.plugin.manifest.id,
+        vaultName: this.app.vault.getName(),
+      }),
     });
 
     onedriveDiv.createEl("p", {
-      text: "Currently only OneDrive for personal is supported. OneDrive for Business is NOT supported (yet).",
+      text: t("settings_onedrive_nobiz"),
     });
 
     const onedriveSelectAuthDiv = onedriveDiv.createDiv();
@@ -961,12 +987,14 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
     });
 
     const onedriveRevokeAuthSetting = new Setting(onedriveRevokeAuthDiv)
-      .setName("Revoke Auth")
+      .setName(t("settings_onedrive_revoke"))
       .setDesc(
-        `You've connected as user ${this.plugin.settings.onedrive.username}. If you want to disconnect, click this button`
+        t("settings_onedrive_revoke_desc", {
+          username: this.plugin.settings.onedrive.username,
+        })
       )
       .addButton(async (button) => {
-        button.setButtonText("Revoke Auth");
+        button.setButtonText(t("settings_onedrive_revoke_button"));
         button.onClick(async () => {
           new OnedriveRevokeAuthModal(
             this.app,
@@ -978,10 +1006,10 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
       });
 
     new Setting(onedriveAuthDiv)
-      .setName("Auth")
-      .setDesc("Auth")
+      .setName(t("settings_onedrive_auth"))
+      .setDesc(t("settings_onedrive_auth_desc"))
       .addButton(async (button) => {
-        button.setButtonText("Auth");
+        button.setButtonText(t("settings_onedrive_auth_button"));
         button.onClick(async () => {
           const modal = new OnedriveAuthModal(
             this.app,
@@ -1008,12 +1036,12 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
     );
 
     new Setting(onedriveDiv)
-      .setName("check connectivity")
-      .setDesc("check connectivity")
+      .setName(t("settings_checkonnectivity"))
+      .setDesc(t("settings_checkonnectivity_desc"))
       .addButton(async (button) => {
-        button.setButtonText("Check");
+        button.setButtonText(t("settings_checkonnectivity_button"));
         button.onClick(async () => {
-          new Notice("Checking...");
+          new Notice(t("settings_checkonnectivity_checking"));
           const self = this;
           const client = new RemoteClient(
             "onedrive",
@@ -1027,9 +1055,9 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
 
           const res = await client.checkConnectivity();
           if (res) {
-            new Notice("Great! We can connect to Onedrive!");
+            new Notice(t("settings_onedrive_connect_succ"));
           } else {
-            new Notice("We cannot connect to Onedrive.");
+            new Notice(t("settings_onedrive_connect_fail"));
           }
         });
       });
@@ -1044,26 +1072,28 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
       this.plugin.settings.serviceType !== "webdav"
     );
 
-    webdavDiv.createEl("h2", { text: "Remote For Webdav" });
+    webdavDiv.createEl("h2", { text: t("settings_webdav") });
 
     webdavDiv.createEl("p", {
-      text: "Disclaimer: The information is stored in locally. Other malicious/harmful/faulty plugins may read the info. If you see any unintentional access to your webdav server, please immediately change the username and password.",
+      text: t("settings_webdav_disclaimer1"),
       cls: "webdav-disclaimer",
     });
 
     if (!requireApiVersion(API_VER_REQURL)) {
       webdavDiv.createEl("p", {
-        text: "You need to configure CORS to allow requests from origin app://obsidian.md and capacitor://localhost and http://localhost",
+        text: t("settings_webdav_cors"),
       });
     }
 
     webdavDiv.createEl("p", {
-      text: `We will create and sync inside the folder /${this.app.vault.getName()} on your server.`,
+      text: t("settings_webdav_folder", {
+        vaultName: this.app.vault.getName(),
+      }),
     });
 
     new Setting(webdavDiv)
-      .setName("server address")
-      .setDesc("server address")
+      .setName(t("settings_webdav_addr"))
+      .setDesc(t("settings_webdav_addr_desc"))
       .addText((text) =>
         text
           .setPlaceholder("")
@@ -1075,8 +1105,8 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
       );
 
     new Setting(webdavDiv)
-      .setName("server username")
-      .setDesc("server username")
+      .setName(t("settings_webdav_user"))
+      .setDesc(t("settings_webdav_user_desc"))
       .addText((text) =>
         text
           .setPlaceholder("")
@@ -1088,8 +1118,8 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
       );
 
     new Setting(webdavDiv)
-      .setName("server password")
-      .setDesc("server password")
+      .setName(t("settings_webdav_password"))
+      .setDesc(t("settings_webdav_password_desc"))
       .addText((text) =>
         text
           .setPlaceholder("")
@@ -1101,8 +1131,8 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
       );
 
     new Setting(webdavDiv)
-      .setName("server auth type")
-      .setDesc("If no password, this option would be ignored.")
+      .setName(t("settings_webdav_auth"))
+      .setDesc(t("settings_webdav_auth_desc"))
       .addDropdown(async (dropdown) => {
         dropdown.addOption("basic", "basic");
         if (requireApiVersion(API_VER_REQURL)) {
@@ -1127,14 +1157,12 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
       });
 
     new Setting(webdavDiv)
-      .setName("depth header sent to servers")
-      .setDesc(
-        "Webdav servers should be configured to allow requests with header Depth being '1' or 'Infinity'. The plugin needs to know this info. If you are not sure what's this, choose \"auto\"."
-      )
+      .setName(t("settings_webdav_depth"))
+      .setDesc(t("settings_webdav_depth_desc"))
       .addDropdown((dropdown) => {
-        dropdown.addOption("auto", "auto detect");
-        dropdown.addOption("manual_1", "only supports depth='1'");
-        dropdown.addOption("manual_infinity", "only supports depth='infinity'");
+        dropdown.addOption("auto", t("settings_webdav_depth_auto"));
+        dropdown.addOption("manual_1", t("settings_webdav_depth_1"));
+        dropdown.addOption("manual_infinity", t("settings_webdav_depth_inf"));
 
         let initVal = "auto";
         const autoOptions: Set<WebdavDepthType> = new Set([
@@ -1165,12 +1193,12 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
       });
 
     new Setting(webdavDiv)
-      .setName("check connectivity")
-      .setDesc("check connectivity")
+      .setName(t("settings_checkonnectivity"))
+      .setDesc(t("settings_checkonnectivity_desc"))
       .addButton(async (button) => {
-        button.setButtonText("Check");
+        button.setButtonText(t("settings_checkonnectivity_button"));
         button.onClick(async () => {
-          new Notice("Checking...");
+          new Notice(t("settings_checkonnectivity_checking"));
           const self = this;
           const client = new RemoteClient(
             "webdav",
@@ -1183,7 +1211,7 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
           );
           const res = await client.checkConnectivity();
           if (res) {
-            new Notice("Great! The webdav server can be accessed.");
+            new Notice(t("settings_webdav_connect_succ"));
           } else {
             let corsErrMsg = "/CORS";
             if (requireApiVersion(API_VER_REQURL)) {
@@ -1191,7 +1219,9 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
             }
 
             new Notice(
-              `The webdav server cannot be reached (possible to be any of address/username/password/authtype${corsErrMsg} errors).`
+              t("settings_webdav_connect_fail", {
+                corsErrMsg: corsErrMsg,
+              })
             );
           }
         });
@@ -1204,13 +1234,13 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
     // we need to create chooser
     // after all service-div-s being created
     new Setting(serviceChooserDiv)
-      .setName("Choose service")
-      .setDesc("Choose a service.")
+      .setName(t("settings_chooseservice"))
+      .setDesc(t("settings_chooseservice_desc"))
       .addDropdown(async (dropdown) => {
-        dropdown.addOption("s3", "S3 or compatible");
-        dropdown.addOption("dropbox", "Dropbox");
-        dropdown.addOption("webdav", "Webdav");
-        dropdown.addOption("onedrive", "OneDrive for personal");
+        dropdown.addOption("s3", t("settings_chooseservice_s3"));
+        dropdown.addOption("dropbox", t("settings_chooseservice_dropbox"));
+        dropdown.addOption("webdav", t("settings_chooseservice_webdav"));
+        dropdown.addOption("onedrive", t("settings_chooseservice_onedrive"));
         dropdown
           .setValue(this.plugin.settings.serviceType)
           .onChange(async (val: SUPPORTED_SERVICES_TYPE) => {
@@ -1240,15 +1270,13 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
     //////////////////////////////////////////////////
     const advDiv = containerEl.createEl("div");
     advDiv.createEl("h2", {
-      text: "Advanced Settings",
+      text: t("settings_adv"),
     });
 
     const concurrencyDiv = advDiv.createEl("div");
     new Setting(concurrencyDiv)
-      .setName("Concurrency")
-      .setDesc(
-        "How many files do you want to download or upload in parallel at most? By default it's set to 5. If you meet any problems such as rate limit, you can reduce the concurrency to a lower value."
-      )
+      .setName(t("settings_concurrency"))
+      .setDesc(t("settings_concurrency_desc"))
       .addDropdown((dropdown) => {
         dropdown.addOption("1", "1");
         dropdown.addOption("2", "2");
@@ -1269,11 +1297,11 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
 
     const syncUnderscoreItemsDiv = advDiv.createEl("div");
     new Setting(syncUnderscoreItemsDiv)
-      .setName("sync _ files or folders")
-      .setDesc(`Sync files or folders startting with _ ("underscore") or not.`)
+      .setName(t("settings_syncunderscore"))
+      .setDesc(t("settings_syncunderscore_desc"))
       .addDropdown((dropdown) => {
-        dropdown.addOption("disable", "disable");
-        dropdown.addOption("enable", "enable");
+        dropdown.addOption("disable", t("disable"));
+        dropdown.addOption("enable", t("enable"));
         dropdown
           .setValue(
             `${this.plugin.settings.syncUnderscoreItems ? "enable" : "disable"}`
@@ -1286,13 +1314,15 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
 
     const syncConfigDirDiv = advDiv.createEl("div");
     new Setting(syncConfigDirDiv)
-      .setName("sync config dir (experimental)")
+      .setName(t("settings_configdir"))
       .setDesc(
-        `Sync config dir ${this.app.vault.configDir} or not (inner folder .git and node_modules would be ignored). Please be aware that this may impact all your plugins' or Obsidian's settings, and may require you restart Obsidian after sync. Enable this at your own risk.`
+        t("settings_configdir_desc", {
+          configDir: this.app.vault.configDir,
+        })
       )
       .addDropdown((dropdown) => {
-        dropdown.addOption("disable", "disable");
-        dropdown.addOption("enable", "enable");
+        dropdown.addOption("disable", t("disable"));
+        dropdown.addOption("enable", t("enable"));
 
         const bridge = {
           secondConfirm: false,
@@ -1328,38 +1358,34 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
     // import and export
     const importExportDiv = containerEl.createEl("div");
     importExportDiv.createEl("h2", {
-      text: "Import and Export Partial Settings",
+      text: t("settings_importexport"),
     });
 
     new Setting(importExportDiv)
-      .setName("export")
-      .setDesc("Export not-oauth2 settings by generating a qrcode.")
+      .setName(t("settings_export"))
+      .setDesc(t("settings_export_desc"))
       .addButton(async (button) => {
-        button.setButtonText("Get QR Code");
+        button.setButtonText(t("settings_export_desc_button"));
         button.onClick(async () => {
           new ExportSettingsQrCodeModal(this.app, this.plugin).open();
         });
       });
 
     new Setting(importExportDiv)
-      .setName("import")
-      .setDesc(
-        "You should open a camera or scan-qrcode app, to manually scan the QR code."
-      );
+      .setName(t("settings_import"))
+      .setDesc(t("settings_import_desc"));
 
     //////////////////////////////////////////////////
     // below for debug
     //////////////////////////////////////////////////
 
     const debugDiv = containerEl.createEl("div");
-    debugDiv.createEl("h2", { text: "Debug" });
+    debugDiv.createEl("h2", { text: t("settings_debug") });
 
     const setConsoleLogLevelDiv = debugDiv.createDiv("div");
     new Setting(setConsoleLogLevelDiv)
-      .setName("alter console log level")
-      .setDesc(
-        'By default the log level is "info". You can change to "debug" to get verbose infomation in console.'
-      )
+      .setName(t("settings_debuglevel"))
+      .setDesc(t("settings_debuglevel_desc"))
       .addDropdown(async (dropdown) => {
         dropdown.addOption("info", "info");
         dropdown.addOption("debug", "debug");
@@ -1374,12 +1400,10 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
       });
     const outputCurrSettingsDiv = debugDiv.createDiv("div");
     new Setting(outputCurrSettingsDiv)
-      .setName("output current settings from disk to console")
-      .setDesc(
-        "The settings save on disk in encoded. Click this to see the decoded settings in console."
-      )
+      .setName(t("settings_outputsettingsconsole"))
+      .setDesc(t("settings_outputsettingsconsole_desc"))
       .addButton(async (button) => {
-        button.setButtonText("Output");
+        button.setButtonText(t("settings_outputsettingsconsole_button"));
         button.onClick(async () => {
           const c = messyConfigToNormal(await this.plugin.loadData());
           if (c.currLogLevel === "debug") {
@@ -1387,64 +1411,56 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
           } else {
             log.info(c);
           }
-          new Notice("Finished outputing in console.");
+          new Notice(t("settings_outputsettingsconsole_notice"));
         });
       });
     const syncPlanDiv = debugDiv.createEl("div");
     new Setting(syncPlanDiv)
-      .setName("export sync plans")
-      .setDesc(
-        "Sync plans are created every time after you trigger sync and before the actual sync. Useful to know what would actually happen in those sync. Click the button to export sync plans"
-      )
+      .setName(t("settings_syncplans"))
+      .setDesc(t("settings_syncplans_desc"))
       .addButton(async (button) => {
-        button.setButtonText("Export");
+        button.setButtonText(t("settings_syncplans_button"));
         button.onClick(async () => {
           await exportVaultSyncPlansToFiles(
             this.plugin.db,
             this.app.vault,
             this.plugin.settings.vaultRandomID
           );
-          new Notice("sync plans history exported");
+          new Notice(t("settings_syncplans_notice"));
         });
       });
     new Setting(syncPlanDiv)
-      .setName("delete sync plans history in db")
-      .setDesc("delete sync plans history in db")
+      .setName(t("settings_delsyncplans"))
+      .setDesc(t("settings_delsyncplans_desc"))
       .addButton(async (button) => {
-        button.setButtonText("Delete History");
+        button.setButtonText(t("settings_delsyncplans_button"));
         button.onClick(async () => {
           await clearAllSyncPlanRecords(this.plugin.db);
-          new Notice("sync plans history (in db) deleted");
+          new Notice(t("settings_delsyncplans_notice"));
         });
       });
 
     const syncMappingDiv = debugDiv.createEl("div");
     new Setting(syncMappingDiv)
-      .setName("delete sync mappings history in db")
-      .setDesc(
-        "Sync mappings history stores the actual LOCAL last modified time of the REMOTE objects. Clearing it may cause unnecessary data exchanges in next-time sync. Click the button to delete sync mappings history in db"
-      )
+      .setName(t("settings_delsyncmap"))
+      .setDesc(t("settings_delsyncmap_desc"))
       .addButton(async (button) => {
-        button.setButtonText("Delete Sync Mappings");
+        button.setButtonText(t("settings_delsyncmap_button"));
         button.onClick(async () => {
           await clearAllSyncMetaMapping(this.plugin.db);
-          new Notice("sync mappings history (in local db) deleted");
+          new Notice(t("settings_delsyncmap_notice"));
         });
       });
 
     const dbsResetDiv = debugDiv.createEl("div");
     new Setting(dbsResetDiv)
-      .setName("reset local internal cache/databases")
-      .setDesc(
-        "Reset local internal caches/databases (for debugging purposes). You would want to reload the plugin after resetting this. This option will not empty the {s3, password...} settings."
-      )
+      .setName(t("settings_resetcache"))
+      .setDesc(t("settings_resetcache_desc"))
       .addButton(async (button) => {
-        button.setButtonText("Reset");
+        button.setButtonText(t("settings_resetcache_button"));
         button.onClick(async () => {
           await destroyDBs();
-          new Notice(
-            "Local internal cache/databases deleted. Please manually reload the plugin."
-          );
+          new Notice(t("settings_resetcache_notice"));
         });
       });
   }
