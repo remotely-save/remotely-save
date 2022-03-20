@@ -745,6 +745,27 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
           })
       );
 
+    new Setting(s3Div)
+      .setName(t("settings_s3_urlstyle"))
+      .setDesc(t("settings_s3_urlstyle_desc"))
+      .addDropdown((dropdown) => {
+        dropdown.addOption(
+          "virtualHostedStyle",
+          "Virtual Hosted-Style (default)"
+        );
+        dropdown.addOption("pathStyle", "Path-Style");
+        dropdown
+          .setValue(
+            this.plugin.settings.s3.forcePathStyle
+              ? "pathStyle"
+              : "virtualHostedStyle"
+          )
+          .onChange(async (val: string) => {
+            this.plugin.settings.s3.forcePathStyle = val === "pathStyle";
+            await this.plugin.saveSettings();
+          });
+      });
+
     if (requireApiVersion(API_VER_REQURL)) {
       new Setting(s3Div)
         .setName(t("settings_s3_bypasscorslocally"))
