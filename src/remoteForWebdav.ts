@@ -223,7 +223,7 @@ export class WrappedWebdavClient {
         const res = await this.client.customRequest(`/${this.vaultName}`, {
           method: "PROPFIND",
           headers: {
-            Depth: "Infinity",
+            Depth: "infinity",
           },
           responseType: "text",
         });
