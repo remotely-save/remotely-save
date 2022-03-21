@@ -527,6 +527,19 @@ export const checkConnectivity = async (
   client: WrappedWebdavClient,
   callbackFunc?: any
 ) => {
+  if (
+    !(
+      client.webdavConfig.address.startsWith("http://") ||
+      client.webdavConfig.address.startsWith("https://")
+    )
+  ) {
+    const err = "Error: the url should start with http(s):// but it does not!";
+    log.debug(err);
+    if (callbackFunc !== undefined) {
+      callbackFunc(err);
+    }
+    return false;
+  }
   try {
     await client.init();
     const results = await getRemoteMeta(client, "/");
