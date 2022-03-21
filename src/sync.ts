@@ -450,7 +450,11 @@ const assignOperationToFileInplace = (
   // 0. find anything inconsistent
   if (r.existLocal && (r.mtimeLocal === undefined || r.mtimeLocal <= 0)) {
     throw Error(
-      `Error: Anormal last modified time locally: ${JSON.stringify(r, null, 2)}`
+      `Error: Abnormal last modified time locally: ${JSON.stringify(
+        r,
+        null,
+        2
+      )}`
     );
   }
   if (r.existRemote && (r.mtimeRemote === undefined || r.mtimeRemote <= 0)) {
