@@ -101,11 +101,11 @@ export default class RemotelySavePlugin extends Plugin {
       return this.i18n.t(x, vars);
     };
 
-    const getNotice = (x: string) => {
+    const getNotice = (x: string, timeout?: number) => {
       // only show notices in manual mode
       // no notice in auto mode
       if (triggerSource === "manual" || triggerSource === "dry") {
-        new Notice(x);
+        new Notice(x, timeout);
       }
     };
     if (this.syncStatus !== "idle") {
@@ -331,8 +331,8 @@ export default class RemotelySavePlugin extends Plugin {
       });
       log.info(msg);
       log.info(error);
-      getNotice(msg);
-      getNotice(error.message);
+      getNotice(msg, 10 * 1000);
+      getNotice(error.message, 10 * 1000);
       this.syncStatus = "idle";
       if (this.syncRibbon !== undefined) {
         setIcon(this.syncRibbon, iconNameSyncWait);
