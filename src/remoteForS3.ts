@@ -498,7 +498,8 @@ export const deleteFromRemote = async (
  */
 export const checkConnectivity = async (
   s3Client: S3Client,
-  s3Config: S3Config
+  s3Config: S3Config,
+  callbackFunc?: any
 ) => {
   try {
     const results = await s3Client.send(
@@ -509,10 +510,19 @@ export const checkConnectivity = async (
       results.$metadata === undefined ||
       results.$metadata.httpStatusCode === undefined
     ) {
+      const err = "results or $metadata or httStatusCode is undefined";
+      log.debug(err);
+      if (callbackFunc !== undefined) {
+        callbackFunc(err);
+      }
       return false;
     }
     return results.$metadata.httpStatusCode === 200;
   } catch (err) {
+    log.debug(err);
+    if (callbackFunc !== undefined) {
+      callbackFunc(err);
+    }
     return false;
   }
 };

@@ -636,7 +636,10 @@ export const deleteFromRemote = async (
   }
 };
 
-export const checkConnectivity = async (client: WrappedDropboxClient) => {
+export const checkConnectivity = async (
+  client: WrappedDropboxClient,
+  callbackFunc?: any
+) => {
   try {
     const results = await getRemoteMeta(client, "/");
     if (results === undefined) {
@@ -644,8 +647,10 @@ export const checkConnectivity = async (client: WrappedDropboxClient) => {
     }
     return true;
   } catch (err) {
-    console.error("dropbox connectivity error:");
-    console.error(err);
+    log.debug(err);
+    if (callbackFunc !== undefined) {
+      callbackFunc(err);
+    }
     return false;
   }
 };

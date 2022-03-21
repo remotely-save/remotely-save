@@ -826,11 +826,15 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
         button.onClick(async () => {
           new Notice(t("settings_checkonnectivity_checking"));
           const client = new RemoteClient("s3", this.plugin.settings.s3);
-          const res = await client.checkConnectivity();
+          const errors = { msg: "" };
+          const res = await client.checkConnectivity((err: any) => {
+            errors.msg = err;
+          });
           if (res) {
             new Notice(t("settings_s3_connect_succ"));
           } else {
             new Notice(t("settings_s3_connect_fail"));
+            new Notice(errors.msg);
           }
         });
       });
@@ -959,11 +963,15 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
             () => self.plugin.saveSettings()
           );
 
-          const res = await client.checkConnectivity();
+          const errors = { msg: "" };
+          const res = await client.checkConnectivity((err: any) => {
+            errors.msg = `${err}`;
+          });
           if (res) {
             new Notice(t("settings_dropbox_connect_succ"));
           } else {
             new Notice(t("settings_dropbox_connect_fail"));
+            new Notice(errors.msg);
           }
         });
       });
@@ -1074,11 +1082,15 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
             () => self.plugin.saveSettings()
           );
 
-          const res = await client.checkConnectivity();
+          const errors = { msg: "" };
+          const res = await client.checkConnectivity((err: any) => {
+            errors.msg = `${err}`;
+          });
           if (res) {
             new Notice(t("settings_onedrive_connect_succ"));
           } else {
             new Notice(t("settings_onedrive_connect_fail"));
+            new Notice(errors.msg);
           }
         });
       });
@@ -1230,7 +1242,10 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
             this.app.vault.getName(),
             () => self.plugin.saveSettings()
           );
-          const res = await client.checkConnectivity();
+          const errors = { msg: "" };
+          const res = await client.checkConnectivity((err: any) => {
+            errors.msg = `${err}`;
+          });
           if (res) {
             new Notice(t("settings_webdav_connect_succ"));
           } else {
@@ -1244,6 +1259,7 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
                 corsErrMsg: corsErrMsg,
               })
             );
+            new Notice(errors.msg);
           }
         });
       });

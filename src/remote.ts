@@ -271,15 +271,22 @@ export class RemoteClient {
     }
   };
 
-  checkConnectivity = async () => {
+  checkConnectivity = async (callbackFunc?: any) => {
     if (this.serviceType === "s3") {
-      return await s3.checkConnectivity(this.s3Client, this.s3Config);
+      return await s3.checkConnectivity(
+        this.s3Client,
+        this.s3Config,
+        callbackFunc
+      );
     } else if (this.serviceType === "webdav") {
-      return await webdav.checkConnectivity(this.webdavClient);
+      return await webdav.checkConnectivity(this.webdavClient, callbackFunc);
     } else if (this.serviceType === "dropbox") {
-      return await dropbox.checkConnectivity(this.dropboxClient);
+      return await dropbox.checkConnectivity(this.dropboxClient, callbackFunc);
     } else if (this.serviceType === "onedrive") {
-      return await onedrive.checkConnectivity(this.onedriveClient);
+      return await onedrive.checkConnectivity(
+        this.onedriveClient,
+        callbackFunc
+      );
     } else {
       throw Error(`not supported service type ${this.serviceType}`);
     }

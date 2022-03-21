@@ -866,11 +866,18 @@ export const deleteFromRemote = async (
   await client.deleteJson(remoteFileName);
 };
 
-export const checkConnectivity = async (client: WrappedOnedriveClient) => {
+export const checkConnectivity = async (
+  client: WrappedOnedriveClient,
+  callbackFunc?: any
+) => {
   try {
     const k = await getUserDisplayName(client);
     return k !== "<unknown display name>";
   } catch (err) {
+    log.debug(err);
+    if (callbackFunc !== undefined) {
+      callbackFunc(err);
+    }
     return false;
   }
 };

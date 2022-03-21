@@ -523,15 +523,27 @@ export const deleteFromRemote = async (
   }
 };
 
-export const checkConnectivity = async (client: WrappedWebdavClient) => {
+export const checkConnectivity = async (
+  client: WrappedWebdavClient,
+  callbackFunc?: any
+) => {
   try {
     await client.init();
     const results = await getRemoteMeta(client, "/");
     if (results === undefined) {
+      const err = "results is undefined";
+      log.debug(err);
+      if (callbackFunc !== undefined) {
+        callbackFunc(err);
+      }
       return false;
     }
     return true;
   } catch (err) {
+    log.debug(err);
+    if (callbackFunc !== undefined) {
+      callbackFunc(err);
+    }
     return false;
   }
 };
