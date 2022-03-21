@@ -323,7 +323,7 @@ const ensembleMixedStates = async (
       r = {
         key: entry.path,
         existLocal: true,
-        mtimeLocal: Math.max(entry.stat.mtime, entry.stat.ctime),
+        mtimeLocal: Math.max(entry.stat.mtime || 0, entry.stat.ctime || 0),
         sizeLocal: entry.stat.size,
       };
     } else if (entry instanceof TFolder) {
@@ -450,22 +450,26 @@ const assignOperationToFileInplace = (
   // 0. find anything inconsistent
   if (r.existLocal && (r.mtimeLocal === undefined || r.mtimeLocal <= 0)) {
     throw Error(
-      `Error: File ${r.key} has a last modified time <=0 or undefined in the local file system. It's abnormal and the plugin stops.`
+      `Error: Anormal last modified time locally: ${JSON.stringify(r, null, 2)}`
     );
   }
   if (r.existRemote && (r.mtimeRemote === undefined || r.mtimeRemote <= 0)) {
     throw Error(
-      `Error: File ${r.key} has a last modified time <=0 or undefined on the remote service. It's abnormal and the plugin stops.`
+      `Error: Abnormal last modified time remotely: ${JSON.stringify(
+        r,
+        null,
+        2
+      )}`
     );
   }
   if (r.deltimeLocal !== undefined && r.deltimeLocal <= 0) {
     throw Error(
-      `Error: File ${r.key} has a local deletion time <=0. It's abnormal and the plugin stops.`
+      `Error: Abnormal deletion time locally: ${JSON.stringify(r, null, 2)}`
     );
   }
   if (r.deltimeRemote !== undefined && r.deltimeRemote <= 0) {
     throw Error(
-      `Error: File ${r.key} has a remote deletion time <=0. It's abnormal and the plugin stops.`
+      `Error: Abnormal deletion time remotely: ${JSON.stringify(r, null, 2)}`
     );
   }
 
