@@ -204,7 +204,7 @@ export class WrappedWebdavClient {
     if (this.vaultFolderExists) {
       // pass
     } else {
-      const res = await this.client.exists(`/${this.vaultName}`);
+      const res = await this.client.exists(`/${this.vaultName}/`);
       if (res) {
         // log.info("remote vault folder exits!");
         this.vaultFolderExists = true;
