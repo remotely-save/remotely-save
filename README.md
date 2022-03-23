@@ -61,8 +61,8 @@ Additionally, the plugin author may occasionally visit Obsidian official forum a
 
 - Prepare your S3 (-compatible) service information: [endpoint, region](https://docs.aws.amazon.com/general/latest/gr/s3.html), [access key id, secret access key](https://docs.aws.amazon.com/sdk-for-javascript/v3/developer-guide/getting-your-credentials.html), bucket name. The bucket should be empty and solely for syncing a vault.
 - About CORS:
-  - If you are using Obsidian >= 0.13.25, you can skip this CORS part.
-  - If you are using Obsidian < 0.13.25, you need to configure (enable) [CORS](https://docs.aws.amazon.com/AmazonS3/latest/userguide/enabling-cors-examples.html) for requests from `app://obsidian.md` and `capacitor://localhost` and `http://localhost`, and add at least `ETag` into exposed headers. Full example is [here](./docs/s3_cors_configure.md). It's unfortunately required, because the plugin sends requests from a browser-like envirement. And those addresses are tested and found on desktop and ios and android.
+  - If you are using Obsidian desktop >= 0.13.25 or mobile >= 1.1.1, you can skip this CORS part.
+  - If you are using Obsidian desktop < 0.13.25 or mobile < 1.1.1, you need to configure (enable) [CORS](https://docs.aws.amazon.com/AmazonS3/latest/userguide/enabling-cors-examples.html) for requests from `app://obsidian.md` and `capacitor://localhost` and `http://localhost`, and add at least `ETag` into exposed headers. Full example is [here](./docs/s3_cors_configure.md). It's unfortunately required, because the plugin sends requests from a browser-like envirement. And those addresses are tested and found on desktop and ios and android.
 - Download and enable this plugin.
 - Enter your information to the settings of this plugin.
 - If you want to enable end-to-end encryption, also set a password in settings. If you do not specify a password, the files and folders are synced in plain, original content to the cloud.
@@ -87,8 +87,8 @@ Additionally, the plugin author may occasionally visit Obsidian official forum a
 ### webdav
 
 - About CORS:
-  - If you are using Obsidian >= 0.13.25, you can skip this CORS part.
-  - If you are using Obsidian < 0.13.25:
+  - If you are using Obsidian desktop >= 0.13.25 or mobile >= 1.1.1, you can skip this CORS part.
+  - If you are using Obsidian desktop < 0.13.25 or mobile < 1.1.1:
     - The webdav server has to be enabled CORS for requests from `app://obsidian.md` and `capacitor://localhost` and `http://localhost`, **AND** all webdav HTTP methods, **AND** all webdav headers. These are required, because Obsidian mobile works like a browser and mobile plugins are limited by CORS policies unless under a upgraded Obsidian version.
     - Popular software NextCloud, OwnCloud, `rclone serve webdav` do **NOT** enable CORS by default. If you are using any of them, you should evaluate the risk, and find a way to enable CORS, before using this plugin, or use a upgraded Obsidian version.
     - The plugin is tested successfully under python package [`wsgidav` (version 4.0)](https://github.com/mar10/wsgidav). See [this issue](https://github.com/mar10/wsgidav/issues/239) for some details.
