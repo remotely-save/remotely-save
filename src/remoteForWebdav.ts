@@ -1,5 +1,11 @@
 import { Buffer } from "buffer";
-import { Vault, request, requestUrl, requireApiVersion } from "obsidian";
+import {
+  Vault,
+  request,
+  requestUrl,
+  requireApiVersion,
+  Platform,
+} from "obsidian";
 
 import { Queue } from "@fyears/tsqueue";
 import chunk from "lodash/chunk";
@@ -20,7 +26,7 @@ import type {
   ResponseDataDetailed,
 } from "webdav/web";
 import { getPatcher } from "webdav/web";
-if (requireApiVersion(API_VER_REQURL)) {
+if (requireApiVersion(API_VER_REQURL) && !Platform.isAndroidApp) {
   getPatcher().patch(
     "request",
     async (
@@ -110,6 +116,7 @@ if (requireApiVersion(API_VER_REQURL)) {
 //   return r;
 // });
 import { AuthType, BufferLike, createClient } from "webdav/web";
+import { Plane } from "lucide";
 export type { WebDAVClient } from "webdav/web";
 
 export const DEFAULT_WEBDAV_CONFIG = {

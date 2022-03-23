@@ -1105,6 +1105,9 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
       this.plugin.settings.serviceType !== "webdav"
     );
 
+    const webdavReq =
+      requireApiVersion(API_VER_REQURL) && !Platform.isAndroidApp;
+
     webdavDiv.createEl("h2", { text: t("settings_webdav") });
 
     webdavDiv.createEl("p", {
@@ -1112,7 +1115,17 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
       cls: "webdav-disclaimer",
     });
 
-    if (!requireApiVersion(API_VER_REQURL)) {
+    if (!webdavReq) {
+      if (Platform.isAndroidApp) {
+        webdavDiv.createEl("p", {
+          text: t("settings_webdav_cors_android"),
+        });
+      } else {
+        webdavDiv.createEl("p", {
+          text: t("settings_webdav_cors_otheros"),
+        });
+      }
+
       webdavDiv.createEl("p", {
         text: t("settings_webdav_cors"),
       });
@@ -1168,15 +1181,12 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
       .setDesc(t("settings_webdav_auth_desc"))
       .addDropdown(async (dropdown) => {
         dropdown.addOption("basic", "basic");
-        if (requireApiVersion(API_VER_REQURL)) {
+        if (webdavReq) {
           dropdown.addOption("digest", "digest");
         }
 
         // new version config, copied to old version, we need to reset it
-        if (
-          !requireApiVersion(API_VER_REQURL) &&
-          this.plugin.settings.webdav.authType !== "basic"
-        ) {
+        if (!webdavReq && this.plugin.settings.webdav.authType !== "basic") {
           this.plugin.settings.webdav.authType = "basic";
           await this.plugin.saveSettings();
         }
@@ -1249,16 +1259,11 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
           if (res) {
             new Notice(t("settings_webdav_connect_succ"));
           } else {
-            let corsErrMsg = "/CORS";
-            if (requireApiVersion(API_VER_REQURL)) {
-              corsErrMsg = "";
+            if (webdavReq) {
+              new Notice(t("settings_webdav_connect_fail"));
+            } else {
+              new Notice(t("settings_webdav_connect_fail_withcors"));
             }
-
-            new Notice(
-              t("settings_webdav_connect_fail", {
-                corsErrMsg: corsErrMsg,
-              })
-            );
             new Notice(errors.msg);
           }
         });
