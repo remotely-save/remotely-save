@@ -7,7 +7,7 @@ import * as origLog from "loglevel";
 const log = origLog.getLogger("rs-default");
 
 const DEFAULT_README: string =
-  "Do NOT modify this manually. It's generated automatically.";
+  "The file contains sensitive info, so DO NOT take screenshot of, copy, or share it to anyone! It's also generated automatically, so do not edit it manually.";
 
 interface MessyConfigType {
   readme: string;
