@@ -218,7 +218,7 @@ export const parseRemoteItems = async (
         mtimeRemote: backwardMapping.localMtime || entry.lastModified,
         sizeRemote: backwardMapping.localSize || entry.size,
         remoteEncryptedKey: remoteEncryptedKey,
-        changeMtimeUsingMapping: true,
+        changeRemoteMtimeUsingMapping: true,
       };
     } else {
       r = {
@@ -227,7 +227,7 @@ export const parseRemoteItems = async (
         mtimeRemote: entry.lastModified,
         sizeRemote: entry.size,
         remoteEncryptedKey: remoteEncryptedKey,
-        changeMtimeUsingMapping: false,
+        changeRemoteMtimeUsingMapping: false,
       };
     }
 
@@ -295,7 +295,7 @@ const ensembleMixedStates = async (
   local: TAbstractFile[],
   localConfigDirContents: ObsConfigDirFileType[] | undefined,
   remoteDeleteHistory: DeletionOnRemote[],
-  localDeleteHistory: FileFolderHistoryRecord[],
+  localFileHistory: FileFolderHistoryRecord[],
   syncConfigDir: boolean,
   configDir: string,
   syncUnderscoreItems: boolean
@@ -397,7 +397,7 @@ const ensembleMixedStates = async (
     }
   }
 
-  for (const entry of localDeleteHistory) {
+  for (const entry of localFileHistory) {
     let key = entry.key;
     if (entry.keyType === "folder") {
       if (!entry.key.endsWith("/")) {
@@ -409,23 +409,45 @@ const ensembleMixedStates = async (
       throw Error(`unexpected ${entry}`);
     }
 
-    const r = {
-      key: key,
-      deltimeLocal: entry.actionWhen,
-    } as FileOrFolderMixedState;
-
     if (isSkipItem(key, syncConfigDir, syncUnderscoreItems, configDir)) {
       continue;
     }
 
-    if (results.hasOwnProperty(key)) {
-      results[key].key = r.key;
-      results[key].deltimeLocal = r.deltimeLocal;
-    } else {
-      results[key] = r;
+    if (entry.actionType === "delete" || entry.actionType === "rename") {
+      const r = {
+        key: key,
+        deltimeLocal: entry.actionWhen,
+      } as FileOrFolderMixedState;
 
-      results[key].existLocal = false;
-      results[key].existRemote = false;
+      if (results.hasOwnProperty(key)) {
+        results[key].deltimeLocal = r.deltimeLocal;
+      } else {
+        results[key] = r;
+        results[key].existLocal = false; // we have already checked local
+        results[key].existRemote = false; // we have already checked remote
+      }
+    } else if (entry.actionType === "renameDestination") {
+      const r = {
+        key: key,
+        mtimeLocal: entry.actionWhen,
+        changeLocalMtimeUsingMapping: true,
+      };
+      if (results.hasOwnProperty(key)) {
+        results[key].mtimeLocal = Math.max(
+          r.mtimeLocal || 0,
+          results[key].mtimeLocal || 0
+        );
+        results[key].changeLocalMtimeUsingMapping =
+          r.changeLocalMtimeUsingMapping;
+      } else {
+        results[key] = r;
+        results[key].existLocal = false; // we have already checked local
+        results[key].existRemote = false; // we have already checked remote
+      }
+    } else {
+      throw Error(
+        `do not know how to deal with local file history ${entry.key} with ${entry.actionType}`
+      );
     }
   }
 
@@ -480,12 +502,12 @@ const assignOperationToFileInplace = (
   // 1. mtimeLocal
   if (r.existLocal) {
     const mtimeRemote = r.existRemote ? r.mtimeRemote : -1;
-    const deltime_remote = r.deltimeRemote !== undefined ? r.deltimeRemote : -1;
+    const deltimeRemote = r.deltimeRemote !== undefined ? r.deltimeRemote : -1;
     const deltimeLocal = r.deltimeLocal !== undefined ? r.deltimeLocal : -1;
     if (
       r.mtimeLocal >= mtimeRemote &&
       r.mtimeLocal >= deltimeLocal &&
-      r.mtimeLocal >= deltime_remote
+      r.mtimeLocal >= deltimeRemote
     ) {
       if (r.mtimeLocal === r.mtimeRemote) {
         // mtime the same
@@ -516,12 +538,12 @@ const assignOperationToFileInplace = (
   // 2. mtimeRemote
   if (r.existRemote) {
     const mtimeLocal = r.existLocal ? r.mtimeLocal : -1;
-    const deltime_remote = r.deltimeRemote !== undefined ? r.deltimeRemote : -1;
+    const deltimeRemote = r.deltimeRemote !== undefined ? r.deltimeRemote : -1;
     const deltimeLocal = r.deltimeLocal !== undefined ? r.deltimeLocal : -1;
     if (
       r.mtimeRemote > mtimeLocal &&
       r.mtimeRemote >= deltimeLocal &&
-      r.mtimeRemote >= deltime_remote
+      r.mtimeRemote >= deltimeRemote
     ) {
       r.decision = "downloadRemoteToLocal";
       r.decisionBranch = 5;
@@ -534,11 +556,11 @@ const assignOperationToFileInplace = (
   if (r.deltimeLocal !== undefined && r.deltimeLocal !== 0) {
     const mtimeLocal = r.existLocal ? r.mtimeLocal : -1;
     const mtimeRemote = r.existRemote ? r.mtimeRemote : -1;
-    const deltime_remote = r.deltimeRemote !== undefined ? r.deltimeRemote : -1;
+    const deltimeRemote = r.deltimeRemote !== undefined ? r.deltimeRemote : -1;
     if (
       r.deltimeLocal >= mtimeLocal &&
       r.deltimeLocal >= mtimeRemote &&
-      r.deltimeLocal >= deltime_remote
+      r.deltimeLocal >= deltimeRemote
     ) {
       r.decision = "uploadLocalDelHistToRemote";
       r.decisionBranch = 6;
@@ -549,7 +571,7 @@ const assignOperationToFileInplace = (
     }
   }
 
-  // 4. deltime_remote
+  // 4. deltimeRemote
   if (r.deltimeRemote !== undefined && r.deltimeRemote !== 0) {
     const mtimeLocal = r.existLocal ? r.mtimeLocal : -1;
     const mtimeRemote = r.existRemote ? r.mtimeRemote : -1;
@@ -617,6 +639,31 @@ const assignOperationToFolderInplace = async (
         }
       }
 
+      // If it was moved to here, after deletion, we should keep it as is.
+      // The logic not necessarily needs API_VER_STAT_FOLDER.
+      // The folder needs this logic because it's also determined by file children.
+      // But the file do not need this logic because the mtimeLocal is checked firstly.
+      if (
+        r.existLocal &&
+        r.changeLocalMtimeUsingMapping &&
+        r.mtimeLocal > 0 &&
+        r.mtimeLocal > deltimeLocal &&
+        r.mtimeLocal > deltimeRemote
+      ) {
+        keptFolder.add(getParentFolder(r.key));
+        if (r.existLocal && r.existRemote) {
+          r.decision = "skipFolder";
+          r.decisionBranch = 16;
+        } else if (r.existLocal || r.existRemote) {
+          r.decision = "createFolder";
+          r.decisionBranch = 17;
+        } else {
+          throw Error(
+            `Error: Folder ${r.key} doesn't exist locally and remotely but is marked must be kept. Abort.`
+          );
+        }
+      }
+
       if (r.decision === undefined) {
         // not yet decided by the above reason
         if (deltimeLocal > 0 && deltimeLocal > deltimeRemote) {
@@ -678,7 +725,7 @@ export const getSyncPlan = async (
   local: TAbstractFile[],
   localConfigDirContents: ObsConfigDirFileType[] | undefined,
   remoteDeleteHistory: DeletionOnRemote[],
-  localDeleteHistory: FileFolderHistoryRecord[],
+  localFileHistory: FileFolderHistoryRecord[],
   remoteType: SUPPORTED_SERVICES_TYPE,
   vault: Vault,
   syncConfigDir: boolean,
@@ -691,7 +738,7 @@ export const getSyncPlan = async (
     local,
     localConfigDirContents,
     remoteDeleteHistory,
-    localDeleteHistory,
+    localFileHistory,
     syncConfigDir,
     configDir,
     syncUnderscoreItems

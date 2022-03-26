@@ -1,7 +1,7 @@
 import localforage from "localforage";
-import { TAbstractFile, TFile, TFolder } from "obsidian";
+import { requireApiVersion, TAbstractFile, TFile, TFolder } from "obsidian";
 
-import type { SUPPORTED_SERVICES_TYPE } from "./baseTypes";
+import { API_VER_STAT_FOLDER, SUPPORTED_SERVICES_TYPE } from "./baseTypes";
 import type { SyncPlanType } from "./sync";
 
 export type LocalForage = typeof localforage;
@@ -9,11 +9,11 @@ export type LocalForage = typeof localforage;
 import * as origLog from "loglevel";
 const log = origLog.getLogger("rs-default");
 
-const DB_VERSION_NUMBER_IN_HISTORY = [20211114, 20220108];
-export const DEFAULT_DB_VERSION_NUMBER: number = 20220108;
+const DB_VERSION_NUMBER_IN_HISTORY = [20211114, 20220108, 20220326];
+export const DEFAULT_DB_VERSION_NUMBER: number = 20220326;
 export const DEFAULT_DB_NAME = "remotelysavedb";
 export const DEFAULT_TBL_VERSION = "schemaversion";
-export const DEFAULT_TBL_DELETE_HISTORY = "filefolderoperationhistory";
+export const DEFAULT_TBL_FILE_HISTORY = "filefolderoperationhistory";
 export const DEFAULT_TBL_SYNC_MAPPING = "syncmetadatahistory";
 export const DEFAULT_SYNC_PLANS_HISTORY = "syncplanshistory";
 
@@ -23,7 +23,7 @@ export interface FileFolderHistoryRecord {
   mtime: number;
   size: number;
   actionWhen: number;
-  actionType: "delete" | "rename";
+  actionType: "delete" | "rename" | "renameDestination";
   keyType: "folder" | "file";
   renameTo: string;
   vaultRandomID: string;
@@ -51,7 +51,7 @@ interface SyncPlanRecord {
 
 export interface InternalDBs {
   versionTbl: LocalForage;
-  deleteHistoryTbl: LocalForage;
+  fileHistoryTbl: LocalForage;
   syncMappingTbl: LocalForage;
   syncPlansTbl: LocalForage;
 }
@@ -72,12 +72,12 @@ const migrateDBsFrom20211114To20220108 = async (
   const allPromisesToWait: Promise<any>[] = [];
 
   log.debug("assign vault id to any delete history");
-  const keysInDeleteHistoryTbl = await db.deleteHistoryTbl.keys();
+  const keysInDeleteHistoryTbl = await db.fileHistoryTbl.keys();
   for (const key of keysInDeleteHistoryTbl) {
     if (key.startsWith(vaultRandomID)) {
       continue;
     }
-    const value = (await db.deleteHistoryTbl.getItem(
+    const value = (await db.fileHistoryTbl.getItem(
       key
     )) as FileFolderHistoryRecord;
     if (value === null || value === undefined) {
@@ -87,8 +87,8 @@ const migrateDBsFrom20211114To20220108 = async (
       value.vaultRandomID = vaultRandomID;
     }
     const newKey = `${vaultRandomID}\t${key}`;
-    allPromisesToWait.push(db.deleteHistoryTbl.setItem(newKey, value));
-    allPromisesToWait.push(db.deleteHistoryTbl.removeItem(key));
+    allPromisesToWait.push(db.fileHistoryTbl.setItem(newKey, value));
+    allPromisesToWait.push(db.fileHistoryTbl.removeItem(key));
   }
 
   log.debug("assign vault id to any sync mapping");
@@ -136,6 +136,23 @@ const migrateDBsFrom20211114To20220108 = async (
   log.debug(`finish upgrading internal db from ${oldVer} to ${newVer}`);
 };
 
+/**
+ * no need to do anything except changing version
+ * we just add more file operations in db, and no schema is changed.
+ * @param db
+ * @param vaultRandomID
+ */
+const migrateDBsFrom20220108To20220326 = async (
+  db: InternalDBs,
+  vaultRandomID: string
+) => {
+  const oldVer = 20220108;
+  const newVer = 20220326;
+  log.debug(`start upgrading internal db from ${oldVer} to ${newVer}`);
+  await db.versionTbl.setItem("version", newVer);
+  log.debug(`finish upgrading internal db from ${oldVer} to ${newVer}`);
+};
+
 const migrateDBs = async (
   db: InternalDBs,
   oldVer: number,
@@ -148,6 +165,20 @@ const migrateDBs = async (
   if (oldVer === 20211114 && newVer === 20220108) {
     return await migrateDBsFrom20211114To20220108(db, vaultRandomID);
   }
+  if (oldVer === 20220108 && newVer === 20220326) {
+    return await migrateDBsFrom20220108To20220326(db, vaultRandomID);
+  }
+  if (oldVer === 20211114 && newVer === 20220326) {
+    // TODO: more steps with more versions in the future
+    await migrateDBsFrom20211114To20220108(db, vaultRandomID);
+    await migrateDBsFrom20220108To20220326(db, vaultRandomID);
+    return;
+  }
+  if (newVer < oldVer) {
+    throw Error(
+      "You've installed a new version, but then downgrade to an old version. Stop working!"
+    );
+  }
   // not implemented
   throw Error(`not supported internal db changes from ${oldVer} to ${newVer}`);
 };
@@ -158,9 +189,9 @@ export const prepareDBs = async (vaultRandomID: string) => {
       name: DEFAULT_DB_NAME,
       storeName: DEFAULT_TBL_VERSION,
     }),
-    deleteHistoryTbl: localforage.createInstance({
+    fileHistoryTbl: localforage.createInstance({
       name: DEFAULT_DB_NAME,
-      storeName: DEFAULT_TBL_DELETE_HISTORY,
+      storeName: DEFAULT_TBL_FILE_HISTORY,
     }),
     syncMappingTbl: localforage.createInstance({
       name: DEFAULT_DB_NAME,
@@ -172,7 +203,7 @@ export const prepareDBs = async (vaultRandomID: string) => {
     }),
   } as InternalDBs;
 
-  const originalVersion = (await db.versionTbl.getItem("version")) as number;
+  const originalVersion: number | null = await db.versionTbl.getItem("version");
   if (originalVersion === null) {
     log.debug(
       `no internal db version, setting it to ${DEFAULT_DB_VERSION_NUMBER}`
@@ -196,26 +227,6 @@ export const prepareDBs = async (vaultRandomID: string) => {
   return db;
 };
 
-export const dropDBs = async (db: InternalDBs) => {
-  const a1 = localforage.dropInstance({
-    name: DEFAULT_DB_NAME,
-    storeName: DEFAULT_TBL_VERSION,
-  });
-  const a2 = localforage.dropInstance({
-    name: DEFAULT_DB_NAME,
-    storeName: DEFAULT_TBL_DELETE_HISTORY,
-  });
-  const a3 = localforage.dropInstance({
-    name: DEFAULT_DB_NAME,
-    storeName: DEFAULT_TBL_SYNC_MAPPING,
-  });
-  const a4 = localforage.dropInstance({
-    name: DEFAULT_DB_NAME,
-    storeName: DEFAULT_SYNC_PLANS_HISTORY,
-  });
-  await Promise.all([a1, a2, a3, a4]);
-};
-
 export const destroyDBs = async () => {
   // await localforage.dropInstance({
   //   name: DEFAULT_DB_NAME,
@@ -226,20 +237,20 @@ export const destroyDBs = async () => {
     log.info("db deleted");
   };
   req.onblocked = (event) => {
-    console.warn("trying to delete db but it was blocked");
+    log.warn("trying to delete db but it was blocked");
   };
   req.onerror = (event) => {
-    console.error("tried to delete db but something bad!");
-    console.error(event);
+    log.error("tried to delete db but something goes wrong!");
+    log.error(event);
   };
 };
 
-export const loadDeleteRenameHistoryTableByVault = async (
+export const loadFileHistoryTableByVault = async (
   db: InternalDBs,
   vaultRandomID: string
 ) => {
   const records = [] as FileFolderHistoryRecord[];
-  await db.deleteHistoryTbl.iterate((value, key, iterationNumber) => {
+  await db.fileHistoryTbl.iterate((value, key, iterationNumber) => {
     if (key.startsWith(`${vaultRandomID}\t`)) {
       records.push(value as FileFolderHistoryRecord);
     }
@@ -253,7 +264,16 @@ export const clearDeleteRenameHistoryOfKeyAndVault = async (
   key: string,
   vaultRandomID: string
 ) => {
-  await db.deleteHistoryTbl.removeItem(`${vaultRandomID}\t${key}`);
+  const fullKey = `${vaultRandomID}\t${key}`;
+  const item: FileFolderHistoryRecord | null = await db.fileHistoryTbl.getItem(
+    fullKey
+  );
+  if (
+    item !== null &&
+    (item.actionType === "delete" || item.actionType === "rename")
+  ) {
+    await db.fileHistoryTbl.removeItem(fullKey);
+  }
 };
 
 export const insertDeleteRecordByVault = async (
@@ -280,10 +300,12 @@ export const insertDeleteRecordByVault = async (
     const key = fileOrFolder.path.endsWith("/")
       ? fileOrFolder.path
       : `${fileOrFolder.path}/`;
+    const ctime = 0; // they are deleted, so no way to get ctime, mtime
+    const mtime = 0; // they are deleted, so no way to get ctime, mtime
     k = {
       key: key,
-      ctime: 0,
-      mtime: 0,
+      ctime: ctime,
+      mtime: mtime,
       size: 0,
       actionWhen: Date.now(),
       actionType: "delete",
@@ -292,9 +314,19 @@ export const insertDeleteRecordByVault = async (
       vaultRandomID: vaultRandomID,
     };
   }
-  await db.deleteHistoryTbl.setItem(`${vaultRandomID}\t${k.key}`, k);
+  await db.fileHistoryTbl.setItem(`${vaultRandomID}\t${k.key}`, k);
 };
 
+/**
+ * A file/folder is renamed from A to B
+ * We insert two records:
+ * A with actionType="rename"
+ * B with actionType="renameDestination"
+ * @param db
+ * @param fileOrFolder
+ * @param oldPath
+ * @param vaultRandomID
+ */
 export const insertRenameRecordByVault = async (
   db: InternalDBs,
   fileOrFolder: TAbstractFile,
@@ -302,17 +334,30 @@ export const insertRenameRecordByVault = async (
   vaultRandomID: string
 ) => {
   // log.info(fileOrFolder);
-  let k: FileFolderHistoryRecord;
+  let k1: FileFolderHistoryRecord;
+  let k2: FileFolderHistoryRecord;
+  const actionWhen = Date.now();
   if (fileOrFolder instanceof TFile) {
-    k = {
+    k1 = {
       key: oldPath,
       ctime: fileOrFolder.stat.ctime,
       mtime: fileOrFolder.stat.mtime,
       size: fileOrFolder.stat.size,
-      actionWhen: Date.now(),
+      actionWhen: actionWhen,
       actionType: "rename",
       keyType: "file",
       renameTo: fileOrFolder.path,
+      vaultRandomID: vaultRandomID,
+    };
+    k2 = {
+      key: fileOrFolder.path,
+      ctime: fileOrFolder.stat.ctime,
+      mtime: fileOrFolder.stat.mtime,
+      size: fileOrFolder.stat.size,
+      actionWhen: actionWhen,
+      actionType: "renameDestination",
+      keyType: "file",
+      renameTo: "", // itself is the destination, so no need to set this field
       vaultRandomID: vaultRandomID,
     };
   } else if (fileOrFolder instanceof TFolder) {
@@ -320,19 +365,42 @@ export const insertRenameRecordByVault = async (
     const renameTo = fileOrFolder.path.endsWith("/")
       ? fileOrFolder.path
       : `${fileOrFolder.path}/`;
-    k = {
+    let ctime = 0;
+    let mtime = 0;
+    if (requireApiVersion(API_VER_STAT_FOLDER)) {
+      // TAbstractFile does not contain these info
+      // but from API_VER_STAT_FOLDER we can manually stat them by path.
+      const s = await fileOrFolder.vault.adapter.stat(fileOrFolder.path);
+      ctime = s.ctime;
+      mtime = s.mtime;
+    }
+    k1 = {
       key: key,
-      ctime: 0,
-      mtime: 0,
+      ctime: ctime,
+      mtime: mtime,
       size: 0,
-      actionWhen: Date.now(),
+      actionWhen: actionWhen,
       actionType: "rename",
       keyType: "folder",
       renameTo: renameTo,
       vaultRandomID: vaultRandomID,
     };
+    k2 = {
+      key: renameTo,
+      ctime: ctime,
+      mtime: mtime,
+      size: 0,
+      actionWhen: actionWhen,
+      actionType: "renameDestination",
+      keyType: "folder",
+      renameTo: "", // itself is the destination, so no need to set this field
+      vaultRandomID: vaultRandomID,
+    };
   }
-  await db.deleteHistoryTbl.setItem(`${vaultRandomID}\t${k.key}`, k);
+  await Promise.all([
+    db.fileHistoryTbl.setItem(`${vaultRandomID}\t${k1.key}`, k1),
+    db.fileHistoryTbl.setItem(`${vaultRandomID}\t${k2.key}`, k2),
+  ]);
 };
 
 export const upsertSyncMetaMappingDataByVault = async (

@@ -14,9 +14,8 @@ import {
   insertDeleteRecordByVault,
   insertRenameRecordByVault,
   insertSyncPlanRecordByVault,
-  loadDeleteRenameHistoryTableByVault,
+  loadFileHistoryTableByVault,
   prepareDBs,
-  dropDBs,
   InternalDBs,
 } from "./localdb";
 import { RemoteClient } from "./remote";
@@ -235,7 +234,7 @@ export default class RemotelySavePlugin extends Plugin {
       );
       this.syncStatus = "getting_local_meta";
       const local = this.app.vault.getAllLoadedFiles();
-      const localHistory = await loadDeleteRenameHistoryTableByVault(
+      const localHistory = await loadFileHistoryTableByVault(
         this.db,
         this.settings.vaultRandomID
       );
@@ -390,7 +389,12 @@ export default class RemotelySavePlugin extends Plugin {
     // no need to await this
     this.tryToAddIgnoreFile();
 
-    await this.prepareDB();
+    try {
+      await this.prepareDB();
+    } catch (err) {
+      new Notice(err.message, 10 * 1000);
+      throw err;
+    }
 
     this.syncStatus = "idle";
 
@@ -643,7 +647,6 @@ export default class RemotelySavePlugin extends Plugin {
 
   async onunload() {
     log.info(`unloading plugin ${this.manifest.id}`);
-    await dropDBs(this.db);
     this.syncRibbon = undefined;
     if (this.oauth2Info !== undefined) {
       this.oauth2Info.helperModal = undefined;

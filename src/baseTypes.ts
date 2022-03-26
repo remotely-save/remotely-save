@@ -124,7 +124,8 @@ export interface FileOrFolderMixedState {
   deltimeRemote?: number;
   sizeLocal?: number;
   sizeRemote?: number;
-  changeMtimeUsingMapping?: boolean;
+  changeRemoteMtimeUsingMapping?: boolean;
+  changeLocalMtimeUsingMapping?: boolean;
   decision?: DecisionType;
   decisionBranch?: number;
   syncDone?: "done";
