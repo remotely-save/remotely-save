@@ -1376,15 +1376,10 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
           .onChange(async (val) => {
             if (val === "enable" && !bridge.secondConfirm) {
               dropdown.setValue("disable");
-              const modal = new SyncConfigDirModal(
-                this.app,
-                this.plugin,
-                () => {
-                  bridge.secondConfirm = true;
-                  dropdown.setValue("enable");
-                }
-              );
-              modal.open();
+              new SyncConfigDirModal(this.app, this.plugin, () => {
+                bridge.secondConfirm = true;
+                dropdown.setValue("enable");
+              }).open();
             } else {
               bridge.secondConfirm = false;
               this.plugin.settings.syncConfigDir = false;
@@ -1505,5 +1500,11 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
           new Notice(t("settings_resetcache_notice"));
         });
       });
+  }
+
+  hide() {
+    let { containerEl } = this;
+    containerEl.empty();
+    super.hide();
   }
 }

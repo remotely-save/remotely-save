@@ -10,13 +10,14 @@ import {
   COMMAND_URI,
 } from "./baseTypes";
 import { importQrCodeUri } from "./importExport";
-import type { InternalDBs } from "./localdb";
 import {
   insertDeleteRecordByVault,
   insertRenameRecordByVault,
   insertSyncPlanRecordByVault,
   loadDeleteRenameHistoryTableByVault,
   prepareDBs,
+  dropDBs,
+  InternalDBs,
 } from "./localdb";
 import { RemoteClient } from "./remote";
 import {
@@ -77,16 +78,25 @@ type SyncTriggerSourceType = "manual" | "auto" | "dry" | "autoOnceInit";
 const iconNameSyncWait = `remotely-save-sync-wait`;
 const iconNameSyncRunning = `remotely-save-sync-running`;
 
-const iconSvgSyncWait = createElement(RotateCcw);
-iconSvgSyncWait.setAttribute("width", "100");
-iconSvgSyncWait.setAttribute("height", "100");
-const iconSvgSyncRunning = createElement(RefreshCcw);
-iconSvgSyncRunning.setAttribute("width", "100");
-iconSvgSyncRunning.setAttribute("height", "100");
+const getIconSvg = () => {
+  const iconSvgSyncWait = createElement(RotateCcw);
+  iconSvgSyncWait.setAttribute("width", "100");
+  iconSvgSyncWait.setAttribute("height", "100");
+  const iconSvgSyncRunning = createElement(RefreshCcw);
+  iconSvgSyncRunning.setAttribute("width", "100");
+  iconSvgSyncRunning.setAttribute("height", "100");
+  const res = {
+    iconSvgSyncWait: iconSvgSyncWait.outerHTML,
+    iconSvgSyncRunning: iconSvgSyncRunning.outerHTML,
+  };
+
+  iconSvgSyncWait.empty();
+  iconSvgSyncRunning.empty();
+  return res;
+};
 
 export default class RemotelySavePlugin extends Plugin {
   settings: RemotelySavePluginSettings;
-  // cm: CodeMirror.Editor;
   db: InternalDBs;
   syncStatus: SyncStatusType;
   oauth2Info: OAuth2Info;
@@ -344,8 +354,10 @@ export default class RemotelySavePlugin extends Plugin {
   async onload() {
     log.info(`loading plugin ${this.manifest.id}`);
 
-    addIcon(iconNameSyncWait, iconSvgSyncWait.outerHTML);
-    addIcon(iconNameSyncRunning, iconSvgSyncRunning.outerHTML);
+    const { iconSvgSyncWait, iconSvgSyncRunning } = getIconSvg();
+
+    addIcon(iconNameSyncWait, iconSvgSyncWait);
+    addIcon(iconNameSyncRunning, iconSvgSyncRunning);
 
     this.oauth2Info = {
       verifier: "",
@@ -629,9 +641,14 @@ export default class RemotelySavePlugin extends Plugin {
     }
   }
 
-  onunload() {
+  async onunload() {
     log.info(`unloading plugin ${this.manifest.id}`);
-    this.destroyDBs();
+    await dropDBs(this.db);
+    this.syncRibbon = undefined;
+    if (this.oauth2Info !== undefined) {
+      this.oauth2Info.helperModal = undefined;
+      this.oauth2Info = undefined;
+    }
   }
 
   async loadSettings() {
@@ -790,10 +807,6 @@ export default class RemotelySavePlugin extends Plugin {
   async saveAgreeToUseNewSyncAlgorithm() {
     this.settings.agreeToUploadExtraMetadata = true;
     await this.saveSettings();
-  }
-
-  destroyDBs() {
-    /* destroyDBs(this.db); */
   }
 
   async setCurrSyncMsg(

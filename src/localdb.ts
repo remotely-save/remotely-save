@@ -196,6 +196,26 @@ export const prepareDBs = async (vaultRandomID: string) => {
   return db;
 };
 
+export const dropDBs = async (db: InternalDBs) => {
+  const a1 = localforage.dropInstance({
+    name: DEFAULT_DB_NAME,
+    storeName: DEFAULT_TBL_VERSION,
+  });
+  const a2 = localforage.dropInstance({
+    name: DEFAULT_DB_NAME,
+    storeName: DEFAULT_TBL_DELETE_HISTORY,
+  });
+  const a3 = localforage.dropInstance({
+    name: DEFAULT_DB_NAME,
+    storeName: DEFAULT_TBL_SYNC_MAPPING,
+  });
+  const a4 = localforage.dropInstance({
+    name: DEFAULT_DB_NAME,
+    storeName: DEFAULT_SYNC_PLANS_HISTORY,
+  });
+  await Promise.all([a1, a2, a3, a4]);
+};
+
 export const destroyDBs = async () => {
   // await localforage.dropInstance({
   //   name: DEFAULT_DB_NAME,
