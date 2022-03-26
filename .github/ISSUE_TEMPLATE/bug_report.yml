@@ -1,5 +1,5 @@
 name: Bug Report
-description: File a bug report
+description: Fire a bug report
 title: "[Bug]: "
 labels: ["bug"]
 body:
@@ -55,6 +55,14 @@ body:
       description: What version of Obsidian are you running?
     validations:
       required: false
+  - type: checkboxes
+    id: using-password
+    attributes:
+      label: Using password or not
+      description: Are you using password (end-to-end encryption) or not?
+      options:
+        - label: Yes.
+          required: false
   - type: checkboxes
     id: ensure-no-sensitive-information
     attributes:
