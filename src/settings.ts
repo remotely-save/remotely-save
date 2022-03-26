@@ -1146,6 +1146,12 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
           .setValue(this.plugin.settings.webdav.address)
           .onChange(async (value) => {
             this.plugin.settings.webdav.address = value.trim();
+            if (
+              this.plugin.settings.webdav.depth === "auto_1" ||
+              this.plugin.settings.webdav.depth === "auto_infinity"
+            ) {
+              this.plugin.settings.webdav.depth = "auto_unknown";
+            }
             await this.plugin.saveSettings();
           })
       );
@@ -1159,6 +1165,12 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
           .setValue(this.plugin.settings.webdav.username)
           .onChange(async (value) => {
             this.plugin.settings.webdav.username = value.trim();
+            if (
+              this.plugin.settings.webdav.depth === "auto_1" ||
+              this.plugin.settings.webdav.depth === "auto_infinity"
+            ) {
+              this.plugin.settings.webdav.depth = "auto_unknown";
+            }
             await this.plugin.saveSettings();
           })
       );
@@ -1172,6 +1184,12 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
           .setValue(this.plugin.settings.webdav.password)
           .onChange(async (value) => {
             this.plugin.settings.webdav.password = value.trim();
+            if (
+              this.plugin.settings.webdav.depth === "auto_1" ||
+              this.plugin.settings.webdav.depth === "auto_infinity"
+            ) {
+              this.plugin.settings.webdav.depth = "auto_unknown";
+            }
             await this.plugin.saveSettings();
           })
       );
