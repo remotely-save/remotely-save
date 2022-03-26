@@ -5,6 +5,8 @@ import {
   requestUrl,
   requireApiVersion,
   Platform,
+  Notice,
+  RequestUrlResponse,
 } from "obsidian";
 
 import { Queue } from "@fyears/tsqueue";
@@ -116,7 +118,6 @@ if (requireApiVersion(API_VER_REQURL) && !Platform.isAndroidApp) {
 //   return r;
 // });
 import { AuthType, BufferLike, createClient } from "webdav/web";
-import { Plane } from "lucide";
 export type { WebDAVClient } from "webdav/web";
 
 export const DEFAULT_WEBDAV_CONFIG = {
@@ -217,7 +218,7 @@ export class WrappedWebdavClient {
         this.vaultFolderExists = true;
       } else {
         log.info("remote vault folder not exists, creating");
-        await this.client.createDirectory(`/${this.vaultName}`);
+        await this.client.createDirectory(`/${this.vaultName}/`);
         log.info("remote vault folder created!");
         this.vaultFolderExists = true;
       }
@@ -227,7 +228,7 @@ export class WrappedWebdavClient {
     if (this.webdavConfig.depth === "auto_unknown") {
       let testPassed = false;
       try {
-        const res = await this.client.customRequest(`/${this.vaultName}`, {
+        const res = await this.client.customRequest(`/${this.vaultName}/`, {
           method: "PROPFIND",
           headers: {
             Depth: "infinity",
@@ -246,7 +247,7 @@ export class WrappedWebdavClient {
       }
       if (!testPassed) {
         try {
-          const res = await this.client.customRequest(`/${this.vaultName}`, {
+          const res = await this.client.customRequest(`/${this.vaultName}/`, {
             method: "PROPFIND",
             headers: {
               Depth: "1",
@@ -328,7 +329,7 @@ export const uploadToRemote = async (
     if (password === "") {
       // if not encrypted, mkdir a remote folder
       await client.client.createDirectory(uploadFile, {
-        recursive: true,
+        recursive: false, // the sync algo should guarantee no need to recursive
       });
       const res = await getRemoteMeta(client, uploadFile);
       return res;
@@ -360,11 +361,12 @@ export const uploadToRemote = async (
     if (password !== "") {
       remoteContent = await encryptArrayBuffer(localContent, password);
     }
-    // we need to create folders before uploading
-    const dir = getPathFolder(uploadFile);
-    if (dir !== "/" && dir !== "") {
-      await client.client.createDirectory(dir, { recursive: true });
-    }
+    // updated 20220326: the algorithm guarantee this
+    // // we need to create folders before uploading
+    // const dir = getPathFolder(uploadFile);
+    // if (dir !== "/" && dir !== "") {
+    //   await client.client.createDirectory(dir, { recursive: false });
+    // }
     await client.client.putFileContents(uploadFile, remoteContent, {
       overwrite: true,
       onUploadProgress: (progress: any) => {
