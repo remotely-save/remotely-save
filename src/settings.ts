@@ -1479,7 +1479,7 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
           await exportVaultSyncPlansToFiles(
             this.plugin.db,
             this.app.vault,
-            this.plugin.settings.vaultRandomID
+            this.plugin.vaultRandomID
           );
           new Notice(t("settings_syncplans_notice"));
         });
@@ -1504,6 +1504,18 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
         button.onClick(async () => {
           await clearAllSyncMetaMapping(this.plugin.db);
           new Notice(t("settings_delsyncmap_notice"));
+        });
+      });
+
+    const outputCurrBasePathVaultIDDiv = debugDiv.createDiv("div");
+    new Setting(outputCurrBasePathVaultIDDiv)
+      .setName(t("settings_outputbasepathvaultid"))
+      .setDesc(t("settings_outputbasepathvaultid_desc"))
+      .addButton(async (button) => {
+        button.setButtonText(t("settings_outputbasepathvaultid_button"));
+        button.onClick(async () => {
+          new Notice(this.plugin.getVaultBasePath());
+          new Notice(this.plugin.vaultRandomID);
         });
       });
 

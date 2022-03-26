@@ -1,6 +1,13 @@
-import { Modal, Notice, Plugin, Setting, addIcon, setIcon } from "obsidian";
+import {
+  Modal,
+  Notice,
+  Plugin,
+  Setting,
+  addIcon,
+  setIcon,
+  FileSystemAdapter,
+} from "obsidian";
 import cloneDeep from "lodash/cloneDeep";
-import { nanoid } from "nanoid";
 import { createElement, RotateCcw, RefreshCcw } from "lucide";
 import type { RemotelySavePluginSettings } from "./baseTypes";
 import {
@@ -54,7 +61,7 @@ const DEFAULT_SETTINGS: RemotelySavePluginSettings = {
   password: "",
   serviceType: "s3",
   currLogLevel: "info",
-  vaultRandomID: "",
+  // vaultRandomID: "", // deprecated
   autoRunEveryMilliseconds: -1,
   initRunAfterMilliseconds: -1,
   agreeToUploadExtraMetadata: false,
@@ -104,6 +111,7 @@ export default class RemotelySavePlugin extends Plugin {
   syncRibbon?: HTMLElement;
   autoRunIntervalID?: number;
   i18n: I18n;
+  vaultRandomID: string;
 
   async syncRun(triggerSource: SyncTriggerSourceType = "manual") {
     const t = (x: TransItemType, vars?: any) => {
@@ -216,7 +224,7 @@ export default class RemotelySavePlugin extends Plugin {
       const { remoteStates, metadataFile } = await parseRemoteItems(
         remoteRsp.Contents,
         this.db,
-        this.settings.vaultRandomID,
+        this.vaultRandomID,
         client.serviceType,
         this.settings.password
       );
@@ -236,7 +244,7 @@ export default class RemotelySavePlugin extends Plugin {
       const local = this.app.vault.getAllLoadedFiles();
       const localHistory = await loadFileHistoryTableByVault(
         this.db,
-        this.settings.vaultRandomID
+        this.vaultRandomID
       );
       let localConfigDirContents: ObsConfigDirFileType[] = undefined;
       if (this.settings.syncConfigDir) {
@@ -270,11 +278,7 @@ export default class RemotelySavePlugin extends Plugin {
       );
       log.info(plan.mixedStates); // for debugging
       if (triggerSource !== "dry") {
-        await insertSyncPlanRecordByVault(
-          this.db,
-          plan,
-          this.settings.vaultRandomID
-        );
+        await insertSyncPlanRecordByVault(this.db, plan, this.vaultRandomID);
       }
 
       // The operations above are almost read only and kind of safe.
@@ -291,7 +295,7 @@ export default class RemotelySavePlugin extends Plugin {
         await doActualSync(
           client,
           this.db,
-          this.settings.vaultRandomID,
+          this.vaultRandomID,
           this.app.vault,
           plan,
           sortedKeys,
@@ -384,13 +388,23 @@ export default class RemotelySavePlugin extends Plugin {
     }
 
     await this.checkIfOauthExpires();
-    await this.checkIfVaultIDAssigned(); // MUST before prepareDB()
+
+    // MUST before prepareDB()
+    // And, it's also possible to be an empty string,
+    // which means the vaultRandomID is read from db later!
+    const vaultRandomIDFromOldConfigFile =
+      await this.getVaultRandomIDFromOldConfigFile();
 
     // no need to await this
     this.tryToAddIgnoreFile();
 
+    const vaultBasePath = this.getVaultBasePath();
+
     try {
-      await this.prepareDB();
+      await this.prepareDBAndVaultRandomID(
+        vaultBasePath,
+        vaultRandomIDFromOldConfigFile
+      );
     } catch (err) {
       new Notice(err.message, 10 * 1000);
       throw err;
@@ -403,7 +417,7 @@ export default class RemotelySavePlugin extends Plugin {
         await insertDeleteRecordByVault(
           this.db,
           fileOrFolder,
-          this.settings.vaultRandomID
+          this.vaultRandomID
         );
       })
     );
@@ -414,7 +428,7 @@ export default class RemotelySavePlugin extends Plugin {
           this.db,
           fileOrFolder,
           oldPath,
-          this.settings.vaultRandomID
+          this.vaultRandomID
         );
       })
     );
@@ -757,14 +771,20 @@ export default class RemotelySavePlugin extends Plugin {
     }
   }
 
-  async checkIfVaultIDAssigned() {
-    if (
-      this.settings.vaultRandomID === undefined ||
-      this.settings.vaultRandomID === ""
-    ) {
-      this.settings.vaultRandomID = nanoid();
+  async getVaultRandomIDFromOldConfigFile() {
+    let vaultRandomID = "";
+    if (this.settings.vaultRandomID !== undefined) {
+      // In old version, the vault id is saved in data.json
+      // But we want to store it in localForage later
+      if (this.settings.vaultRandomID !== "") {
+        // a real string was assigned before
+        vaultRandomID = this.settings.vaultRandomID;
+      }
+      log.debug("vaultRandomID is no longer saved in data.json");
+      delete this.settings.vaultRandomID;
       await this.saveSettings();
     }
+    return vaultRandomID;
   }
 
   async trash(x: string) {
@@ -773,8 +793,26 @@ export default class RemotelySavePlugin extends Plugin {
     }
   }
 
-  async prepareDB() {
-    this.db = await prepareDBs(this.settings.vaultRandomID);
+  getVaultBasePath() {
+    if (this.app.vault.adapter instanceof FileSystemAdapter) {
+      // in desktop
+      return this.app.vault.adapter.getBasePath().split("?")[0];
+    } else {
+      // in mobile
+      return this.app.vault.adapter.getResourcePath("").split("?")[0];
+    }
+  }
+
+  async prepareDBAndVaultRandomID(
+    vaultBasePath: string,
+    vaultRandomIDFromOldConfigFile: string
+  ) {
+    const { db, vaultRandomID } = await prepareDBs(
+      vaultBasePath,
+      vaultRandomIDFromOldConfigFile
+    );
+    this.db = db;
+    this.vaultRandomID = vaultRandomID;
   }
 
   enableAutoSyncIfSet() {

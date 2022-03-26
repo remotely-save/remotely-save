@@ -66,7 +66,6 @@ export interface RemotelySavePluginSettings {
   password: string;
   serviceType: SUPPORTED_SERVICES_TYPE;
   currLogLevel?: string;
-  vaultRandomID?: string;
   autoRunEveryMilliseconds?: number;
   initRunAfterMilliseconds?: number;
   agreeToUploadExtraMetadata?: boolean;
@@ -74,6 +73,11 @@ export interface RemotelySavePluginSettings {
   syncConfigDir?: boolean;
   syncUnderscoreItems?: boolean;
   lang?: LangTypeAndAuto;
+
+  /**
+   * @deprecated
+   */
+  vaultRandomID?: string;
 }
 
 export interface RemoteItem {

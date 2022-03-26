@@ -7,6 +7,7 @@ import type { SyncPlanType } from "./sync";
 export type LocalForage = typeof localforage;
 
 import * as origLog from "loglevel";
+import { nanoid } from "nanoid";
 const log = origLog.getLogger("rs-default");
 
 const DB_VERSION_NUMBER_IN_HISTORY = [20211114, 20220108, 20220326];
@@ -16,6 +17,7 @@ export const DEFAULT_TBL_VERSION = "schemaversion";
 export const DEFAULT_TBL_FILE_HISTORY = "filefolderoperationhistory";
 export const DEFAULT_TBL_SYNC_MAPPING = "syncmetadatahistory";
 export const DEFAULT_SYNC_PLANS_HISTORY = "syncplanshistory";
+export const DEFAULT_TBL_VAULT_RANDOM_ID_MAPPING = "vaultrandomidmapping";
 
 export interface FileFolderHistoryRecord {
   key: string;
@@ -54,6 +56,7 @@ export interface InternalDBs {
   fileHistoryTbl: LocalForage;
   syncMappingTbl: LocalForage;
   syncPlansTbl: LocalForage;
+  vaultRandomIDMappingTbl: LocalForage;
 }
 
 /**
@@ -183,7 +186,10 @@ const migrateDBs = async (
   throw Error(`not supported internal db changes from ${oldVer} to ${newVer}`);
 };
 
-export const prepareDBs = async (vaultRandomID: string) => {
+export const prepareDBs = async (
+  vaultBasePath: string,
+  vaultRandomIDFromOldConfigFile: string
+) => {
   const db = {
     versionTbl: localforage.createInstance({
       name: DEFAULT_DB_NAME,
@@ -201,7 +207,40 @@ export const prepareDBs = async (vaultRandomID: string) => {
       name: DEFAULT_DB_NAME,
       storeName: DEFAULT_SYNC_PLANS_HISTORY,
     }),
+    vaultRandomIDMappingTbl: localforage.createInstance({
+      name: DEFAULT_DB_NAME,
+      storeName: DEFAULT_TBL_VAULT_RANDOM_ID_MAPPING,
+    }),
   } as InternalDBs;
+
+  // try to get vaultRandomID firstly
+  let vaultRandomID = "";
+  const vaultRandomIDInDB: string | null =
+    await db.vaultRandomIDMappingTbl.getItem(`path2id\t${vaultBasePath}`);
+  if (vaultRandomIDInDB === null) {
+    if (vaultRandomIDFromOldConfigFile !== "") {
+      // reuse the old config id
+      vaultRandomID = vaultRandomIDFromOldConfigFile;
+    } else {
+      // no old config id, we create a random one
+      vaultRandomID = nanoid();
+    }
+    // save the id back
+    await db.vaultRandomIDMappingTbl.setItem(
+      `path2id\t${vaultBasePath}`,
+      vaultRandomID
+    );
+    await db.vaultRandomIDMappingTbl.setItem(
+      `id2path\t${vaultRandomID}`,
+      vaultBasePath
+    );
+  } else {
+    vaultRandomID = vaultRandomIDInDB;
+  }
+
+  if (vaultRandomID === "") {
+    throw Error("no vaultRandomID found or generated");
+  }
 
   const originalVersion: number | null = await db.versionTbl.getItem("version");
   if (originalVersion === null) {
@@ -224,7 +263,10 @@ export const prepareDBs = async (vaultRandomID: string) => {
   }
 
   log.info("db connected");
-  return db;
+  return {
+    db: db,
+    vaultRandomID: vaultRandomID,
+  };
 };
 
 export const destroyDBs = async () => {
