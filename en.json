@@ -206,7 +206,7 @@
   "settings_syncplans_notice": "Sync plans history exported.",
   "settings_delsyncplans": "Delete Sync Plans History In DB",
   "settings_delsyncplans_desc": "Delete sync plans history in DB.",
-  "settings_delsyncplans_button": "Delete History",
+  "settings_delsyncplans_button": "Delete Sync Plans History",
   "settings_delsyncplans_notice": "Sync plans history (in DB) deleted.",
   "settings_delsyncmap": "delete sync mappings history in DB",
   "settings_delsyncmap_desc": "Sync mappings history stores the actual LOCAL last modified time of the REMOTE objects. Clearing it may cause unnecessary data exchanges in next-time sync. Click the button to delete sync mappings history in DB.",
