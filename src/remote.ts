@@ -46,10 +46,11 @@ export class RemoteClient {
           "remember to provide vault name and callback while init webdav client"
         );
       }
+      const remoteBaseDir = webdavConfig.remoteBaseDir || vaultName;
       this.webdavConfig = webdavConfig;
       this.webdavClient = webdav.getWebdavClient(
         this.webdavConfig,
-        vaultName,
+        remoteBaseDir,
         saveUpdatedConfigFunc
       );
     } else if (serviceType === "dropbox") {
@@ -58,10 +59,11 @@ export class RemoteClient {
           "remember to provide vault name and callback while init dropbox client"
         );
       }
+      const remoteBaseDir = dropboxConfig.remoteBaseDir || vaultName;
       this.dropboxConfig = dropboxConfig;
       this.dropboxClient = dropbox.getDropboxClient(
         this.dropboxConfig,
-        vaultName,
+        remoteBaseDir,
         saveUpdatedConfigFunc
       );
     } else if (serviceType === "onedrive") {
@@ -70,10 +72,11 @@ export class RemoteClient {
           "remember to provide vault name and callback while init onedrive client"
         );
       }
+      const remoteBaseDir = onedriveConfig.remoteBaseDir || vaultName;
       this.onedriveConfig = onedriveConfig;
       this.onedriveClient = onedrive.getOnedriveClient(
         this.onedriveConfig,
-        vaultName,
+        remoteBaseDir,
         saveUpdatedConfigFunc
       );
     } else {

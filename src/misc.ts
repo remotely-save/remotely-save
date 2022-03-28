@@ -299,3 +299,7 @@ export const atWhichLevel = (x: string) => {
   }
   return y.split("/").length;
 };
+
+export const checkHasSpecialCharForDir = (x: string) => {
+  return /[?/\\]/.test(x);
+};

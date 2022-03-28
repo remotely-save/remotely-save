@@ -204,9 +204,9 @@ export const setConfigBySuccessfullAuthInplace = async (
 // Other usual common methods
 ////////////////////////////////////////////////////////////////////////////////
 
-const getOnedrivePath = (fileOrFolderPath: string, vaultName: string) => {
+const getOnedrivePath = (fileOrFolderPath: string, remoteBaseDir: string) => {
   // https://docs.microsoft.com/en-us/onedrive/developer/rest-api/concepts/special-folders-appfolder?view=odsp-graph-online
-  const prefix = `/drive/special/approot:/${vaultName}`;
+  const prefix = `/drive/special/approot:/${remoteBaseDir}`;
   if (fileOrFolderPath.startsWith(prefix)) {
     // already transformed, return as is
     return fileOrFolderPath;
@@ -225,8 +225,8 @@ const getOnedrivePath = (fileOrFolderPath: string, vaultName: string) => {
   return key;
 };
 
-const getNormPath = (fileOrFolderPath: string, vaultName: string) => {
-  const prefix = `/drive/special/approot:/${vaultName}`;
+const getNormPath = (fileOrFolderPath: string, remoteBaseDir: string) => {
+  const prefix = `/drive/special/approot:/${remoteBaseDir}`;
 
   if (
     !(fileOrFolderPath === prefix || fileOrFolderPath.startsWith(`${prefix}/`))
@@ -248,16 +248,16 @@ const constructFromDriveItemToRemoteItemError = (x: DriveItem) => {
 
 const fromDriveItemToRemoteItem = (
   x: DriveItem,
-  vaultName: string
+  remoteBaseDir: string
 ): RemoteItem => {
   let key = "";
 
   // possible prefix:
-  // pure english: /drive/root:/Apps/remotely-save/${vaultName}
-  // or localized, e.g.: /drive/root:/应用/remotely-save/${vaultName}
+  // pure english: /drive/root:/Apps/remotely-save/${remoteBaseDir}
+  // or localized, e.g.: /drive/root:/应用/remotely-save/${remoteBaseDir}
   const FIRST_COMMON_PREFIX_REGEX = /^\/drive\/root:\/[^\/]+\/remotely-save\//g;
   // or the root is absolute path /Livefolders,
-  // e.g.: /Livefolders/应用/remotely-save/${vaultName}
+  // e.g.: /Livefolders/应用/remotely-save/${remoteBaseDir}
   const SECOND_COMMON_PREFIX_REGEX = /^\/Livefolders\/[^\/]+\/remotely-save\//g;
 
   // another possibile prefix
@@ -270,26 +270,26 @@ const fromDriveItemToRemoteItem = (
   );
   if (
     matchFirstPrefixRes !== null &&
-    fullPathOriginal.startsWith(`${matchFirstPrefixRes[0]}${vaultName}`)
+    fullPathOriginal.startsWith(`${matchFirstPrefixRes[0]}${remoteBaseDir}`)
   ) {
-    const foundPrefix = `${matchFirstPrefixRes[0]}${vaultName}`;
+    const foundPrefix = `${matchFirstPrefixRes[0]}${remoteBaseDir}`;
     key = fullPathOriginal.substring(foundPrefix.length + 1);
   } else if (
     matchSecondPrefixRes !== null &&
-    fullPathOriginal.startsWith(`${matchSecondPrefixRes[0]}${vaultName}`)
+    fullPathOriginal.startsWith(`${matchSecondPrefixRes[0]}${remoteBaseDir}`)
   ) {
-    const foundPrefix = `${matchSecondPrefixRes[0]}${vaultName}`;
+    const foundPrefix = `${matchSecondPrefixRes[0]}${remoteBaseDir}`;
     key = fullPathOriginal.substring(foundPrefix.length + 1);
   } else if (x.parentReference.path.startsWith(THIRD_COMMON_PREFIX_RAW)) {
     // it's something like
-    // /drive/items/<some_id>!<another_id>:/${vaultName}/<subfolder>
+    // /drive/items/<some_id>!<another_id>:/${remoteBaseDir}/<subfolder>
     // with uri encoded!
     const parPath = decodeURIComponent(x.parentReference.path);
     key = parPath.substring(parPath.indexOf(":") + 1);
-    if (key.startsWith(`/${vaultName}/`)) {
-      key = key.substring(`/${vaultName}/`.length);
+    if (key.startsWith(`/${remoteBaseDir}/`)) {
+      key = key.substring(`/${remoteBaseDir}/`.length);
       key = `${key}/${x.name}`;
-    } else if (key === `/${vaultName}`) {
+    } else if (key === `/${remoteBaseDir}`) {
       key = x.name;
     } else {
       throw Error(
@@ -369,17 +369,17 @@ class MyAuthProvider implements AuthenticationProvider {
 
 export class WrappedOnedriveClient {
   onedriveConfig: OnedriveConfig;
-  vaultName: string;
+  remoteBaseDir: string;
   vaultFolderExists: boolean;
   authGetter: MyAuthProvider;
   saveUpdatedConfigFunc: () => Promise<any>;
   constructor(
     onedriveConfig: OnedriveConfig,
-    vaultName: string,
+    remoteBaseDir: string,
     saveUpdatedConfigFunc: () => Promise<any>
   ) {
     this.onedriveConfig = onedriveConfig;
-    this.vaultName = vaultName;
+    this.remoteBaseDir = remoteBaseDir;
     this.vaultFolderExists = false;
     this.saveUpdatedConfigFunc = saveUpdatedConfigFunc;
     this.authGetter = new MyAuthProvider(onedriveConfig, saveUpdatedConfigFunc);
@@ -395,26 +395,26 @@ export class WrappedOnedriveClient {
     }
 
     // check vault folder
-    // log.info(`checking remote has folder /${this.vaultName}`);
+    // log.info(`checking remote has folder /${this.remoteBaseDir}`);
     if (this.vaultFolderExists) {
-      // log.info(`already checked, /${this.vaultName} exist before`)
+      // log.info(`already checked, /${this.remoteBaseDir} exist before`)
     } else {
       const k = await this.getJson("/drive/special/approot/children");
       log.debug(k);
       this.vaultFolderExists =
-        (k.value as DriveItem[]).filter((x) => x.name === this.vaultName)
+        (k.value as DriveItem[]).filter((x) => x.name === this.remoteBaseDir)
           .length > 0;
       if (!this.vaultFolderExists) {
-        log.info(`remote does not have folder /${this.vaultName}`);
+        log.info(`remote does not have folder /${this.remoteBaseDir}`);
         await this.postJson("/drive/special/approot/children", {
-          name: `${this.vaultName}`,
+          name: `${this.remoteBaseDir}`,
           folder: {},
           "@microsoft.graph.conflictBehavior": "replace",
         });
-        log.info(`remote folder /${this.vaultName} created`);
+        log.info(`remote folder /${this.remoteBaseDir} created`);
         this.vaultFolderExists = true;
       } else {
-        // log.info(`remote folder /${this.vaultName} exists`);
+        // log.info(`remote folder /${this.remoteBaseDir} exists`);
       }
     }
   };
@@ -576,12 +576,12 @@ export class WrappedOnedriveClient {
 
 export const getOnedriveClient = (
   onedriveConfig: OnedriveConfig,
-  vaultName: string,
+  remoteBaseDir: string,
   saveUpdatedConfigFunc: () => Promise<any>
 ) => {
   return new WrappedOnedriveClient(
     onedriveConfig,
-    vaultName,
+    remoteBaseDir,
     saveUpdatedConfigFunc
   );
 };
@@ -605,7 +605,7 @@ export const listFromRemote = async (
   const DELTA_LINK_KEY = "@odata.deltaLink";
 
   let res = await client.getJson(
-    `/drive/special/approot:/${client.vaultName}:/delta`
+    `/drive/special/approot:/${client.remoteBaseDir}:/delta`
   );
   let driveItems = res.value as DriveItem[];
 
@@ -622,7 +622,7 @@ export const listFromRemote = async (
 
   // unify everything to RemoteItem
   const unifiedContents = driveItems
-    .map((x) => fromDriveItemToRemoteItem(x, client.vaultName))
+    .map((x) => fromDriveItemToRemoteItem(x, client.remoteBaseDir))
     .filter((x) => x.key !== "/");
 
   return {
@@ -635,14 +635,14 @@ export const getRemoteMeta = async (
   fileOrFolderPath: string
 ) => {
   await client.init();
-  const remotePath = getOnedrivePath(fileOrFolderPath, client.vaultName);
+  const remotePath = getOnedrivePath(fileOrFolderPath, client.remoteBaseDir);
   // log.info(`remotePath=${remotePath}`);
   const rsp = await client.getJson(
     `${remotePath}?$select=cTag,eTag,fileSystemInfo,folder,file,name,parentReference,size`
   );
   // log.info(rsp);
   const driveItem = rsp as DriveItem;
-  const res = fromDriveItemToRemoteItem(driveItem, client.vaultName);
+  const res = fromDriveItemToRemoteItem(driveItem, client.remoteBaseDir);
   // log.info(res);
   return res;
 };
@@ -664,7 +664,7 @@ export const uploadToRemote = async (
   if (password !== "") {
     uploadFile = remoteEncryptedKey;
   }
-  uploadFile = getOnedrivePath(uploadFile, client.vaultName);
+  uploadFile = getOnedrivePath(uploadFile, client.remoteBaseDir);
   log.debug(`uploadFile=${uploadFile}`);
 
   const isFolder = fileOrFolderPath.endsWith("/");
@@ -751,7 +751,7 @@ export const uploadToRemote = async (
       // ref: https://docs.microsoft.com/en-us/onedrive/developer/rest-api/api/driveitem_createuploadsession?view=odsp-graph-online
 
       // 1. create uploadSession
-      // uploadFile already starts with /drive/special/approot:/${vaultName}
+      // uploadFile already starts with /drive/special/approot:/${remoteBaseDir}
       const s: UploadSession = await client.postJson(
         `${uploadFile}:/createUploadSession`,
         {
@@ -792,7 +792,7 @@ const downloadFromRemoteRaw = async (
   fileOrFolderPath: string
 ): Promise<ArrayBuffer> => {
   await client.init();
-  const key = getOnedrivePath(fileOrFolderPath, client.vaultName);
+  const key = getOnedrivePath(fileOrFolderPath, client.remoteBaseDir);
   const rsp = await client.getJson(
     `${key}?$select=@microsoft.graph.downloadUrl`
   );
@@ -832,7 +832,7 @@ export const downloadFromRemote = async (
     if (password !== "") {
       downloadFile = remoteEncryptedKey;
     }
-    downloadFile = getOnedrivePath(downloadFile, client.vaultName);
+    downloadFile = getOnedrivePath(downloadFile, client.remoteBaseDir);
     const remoteContent = await downloadFromRemoteRaw(client, downloadFile);
     let localContent = remoteContent;
     if (password !== "") {
@@ -860,7 +860,7 @@ export const deleteFromRemote = async (
   if (password !== "") {
     remoteFileName = remoteEncryptedKey;
   }
-  remoteFileName = getOnedrivePath(remoteFileName, client.vaultName);
+  remoteFileName = getOnedrivePath(remoteFileName, client.remoteBaseDir);
 
   await client.init();
   await client.deleteJson(remoteFileName);

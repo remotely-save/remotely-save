@@ -10,6 +10,7 @@ import {
 import {
   API_VER_REQURL,
   SUPPORTED_SERVICES_TYPE,
+  SUPPORTED_SERVICES_TYPE_WITH_REMOTE_BASE_DIR,
   WebdavAuthType,
   WebdavDepthType,
 } from "./baseTypes";
@@ -36,6 +37,7 @@ import { messyConfigToNormal } from "./configPersist";
 import type { TransItemType } from "./i18n";
 
 import * as origLog from "loglevel";
+import { checkHasSpecialCharForDir } from "./misc";
 const log = origLog.getLogger("rs-default");
 
 class PasswordModal extends Modal {
@@ -100,6 +102,100 @@ class PasswordModal extends Modal {
           this.close();
         });
       });
+  }
+
+  onClose() {
+    let { contentEl } = this;
+    contentEl.empty();
+  }
+}
+
+class ChangeRemoteBaseDirModal extends Modal {
+  readonly plugin: RemotelySavePlugin;
+  readonly newRemoteBaseDir: string;
+  readonly service: SUPPORTED_SERVICES_TYPE_WITH_REMOTE_BASE_DIR;
+  constructor(
+    app: App,
+    plugin: RemotelySavePlugin,
+    newRemoteBaseDir: string,
+    service: SUPPORTED_SERVICES_TYPE_WITH_REMOTE_BASE_DIR
+  ) {
+    super(app);
+    this.plugin = plugin;
+    this.newRemoteBaseDir = newRemoteBaseDir;
+    this.service = service;
+  }
+
+  onOpen() {
+    let { contentEl } = this;
+
+    const t = (x: TransItemType, vars?: any) => {
+      return this.plugin.i18n.t(x, vars);
+    };
+
+    contentEl.createEl("h2", { text: t("modal_remotebasedir_title") });
+    t("modal_remotebasedir_shortdesc")
+      .split("\n")
+      .forEach((val, idx) => {
+        contentEl.createEl("p", {
+          text: val,
+        });
+      });
+
+    if (
+      this.newRemoteBaseDir === "" ||
+      this.newRemoteBaseDir === this.app.vault.getName()
+    ) {
+      new Setting(contentEl)
+        .addButton((button) => {
+          button.setButtonText(
+            t("modal_remotebasedir_secondconfirm_vaultname")
+          );
+          button.onClick(async () => {
+            // in the settings, the value is reset to the special case ""
+            this.plugin.settings[this.service].remoteBaseDir = "";
+            await this.plugin.saveSettings();
+            new Notice(t("modal_remotebasedir_notice"));
+            this.close();
+          });
+          button.setClass("remotebasedir-second-confirm");
+        })
+        .addButton((button) => {
+          button.setButtonText(t("goback"));
+          button.onClick(() => {
+            this.close();
+          });
+        });
+    } else if (checkHasSpecialCharForDir(this.newRemoteBaseDir)) {
+      contentEl.createEl("p", {
+        text: t("modal_remotebasedir_invaliddirhint"),
+      });
+      new Setting(contentEl).addButton((button) => {
+        button.setButtonText(t("goback"));
+        button.onClick(() => {
+          this.close();
+        });
+      });
+    } else {
+      new Setting(contentEl)
+        .addButton((button) => {
+          button.setButtonText(t("modal_remotebasedir_secondconfirm_change"));
+          button.onClick(async () => {
+            this.plugin.settings[this.service].remoteBaseDir =
+              this.newRemoteBaseDir;
+            await this.plugin.saveSettings();
+            new Notice(t("modal_remotebasedir_notice"));
+            this.close();
+          });
+          button.setClass("remotebasedir-second-confirm");
+        })
+        .addButton((button) => {
+          button.setButtonText(t("goback"));
+          button.onClick(() => {
+            this.close();
+          });
+        });
+    }
   }
 
   onClose() {
@@ -861,7 +957,9 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
     dropboxDiv.createEl("p", {
       text: t("settings_dropbox_folder", {
         pluginID: this.plugin.manifest.id,
-        vaultName: this.app.vault.getName(),
+        remoteBaseDir:
+          this.plugin.settings.dropbox.remoteBaseDir ||
+          this.app.vault.getName(),
       }),
     });
 
@@ -945,6 +1043,31 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
       this.plugin.settings.dropbox.username === ""
     );
 
+    let newDropboxRemoteBaseDir =
+      this.plugin.settings.dropbox.remoteBaseDir || "";
+    new Setting(dropboxDiv)
+      .setName(t("settings_remotebasedir"))
+      .setDesc(t("settings_remotebasedir_desc"))
+      .addText((text) =>
+        text
+          .setPlaceholder(this.app.vault.getName())
+          .setValue(newDropboxRemoteBaseDir)
+          .onChange((value) => {
+            newDropboxRemoteBaseDir = value.trim();
+          })
+      )
+      .addButton((button) => {
+        button.setButtonText(t("confirm"));
+        button.onClick(() => {
+          new ChangeRemoteBaseDirModal(
+            this.app,
+            this.plugin,
+            newDropboxRemoteBaseDir,
+            "dropbox"
+          ).open();
+        });
+      });
+
     new Setting(dropboxDiv)
       .setName(t("settings_checkonnectivity"))
       .setDesc(t("settings_checkonnectivity_desc"))
@@ -999,7 +1122,9 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
     onedriveDiv.createEl("p", {
       text: t("settings_onedrive_folder", {
         pluginID: this.plugin.manifest.id,
-        vaultName: this.app.vault.getName(),
+        remoteBaseDir:
+          this.plugin.settings.onedrive.remoteBaseDir ||
+          this.app.vault.getName(),
       }),
     });
 
@@ -1063,6 +1188,31 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
       "onedrive-revoke-auth-button-hide",
       this.plugin.settings.onedrive.username === ""
     );
+
+    let newOnedriveRemoteBaseDir =
+      this.plugin.settings.onedrive.remoteBaseDir || "";
+    new Setting(onedriveDiv)
+      .setName(t("settings_remotebasedir"))
+      .setDesc(t("settings_remotebasedir_desc"))
+      .addText((text) =>
+        text
+          .setPlaceholder(this.app.vault.getName())
+          .setValue(newOnedriveRemoteBaseDir)
+          .onChange((value) => {
+            newOnedriveRemoteBaseDir = value.trim();
+          })
+      )
+      .addButton((button) => {
+        button.setButtonText(t("confirm"));
+        button.onClick(() => {
+          new ChangeRemoteBaseDirModal(
+            this.app,
+            this.plugin,
+            newOnedriveRemoteBaseDir,
+            "onedrive"
+          ).open();
+        });
+      });
 
     new Setting(onedriveDiv)
       .setName(t("settings_checkonnectivity"))
@@ -1133,7 +1283,8 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
 
     webdavDiv.createEl("p", {
       text: t("settings_webdav_folder", {
-        vaultName: this.app.vault.getName(),
+        remoteBaseDir:
+          this.plugin.settings.webdav.remoteBaseDir || this.app.vault.getName(),
       }),
     });
 
@@ -1250,6 +1401,31 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
             this.plugin.settings.webdav.manualRecursive = false;
           }
           await this.plugin.saveSettings();
+        });
+      });
+
+    let newWebdavRemoteBaseDir =
+      this.plugin.settings.webdav.remoteBaseDir || "";
+    new Setting(webdavDiv)
+      .setName(t("settings_remotebasedir"))
+      .setDesc(t("settings_remotebasedir_desc"))
+      .addText((text) =>
+        text
+          .setPlaceholder(this.app.vault.getName())
+          .setValue(newWebdavRemoteBaseDir)
+          .onChange((value) => {
+            newWebdavRemoteBaseDir = value.trim();
+          })
+      )
+      .addButton((button) => {
+        button.setButtonText(t("confirm"));
+        button.onClick(() => {
+          new ChangeRemoteBaseDirModal(
+            this.app,
+            this.plugin,
+            newWebdavRemoteBaseDir,
+            "webdav"
+          ).open();
         });
       });
 

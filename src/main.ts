@@ -677,17 +677,26 @@ export default class RemotelySavePlugin extends Plugin {
     if (this.settings.dropbox.clientID === "") {
       this.settings.dropbox.clientID = DEFAULT_SETTINGS.dropbox.clientID;
     }
+    if (this.settings.dropbox.remoteBaseDir === undefined) {
+      this.settings.dropbox.remoteBaseDir = "";
+    }
     if (this.settings.onedrive.clientID === "") {
       this.settings.onedrive.clientID = DEFAULT_SETTINGS.onedrive.clientID;
     }
     if (this.settings.onedrive.authority === "") {
       this.settings.onedrive.authority = DEFAULT_SETTINGS.onedrive.authority;
     }
+    if (this.settings.onedrive.remoteBaseDir === undefined) {
+      this.settings.onedrive.remoteBaseDir = "";
+    }
     if (this.settings.webdav.manualRecursive === undefined) {
       this.settings.webdav.manualRecursive = false;
     }
     if (this.settings.webdav.depth === undefined) {
       this.settings.webdav.depth = "auto_unknown";
+    }
+    if (this.settings.webdav.remoteBaseDir === undefined) {
+      this.settings.webdav.remoteBaseDir = "";
     }
     if (this.settings.s3.partsConcurrency === undefined) {
       this.settings.s3.partsConcurrency = 20;

@@ -266,3 +266,22 @@ describe("Misc: at which level", () => {
     expect(misc.atWhichLevel("x/y/z.md")).to.be.equal(3);
   });
 });
+
+describe("Misc: special char for dir", () => {
+  it("should return false for normal string", () => {
+    expect(misc.checkHasSpecialCharForDir("")).to.be.false;
+    expect(misc.checkHasSpecialCharForDir("xxx")).to.be.false;
+    expect(misc.checkHasSpecialCharForDir("yyy_xxx")).to.be.false;
+    expect(misc.checkHasSpecialCharForDir("yyy.xxx")).to.be.false;
+    expect(misc.checkHasSpecialCharForDir("yyy？xxx")).to.be.false;
+  });
+
+  it("should return true for special cases", () => {
+    expect(misc.checkHasSpecialCharForDir("?")).to.be.true;
+    expect(misc.checkHasSpecialCharForDir("/")).to.be.true;
+    expect(misc.checkHasSpecialCharForDir("\\")).to.be.true;
+    expect(misc.checkHasSpecialCharForDir("xxx/yyy")).to.be.true;
+    expect(misc.checkHasSpecialCharForDir("xxx\\yyy")).to.be.true;
+    expect(misc.checkHasSpecialCharForDir("xxx?yyy")).to.be.true;
+  });
+});

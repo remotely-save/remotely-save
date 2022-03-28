@@ -7,6 +7,11 @@ import type { LangType, LangTypeAndAuto } from "./i18n";
 
 export type SUPPORTED_SERVICES_TYPE = "s3" | "webdav" | "dropbox" | "onedrive";
 
+export type SUPPORTED_SERVICES_TYPE_WITH_REMOTE_BASE_DIR =
+  | "webdav"
+  | "dropbox"
+  | "onedrive";
+
 export interface S3Config {
   s3Endpoint: string;
   s3Region: string;
@@ -27,6 +32,7 @@ export interface DropboxConfig {
   accountID: string;
   username: string;
   credentialsShouldBeDeletedAtTime?: number;
+  remoteBaseDir?: string;
 }
 
 export type WebdavAuthType = "digest" | "basic";
@@ -44,6 +50,7 @@ export interface WebdavConfig {
   authType: WebdavAuthType;
   manualRecursive: boolean; // deprecated in 0.3.6, use depth
   depth?: WebdavDepthType;
+  remoteBaseDir?: string;
 }
 
 export interface OnedriveConfig {
@@ -56,6 +63,7 @@ export interface OnedriveConfig {
   deltaLink: string;
   username: string;
   credentialsShouldBeDeletedAtTime?: number;
+  remoteBaseDir?: string;
 }
 
 export interface RemotelySavePluginSettings {
