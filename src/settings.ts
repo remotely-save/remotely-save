@@ -1013,6 +1013,28 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
         });
       });
 
+    new Setting(dropboxRevokeAuthDiv)
+      .setName(t("settings_dropbox_clearlocal"))
+      .setDesc(t("settings_dropbox_clearlocal_desc"))
+      .addButton(async (button) => {
+        button.setButtonText(t("settings_dropbox_clearlocal_button"));
+        button.onClick(async () => {
+          this.plugin.settings.dropbox = JSON.parse(
+            JSON.stringify(DEFAULT_DROPBOX_CONFIG)
+          );
+          await this.plugin.saveSettings();
+          dropboxAuthDiv.toggleClass(
+            "dropbox-auth-button-hide",
+            this.plugin.settings.dropbox.username !== ""
+          );
+          dropboxRevokeAuthDiv.toggleClass(
+            "dropbox-revoke-auth-button-hide",
+            this.plugin.settings.dropbox.username === ""
+          );
+          new Notice(t("settings_dropbox_clearlocal_notice"));
+        });
+      });
+
     new Setting(dropboxAuthDiv)
       .setName(t("settings_dropbox_auth"))
       .setDesc(t("settings_dropbox_auth_desc"))
