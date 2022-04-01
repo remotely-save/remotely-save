@@ -30,7 +30,12 @@ import {
   requireApiVersion,
 } from "obsidian";
 import { Readable } from "stream";
-import { API_VER_REQURL, RemoteItem, S3Config } from "./baseTypes";
+import {
+  API_VER_REQURL,
+  DEFAULT_CONTENT_TYPE,
+  RemoteItem,
+  S3Config,
+} from "./baseTypes";
 import { decryptArrayBuffer, encryptArrayBuffer } from "./encrypt";
 import {
   arrayBufferToBuffer,
@@ -246,8 +251,6 @@ export const uploadToRemote = async (
     uploadFile = remoteEncryptedKey;
   }
   const isFolder = fileOrFolderPath.endsWith("/");
-
-  const DEFAULT_CONTENT_TYPE = "application/octet-stream";
 
   if (isFolder && isRecursively) {
     throw Error("upload function doesn't implement recursive function yet!");

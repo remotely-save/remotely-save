@@ -11,6 +11,7 @@ import { request, requestUrl, requireApiVersion, Vault } from "obsidian";
 import {
   API_VER_REQURL,
   COMMAND_CALLBACK_ONEDRIVE,
+  DEFAULT_CONTENT_TYPE,
   OAUTH2_FORCE_EXPIRE_MILLISECONDS,
   OnedriveConfig,
   RemoteItem,
@@ -505,12 +506,17 @@ export class WrappedOnedriveClient {
   putArrayBuffer = async (pathFragOrig: string, payload: ArrayBuffer) => {
     const theUrl = this.buildUrl(pathFragOrig);
     log.debug(`putArrayBuffer, theUrl=${theUrl}`);
-    if (requireApiVersion(API_VER_REQURL)) {
+    // TODO:
+    // 20220401: On Android, requestUrl has issue that text becomes base64.
+    // Use fetch everywhere instead!
+    if (false /*requireApiVersion(API_VER_REQURL)*/) {
       await requestUrl({
         url: theUrl,
         method: "PUT",
         body: payload,
+        contentType: DEFAULT_CONTENT_TYPE,
         headers: {
+          "Content-Type": DEFAULT_CONTENT_TYPE,
           Authorization: `Bearer ${await this.authGetter.getAccessToken()}`,
         },
       });
@@ -519,6 +525,7 @@ export class WrappedOnedriveClient {
         method: "PUT",
         body: payload,
         headers: {
+          "Content-Type": DEFAULT_CONTENT_TYPE,
           Authorization: `Bearer ${await this.authGetter.getAccessToken()}`,
         },
       });
@@ -547,15 +554,18 @@ export class WrappedOnedriveClient {
       }, len=${rangeEnd - rangeStart}, size=${size}`
     );
     // NO AUTH HEADER here!
-    if (requireApiVersion(API_VER_REQURL)) {
+    // TODO:
+    // 20220401: On Android, requestUrl has issue that text becomes base64.
+    // Use fetch everywhere instead!
+    if (false /*requireApiVersion(API_VER_REQURL)*/) {
       const res = await requestUrl({
         url: theUrl,
         method: "PUT",
         body: bufferToArrayBuffer(payload.subarray(rangeStart, rangeEnd)),
+        contentType: DEFAULT_CONTENT_TYPE,
         headers: {
           // no "Content-Length" allowed here
           "Content-Range": `bytes ${rangeStart}-${rangeEnd - 1}/${size}`,
-          "Content-Type": "application/octet-stream",
         },
       });
       return res.json as DriveItem | UploadSession;
@@ -566,7 +576,7 @@ export class WrappedOnedriveClient {
         headers: {
           "Content-Length": `${rangeEnd - rangeStart}`,
           "Content-Range": `bytes ${rangeStart}-${rangeEnd - 1}/${size}`,
-          "Content-Type": "application/octet-stream",
+          "Content-Type": DEFAULT_CONTENT_TYPE,
         },
       });
       return (await res.json()) as DriveItem | UploadSession;
@@ -737,8 +747,9 @@ export const uploadToRemote = async (
     // hard code range size
     const MIN_UNIT = 327680; // bytes in msft doc, about 0.32768 MB
     const RANGE_SIZE = MIN_UNIT * 20; // about 6.5536 MB
+    const DIRECT_UPLOAD_MAX_SIZE = 1000 * 1000 * 4; // 4 Megabyte
 
-    if (remoteContent.byteLength <= RANGE_SIZE) {
+    if (remoteContent.byteLength < DIRECT_UPLOAD_MAX_SIZE) {
       // directly using put!
       await client.putArrayBuffer(
         `${uploadFile}:/content?${new URLSearchParams({

@@ -5,6 +5,8 @@
 
 import type { LangType, LangTypeAndAuto } from "./i18n";
 
+export const DEFAULT_CONTENT_TYPE = "application/octet-stream";
+
 export type SUPPORTED_SERVICES_TYPE = "s3" | "webdav" | "dropbox" | "onedrive";
 
 export type SUPPORTED_SERVICES_TYPE_WITH_REMOTE_BASE_DIR =
