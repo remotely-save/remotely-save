@@ -22,19 +22,13 @@ import { buildQueryString } from "@aws-sdk/querystring-builder";
 import { HeaderBag, HttpHandlerOptions, Provider } from "@aws-sdk/types";
 import { Buffer } from "buffer";
 import * as mime from "mime-types";
-import {
-  Vault,
-  requestUrl,
-  RequestUrlParam,
-  RequestUrlResponse,
-  requireApiVersion,
-} from "obsidian";
+import { Vault, requestUrl, RequestUrlParam } from "obsidian";
 import { Readable } from "stream";
 import {
-  API_VER_REQURL,
   DEFAULT_CONTENT_TYPE,
   RemoteItem,
   S3Config,
+  VALID_REQURL,
 } from "./baseTypes";
 import { decryptArrayBuffer, encryptArrayBuffer } from "./encrypt";
 import {
@@ -194,7 +188,7 @@ export const getS3Client = (s3Config: S3Config) => {
     endpoint = `https://${endpoint}`;
   }
 
-  if (requireApiVersion(API_VER_REQURL) && s3Config.bypassCorsLocally) {
+  if (VALID_REQURL && s3Config.bypassCorsLocally) {
     const s3Client = new S3Client({
       region: s3Config.s3Region,
       endpoint: endpoint,

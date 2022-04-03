@@ -3,6 +3,7 @@
  * To avoid circular dependency.
  */
 
+import { Platform, requireApiVersion } from "obsidian";
 import type { LangType, LangTypeAndAuto } from "./i18n";
 
 export const DEFAULT_CONTENT_TYPE = "application/octet-stream";
@@ -148,3 +149,5 @@ export interface FileOrFolderMixedState {
 
 export const API_VER_STAT_FOLDER = "0.13.27";
 export const API_VER_REQURL = "0.13.26";
+export const VALID_REQURL =
+  requireApiVersion(API_VER_REQURL) && !Platform.isAndroidApp;

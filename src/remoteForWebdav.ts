@@ -1,19 +1,11 @@
 import { Buffer } from "buffer";
-import {
-  Vault,
-  request,
-  requestUrl,
-  requireApiVersion,
-  Platform,
-  Notice,
-  RequestUrlResponse,
-} from "obsidian";
+import { Vault, requestUrl } from "obsidian";
 
 import { Queue } from "@fyears/tsqueue";
 import chunk from "lodash/chunk";
 import flatten from "lodash/flatten";
 import { getReasonPhrase } from "http-status-codes";
-import { API_VER_REQURL, RemoteItem, WebdavConfig } from "./baseTypes";
+import { RemoteItem, VALID_REQURL, WebdavConfig } from "./baseTypes";
 import { decryptArrayBuffer, encryptArrayBuffer } from "./encrypt";
 import { bufferToArrayBuffer, getPathFolder, mkdirpInVault } from "./misc";
 
@@ -28,7 +20,7 @@ import type {
   ResponseDataDetailed,
 } from "webdav/web";
 import { getPatcher } from "webdav/web";
-if (requireApiVersion(API_VER_REQURL) && !Platform.isAndroidApp) {
+if (VALID_REQURL) {
   getPatcher().patch(
     "request",
     async (

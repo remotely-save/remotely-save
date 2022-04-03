@@ -11,6 +11,7 @@ import {
   API_VER_REQURL,
   SUPPORTED_SERVICES_TYPE,
   SUPPORTED_SERVICES_TYPE_WITH_REMOTE_BASE_DIR,
+  VALID_REQURL,
   WebdavAuthType,
   WebdavDepthType,
 } from "./baseTypes";
@@ -747,7 +748,7 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
       });
     }
 
-    if (!requireApiVersion(API_VER_REQURL)) {
+    if (!VALID_REQURL) {
       s3Div.createEl("p", {
         text: t("settings_s3_cors"),
       });
@@ -769,7 +770,7 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
       text: t("settings_s3_prod2"),
     });
 
-    if (!requireApiVersion(API_VER_REQURL)) {
+    if (!VALID_REQURL) {
       s3LinksUl.createEl("li").createEl("a", {
         href: "https://docs.aws.amazon.com/AmazonS3/latest/userguide/enabling-cors-examples.html",
         text: t("settings_s3_prod3"),
@@ -862,7 +863,7 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
           });
       });
 
-    if (requireApiVersion(API_VER_REQURL)) {
+    if (VALID_REQURL) {
       new Setting(s3Div)
         .setName(t("settings_s3_bypasscorslocally"))
         .setDesc(
@@ -1277,9 +1278,6 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
       this.plugin.settings.serviceType !== "webdav"
     );
 
-    const webdavReq =
-      requireApiVersion(API_VER_REQURL) && !Platform.isAndroidApp;
-
     webdavDiv.createEl("h2", { text: t("settings_webdav") });
 
     webdavDiv.createEl("p", {
@@ -1287,7 +1285,7 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
       cls: "webdav-disclaimer",
     });
 
-    if (!webdavReq) {
+    if (!VALID_REQURL) {
       if (Platform.isAndroidApp) {
         webdavDiv.createEl("p", {
           text: t("settings_webdav_cors_android"),
@@ -1372,12 +1370,12 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
       .setDesc(t("settings_webdav_auth_desc"))
       .addDropdown(async (dropdown) => {
         dropdown.addOption("basic", "basic");
-        if (webdavReq) {
+        if (VALID_REQURL) {
           dropdown.addOption("digest", "digest");
         }
 
         // new version config, copied to old version, we need to reset it
-        if (!webdavReq && this.plugin.settings.webdav.authType !== "basic") {
+        if (!VALID_REQURL && this.plugin.settings.webdav.authType !== "basic") {
           this.plugin.settings.webdav.authType = "basic";
           await this.plugin.saveSettings();
         }
@@ -1475,7 +1473,7 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
           if (res) {
             new Notice(t("settings_webdav_connect_succ"));
           } else {
-            if (webdavReq) {
+            if (VALID_REQURL) {
               new Notice(t("settings_webdav_connect_fail"));
             } else {
               new Notice(t("settings_webdav_connect_fail_withcors"));
