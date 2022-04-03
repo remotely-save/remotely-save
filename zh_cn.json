@@ -48,7 +48,7 @@
   "modal_remotebasedir_title": "您正在修改远端基文件夹设置",
   "modal_remotebasedir_shortdesc": "1. 本插件并不会自动在远端把内容从旧文件夹移动到新文件夹。所有内容都会重新同步。\n2. 如果你使得文本输入框为空，那么本设置会被重设回库的文件夹名（默认设置）。\n3. 即使您设置了端对端加密的密码，远端文件夹名称本身也不会被加密。\n4. 某些特殊字符，如“?”、“/”、“\\”是不允许的。文本前后的空格也会被自动删去。",
   "modal_remotebasedir_invaliddirhint": "您所输入的内容含有某些特殊字符，如“?”、“/”、“\\”，它们是不允许的。",
-  "modal_remotebasedir_secondconfirm_vaultname": "重设会默认的库文件夹名",
+  "modal_remotebasedir_secondconfirm_vaultname": "重设回默认的库文件夹名",
   "modal_remotebasedir_secondconfirm_change": "确认修改",
   "modal_remotebasedir_notice": "新的远端基文件夹设置已保存！",
 

@@ -48,7 +48,7 @@
   "modal_remotebasedir_title": "您正在修改遠端基資料夾設定",
   "modal_remotebasedir_shortdesc": "1. 本外掛並不會自動在遠端把內容從舊資料夾移動到新資料夾。所有內容都會重新同步。\n2. 如果你使得文字輸入框為空，那麼本設定會被重設回庫的資料夾名（預設設定）。\n3. 即使您設定了端對端加密的密碼，遠端資料夾名稱本身也不會被加密。\n4. 某些特殊字元，如“?”、“/”、“\\”是不允許的。文字前後的空格也會被自動刪去。",
   "modal_remotebasedir_invaliddirhint": "您所輸入的內容含有某些特殊字元，如“?”、“/”、“\\”，它們是不允許的。",
-  "modal_remotebasedir_secondconfirm_vaultname": "重設會預設的庫資料夾名",
+  "modal_remotebasedir_secondconfirm_vaultname": "重設回預設的庫資料夾名",
   "modal_remotebasedir_secondconfirm_change": "確認修改",
   "modal_remotebasedir_notice": "新的遠端基資料夾設定已儲存！",
 
