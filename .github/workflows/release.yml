@@ -1,6 +1,11 @@
 # modified from https://github.com/argenos/nldates-obsidian/blob/master/.github/workflows/release.yml
 # which is released under MIT License
 
+# trigger:
+# modify manifest.json, package.json, versions.json
+# git tag <version number>
+# git push origin --tags
+
 name: Release A New Version
 
 on:
