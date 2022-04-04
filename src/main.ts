@@ -878,6 +878,13 @@ export default class RemotelySavePlugin extends Plugin {
     this.currSyncMsg = msg;
   }
 
+  /**
+   * Because data.json contains sensitive information,
+   * We usually want to ignore it in the version control.
+   * However, if there's already a an ignore file (even empty),
+   * we respect the existing configure and not add any modifications.
+   * @returns
+   */
   async tryToAddIgnoreFile() {
     const pluginConfigDir =
       this.manifest.dir ||
@@ -895,15 +902,7 @@ export default class RemotelySavePlugin extends Plugin {
     const contentText = "data.json\n";
 
     try {
-      if (ignoreFileExists) {
-        // check empty, if empty, we can write it
-        // if not empty, we do nothing
-        const content = (await this.app.vault.adapter.read(ignoreFile)).trim();
-        if (content === "") {
-          // no need to await writing
-          this.app.vault.adapter.write(ignoreFile, contentText);
-        }
-      } else {
+      if (!ignoreFileExists) {
         // not exists, directly create
         // no need to await
         this.app.vault.adapter.write(ignoreFile, contentText);
