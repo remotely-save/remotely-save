@@ -35,6 +35,9 @@ This is yet another unofficial sync plugin for Obsidian. If you like it or find 
 - **No Conflict resolution. No content-diff-and-patch algorithm.** All files and folders are compared using their local and remote "last modified time" and those with later "last modified time" wins.
 - **Cloud services cost you money.** Always be aware of the costs and pricing. Specifically, all the operations, including but not limited to downloading, uploading, listing all files, calling any api, storage sizes, may or may not cost you money.
 - **Some limitations from the browser environment.** More technical details are [in the doc](./docs/browser_env.md).
+- **You should protect your `data.json` file.** The file contains sensitive information.
+  - It's strongly advised **NOT** to share your `data.json` file to anyone.
+  - It's usually **NOT** a good idea to check the file into version control. By default, the plugin tries to create a `.gitignore` file inside the plugin directory if it doesn't exist, for ignoring `data.json` in the `git` version control. If you know exactly what it means and want to remove the setting, please modify the `.gitignore` file or set it to be empty.
 
 ## Questions, Suggestions, Or Bugs
 
