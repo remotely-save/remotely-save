@@ -51,6 +51,7 @@ import type { LangType, LangTypeAndAuto, TransItemType } from "./i18n";
 import * as origLog from "loglevel";
 import { DeletionOnRemote, MetadataOnRemote } from "./metadataOnRemote";
 import { SyncAlgoV2Modal } from "./syncAlgoV2Notice";
+import { applyPresetRulesInplace } from "./presetRules";
 const log = origLog.getLogger("rs-default");
 
 const DEFAULT_SETTINGS: RemotelySavePluginSettings = {
@@ -373,6 +374,7 @@ export default class RemotelySavePlugin extends Plugin {
     this.currSyncMsg = "";
 
     await this.loadSettings();
+    await this.checkIfPresetRulesFollowed();
 
     // lang should be load early, but after settings
     this.i18n = new I18n(this.settings.lang, async (lang: LangTypeAndAuto) => {
@@ -703,6 +705,13 @@ export default class RemotelySavePlugin extends Plugin {
     }
     if (this.settings.s3.forcePathStyle === undefined) {
       this.settings.s3.forcePathStyle = false;
+    }
+  }
+
+  async checkIfPresetRulesFollowed() {
+    const res = applyPresetRulesInplace(this.settings);
+    if (res.changed) {
+      await this.saveSettings();
     }
   }
 

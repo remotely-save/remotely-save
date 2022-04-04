@@ -39,6 +39,7 @@ import type { TransItemType } from "./i18n";
 
 import * as origLog from "loglevel";
 import { checkHasSpecialCharForDir } from "./misc";
+import { applyWebdavPresetRulesInplace } from "./presetRules";
 const log = origLog.getLogger("rs-default");
 
 class PasswordModal extends Modal {
@@ -1323,6 +1324,11 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
             ) {
               this.plugin.settings.webdav.depth = "auto_unknown";
             }
+
+            // TODO: any more elegant way?
+            applyWebdavPresetRulesInplace(this.plugin.settings.webdav);
+
+            // normally saved
             await this.plugin.saveSettings();
           })
       );
@@ -1420,6 +1426,11 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
             this.plugin.settings.webdav.depth = "manual_infinity";
             this.plugin.settings.webdav.manualRecursive = false;
           }
+
+          // TODO: any more elegant way?
+          applyWebdavPresetRulesInplace(this.plugin.settings.webdav);
+
+          // normally save
           await this.plugin.saveSettings();
         });
       });
