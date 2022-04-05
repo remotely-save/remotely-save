@@ -7,8 +7,7 @@ import {
   RemotelySavePluginSettings,
 } from "./baseTypes";
 
-import * as origLog from "loglevel";
-const log = origLog.getLogger("rs-default");
+import { log } from "./moreOnLog";
 
 export const exportQrCodeUri = async (
   settings: RemotelySavePluginSettings,

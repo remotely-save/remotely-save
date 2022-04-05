@@ -24,6 +24,8 @@ import {
   loadFileHistoryTableByVault,
   prepareDBs,
   InternalDBs,
+  insertLoggerOutputByVault,
+  clearExpiredLoggerOutputRecords,
 } from "./localdb";
 import { RemoteClient } from "./remote";
 import {
@@ -48,11 +50,11 @@ import { ObsConfigDirFileType, listFilesInObsFolder } from "./obsFolderLister";
 import { I18n } from "./i18n";
 import type { LangType, LangTypeAndAuto, TransItemType } from "./i18n";
 
-import * as origLog from "loglevel";
 import { DeletionOnRemote, MetadataOnRemote } from "./metadataOnRemote";
 import { SyncAlgoV2Modal } from "./syncAlgoV2Notice";
 import { applyPresetRulesInplace } from "./presetRules";
-const log = origLog.getLogger("rs-default");
+
+import { applyLogWriterInplace, log } from "./moreOnLog";
 
 const DEFAULT_SETTINGS: RemotelySavePluginSettings = {
   s3: DEFAULT_S3_CONFIG,
@@ -70,6 +72,7 @@ const DEFAULT_SETTINGS: RemotelySavePluginSettings = {
   syncConfigDir: false,
   syncUnderscoreItems: false,
   lang: "auto",
+  logToDB: false,
 };
 
 interface OAuth2Info {
@@ -343,8 +346,8 @@ export default class RemotelySavePlugin extends Plugin {
         triggerSource: triggerSource,
         syncStatus: this.syncStatus,
       });
-      log.info(msg);
-      log.info(error);
+      log.error(msg);
+      log.error(error);
       getNotice(msg, 10 * 1000);
       getNotice(error.message, 10 * 1000);
       this.syncStatus = "idle";
@@ -411,6 +414,10 @@ export default class RemotelySavePlugin extends Plugin {
       new Notice(err.message, 10 * 1000);
       throw err;
     }
+
+    // must AFTER preparing DB
+    this.addOutputToDBIfSet();
+    this.enableAutoClearOutputToDBHistIfSet();
 
     this.syncStatus = "idle";
 
@@ -910,5 +917,35 @@ export default class RemotelySavePlugin extends Plugin {
     } catch (error) {
       // just skip
     }
+  }
+
+  addOutputToDBIfSet() {
+    if (this.settings.logToDB) {
+      applyLogWriterInplace((...msg: any[]) => {
+        insertLoggerOutputByVault(this.db, this.vaultRandomID, ...msg);
+      });
+    }
+  }
+
+  enableAutoClearOutputToDBHistIfSet() {
+    const initClearOutputToDBHistAfterMilliseconds = 1000 * 45;
+    const autoClearOutputToDBHistAfterMilliseconds = 1000 * 60 * 5;
+
+    this.app.workspace.onLayoutReady(() => {
+      // init run
+      window.setTimeout(() => {
+        if (this.settings.logToDB) {
+          clearExpiredLoggerOutputRecords(this.db);
+        }
+      }, initClearOutputToDBHistAfterMilliseconds);
+
+      // scheduled run
+      const intervalID = window.setInterval(() => {
+        if (this.settings.logToDB) {
+          clearExpiredLoggerOutputRecords(this.db);
+        }
+      }, autoClearOutputToDBHistAfterMilliseconds);
+      this.registerInterval(intervalID);
+    });
   }
 }

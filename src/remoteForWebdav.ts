@@ -9,8 +9,7 @@ import { RemoteItem, VALID_REQURL, WebdavConfig } from "./baseTypes";
 import { decryptArrayBuffer, encryptArrayBuffer } from "./encrypt";
 import { bufferToArrayBuffer, getPathFolder, mkdirpInVault } from "./misc";
 
-import * as origLog from "loglevel";
-const log = origLog.getLogger("rs-default");
+import { log } from "./moreOnLog";
 
 import type {
   FileStat,

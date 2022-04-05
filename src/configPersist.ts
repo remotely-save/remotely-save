@@ -3,8 +3,7 @@ import { reverseString } from "./misc";
 
 import type { RemotelySavePluginSettings } from "./baseTypes";
 
-import * as origLog from "loglevel";
-const log = origLog.getLogger("rs-default");
+import { log } from "./moreOnLog";
 
 const DEFAULT_README: string =
   "The file contains sensitive info, so DO NOT take screenshot of, copy, or share it to anyone! It's also generated automatically, so do not edit it manually.";

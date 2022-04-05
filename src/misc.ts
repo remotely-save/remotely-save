@@ -4,8 +4,7 @@ import * as path from "path";
 import { base32, base64url } from "rfc4648";
 import XRegExp from "xregexp";
 
-import * as origLog from "loglevel";
-const log = origLog.getLogger("rs-default");
+import { log } from "./moreOnLog";
 
 declare global {
   interface Window {
@@ -318,4 +317,65 @@ export const unixTimeToStr = (x: number | undefined | null) => {
     return null;
   }
   return window.moment(x).format() as string;
+};
+
+/**
+ * https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Errors/Cyclic_object_value#examples
+ * @returns
+ */
+const getCircularReplacer = () => {
+  const seen = new WeakSet();
+  return (key: any, value: any) => {
+    if (typeof value === "object" && value !== null) {
+      if (seen.has(value)) {
+        return;
+      }
+      seen.add(value);
+    }
+    return value;
+  };
+};
+
+/**
+ * Convert "any" value to string.
+ * @param x
+ * @returns
+ */
+export const toText = (x: any) => {
+  if (x === undefined || x === null) {
+    return `${x}`;
+  }
+  if (typeof x === "string") {
+    return x;
+  }
+  if (
+    x instanceof String ||
+    x instanceof Date ||
+    typeof x === "number" ||
+    typeof x === "bigint" ||
+    typeof x === "boolean"
+  ) {
+    return `${x}`;
+  }
+
+  if (
+    x instanceof Error ||
+    (x &&
+      x.stack &&
+      x.message &&
+      typeof x.stack === "string" &&
+      typeof x.message === "string")
+  ) {
+    return (x.stack || x.message) as string;
+  }
+
+  try {
+    const y = JSON.stringify(x, getCircularReplacer(), 2);
+    if (y !== undefined) {
+      return y;
+    }
+    throw new Error("not jsonable");
+  } catch {
+    return `${x}`;
+  }
 };

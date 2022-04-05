@@ -1,15 +1,19 @@
 import { TAbstractFile, TFolder, TFile, Vault } from "obsidian";
 
 import type { SyncPlanType } from "./sync";
-import { readAllSyncPlanRecordTextsByVault } from "./localdb";
+import {
+  readAllSyncPlanRecordTextsByVault,
+  readAllLogRecordTextsByVault,
+} from "./localdb";
 import type { InternalDBs } from "./localdb";
 import { mkdirpInVault } from "./misc";
+import {
+  DEFAULT_DEBUG_FOLDER,
+  DEFAULT_LOG_HISTORY_FILE_PREFIX,
+  DEFAULT_SYNC_PLANS_HISTORY_FILE_PREFIX,
+} from "./baseTypes";
 
-import * as origLog from "loglevel";
-const log = origLog.getLogger("rs-default");
-
-const DEFAULT_DEBUG_FOLDER = "_debug_remotely_save/";
-const DEFAULT_SYNC_PLANS_HISTORY_FILE_PREFIX = "sync_plans_hist_exported_on_";
+import { log } from "./moreOnLog";
 
 export const exportVaultSyncPlansToFiles = async (
   db: InternalDBs,
@@ -33,4 +37,28 @@ export const exportVaultSyncPlansToFiles = async (
     mtime: ts,
   });
   log.info("finish exporting");
+};
+
+export const exportVaultLoggerOutputToFiles = async (
+  db: InternalDBs,
+  vault: Vault,
+  vaultRandomID: string
+) => {
+  await mkdirpInVault(DEFAULT_DEBUG_FOLDER, vault);
+  const records = await readAllLogRecordTextsByVault(db, vaultRandomID);
+  let md = "";
+  if (records.length === 0) {
+    md = "No logger history found.";
+  } else {
+    md =
+      "Logger history found:\n\n" +
+      "```text\n" +
+      records.join("\n") +
+      "\n```\n";
+  }
+  const ts = Date.now();
+  const filePath = `${DEFAULT_DEBUG_FOLDER}${DEFAULT_LOG_HISTORY_FILE_PREFIX}${ts}.md`;
+  await vault.create(filePath, md, {
+    mtime: ts,
+  });
 };

@@ -3,9 +3,6 @@ import { Queue } from "@fyears/tsqueue";
 import chunk from "lodash/chunk";
 import flatten from "lodash/flatten";
 
-import * as origLog from "loglevel";
-const log = origLog.getLogger("rs-default");
-
 export interface ObsConfigDirFileType {
   key: string;
   ctime: number;

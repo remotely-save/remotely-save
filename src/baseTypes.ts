@@ -84,6 +84,7 @@ export interface RemotelySavePluginSettings {
   syncConfigDir?: boolean;
   syncUnderscoreItems?: boolean;
   lang?: LangTypeAndAuto;
+  logToDB?: boolean;
 
   /**
    * @deprecated
@@ -156,3 +157,8 @@ export const API_VER_STAT_FOLDER = "0.13.27";
 export const API_VER_REQURL = "0.13.26";
 export const VALID_REQURL =
   requireApiVersion(API_VER_REQURL) && !Platform.isAndroidApp;
+
+export const DEFAULT_DEBUG_FOLDER = "_debug_remotely_save/";
+export const DEFAULT_SYNC_PLANS_HISTORY_FILE_PREFIX =
+  "sync_plans_hist_exported_on_";
+export const DEFAULT_LOG_HISTORY_FILE_PREFIX = "log_hist_exported_on_";

@@ -39,8 +39,7 @@ import {
 
 export { S3Client } from "@aws-sdk/client-s3";
 
-import * as origLog from "loglevel";
-const log = origLog.getLogger("rs-default");
+import { log } from "./moreOnLog";
 
 ////////////////////////////////////////////////////////////////////////////////
 // special handler using Obsidian requestUrl

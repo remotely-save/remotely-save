@@ -12,8 +12,7 @@ import { bufferToArrayBuffer, getFolderLevels, mkdirpInVault } from "./misc";
 
 export { Dropbox } from "dropbox";
 
-import * as origLog from "loglevel";
-const log = origLog.getLogger("rs-default");
+import { log } from "./moreOnLog";
 
 export const DEFAULT_DROPBOX_CONFIG: DropboxConfig = {
   accessToken: "",

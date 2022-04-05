@@ -47,8 +47,7 @@ import {
 } from "./metadataOnRemote";
 import { isInsideObsFolder, ObsConfigDirFileType } from "./obsFolderLister";
 
-import * as origLog from "loglevel";
-const log = origLog.getLogger("rs-default");
+import { log } from "./moreOnLog";
 
 export type SyncStatusType =
   | "idle"

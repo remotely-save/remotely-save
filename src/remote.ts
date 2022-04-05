@@ -11,8 +11,7 @@ import * as onedrive from "./remoteForOnedrive";
 import * as s3 from "./remoteForS3";
 import * as webdav from "./remoteForWebdav";
 
-import * as origLog from "loglevel";
-const log = origLog.getLogger("rs-default");
+import { log } from "./moreOnLog";
 
 export class RemoteClient {
   readonly serviceType: SUPPORTED_SERVICES_TYPE;

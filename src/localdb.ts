@@ -1,14 +1,13 @@
 import localforage from "localforage";
+export type LocalForage = typeof localforage;
+import { nanoid } from "nanoid";
 import { requireApiVersion, TAbstractFile, TFile, TFolder } from "obsidian";
 
 import { API_VER_STAT_FOLDER, SUPPORTED_SERVICES_TYPE } from "./baseTypes";
 import type { SyncPlanType } from "./sync";
+import { toText, unixTimeToStr } from "./misc";
 
-export type LocalForage = typeof localforage;
-
-import * as origLog from "loglevel";
-import { nanoid } from "nanoid";
-const log = origLog.getLogger("rs-default");
+import { log } from "./moreOnLog";
 
 const DB_VERSION_NUMBER_IN_HISTORY = [20211114, 20220108, 20220326];
 export const DEFAULT_DB_VERSION_NUMBER: number = 20220326;
@@ -18,6 +17,7 @@ export const DEFAULT_TBL_FILE_HISTORY = "filefolderoperationhistory";
 export const DEFAULT_TBL_SYNC_MAPPING = "syncmetadatahistory";
 export const DEFAULT_SYNC_PLANS_HISTORY = "syncplanshistory";
 export const DEFAULT_TBL_VAULT_RANDOM_ID_MAPPING = "vaultrandomidmapping";
+export const DEFAULT_TBL_LOGGER_OUTPUT = "loggeroutput";
 
 export interface FileFolderHistoryRecord {
   key: string;
@@ -57,6 +57,7 @@ export interface InternalDBs {
   syncMappingTbl: LocalForage;
   syncPlansTbl: LocalForage;
   vaultRandomIDMappingTbl: LocalForage;
+  loggerOutputTbl: LocalForage;
 }
 
 /**
@@ -210,6 +211,10 @@ export const prepareDBs = async (
     vaultRandomIDMappingTbl: localforage.createInstance({
       name: DEFAULT_DB_NAME,
       storeName: DEFAULT_TBL_VAULT_RANDOM_ID_MAPPING,
+    }),
+    loggerOutputTbl: localforage.createInstance({
+      name: DEFAULT_DB_NAME,
+      storeName: DEFAULT_TBL_LOGGER_OUTPUT,
     }),
   } as InternalDBs;
 
@@ -545,4 +550,92 @@ export const readAllSyncPlanRecordTextsByVault = async (
   } else {
     return records.map((x) => x.syncPlan);
   }
+};
+
+export const readAllLogRecordTextsByVault = async (
+  db: InternalDBs,
+  vaultRandomID: string
+) => {
+  const records = [] as { ts: number; r: string }[];
+  await db.loggerOutputTbl.iterate((value, key, iterationNumber) => {
+    if (key.startsWith(`${vaultRandomID}\t`)) {
+      const item = {
+        ts: parseInt(key.split("\t")[1]),
+        r: value as string,
+      };
+      records.push(item);
+    }
+  });
+
+  // while reading the logs, we want it to be ascending
+  records.sort((a, b) => a.ts - b.ts);
+
+  if (records === undefined) {
+    return [] as string[];
+  } else {
+    return records.map((x) => x.r);
+  }
+};
+
+export const insertLoggerOutputByVault = async (
+  db: InternalDBs,
+  vaultRandomID: string,
+  ...msg: any[]
+) => {
+  const ts = Date.now();
+  const tsFmt = unixTimeToStr(ts);
+  const key = `${vaultRandomID}\t${ts}`;
+
+  try {
+    const val = [`[${tsFmt}]`, ...msg.map((x) => toText(x))].join(" ");
+    db.loggerOutputTbl.setItem(key, val);
+  } catch (err) {
+    // give up, and let it pass
+  }
+};
+
+export const clearAllLoggerOutputRecords = async (db: InternalDBs) => {
+  await db.loggerOutputTbl.clear();
+};
+
+/**
+ * We remove records that are older than 7 days or 10000 records.
+ * It's a heavy operation, so we shall not place it in the start up.
+ * @param db
+ */
+export const clearExpiredLoggerOutputRecords = async (db: InternalDBs) => {
+  const MILLISECONDS_OLD = 1000 * 60 * 60 * 24 * 7; // 7 days
+  const COUNT_TO_MANY = 10000;
+
+  const currTs = Date.now();
+  const expiredTs = currTs - MILLISECONDS_OLD;
+
+  let records = (await db.loggerOutputTbl.keys()).map((key) => {
+    const ts = parseInt(key.split("\t")[1]);
+    const expired = ts <= expiredTs;
+    return {
+      ts: ts,
+      key: key,
+      expired: expired,
+    };
+  });
+
+  const keysToRemove = new Set(
+    records.filter((x) => x.expired).map((x) => x.key)
+  );
+
+  if (records.length - keysToRemove.size > COUNT_TO_MANY) {
+    // we need to find out records beyond 10000 records
+    records = records.filter((x) => !x.expired); // shrink the array
+    records.sort((a, b) => -(a.ts - b.ts)); // descending
+    records.slice(COUNT_TO_MANY).forEach((element) => {
+      keysToRemove.add(element.key);
+    });
+  }
+
+  const ps = [] as Promise<void>[];
+  keysToRemove.forEach((element) => {
+    ps.push(db.loggerOutputTbl.removeItem(element));
+  });
+  await Promise.all(ps);
 };

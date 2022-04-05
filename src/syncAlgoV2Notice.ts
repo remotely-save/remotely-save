@@ -1,8 +1,8 @@
 import { App, Modal, Notice, PluginSettingTab, Setting } from "obsidian";
 import type RemotelySavePlugin from "./main"; // unavoidable
 import type { TransItemType } from "./i18n";
-import * as origLog from "loglevel";
-const log = origLog.getLogger("rs-default");
+
+import { log } from "./moreOnLog";
 
 export class SyncAlgoV2Modal extends Modal {
   agree: boolean;

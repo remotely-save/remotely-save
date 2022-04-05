@@ -6,7 +6,6 @@ import type {
   User,
 } from "@microsoft/microsoft-graph-types";
 import cloneDeep from "lodash/cloneDeep";
-import * as origLog from "loglevel";
 import { request, requestUrl, requireApiVersion, Vault } from "obsidian";
 import {
   API_VER_REQURL,
@@ -24,7 +23,7 @@ import {
   mkdirpInVault,
 } from "./misc";
 
-const log = origLog.getLogger("rs-default");
+import { log } from "./moreOnLog";
 
 const SCOPES = ["User.Read", "Files.ReadWrite.AppFolder", "offline_access"];
 const REDIRECT_URI = `obsidian://${COMMAND_CALLBACK_ONEDRIVE}`;
