@@ -26,6 +26,7 @@ import {
   InternalDBs,
   insertLoggerOutputByVault,
   clearExpiredLoggerOutputRecords,
+  clearExpiredSyncPlanRecords,
 } from "./localdb";
 import { RemoteClient } from "./remote";
 import {
@@ -418,6 +419,9 @@ export default class RemotelySavePlugin extends Plugin {
     // must AFTER preparing DB
     this.addOutputToDBIfSet();
     this.enableAutoClearOutputToDBHistIfSet();
+
+    // must AFTER preparing DB
+    this.enableAutoClearSyncPlanHist();
 
     this.syncStatus = "idle";
 
@@ -945,6 +949,24 @@ export default class RemotelySavePlugin extends Plugin {
           clearExpiredLoggerOutputRecords(this.db);
         }
       }, autoClearOutputToDBHistAfterMilliseconds);
+      this.registerInterval(intervalID);
+    });
+  }
+
+  enableAutoClearSyncPlanHist() {
+    const initClearSyncPlanHistAfterMilliseconds = 1000 * 45;
+    const autoClearSyncPlanHistAfterMilliseconds = 1000 * 60 * 5;
+
+    this.app.workspace.onLayoutReady(() => {
+      // init run
+      window.setTimeout(() => {
+        clearExpiredSyncPlanRecords(this.db);
+      }, initClearSyncPlanHistAfterMilliseconds);
+
+      // scheduled run
+      const intervalID = window.setInterval(() => {
+        clearExpiredSyncPlanRecords(this.db);
+      }, autoClearSyncPlanHistAfterMilliseconds);
       this.registerInterval(intervalID);
     });
   }

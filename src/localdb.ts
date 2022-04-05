@@ -552,6 +552,48 @@ export const readAllSyncPlanRecordTextsByVault = async (
   }
 };
 
+/**
+ * We remove records that are older than 7 days or 10000 records.
+ * It's a heavy operation, so we shall not place it in the start up.
+ * @param db
+ */
+export const clearExpiredSyncPlanRecords = async (db: InternalDBs) => {
+  const MILLISECONDS_OLD = 1000 * 60 * 60 * 24 * 7; // 7 days
+  const COUNT_TO_MANY = 10000;
+
+  const currTs = Date.now();
+  const expiredTs = currTs - MILLISECONDS_OLD;
+
+  let records = (await db.syncPlansTbl.keys()).map((key) => {
+    const ts = parseInt(key.split("\t")[1]);
+    const expired = ts <= expiredTs;
+    return {
+      ts: ts,
+      key: key,
+      expired: expired,
+    };
+  });
+
+  const keysToRemove = new Set(
+    records.filter((x) => x.expired).map((x) => x.key)
+  );
+
+  if (records.length - keysToRemove.size > COUNT_TO_MANY) {
+    // we need to find out records beyond 10000 records
+    records = records.filter((x) => !x.expired); // shrink the array
+    records.sort((a, b) => -(a.ts - b.ts)); // descending
+    records.slice(COUNT_TO_MANY).forEach((element) => {
+      keysToRemove.add(element.key);
+    });
+  }
+
+  const ps = [] as Promise<void>[];
+  keysToRemove.forEach((element) => {
+    ps.push(db.syncPlansTbl.removeItem(element));
+  });
+  await Promise.all(ps);
+};
+
 export const readAllLogRecordTextsByVault = async (
   db: InternalDBs,
   vaultRandomID: string
