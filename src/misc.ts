@@ -366,7 +366,7 @@ export const toText = (x: any) => {
       typeof x.stack === "string" &&
       typeof x.message === "string")
   ) {
-    return (x.stack || x.message) as string;
+    return `ERROR! MESSAGE: ${x.message}, STACK: ${x.stack}`;
   }
 
   try {
