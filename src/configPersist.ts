@@ -35,12 +35,12 @@ export const messyConfigToNormal = (
         }) as Buffer
       ).toString("utf-8")
     );
-    log.debug("loading, parsed config is:");
-    log.debug(y);
+    // log.debug("loading, parsed config is:");
+    // log.debug(y);
     return y;
   } else {
     // return as is
-    log.debug("loading, parsed config is the same");
+    // log.debug("loading, parsed config is the same");
     return x;
   }
 };
@@ -63,7 +63,7 @@ export const normalConfigToMessy = (
       })
     ),
   };
-  log.debug("encoding, encoded config is:");
-  log.debug(y);
+  // log.debug("encoding, encoded config is:");
+  // log.debug(y);
   return y;
 };
