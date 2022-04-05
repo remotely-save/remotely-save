@@ -516,6 +516,7 @@ export const insertSyncPlanRecordByVault = async (
 ) => {
   const record = {
     ts: syncPlan.ts,
+    tsFmt: syncPlan.tsFmt,
     vaultRandomID: vaultRandomID,
     remoteType: syncPlan.remoteType,
     syncPlan: JSON.stringify(syncPlan /* directly stringify */, null, 2),

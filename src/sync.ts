@@ -33,6 +33,7 @@ import {
   getFolderLevels,
   getParentFolder,
   atWhichLevel,
+  unixTimeToStr,
 } from "./misc";
 import { RemoteClient } from "./remote";
 import {
@@ -63,6 +64,7 @@ export type SyncStatusType =
 
 export interface SyncPlanType {
   ts: number;
+  tsFmt?: string;
   remoteType: SUPPORTED_SERVICES_TYPE;
   mixedStates: Record<string, FileOrFolderMixedState>;
 }
@@ -212,10 +214,12 @@ export const parseRemoteItems = async (
     let r = {} as FileOrFolderMixedState;
     if (backwardMapping !== undefined) {
       key = backwardMapping.localKey;
+      const mtimeRemote = backwardMapping.localMtime || entry.lastModified;
       r = {
         key: key,
         existRemote: true,
-        mtimeRemote: backwardMapping.localMtime || entry.lastModified,
+        mtimeRemote: mtimeRemote,
+        mtimeRemoteFmt: unixTimeToStr(mtimeRemote),
         sizeRemote: backwardMapping.localSize || entry.size,
         remoteEncryptedKey: remoteEncryptedKey,
         changeRemoteMtimeUsingMapping: true,
@@ -225,6 +229,7 @@ export const parseRemoteItems = async (
         key: key,
         existRemote: true,
         mtimeRemote: entry.lastModified,
+        mtimeRemoteFmt: unixTimeToStr(entry.lastModified),
         sizeRemote: entry.size,
         remoteEncryptedKey: remoteEncryptedKey,
         changeRemoteMtimeUsingMapping: false,
@@ -320,10 +325,12 @@ const ensembleMixedStates = async (
       // ignore
       continue;
     } else if (entry instanceof TFile) {
+      const mtimeLocal = Math.max(entry.stat.mtime || 0, entry.stat.ctime || 0);
       r = {
         key: entry.path,
         existLocal: true,
-        mtimeLocal: Math.max(entry.stat.mtime || 0, entry.stat.ctime || 0),
+        mtimeLocal: mtimeLocal,
+        mtimeLocalFmt: unixTimeToStr(mtimeLocal),
         sizeLocal: entry.stat.size,
       };
     } else if (entry instanceof TFolder) {
@@ -332,6 +339,7 @@ const ensembleMixedStates = async (
         key: key,
         existLocal: true,
         mtimeLocal: undefined,
+        mtimeLocalFmt: undefined,
         sizeLocal: 0,
       };
     } else {
@@ -346,6 +354,7 @@ const ensembleMixedStates = async (
       results[key].key = r.key;
       results[key].existLocal = r.existLocal;
       results[key].mtimeLocal = r.mtimeLocal;
+      results[key].mtimeLocalFmt = r.mtimeLocalFmt;
       results[key].sizeLocal = r.sizeLocal;
     } else {
       results[key] = r;
@@ -356,10 +365,12 @@ const ensembleMixedStates = async (
   if (syncConfigDir && localConfigDirContents !== undefined) {
     for (const entry of localConfigDirContents) {
       const key = entry.key;
+      const mtimeLocal = Math.max(entry.mtime, entry.ctime);
       const r: FileOrFolderMixedState = {
         key: key,
         existLocal: true,
-        mtimeLocal: Math.max(entry.mtime, entry.ctime),
+        mtimeLocal: mtimeLocal,
+        mtimeLocalFmt: unixTimeToStr(mtimeLocal),
         sizeLocal: entry.size,
       };
 
@@ -367,6 +378,7 @@ const ensembleMixedStates = async (
         results[key].key = r.key;
         results[key].existLocal = r.existLocal;
         results[key].mtimeLocal = r.mtimeLocal;
+        results[key].mtimeLocalFmt = r.mtimeLocalFmt;
         results[key].sizeLocal = r.sizeLocal;
       } else {
         results[key] = r;
@@ -380,6 +392,7 @@ const ensembleMixedStates = async (
     const r = {
       key: key,
       deltimeRemote: entry.actionWhen,
+      deltimeRemoteFmt: unixTimeToStr(entry.actionWhen),
     } as FileOrFolderMixedState;
 
     if (isSkipItem(key, syncConfigDir, syncUnderscoreItems, configDir)) {
@@ -389,6 +402,7 @@ const ensembleMixedStates = async (
     if (results.hasOwnProperty(key)) {
       results[key].key = r.key;
       results[key].deltimeRemote = r.deltimeRemote;
+      results[key].deltimeRemoteFmt = r.deltimeRemoteFmt;
     } else {
       results[key] = r;
 
@@ -417,10 +431,12 @@ const ensembleMixedStates = async (
       const r = {
         key: key,
         deltimeLocal: entry.actionWhen,
+        deltimeLocalFmt: unixTimeToStr(entry.actionWhen),
       } as FileOrFolderMixedState;
 
       if (results.hasOwnProperty(key)) {
         results[key].deltimeLocal = r.deltimeLocal;
+        results[key].deltimeLocalFmt = r.deltimeLocalFmt;
       } else {
         results[key] = r;
         results[key].existLocal = false; // we have already checked local
@@ -430,13 +446,16 @@ const ensembleMixedStates = async (
       const r = {
         key: key,
         mtimeLocal: entry.actionWhen,
+        mtimeLocalFmt: unixTimeToStr(entry.actionWhen),
         changeLocalMtimeUsingMapping: true,
       };
       if (results.hasOwnProperty(key)) {
-        results[key].mtimeLocal = Math.max(
+        const mtimeLocal = Math.max(
           r.mtimeLocal || 0,
           results[key].mtimeLocal || 0
         );
+        results[key].mtimeLocal = mtimeLocal;
+        results[key].mtimeLocalFmt = unixTimeToStr(mtimeLocal);
         results[key].changeLocalMtimeUsingMapping =
           r.changeLocalMtimeUsingMapping;
       } else {
@@ -793,8 +812,11 @@ export const getSyncPlan = async (
     }
   }
 
+  const currTs = Date.now();
+  const currTsFmt = unixTimeToStr(currTs);
   const plan = {
-    ts: Date.now(),
+    ts: currTs,
+    tsFmt: currTsFmt,
     remoteType: remoteType,
     mixedStates: mixedStates,
   } as SyncPlanType;

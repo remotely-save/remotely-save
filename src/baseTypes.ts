@@ -145,6 +145,11 @@ export interface FileOrFolderMixedState {
   decisionBranch?: number;
   syncDone?: "done";
   remoteEncryptedKey?: string;
+
+  mtimeLocalFmt?: string;
+  mtimeRemoteFmt?: string;
+  deltimeLocalFmt?: string;
+  deltimeRemoteFmt?: string;
 }
 
 export const API_VER_STAT_FOLDER = "0.13.27";

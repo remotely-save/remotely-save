@@ -7,6 +7,12 @@ import XRegExp from "xregexp";
 import * as origLog from "loglevel";
 const log = origLog.getLogger("rs-default");
 
+declare global {
+  interface Window {
+    moment: (...data: any) => any;
+  }
+}
+
 /**
  * If any part of the file starts with '.' or '_' then it's a hidden file.
  * @param item
@@ -302,4 +308,14 @@ export const atWhichLevel = (x: string) => {
 
 export const checkHasSpecialCharForDir = (x: string) => {
   return /[?/\\]/.test(x);
+};
+
+export const unixTimeToStr = (x: number | undefined | null) => {
+  if (x === undefined) {
+    return undefined;
+  }
+  if (x === null) {
+    return null;
+  }
+  return window.moment(x).format() as string;
 };
