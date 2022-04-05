@@ -4,6 +4,7 @@
   "enable": "开启",
   "goback": "返回",
   "submit": "提交",
+  "sometext": "这里有一段文字。",
 
   "syncrun_alreadyrunning": "{{pluginName}} 正处于此阶段：{{syncStatus}}!",
   "syncrun_syncingribbon": "{{pluginName}}：正在由 {{triggerSource}} 触发运行",

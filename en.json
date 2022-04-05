@@ -4,6 +4,7 @@
   "enable": "Enable",
   "goback": "Go Back",
   "submit": "Submit",
+  "sometext": "Here are some texts.",
 
   "syncrun_alreadyrunning": "{{pluginName}} already running in stage {{syncStatus}}!",
   "syncrun_syncingribbon": "{{pluginName}}: syncing from {{triggerSource}}",
