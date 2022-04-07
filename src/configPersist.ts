@@ -19,8 +19,8 @@ interface MessyConfigType {
 export const messyConfigToNormal = (
   x: MessyConfigType | RemotelySavePluginSettings | null | undefined
 ): RemotelySavePluginSettings | null | undefined => {
-  log.debug("loading, original config on disk:");
-  log.debug(x);
+  // log.debug("loading, original config on disk:");
+  // log.debug(x);
   if (x === null || x === undefined) {
     log.debug("the messy config is null or undefined, skip");
     return x as any;
