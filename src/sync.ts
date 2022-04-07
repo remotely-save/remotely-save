@@ -5,6 +5,7 @@ import {
   Vault,
   requireApiVersion,
 } from "obsidian";
+import AggregateError from "aggregate-error";
 import PQueue from "p-queue";
 import {
   RemoteItem,
@@ -1156,6 +1157,7 @@ export const doActualSync = async (
       }
 
       const queue = new PQueue({ concurrency: concurrency, autoStart: true });
+      const potentialErrors: Error[] = [];
 
       for (let k = 0; k < singleLevelOps.length; ++k) {
         const val: FileOrFolderMixedState = singleLevelOps[k];
@@ -1188,10 +1190,18 @@ export const doActualSync = async (
 
           log.debug(`finished ${key}`);
         };
-        queue.add(fn);
+
+        queue.add(fn).catch((e) => {
+          const msg = `${key}: ${e.message}`;
+          potentialErrors.push(new Error(msg));
+        });
       }
 
       await queue.onIdle();
+
+      if (potentialErrors.length > 0) {
+        throw new AggregateError(potentialErrors);
+      }
     }
   }
 };

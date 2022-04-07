@@ -62,6 +62,7 @@
     "@fyears/tsqueue": "^1.0.1",
     "@microsoft/microsoft-graph-client": "^3.0.1",
     "acorn": "^8.5.0",
+    "aggregate-error": "^4.0.0",
     "assert": "^2.0.0",
     "aws-crt": "^1.10.1",
     "buffer": "^6.0.3",

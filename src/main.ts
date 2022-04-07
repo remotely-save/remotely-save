@@ -56,6 +56,7 @@ import { SyncAlgoV2Modal } from "./syncAlgoV2Notice";
 import { applyPresetRulesInplace } from "./presetRules";
 
 import { applyLogWriterInplace, log } from "./moreOnLog";
+import AggregateError from "aggregate-error";
 
 const DEFAULT_SETTINGS: RemotelySavePluginSettings = {
   s3: DEFAULT_S3_CONFIG,
@@ -350,7 +351,13 @@ export default class RemotelySavePlugin extends Plugin {
       log.error(msg);
       log.error(error);
       getNotice(msg, 10 * 1000);
-      getNotice(error.message, 10 * 1000);
+      if (error instanceof AggregateError) {
+        for (const e of error.errors) {
+          getNotice(e.message, 10 * 1000);
+        }
+      } else {
+        getNotice(error.message, 10 * 1000);
+      }
       this.syncStatus = "idle";
       if (this.syncRibbon !== undefined) {
         setIcon(this.syncRibbon, iconNameSyncWait);
