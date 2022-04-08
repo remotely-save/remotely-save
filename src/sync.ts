@@ -1158,6 +1158,7 @@ export const doActualSync = async (
 
       const queue = new PQueue({ concurrency: concurrency, autoStart: true });
       const potentialErrors: Error[] = [];
+      let tooManyErrors = false;
 
       for (let k = 0; k < singleLevelOps.length; ++k) {
         const val: FileOrFolderMixedState = singleLevelOps[k];
@@ -1194,12 +1195,22 @@ export const doActualSync = async (
         queue.add(fn).catch((e) => {
           const msg = `${key}: ${e.message}`;
           potentialErrors.push(new Error(msg));
+          if (potentialErrors.length >= 3) {
+            tooManyErrors = true;
+            queue.pause();
+            queue.clear();
+          }
         });
       }
 
       await queue.onIdle();
 
       if (potentialErrors.length > 0) {
+        if (tooManyErrors) {
+          potentialErrors.push(
+            new Error("too many errors, stop the remaining tasks")
+          );
+        }
         throw new AggregateError(potentialErrors);
       }
     }
