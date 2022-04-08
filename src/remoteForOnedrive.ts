@@ -400,7 +400,7 @@ export class WrappedOnedriveClient {
       // log.info(`already checked, /${this.remoteBaseDir} exist before`)
     } else {
       const k = await this.getJson("/drive/special/approot/children");
-      log.debug(k);
+      // log.debug(k);
       this.vaultFolderExists =
         (k.value as DriveItem[]).filter((x) => x.name === this.remoteBaseDir)
           .length > 0;
@@ -617,6 +617,7 @@ export const listFromRemote = async (
     `/drive/special/approot:/${client.remoteBaseDir}:/delta`
   );
   let driveItems = res.value as DriveItem[];
+  // log.debug(driveItems);
 
   while (NEXT_LINK_KEY in res) {
     res = await client.getJson(res[NEXT_LINK_KEY]);
