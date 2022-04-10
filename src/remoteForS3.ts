@@ -109,6 +109,11 @@ class ObsHttpHandler extends FetchHttpHandler {
 
     const raceOfPromises = [
       requestUrl(param).then((rsp) => {
+        const headers = rsp.headers;
+        const headersLower: Record<string, string> = {};
+        for (const key of Object.keys(headers)) {
+          headersLower[key.toLowerCase()] = headers[key];
+        }
         const stream = new ReadableStream<Uint8Array>({
           start(controller) {
             controller.enqueue(new Uint8Array(rsp.arrayBuffer));
@@ -117,7 +122,7 @@ class ObsHttpHandler extends FetchHttpHandler {
         });
         return {
           response: new HttpResponse({
-            headers: rsp.headers,
+            headers: headersLower,
             statusCode: rsp.status,
             body: stream,
           }),
