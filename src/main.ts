@@ -676,14 +676,30 @@ export default class RemotelySavePlugin extends Plugin {
     });
 
     this.addCommand({
-      id: "export-sync-plans",
-      name: t("command_exportsyncplans"),
+      id: "export-sync-plans-json",
+      name: t("command_exportsyncplans_json"),
       icon: iconNameLogs,
       callback: async () => {
         await exportVaultSyncPlansToFiles(
           this.db,
           this.app.vault,
-          this.vaultRandomID
+          this.vaultRandomID,
+          "json"
+        );
+        new Notice(t("settings_syncplans_notice"));
+      },
+    });
+
+    this.addCommand({
+      id: "export-sync-plans-table",
+      name: t("command_exportsyncplans_table"),
+      icon: iconNameLogs,
+      callback: async () => {
+        await exportVaultSyncPlansToFiles(
+          this.db,
+          this.app.vault,
+          this.vaultRandomID,
+          "table"
         );
         new Notice(t("settings_syncplans_notice"));
       },
