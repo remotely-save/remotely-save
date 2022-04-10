@@ -8,7 +8,7 @@ import {
   FileSystemAdapter,
 } from "obsidian";
 import cloneDeep from "lodash/cloneDeep";
-import { createElement, RotateCcw, RefreshCcw } from "lucide";
+import { createElement, RotateCcw, RefreshCcw, FileText } from "lucide";
 import type { RemotelySavePluginSettings } from "./baseTypes";
 import {
   COMMAND_CALLBACK,
@@ -57,6 +57,10 @@ import { applyPresetRulesInplace } from "./presetRules";
 
 import { applyLogWriterInplace, log } from "./moreOnLog";
 import AggregateError from "aggregate-error";
+import {
+  exportVaultLoggerOutputToFiles,
+  exportVaultSyncPlansToFiles,
+} from "./debugMode";
 
 const DEFAULT_SETTINGS: RemotelySavePluginSettings = {
   s3: DEFAULT_S3_CONFIG,
@@ -89,6 +93,7 @@ type SyncTriggerSourceType = "manual" | "auto" | "dry" | "autoOnceInit";
 
 const iconNameSyncWait = `remotely-save-sync-wait`;
 const iconNameSyncRunning = `remotely-save-sync-running`;
+const iconNameLogs = `remotely-save-logs`;
 
 const getIconSvg = () => {
   const iconSvgSyncWait = createElement(RotateCcw);
@@ -97,13 +102,18 @@ const getIconSvg = () => {
   const iconSvgSyncRunning = createElement(RefreshCcw);
   iconSvgSyncRunning.setAttribute("width", "100");
   iconSvgSyncRunning.setAttribute("height", "100");
+  const iconSvgLogs = createElement(FileText);
+  iconSvgLogs.setAttribute("width", "100");
+  iconSvgLogs.setAttribute("height", "100");
   const res = {
     iconSvgSyncWait: iconSvgSyncWait.outerHTML,
     iconSvgSyncRunning: iconSvgSyncRunning.outerHTML,
+    iconSvgLogs: iconSvgLogs.outerHTML,
   };
 
   iconSvgSyncWait.empty();
   iconSvgSyncRunning.empty();
+  iconSvgLogs.empty();
   return res;
 };
 
@@ -369,10 +379,11 @@ export default class RemotelySavePlugin extends Plugin {
   async onload() {
     log.info(`loading plugin ${this.manifest.id}`);
 
-    const { iconSvgSyncWait, iconSvgSyncRunning } = getIconSvg();
+    const { iconSvgSyncWait, iconSvgSyncRunning, iconSvgLogs } = getIconSvg();
 
     addIcon(iconNameSyncWait, iconSvgSyncWait);
     addIcon(iconNameSyncRunning, iconSvgSyncRunning);
+    addIcon(iconNameLogs, iconSvgLogs);
 
     this.oauth2Info = {
       verifier: "",
@@ -661,6 +672,34 @@ export default class RemotelySavePlugin extends Plugin {
       icon: iconNameSyncWait,
       callback: async () => {
         this.syncRun("dry");
+      },
+    });
+
+    this.addCommand({
+      id: "export-sync-plans",
+      name: t("command_exportsyncplans"),
+      icon: iconNameLogs,
+      callback: async () => {
+        await exportVaultSyncPlansToFiles(
+          this.db,
+          this.app.vault,
+          this.vaultRandomID
+        );
+        new Notice(t("settings_syncplans_notice"));
+      },
+    });
+
+    this.addCommand({
+      id: "export-logs-in-db",
+      name: t("command_exportlogsindb"),
+      icon: iconNameLogs,
+      callback: async () => {
+        await exportVaultLoggerOutputToFiles(
+          this.db,
+          this.app.vault,
+          this.vaultRandomID
+        );
+        new Notice(t("settings_logtodbexport_notice"));
       },
     });
 
