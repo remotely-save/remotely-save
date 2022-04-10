@@ -1678,11 +1678,7 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
         button.setButtonText(t("settings_outputsettingsconsole_button"));
         button.onClick(async () => {
           const c = messyConfigToNormal(await this.plugin.loadData());
-          if (c.currLogLevel === "debug") {
-            // no need to ouput it again because debug mode already output it
-          } else {
-            log.info(c);
-          }
+          log.info(c);
           new Notice(t("settings_outputsettingsconsole_notice"));
         });
       });
