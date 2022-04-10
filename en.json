@@ -35,6 +35,8 @@
 
   "command_startsync": "start sync",
   "command_drynrun": "start sync (dry run only)",
+  "command_exportsyncplans": "export sync plans",
+  "command_exportlogsindb": "export logs saved in db",
 
   "modal_password_title": "Hold on and PLEASE READ ON...",
   "modal_password_shortdesc": "If the field is not empty, files would be encrypted locally before being uploaded.\nIf the field is empty, then files would be uploaded without encryption.",

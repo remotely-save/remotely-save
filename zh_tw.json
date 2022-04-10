@@ -35,6 +35,8 @@
 
   "command_startsync": "開始同步（start sync）",
   "command_drynrun": "開始同步（空跑模式）（start sync (dry run only)）",
+  "command_exportsyncplans": "匯出同步計劃（export sync plans）",
+  "command_exportlogsindb": "從資料庫匯出終端日誌（export logs saved in db）",
 
   "modal_password_title": "稍等一下，請閱讀下文：",
   "modal_password_shortdesc": "如果密碼不是空的，那麼檔案會在上傳之前，在本地先用此密碼加密。\n如果密碼是空的，那麼檔案會被非加密地上傳。",
