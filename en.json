@@ -35,7 +35,8 @@
 
   "command_startsync": "start sync",
   "command_drynrun": "start sync (dry run only)",
-  "command_exportsyncplans": "export sync plans",
+  "command_exportsyncplans_json": "export sync plans in json format",
+  "command_exportsyncplans_table": "export sync plans in table format",
   "command_exportlogsindb": "export logs saved in db",
 
   "modal_password_title": "Hold on and PLEASE READ ON...",
@@ -218,8 +219,9 @@
   "settings_outputsettingsconsole_button": "Output",
   "settings_outputsettingsconsole_notice": "Finished outputing in console.",
   "settings_syncplans": "Export Sync Plans",
-  "settings_syncplans_desc": "Sync plans are created every time after you trigger sync and before the actual sync. Useful to know what would actually happen in those sync. Click the button to export sync plans",
-  "settings_syncplans_button": "Export",
+  "settings_syncplans_desc": "Sync plans are created every time after you trigger sync and before the actual sync. Useful to know what would actually happen in those sync. Click the button to export sync plans. You can choose to export to json or table format inside Markdown, which are equivalent.",
+  "settings_syncplans_button_json": "Export (json)",
+  "settings_syncplans_button_table": "Export (table)",
   "settings_syncplans_notice": "Sync plans history exported.",
   "settings_delsyncplans": "Delete Sync Plans History In DB",
   "settings_delsyncplans_desc": "Delete sync plans history in DB.",

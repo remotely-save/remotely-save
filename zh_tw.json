@@ -35,7 +35,8 @@
 
   "command_startsync": "開始同步（start sync）",
   "command_drynrun": "開始同步（空跑模式）（start sync (dry run only)）",
-  "command_exportsyncplans": "匯出同步計劃（export sync plans）",
+  "command_exportsyncplans_json": "匯出同步計劃為 json 格式（export sync plans in json format）",
+  "command_exportsyncplans_table": "匯出同步計劃為表格格式（export sync plans in table format）",
   "command_exportlogsindb": "從資料庫匯出終端日誌（export logs saved in db）",
 
   "modal_password_title": "稍等一下，請閱讀下文：",
@@ -218,8 +219,9 @@
   "settings_outputsettingsconsole_button": "輸出",
   "settings_outputsettingsconsole_notice": "已輸出到終端",
   "settings_syncplans": "匯出同步計劃",
-  "settings_syncplans_desc": "每次您啟動同步，並在實際上傳下載前，外掛會生成同步計劃。它可以使您知道每次同步發生了什麼。點選按鈕可以匯出同步計劃。",
-  "settings_syncplans_button": "匯出",
+  "settings_syncplans_desc": "每次您啟動同步，並在實際上傳下載前，外掛會生成同步計劃。它可以使您知道每次同步發生了什麼。點選按鈕可以匯出同步計劃。並且，您可以選擇匯出為內嵌在 Markdown 裡的 json 格式或表格格式，它們是等價的。",
+  "settings_syncplans_button_json": "匯出（json）",
+  "settings_syncplans_button_table": "匯出（表格）",
   "settings_syncplans_notice": "同步計劃已匯出",
   "settings_delsyncplans": "刪除資料庫裡的同步計劃歷史",
   "settings_delsyncplans_desc": "刪除資料庫裡的同步計劃歷史。",
