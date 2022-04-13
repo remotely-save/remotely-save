@@ -877,11 +877,7 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
     if (VALID_REQURL) {
       new Setting(s3Div)
         .setName(t("settings_s3_bypasscorslocally"))
-        .setDesc(
-          t("settings_s3_bypasscorslocally_desc", {
-            ver: API_VER_REQURL,
-          })
-        )
+        .setDesc(t("settings_s3_bypasscorslocally_desc"))
         .addDropdown((dropdown) => {
           dropdown
             .addOption("disable", t("disable"))
@@ -1297,15 +1293,9 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
     });
 
     if (!VALID_REQURL) {
-      if (Platform.isAndroidApp) {
-        webdavDiv.createEl("p", {
-          text: t("settings_webdav_cors_android"),
-        });
-      } else {
-        webdavDiv.createEl("p", {
-          text: t("settings_webdav_cors_otheros"),
-        });
-      }
+      webdavDiv.createEl("p", {
+        text: t("settings_webdav_cors_os"),
+      });
 
       webdavDiv.createEl("p", {
         text: t("settings_webdav_cors"),

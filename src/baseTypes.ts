@@ -154,9 +154,12 @@ export interface FileOrFolderMixedState {
 }
 
 export const API_VER_STAT_FOLDER = "0.13.27";
-export const API_VER_REQURL = "0.13.26";
+export const API_VER_REQURL = "0.13.26"; // desktop ver 0.13.26, iOS ver 1.1.1
+export const API_VER_REQURL_ANDROID = "0.14.6"; // Android ver 1.2.1
+
 export const VALID_REQURL =
-  requireApiVersion(API_VER_REQURL) && !Platform.isAndroidApp;
+  (!Platform.isAndroidApp && requireApiVersion(API_VER_REQURL)) ||
+  (Platform.isAndroidApp && requireApiVersion(API_VER_REQURL_ANDROID));
 
 export const DEFAULT_DEBUG_FOLDER = "_debug_remotely_save/";
 export const DEFAULT_SYNC_PLANS_HISTORY_FILE_PREFIX =
