@@ -125,7 +125,7 @@
   "settings_s3_secretaccesskey": "Secret Access Key",
   "settings_s3_bucketname": "存储桶（Bucket）的名字",
   "settings_s3_bypasscorslocally": "本地绕过 CORS 问题",
-  "settings_s3_bypasscorslocally_desc": "对于 Obsidian 新版本（>= {{ver}}），本插件可以跳过服务器设置 CORS 的步骤。如果您遇到任意问题，可以关闭此设定，并在服务端设置 CORS（允许来自 app://obsidian.md 和 capacitor://localhost 和 http://localhost 的请求且增加 ETag 到暴露 headers 里）。",
+  "settings_s3_bypasscorslocally_desc": "对于 Obsidian 新版本（桌面版>=0.13.25 或 iOS>=1.1.1 或 Android>=1.2.1），本插件可以跳过服务器设置 CORS 的步骤。如果您遇到任意问题，可以关闭此设定，并在服务端设置 CORS（允许来自 app://obsidian.md 和 capacitor://localhost 和 http://localhost 的请求且增加 ETag 到暴露 headers 里）。",
   "settings_s3_parts": "分块并行度",
   "settings_s3_parts_desc": "在 S3 里，大文件会被分块上传。您希望同一时间最多有多少个分块被上传？",
   "settings_s3_urlstyle": "S3 URL style",
@@ -168,8 +168,7 @@
 
   "settings_webdav": "Webdav 设置",
   "settings_webdav_disclaimer1": "声明：您所输入的信息存储于本地。其它有害的或者出错的插件，是有可能读取到这些信息的。如果您发现了 Webdav 服务器有不符合预期的访问，请立刻修改用户名和密码。",
-  "settings_webdav_cors_android": "Obsidian Android 暂未支持 Webdav 跳过 CORS 设置。",
-  "settings_webdav_cors_otheros": "Obsidian 桌面版>=0.13.25 或 iOS>=1.1.1 支持跳过 CORS 设置。但您正在使用旧版，建议升级。",
+  "settings_webdav_cors_os": "Obsidian 桌面版>=0.13.25 或 iOS>=1.1.1 或 Android>=1.2.1 支持跳过 CORS 设置。但您正在使用旧版，建议升级。",
   "settings_webdav_cors": "您需要设置 CORS，允许来自这些源的请求：app://obsidian.md 和 capacitor://localhost 和 http://localhost。",
   "settings_webdav_folder": "我们会在您的服务器上创建此文件夹并在里面同步：/{{remoteBaseDir}}",
   "settings_webdav_addr": "服务器地址",

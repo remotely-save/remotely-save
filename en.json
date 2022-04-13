@@ -125,7 +125,7 @@
   "settings_s3_secretaccesskey": "Secret Access Key",
   "settings_s3_bucketname": "Bucket Name",
   "settings_s3_bypasscorslocally": "bypass CORS issue locally",
-  "settings_s3_bypasscorslocally_desc": "The plugin allows skipping server CORS config in new version (Obsidian>={{ver}}). If you encounter any issues, please disable this setting and config CORS on servers (allowing requests from app://obsidian.md and capacitor://localhost and http://localhost and add ETag into exposed headers).",
+  "settings_s3_bypasscorslocally_desc": "The plugin allows skipping server CORS config in new version of Obsidian ( desktop>=0.13.25 or iOS>=1.1.1 or Android>=1.2.1). If you encounter any issues, please disable this setting and config CORS on servers (allowing requests from app://obsidian.md and capacitor://localhost and http://localhost and add ETag into exposed headers).",
   "settings_s3_parts": "Parts Concurrency",
   "settings_s3_parts_desc": "Large files are split into small parts to upload in S3. How many parts do you want to upload in parallel at most?",
   "settings_s3_urlstyle": "S3 URL style",
@@ -168,8 +168,7 @@
 
   "settings_webdav": "Remote For Webdav",
   "settings_webdav_disclaimer1": "Disclaimer: The information is stored in locally. Other malicious/harmful/faulty plugins may read the info. If you see any unintentional access to your webdav server, please immediately change the username and password.",
-  "settings_webdav_cors_android": "Obsidian Android does not yet support bypassing CORS locally for Webdav.",
-  "settings_webdav_cors_otheros": "Obsidian desktop>=0.13.25 or iOS>=1.1.1 supports bypassing CORS locally. But you are using an old version, and you're suggested to upgrade Obsidian.",
+  "settings_webdav_cors_os": "Obsidian desktop>=0.13.25 or iOS>=1.1.1 or Android>=1.2.1 supports bypassing CORS locally. But you are using an old version, and you're suggested to upgrade Obsidian.",
   "settings_webdav_cors": "You need to configure CORS to allow requests from origin app://obsidian.md and capacitor://localhost and http://localhost",
   "settings_webdav_folder": "We will create and sync inside the folder /{{remoteBaseDir}} on your server.",
   "settings_webdav_addr": "Server Address",
