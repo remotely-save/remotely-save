@@ -459,9 +459,15 @@ const ensembleMixedStates = async (
         results[key].changeLocalMtimeUsingMapping =
           r.changeLocalMtimeUsingMapping;
       } else {
-        results[key] = r;
-        results[key].existLocal = false; // we have already checked local
-        results[key].existRemote = false; // we have already checked remote
+        // So, the file doesn't exist,
+        // except that it existed in the "renamed to" history records.
+        // Most likely because that the user deleted the file while Obsidian was closed,
+        // so Obsidian could not track the deletions.
+        // We are not sure how to deal with this, so do not generate anything here!
+        // // // The following 3 lines are of old logic, and have been removed:
+        // // results[key] = r;
+        // // results[key].existLocal = false; // we have already checked local
+        // // results[key].existRemote = false; // we have already checked remote
       }
     } else {
       throw Error(
