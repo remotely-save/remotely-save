@@ -1,4 +1,6 @@
-import { Dropbox, DropboxAuth, files, DropboxResponseError } from "dropbox";
+import delay from "delay";
+import { Dropbox, DropboxAuth } from "dropbox";
+import type { files, DropboxResponseError, DropboxResponse } from "dropbox";
 import { Vault } from "obsidian";
 import * as path from "path";
 import {
@@ -276,6 +278,73 @@ export const setConfigBySuccessfullAuthInplace = async (
 // Other usual common methods
 ////////////////////////////////////////////////////////////////////////////////
 
+interface ErrSubType {
+  error: {
+    retry_after: number;
+  };
+}
+
+async function retryReq<T>(
+  reqFunc: () => Promise<DropboxResponse<T>>,
+  extraHint: string = ""
+): Promise<DropboxResponse<T>> {
+  const waitSeconds = [1, 2, 4, 8]; // hard code exponential backoff
+  for (let idx = 0; idx < waitSeconds.length; ++idx) {
+    try {
+      if (idx !== 0) {
+        log.warn(
+          `${extraHint === "" ? "" : extraHint + ": "}The ${
+            idx + 1
+          }-th try starts at time ${Date.now()}`
+        );
+      }
+      return await reqFunc();
+    } catch (e: unknown) {
+      const err = e as DropboxResponseError<ErrSubType>;
+      if (err.status === undefined) {
+        // then the err is not DropboxResponseError
+        throw err;
+      }
+      if (err.status !== 429) {
+        // then the err is not "too many requests", give up
+        throw err;
+      }
+
+      if (idx === waitSeconds.length - 1) {
+        // the last retry also failed, give up
+        throw new Error(
+          `${
+            extraHint === "" ? "" : extraHint + ": "
+          }"429 too many requests", after retrying for ${
+            idx + 1
+          } times still failed.`
+        );
+      }
+
+      const headers = headersToRecord(err.headers);
+      const svrSec =
+        err.error.error.retry_after ||
+        parseInt(headers["retry-after"] || "1") ||
+        1;
+      const fallbackSec = waitSeconds[idx];
+      const secMin = Math.max(svrSec, fallbackSec);
+      const secMax = Math.max(secMin * 1.8, 2);
+      log.warn(
+        `${
+          extraHint === "" ? "" : extraHint + ": "
+        }We have "429 too many requests" error of ${
+          idx + 1
+        }-th try, at time ${Date.now()}, and wait for ${secMin} ~ ${secMax} seconds to retry. Original info: ${JSON.stringify(
+          err.error,
+          null,
+          2
+        )}`
+      );
+      await delay.range(secMin * 1000, secMax * 1000);
+    }
+  }
+}
+
 export class WrappedDropboxClient {
   dropboxConfig: DropboxConfig;
   remoteBaseDir: string;
@@ -390,10 +459,12 @@ export const getRemoteMeta = async (
     // filesGetMetadata doesn't support root folder
     // we instead try to list files
     // if no error occurs, we ensemble a fake result.
-    const rsp = await client.dropbox.filesListFolder({
-      path: `/${client.remoteBaseDir}`,
-      recursive: false, // don't need to recursive here
-    });
+    const rsp = await retryReq(() =>
+      client.dropbox.filesListFolder({
+        path: `/${client.remoteBaseDir}`,
+        recursive: false, // don't need to recursive here
+      })
+    );
     if (rsp.status !== 200) {
       throw Error(JSON.stringify(rsp));
     }
@@ -408,9 +479,11 @@ export const getRemoteMeta = async (
 
   const key = getDropboxPath(fileOrFolderPath, client.remoteBaseDir);
 
-  const rsp = await client.dropbox.filesGetMetadata({
-    path: key,
-  });
+  const rsp = await retryReq(() =>
+    client.dropbox.filesGetMetadata({
+      path: key,
+    })
+  );
   if (rsp.status !== 200) {
     throw Error(JSON.stringify(rsp));
   }
@@ -457,12 +530,19 @@ export const uploadToRemote = async (
         // created, pass
       } else {
         try {
-          await client.dropbox.filesCreateFolderV2({
-            path: uploadFile,
-          });
+          await retryReq(
+            () =>
+              client.dropbox.filesCreateFolderV2({
+                path: uploadFile,
+              }),
+            fileOrFolderPath
+          );
           foldersCreatedBefore?.add(uploadFile);
         } catch (e: unknown) {
           const err = e as DropboxResponseError<files.CreateFolderError>;
+          if (err.status === undefined) {
+            throw err;
+          }
           if (err.status === 409) {
             // pass
             foldersCreatedBefore?.add(uploadFile);
@@ -475,23 +555,14 @@ export const uploadToRemote = async (
       return res;
     } else {
       // if encrypted, upload a fake file with the encrypted file name
-      try {
-        await client.dropbox.filesUpload({
-          path: uploadFile,
-          contents: "",
-        });
-      } catch (e: unknown) {
-        const err = e as DropboxResponseError<files.UploadError>;
-        // log.debug(
-        //   `we are of error: ${JSON.stringify(
-        //     headersToRecord(err.headers),
-        //     null,
-        //     2
-        //   )}, ${err.status}, ${JSON.stringify(err.error, null, 2)}`
-        // );
-        throw err;
-      }
-
+      await retryReq(
+        () =>
+          client.dropbox.filesUpload({
+            path: uploadFile,
+            contents: "",
+          }),
+        fileOrFolderPath
+      );
       return await getRemoteMeta(client, uploadFile);
     }
   } else {
@@ -513,32 +584,18 @@ export const uploadToRemote = async (
     }
     // in dropbox, we don't need to create folders before uploading! cool!
     // TODO: filesUploadSession for larger files (>=150 MB)
-    try {
-      await client.dropbox.filesUpload({
-        path: uploadFile,
-        contents: remoteContent,
-        mode: {
-          ".tag": "overwrite",
-        },
-      });
-    } catch (e: unknown) {
-      const err = e as DropboxResponseError<files.UploadError>;
-      // log.debug(
-      //   `we are of error: ${JSON.stringify(
-      //     headersToRecord(err.headers),
-      //     null,
-      //     2
-      //   )}, ${err.status}, ${JSON.stringify(err.error, null, 2)}`
-      // );
-      // if (err.status === 429) {
-      //   // too many request
-      // } else if (err.status === 409) {
-      //   // Endpoint Specific Error
-      // } else {
-      //   throw err;
-      // }
-      throw err;
-    }
+
+    await retryReq(
+      () =>
+        client.dropbox.filesUpload({
+          path: uploadFile,
+          contents: remoteContent,
+          mode: {
+            ".tag": "overwrite",
+          },
+        }),
+      fileOrFolderPath
+    );
 
     // we want to mark that parent folders are created
     if (foldersCreatedBefore !== undefined) {
@@ -607,9 +664,13 @@ const downloadFromRemoteRaw = async (
 ) => {
   await client.init();
   const key = getDropboxPath(fileOrFolderPath, client.remoteBaseDir);
-  const rsp = await client.dropbox.filesDownload({
-    path: key,
-  });
+  const rsp = await retryReq(
+    () =>
+      client.dropbox.filesDownload({
+        path: key,
+      }),
+    fileOrFolderPath
+  );
   if ((rsp.result as any).fileBlob !== undefined) {
     // we get a Blob
     const content = (rsp.result as any).fileBlob as Blob;
@@ -684,9 +745,13 @@ export const deleteFromRemote = async (
 
   await client.init();
   try {
-    await client.dropbox.filesDeleteV2({
-      path: remoteFileName,
-    });
+    await retryReq(
+      () =>
+        client.dropbox.filesDeleteV2({
+          path: remoteFileName,
+        }),
+      fileOrFolderPath
+    );
   } catch (err) {
     console.error("some error while deleting");
     console.error(err);
