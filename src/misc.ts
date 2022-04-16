@@ -3,6 +3,7 @@ import * as path from "path";
 
 import { base32, base64url } from "rfc4648";
 import XRegExp from "xregexp";
+import emojiRegex from "emoji-regex";
 
 import { log } from "./moreOnLog";
 
@@ -160,6 +161,34 @@ export const isVaildText = (a: string) => {
   return !XRegExp("\\p{Cc}|\\p{Cf}|\\p{Co}|\\p{Cn}|\\p{Zl}|\\p{Zp}", "A").test(
     a
   );
+};
+
+/**
+ * Use regex to detect a text contains emoji or not.
+ * @param a
+ * @returns
+ */
+export const hasEmojiInText = (a: string) => {
+  const regex = emojiRegex();
+  return regex.test(a);
+};
+
+/**
+ * Convert the headers to a normal object.
+ * @param h
+ * @param toLower
+ * @returns
+ */
+export const headersToRecord = (h: Headers, toLower: boolean = true) => {
+  const res: Record<string, string> = {};
+  h.forEach((v, k) => {
+    if (toLower) {
+      res[k.toLowerCase()] = v;
+    } else {
+      res[k] = v;
+    }
+  });
+  return res;
 };
 
 /**

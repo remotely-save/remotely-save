@@ -1,4 +1,4 @@
-import { Dropbox, DropboxAuth, files } from "dropbox";
+import { Dropbox, DropboxAuth, files, DropboxResponseError } from "dropbox";
 import { Vault } from "obsidian";
 import * as path from "path";
 import {
@@ -8,7 +8,13 @@ import {
   OAUTH2_FORCE_EXPIRE_MILLISECONDS,
 } from "./baseTypes";
 import { decryptArrayBuffer, encryptArrayBuffer } from "./encrypt";
-import { bufferToArrayBuffer, getFolderLevels, mkdirpInVault } from "./misc";
+import {
+  bufferToArrayBuffer,
+  getFolderLevels,
+  hasEmojiInText,
+  headersToRecord,
+  mkdirpInVault,
+} from "./misc";
 
 export { Dropbox } from "dropbox";
 
@@ -338,6 +344,13 @@ export class WrappedDropboxClient {
       }
       if (!this.vaultFolderExists) {
         log.info(`remote does not have folder /${this.remoteBaseDir}`);
+
+        if (hasEmojiInText(`/${this.remoteBaseDir}`)) {
+          throw new Error(
+            `/${this.remoteBaseDir}: Error: Dropbox does not support emoji in folder names.`
+          );
+        }
+
         await this.dropbox.filesCreateFolderV2({
           path: `/${this.remoteBaseDir}`,
         });
@@ -423,6 +436,12 @@ export const uploadToRemote = async (
   }
   uploadFile = getDropboxPath(uploadFile, client.remoteBaseDir);
 
+  if (hasEmojiInText(uploadFile)) {
+    throw new Error(
+      `${uploadFile}: Error: Dropbox does not support emoji in file / folder names.`
+    );
+  }
+
   const isFolder = fileOrFolderPath.endsWith("/");
 
   if (isFolder && isRecursively) {
@@ -442,7 +461,8 @@ export const uploadToRemote = async (
             path: uploadFile,
           });
           foldersCreatedBefore?.add(uploadFile);
-        } catch (err) {
+        } catch (e: unknown) {
+          const err = e as DropboxResponseError<files.CreateFolderError>;
           if (err.status === 409) {
             // pass
             foldersCreatedBefore?.add(uploadFile);
@@ -455,10 +475,23 @@ export const uploadToRemote = async (
       return res;
     } else {
       // if encrypted, upload a fake file with the encrypted file name
-      await client.dropbox.filesUpload({
-        path: uploadFile,
-        contents: "",
-      });
+      try {
+        await client.dropbox.filesUpload({
+          path: uploadFile,
+          contents: "",
+        });
+      } catch (e: unknown) {
+        const err = e as DropboxResponseError<files.UploadError>;
+        // log.debug(
+        //   `we are of error: ${JSON.stringify(
+        //     headersToRecord(err.headers),
+        //     null,
+        //     2
+        //   )}, ${err.status}, ${JSON.stringify(err.error, null, 2)}`
+        // );
+        throw err;
+      }
+
       return await getRemoteMeta(client, uploadFile);
     }
   } else {
@@ -480,13 +513,33 @@ export const uploadToRemote = async (
     }
     // in dropbox, we don't need to create folders before uploading! cool!
     // TODO: filesUploadSession for larger files (>=150 MB)
-    await client.dropbox.filesUpload({
-      path: uploadFile,
-      contents: remoteContent,
-      mode: {
-        ".tag": "overwrite",
-      },
-    });
+    try {
+      await client.dropbox.filesUpload({
+        path: uploadFile,
+        contents: remoteContent,
+        mode: {
+          ".tag": "overwrite",
+        },
+      });
+    } catch (e: unknown) {
+      const err = e as DropboxResponseError<files.UploadError>;
+      // log.debug(
+      //   `we are of error: ${JSON.stringify(
+      //     headersToRecord(err.headers),
+      //     null,
+      //     2
+      //   )}, ${err.status}, ${JSON.stringify(err.error, null, 2)}`
+      // );
+      // if (err.status === 429) {
+      //   // too many request
+      // } else if (err.status === 409) {
+      //   // Endpoint Specific Error
+      // } else {
+      //   throw err;
+      // }
+      throw err;
+    }
+
     // we want to mark that parent folders are created
     if (foldersCreatedBefore !== undefined) {
       const dirs = getFolderLevels(uploadFile).map((x) =>
