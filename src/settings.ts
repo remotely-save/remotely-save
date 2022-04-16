@@ -7,6 +7,8 @@ import {
   Platform,
   requireApiVersion,
 } from "obsidian";
+import type { TextComponent } from "obsidian";
+import { createElement, Eye, EyeOff } from "lucide";
 import {
   API_VER_REQURL,
   DEFAULT_DEBUG_FOLDER,
@@ -627,8 +629,33 @@ class ExportSettingsQrCodeModal extends Modal {
   }
 }
 
+const getEyesElements = () => {
+  const eyeEl = createElement(Eye);
+  const eyeOffEl = createElement(EyeOff);
+  return {
+    eye: eyeEl.outerHTML,
+    eyeOff: eyeOffEl.outerHTML,
+  };
+};
+
+const wrapTextWithPasswordHide = (text: TextComponent) => {
+  const { eye, eyeOff } = getEyesElements();
+  const hider = text.inputEl.insertAdjacentElement("afterend", createSpan());
+  // the init type of hider is "hidden" === eyeOff === password
+  hider.innerHTML = eyeOff;
+  hider.addEventListener("click", (e) => {
+    const isText = text.inputEl.getAttribute("type") === "text";
+    text.inputEl.setAttribute("type", isText ? "password" : "text");
+    hider.innerHTML = isText ? eyeOff : eye;
+  });
+
+  // the init type of text el is password
+  text.inputEl.setAttribute("type", "password");
+  return text;
+};
+
 export class RemotelySaveSettingTab extends PluginSettingTab {
-  plugin: RemotelySavePlugin;
+  readonly plugin: RemotelySavePlugin;
 
   constructor(app: App, plugin: RemotelySavePlugin) {
     super(app, plugin);
@@ -658,14 +685,15 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
     new Setting(passwordDiv)
       .setName(t("settings_password"))
       .setDesc(t("settings_password_desc"))
-      .addText((text) =>
+      .addText((text) => {
+        wrapTextWithPasswordHide(text);
         text
           .setPlaceholder("")
           .setValue(`${this.plugin.settings.password}`)
           .onChange(async (value) => {
             newPassword = value.trim();
-          })
-      )
+          });
+      })
       .addButton(async (button) => {
         button.setButtonText(t("confirm"));
         button.onClick(async () => {
@@ -816,29 +844,31 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
 
     new Setting(s3Div)
       .setName(t("settings_s3_accesskeyid"))
-      .setDesc(t("settings_s3_accesskeyid"))
-      .addText((text) =>
+      .setDesc(t("settings_s3_accesskeyid_desc"))
+      .addText((text) => {
+        wrapTextWithPasswordHide(text);
         text
           .setPlaceholder("")
           .setValue(`${this.plugin.settings.s3.s3AccessKeyID}`)
           .onChange(async (value) => {
             this.plugin.settings.s3.s3AccessKeyID = value.trim();
             await this.plugin.saveSettings();
-          })
-      );
+          });
+      });
 
     new Setting(s3Div)
       .setName(t("settings_s3_secretaccesskey"))
-      .setDesc(t("settings_s3_secretaccesskey"))
-      .addText((text) =>
+      .setDesc(t("settings_s3_secretaccesskey_desc"))
+      .addText((text) => {
+        wrapTextWithPasswordHide(text);
         text
           .setPlaceholder("")
           .setValue(`${this.plugin.settings.s3.s3SecretAccessKey}`)
           .onChange(async (value) => {
             this.plugin.settings.s3.s3SecretAccessKey = value.trim();
             await this.plugin.saveSettings();
-          })
-      );
+          });
+      });
 
     new Setting(s3Div)
       .setName(t("settings_s3_bucketname"))
@@ -1336,7 +1366,8 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
     new Setting(webdavDiv)
       .setName(t("settings_webdav_user"))
       .setDesc(t("settings_webdav_user_desc"))
-      .addText((text) =>
+      .addText((text) => {
+        wrapTextWithPasswordHide(text);
         text
           .setPlaceholder("")
           .setValue(this.plugin.settings.webdav.username)
@@ -1349,13 +1380,14 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
               this.plugin.settings.webdav.depth = "auto_unknown";
             }
             await this.plugin.saveSettings();
-          })
-      );
+          });
+      });
 
     new Setting(webdavDiv)
       .setName(t("settings_webdav_password"))
       .setDesc(t("settings_webdav_password_desc"))
-      .addText((text) =>
+      .addText((text) => {
+        wrapTextWithPasswordHide(text);
         text
           .setPlaceholder("")
           .setValue(this.plugin.settings.webdav.password)
@@ -1368,8 +1400,8 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
               this.plugin.settings.webdav.depth = "auto_unknown";
             }
             await this.plugin.saveSettings();
-          })
-      );
+          });
+      });
 
     new Setting(webdavDiv)
       .setName(t("settings_webdav_auth"))
