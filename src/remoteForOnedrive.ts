@@ -8,7 +8,7 @@ import type {
 import cloneDeep from "lodash/cloneDeep";
 import { request, requestUrl, requireApiVersion, Vault } from "obsidian";
 import {
-  API_VER_REQURL,
+  VALID_REQURL,
   COMMAND_CALLBACK_ONEDRIVE,
   DEFAULT_CONTENT_TYPE,
   OAUTH2_FORCE_EXPIRE_MILLISECONDS,
@@ -484,7 +484,7 @@ export class WrappedOnedriveClient {
   deleteJson = async (pathFragOrig: string) => {
     const theUrl = this.buildUrl(pathFragOrig);
     log.debug(`deleteJson, theUrl=${theUrl}`);
-    if (requireApiVersion(API_VER_REQURL)) {
+    if (VALID_REQURL) {
       await requestUrl({
         url: theUrl,
         method: "DELETE",
@@ -508,7 +508,7 @@ export class WrappedOnedriveClient {
     // TODO:
     // 20220401: On Android, requestUrl has issue that text becomes base64.
     // Use fetch everywhere instead!
-    if (false /*requireApiVersion(API_VER_REQURL)*/) {
+    if (false /*VALID_REQURL*/) {
       await requestUrl({
         url: theUrl,
         method: "PUT",
@@ -556,7 +556,7 @@ export class WrappedOnedriveClient {
     // TODO:
     // 20220401: On Android, requestUrl has issue that text becomes base64.
     // Use fetch everywhere instead!
-    if (false /*requireApiVersion(API_VER_REQURL)*/) {
+    if (false /*VALID_REQURL*/) {
       const res = await requestUrl({
         url: theUrl,
         method: "PUT",
@@ -808,7 +808,7 @@ const downloadFromRemoteRaw = async (
     `${key}?$select=@microsoft.graph.downloadUrl`
   );
   const downloadUrl: string = rsp["@microsoft.graph.downloadUrl"];
-  if (requireApiVersion(API_VER_REQURL)) {
+  if (VALID_REQURL) {
     const content = (await requestUrl({ url: downloadUrl })).arrayBuffer;
     return content;
   } else {
