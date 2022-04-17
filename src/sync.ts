@@ -7,13 +7,14 @@ import {
 } from "obsidian";
 import AggregateError from "aggregate-error";
 import PQueue from "p-queue";
-import {
+import type {
   RemoteItem,
-  SUPPORTED_SERVICES_TYPE,
+  SyncTriggerSourceType,
   DecisionType,
   FileOrFolderMixedState,
-  API_VER_STAT_FOLDER,
+  SUPPORTED_SERVICES_TYPE,
 } from "./baseTypes";
+import { API_VER_STAT_FOLDER } from "./baseTypes";
 import {
   decryptBase32ToString,
   decryptBase64urlToString,
@@ -65,6 +66,7 @@ export type SyncStatusType =
 export interface SyncPlanType {
   ts: number;
   tsFmt?: string;
+  syncTriggerSource?: SyncTriggerSourceType;
   remoteType: SUPPORTED_SERVICES_TYPE;
   mixedStates: Record<string, FileOrFolderMixedState>;
 }
@@ -752,6 +754,7 @@ export const getSyncPlan = async (
   remoteDeleteHistory: DeletionOnRemote[],
   localFileHistory: FileFolderHistoryRecord[],
   remoteType: SUPPORTED_SERVICES_TYPE,
+  triggerSource: SyncTriggerSourceType,
   vault: Vault,
   syncConfigDir: boolean,
   configDir: string,
@@ -824,6 +827,7 @@ export const getSyncPlan = async (
     ts: currTs,
     tsFmt: currTsFmt,
     remoteType: remoteType,
+    syncTriggerSource: triggerSource,
     mixedStates: mixedStates,
   } as SyncPlanType;
   return {

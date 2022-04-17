@@ -9,7 +9,10 @@ import {
 } from "obsidian";
 import cloneDeep from "lodash/cloneDeep";
 import { createElement, RotateCcw, RefreshCcw, FileText } from "lucide";
-import type { RemotelySavePluginSettings } from "./baseTypes";
+import type {
+  RemotelySavePluginSettings,
+  SyncTriggerSourceType,
+} from "./baseTypes";
 import {
   COMMAND_CALLBACK,
   COMMAND_CALLBACK_ONEDRIVE,
@@ -88,8 +91,6 @@ interface OAuth2Info {
   revokeDiv?: HTMLElement;
   revokeAuthSetting?: Setting;
 }
-
-type SyncTriggerSourceType = "manual" | "auto" | "dry" | "autoOnceInit";
 
 const iconNameSyncWait = `remotely-save-sync-wait`;
 const iconNameSyncRunning = `remotely-save-sync-running`;
@@ -286,6 +287,7 @@ export default class RemotelySavePlugin extends Plugin {
         origMetadataOnRemote.deletions,
         localHistory,
         client.serviceType,
+        triggerSource,
         this.app.vault,
         this.settings.syncConfigDir,
         this.app.vault.configDir,
@@ -293,9 +295,7 @@ export default class RemotelySavePlugin extends Plugin {
         this.settings.password
       );
       log.info(plan.mixedStates); // for debugging
-      if (triggerSource !== "dry") {
-        await insertSyncPlanRecordByVault(this.db, plan, this.vaultRandomID);
-      }
+      await insertSyncPlanRecordByVault(this.db, plan, this.vaultRandomID);
 
       // The operations above are almost read only and kind of safe.
       // The operations below begins to write or delete (!!!) something.
