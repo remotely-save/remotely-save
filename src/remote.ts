@@ -15,7 +15,6 @@ import { log } from "./moreOnLog";
 
 export class RemoteClient {
   readonly serviceType: SUPPORTED_SERVICES_TYPE;
-  readonly s3Client?: s3.S3Client;
   readonly s3Config?: S3Config;
   readonly webdavClient?: webdav.WrappedWebdavClient;
   readonly webdavConfig?: WebdavConfig;
@@ -38,7 +37,6 @@ export class RemoteClient {
     // so we use a ref not copy of config here
     if (serviceType === "s3") {
       this.s3Config = s3Config;
-      this.s3Client = s3.getS3Client(this.s3Config);
     } else if (serviceType === "webdav") {
       if (vaultName === undefined || saveUpdatedConfigFunc === undefined) {
         throw Error(
@@ -86,7 +84,7 @@ export class RemoteClient {
   getRemoteMeta = async (fileOrFolderPath: string) => {
     if (this.serviceType === "s3") {
       return await s3.getRemoteMeta(
-        this.s3Client,
+        s3.getS3Client(this.s3Config),
         this.s3Config,
         fileOrFolderPath
       );
@@ -116,7 +114,7 @@ export class RemoteClient {
   ) => {
     if (this.serviceType === "s3") {
       return await s3.uploadToRemote(
-        this.s3Client,
+        s3.getS3Client(this.s3Config),
         this.s3Config,
         fileOrFolderPath,
         vault,
@@ -168,7 +166,11 @@ export class RemoteClient {
 
   listFromRemote = async (prefix?: string) => {
     if (this.serviceType === "s3") {
-      return await s3.listFromRemote(this.s3Client, this.s3Config, prefix);
+      return await s3.listFromRemote(
+        s3.getS3Client(this.s3Config),
+        this.s3Config,
+        prefix
+      );
     } else if (this.serviceType === "webdav") {
       return await webdav.listFromRemote(this.webdavClient, prefix);
     } else if (this.serviceType === "dropbox") {
@@ -190,7 +192,7 @@ export class RemoteClient {
   ) => {
     if (this.serviceType === "s3") {
       return await s3.downloadFromRemote(
-        this.s3Client,
+        s3.getS3Client(this.s3Config),
         this.s3Config,
         fileOrFolderPath,
         vault,
@@ -241,7 +243,7 @@ export class RemoteClient {
   ) => {
     if (this.serviceType === "s3") {
       return await s3.deleteFromRemote(
-        this.s3Client,
+        s3.getS3Client(this.s3Config),
         this.s3Config,
         fileOrFolderPath,
         password,
@@ -276,7 +278,7 @@ export class RemoteClient {
   checkConnectivity = async (callbackFunc?: any) => {
     if (this.serviceType === "s3") {
       return await s3.checkConnectivity(
-        this.s3Client,
+        s3.getS3Client(this.s3Config),
         this.s3Config,
         callbackFunc
       );
