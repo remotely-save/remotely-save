@@ -83,11 +83,14 @@ class ObsHttpHandler extends FetchHttpHandler {
     const body =
       method === "GET" || method === "HEAD" ? undefined : request.body;
 
-    const transformedHeaders = { ...request.headers };
-    delete transformedHeaders["host"];
-    delete transformedHeaders["Host"];
-    delete transformedHeaders["content-length"];
-    delete transformedHeaders["Content-Length"];
+    const transformedHeaders: Record<string, string> = {};
+    for (const key of Object.keys(request.headers)) {
+      const keyLower = key.toLowerCase();
+      if (keyLower === "host" || keyLower === "content-length") {
+        continue;
+      }
+      transformedHeaders[keyLower] = request.headers[key];
+    }
 
     let contentType: string = undefined;
     if (transformedHeaders["content-type"] !== undefined) {
