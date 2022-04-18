@@ -51,9 +51,9 @@
     "webpack-cli": "^4.9.1"
   },
   "dependencies": {
-    "@aws-sdk/client-s3": "^3.67.0",
+    "@aws-sdk/client-s3": "^3.72.0",
     "@aws-sdk/fetch-http-handler": "^3.58.0",
-    "@aws-sdk/lib-storage": "^3.67.0",
+    "@aws-sdk/lib-storage": "^3.72.0",
     "@aws-sdk/protocol-http": "^3.58.0",
     "@aws-sdk/querystring-builder": "^3.55.0",
     "@aws-sdk/signature-v4-crt": "^3.66.0",
