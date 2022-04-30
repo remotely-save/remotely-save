@@ -9,5 +9,6 @@ The plugin is developed for the browser environment. The "fake" browser behind t
 2. For using this plugin in Obsidian desktop < 0.13.25 or mobile < 1.1.1, we need to configure the server side to return the header `Access-Control-Allow-Origin` allowing the origins `app://obsidian.md` and `capacitor://localhost` and `http://localhost`.
 
    Example configurations:
+
    - [Amazon S3](./s3_cors_configure.md)
    - [Apache](./apache_cors_configure.md) ([contributed by community](https://github.com/remotely-save/remotely-save/pull/31))
