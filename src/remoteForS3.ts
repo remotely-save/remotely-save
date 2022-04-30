@@ -97,11 +97,6 @@ class ObsHttpHandler extends FetchHttpHandler {
       contentType = transformedHeaders["content-type"];
     }
 
-    if (transformedHeaders["cache-control"] === undefined) {
-      // every time is a new request
-      transformedHeaders["cache-control"] = "no-cache";
-    }
-
     let transformedBody: any = body;
     if (ArrayBuffer.isView(body)) {
       transformedBody = bufferToArrayBuffer(body);
@@ -200,8 +195,10 @@ export const getS3Client = (s3Config: S3Config) => {
     endpoint = `https://${endpoint}`;
   }
 
+  let s3Client: S3Client;
+
   if (VALID_REQURL && s3Config.bypassCorsLocally) {
-    const s3Client = new S3Client({
+    s3Client = new S3Client({
       region: s3Config.s3Region,
       endpoint: endpoint,
       forcePathStyle: s3Config.forcePathStyle,
@@ -211,9 +208,8 @@ export const getS3Client = (s3Config: S3Config) => {
       },
       requestHandler: new ObsHttpHandler(),
     });
-    return s3Client;
   } else {
-    const s3Client = new S3Client({
+    s3Client = new S3Client({
       region: s3Config.s3Region,
       endpoint: endpoint,
       forcePathStyle: s3Config.forcePathStyle,
@@ -222,8 +218,19 @@ export const getS3Client = (s3Config: S3Config) => {
         secretAccessKey: s3Config.s3SecretAccessKey,
       },
     });
-    return s3Client;
   }
+
+  s3Client.middlewareStack.add(
+    (next, context) => (args) => {
+      (args.request as any).headers["cache-control"] = "no-cache";
+      return next(args);
+    },
+    {
+      step: "build",
+    }
+  );
+
+  return s3Client;
 };
 
 export const getRemoteMeta = async (
