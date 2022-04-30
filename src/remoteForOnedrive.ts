@@ -444,6 +444,7 @@ export class WrappedOnedriveClient {
         contentType: "application/json",
         headers: {
           Authorization: `Bearer ${await this.authGetter.getAccessToken()}`,
+          "Cache-Control": "no-cache",
         },
       })
     );
@@ -460,6 +461,7 @@ export class WrappedOnedriveClient {
         body: JSON.stringify(payload),
         headers: {
           Authorization: `Bearer ${await this.authGetter.getAccessToken()}`,
+          "Cache-Control": "no-cache",
         },
       })
     );
@@ -476,6 +478,7 @@ export class WrappedOnedriveClient {
         body: JSON.stringify(payload),
         headers: {
           Authorization: `Bearer ${await this.authGetter.getAccessToken()}`,
+          "Cache-Control": "no-cache",
         },
       })
     );
@@ -490,6 +493,7 @@ export class WrappedOnedriveClient {
         method: "DELETE",
         headers: {
           Authorization: `Bearer ${await this.authGetter.getAccessToken()}`,
+          "Cache-Control": "no-cache",
         },
       });
     } else {
@@ -497,6 +501,7 @@ export class WrappedOnedriveClient {
         method: "DELETE",
         headers: {
           Authorization: `Bearer ${await this.authGetter.getAccessToken()}`,
+          "Cache-Control": "no-cache",
         },
       });
     }
@@ -517,6 +522,7 @@ export class WrappedOnedriveClient {
         headers: {
           "Content-Type": DEFAULT_CONTENT_TYPE,
           Authorization: `Bearer ${await this.authGetter.getAccessToken()}`,
+          "Cache-Control": "no-cache",
         },
       });
     } else {
@@ -526,6 +532,7 @@ export class WrappedOnedriveClient {
         headers: {
           "Content-Type": DEFAULT_CONTENT_TYPE,
           Authorization: `Bearer ${await this.authGetter.getAccessToken()}`,
+          "Cache-Control": "no-cache",
         },
       });
     }
@@ -565,6 +572,7 @@ export class WrappedOnedriveClient {
         headers: {
           // no "Content-Length" allowed here
           "Content-Range": `bytes ${rangeStart}-${rangeEnd - 1}/${size}`,
+          /* "Cache-Control": "no-cache", not allowed here!!! */
         },
       });
       return res.json as DriveItem | UploadSession;
@@ -576,6 +584,7 @@ export class WrappedOnedriveClient {
           "Content-Length": `${rangeEnd - rangeStart}`,
           "Content-Range": `bytes ${rangeStart}-${rangeEnd - 1}/${size}`,
           "Content-Type": DEFAULT_CONTENT_TYPE,
+          /* "Cache-Control": "no-cache", not allowed here!!! */
         },
       });
       return (await res.json()) as DriveItem | UploadSession;
@@ -809,10 +818,21 @@ const downloadFromRemoteRaw = async (
   );
   const downloadUrl: string = rsp["@microsoft.graph.downloadUrl"];
   if (VALID_REQURL) {
-    const content = (await requestUrl({ url: downloadUrl })).arrayBuffer;
+    const content = (
+      await requestUrl({
+        url: downloadUrl,
+        headers: { "Cache-Control": "no-cache" },
+      })
+    ).arrayBuffer;
     return content;
   } else {
-    const content = await (await fetch(downloadUrl)).arrayBuffer();
+    const content = await (
+      await fetch(downloadUrl, {
+        headers: {
+          "Cache-Control": "no-cache",
+        },
+      })
+    ).arrayBuffer();
     return content;
   }
 };
