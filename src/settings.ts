@@ -645,8 +645,9 @@ const wrapTextWithPasswordHide = (text: TextComponent) => {
   hider.innerHTML = eyeOff;
   hider.addEventListener("click", (e) => {
     const isText = text.inputEl.getAttribute("type") === "text";
-    text.inputEl.setAttribute("type", isText ? "password" : "text");
     hider.innerHTML = isText ? eyeOff : eye;
+    text.inputEl.setAttribute("type", isText ? "password" : "text");
+    text.inputEl.focus();
   });
 
   // the init type of text el is password
