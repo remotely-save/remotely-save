@@ -70,19 +70,44 @@ export const deserializeMetadataOnRemote = (x: string | ArrayBuffer) => {
   } else {
     y1 = new TextDecoder().decode(x);
   }
-  const y2: any = JSON.parse(y1);
 
-  if (!("readme" in y2 && "d" in y2)) {
-    throw Error("invalid remote meta data file!");
+  let y2: any;
+  try {
+    y2 = JSON.parse(y1);
+  } catch (e) {
+    throw new Error(
+      `invalid remote meta data file with first few chars: ${y1.slice(0, 5)}`
+    );
   }
 
-  const y3 = JSON.parse(
-    (
+  if (!("readme" in y2 && "d" in y2)) {
+    throw new Error(
+      'invalid remote meta data file (no "readme" or "d" fields)!'
+    );
+  }
+
+  let y3: string;
+  try {
+    y3 = (
       base64url.parse(reverseString(y2["d"]), {
         out: Buffer.allocUnsafe as any,
         loose: true,
       }) as Buffer
-    ).toString("utf-8")
-  ) as MetadataOnRemote;
-  return y3;
+    ).toString("utf-8");
+  } catch (e) {
+    throw new Error('invalid remote meta data file (invalid "d" field)!');
+  }
+
+  let y4: MetadataOnRemote;
+  try {
+    y4 = JSON.parse(y3) as MetadataOnRemote;
+  } catch (e) {
+    throw new Error(
+      `invalid remote meta data file with \"d\" field with first few chars: ${y3.slice(
+        0,
+        5
+      )}`
+    );
+  }
+  return y4;
 };
