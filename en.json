@@ -99,7 +99,7 @@
   "settings_runoncestartup": "run once on start up automatically",
   "settings_runoncestartup_desc": "This settings allows setting running ONCE on start up automatically. This will take effect on NEXT start up after changing. This setting, is different from \"schedule for auto run\" which starts syncing after EVERY interval.",
   "settings_runoncestartup_notset": "(not set)",
-  "settings_runoncestartup_1sec": "sync once after 1 seconds of start up",
+  "settings_runoncestartup_1sec": "sync once after 1 second of start up",
   "settings_runoncestartup_10sec": "sync once after 10 seconds of start up",
   "settings_runoncestartup_30sec": "sync once after 30 seconds of start up",
 
