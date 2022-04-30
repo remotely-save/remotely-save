@@ -97,6 +97,11 @@ class ObsHttpHandler extends FetchHttpHandler {
       contentType = transformedHeaders["content-type"];
     }
 
+    if (transformedHeaders["cache-control"] === undefined) {
+      // every time is a new request
+      transformedHeaders["cache-control"] = "no-cache";
+    }
+
     let transformedBody: any = body;
     if (ArrayBuffer.isView(body)) {
       transformedBody = bufferToArrayBuffer(body);
