@@ -746,6 +746,10 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
       .addDropdown((dropdown) => {
         dropdown.addOption("-1", t("settings_runoncestartup_notset"));
         dropdown.addOption(
+          `${1000 * 1 * 1}`,
+          t("settings_runoncestartup_1sec")
+        );
+        dropdown.addOption(
           `${1000 * 10 * 1}`,
           t("settings_runoncestartup_10sec")
         );
