@@ -371,9 +371,13 @@ export class WrappedDropboxClient {
       throw Error("The user has not manually auth yet.");
     }
     const currentTs = Date.now();
+    const customHeaders = {
+      "Cache-Control": "no-cache",
+    };
     if (this.dropboxConfig.accessTokenExpiresAtTime > currentTs) {
       this.dropbox = new Dropbox({
         accessToken: this.dropboxConfig.accessToken,
+        customHeaders: customHeaders,
       });
     } else {
       if (this.dropboxConfig.refreshToken === "") {
@@ -393,6 +397,7 @@ export class WrappedDropboxClient {
       );
       this.dropbox = new Dropbox({
         accessToken: this.dropboxConfig.accessToken,
+        customHeaders: customHeaders,
       });
     }
 
