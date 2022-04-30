@@ -99,6 +99,7 @@
   "settings_runoncestartup": "启动后自动运行一次",
   "settings_runoncestartup_desc": "本设置使得插件在程序启动后自动触发一次同步。修改后，会在下一次启动生效。本设置和“自动运行”是不同的，那个设置是指“每隔一段时间”都自动同步一次。",
   "settings_runoncestartup_notset": "（不设置）",
+  "settings_runoncestartup_1sec": "启动后第 1 秒运行一次",
   "settings_runoncestartup_10sec": "启动后第 10 秒运行一次",
   "settings_runoncestartup_30sec": "启动后第 30 秒运行一次",
 

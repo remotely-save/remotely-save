@@ -99,6 +99,7 @@
   "settings_runoncestartup": "啟動後自動執行一次",
   "settings_runoncestartup_desc": "本設定使得外掛在程式啟動後自動觸發一次同步。修改後，會在下一次啟動生效。本設定和“自動執行”是不同的，那個設定是指“每隔一段時間”都自動同步一次。",
   "settings_runoncestartup_notset": "（不設定）",
+  "settings_runoncestartup_1sec": "啟動後第 1 秒執行一次",
   "settings_runoncestartup_10sec": "啟動後第 10 秒執行一次",
   "settings_runoncestartup_30sec": "啟動後第 30 秒執行一次",
 
