@@ -183,6 +183,9 @@ export class WrappedWebdavClient {
 
   init = async () => {
     // init client if not inited
+    const headers = {
+      "Cache-Control": "no-cache",
+    };
     if (this.client === undefined) {
       if (
         this.webdavConfig.username !== "" &&
@@ -191,6 +194,7 @@ export class WrappedWebdavClient {
         this.client = createClient(this.webdavConfig.address, {
           username: this.webdavConfig.username,
           password: this.webdavConfig.password,
+          headers: headers,
           authType:
             this.webdavConfig.authType === "digest"
               ? AuthType.Digest
@@ -198,7 +202,9 @@ export class WrappedWebdavClient {
         });
       } else {
         log.info("no password");
-        this.client = createClient(this.webdavConfig.address);
+        this.client = createClient(this.webdavConfig.address, {
+          headers: headers,
+        });
       }
     }
 
