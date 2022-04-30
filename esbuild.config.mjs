@@ -31,11 +31,11 @@ esbuild
       "obsidian",
       "electron",
       "fs",
-      "crypto",
       "tls",
       "net",
       // ...builtins
     ],
+    inject: ["./esbuild.injecthelper.mjs"],
     format: "cjs",
     watch: !prod,
     target: "es2016",
@@ -48,6 +48,9 @@ esbuild
       "process.env.DEFAULT_DROPBOX_APP_KEY": `"${DEFAULT_DROPBOX_APP_KEY}"`,
       "process.env.DEFAULT_ONEDRIVE_CLIENT_ID": `"${DEFAULT_ONEDRIVE_CLIENT_ID}"`,
       "process.env.DEFAULT_ONEDRIVE_AUTHORITY": `"${DEFAULT_ONEDRIVE_AUTHORITY}"`,
+      global: "window",
+      "process.env.NODE_DEBUG": `undefined`, // ugly fix
+      "process.env.DEBUG": `undefined`, // ugly fix
     },
   })
   .catch(() => process.exit(1));
