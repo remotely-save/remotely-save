@@ -24,6 +24,7 @@ import { Buffer } from "buffer";
 import * as mime from "mime-types";
 import { Vault, requestUrl, RequestUrlParam } from "obsidian";
 import { Readable } from "stream";
+import AggregateError from "aggregate-error";
 import {
   DEFAULT_CONTENT_TYPE,
   RemoteItem,
@@ -537,8 +538,19 @@ export const checkConnectivity = async (
   } catch (err) {
     log.debug(err);
     if (callbackFunc !== undefined) {
-      callbackFunc(err);
+      if (s3Config.s3Endpoint.contains(s3Config.s3BucketName)) {
+        const err2 = new AggregateError([
+          err,
+          new Error(
+            "Maybe you've included the bucket name inside the endpoint setting. Please remove the bucket name and try again."
+          ),
+        ]);
+        callbackFunc(err2);
+      } else {
+        callbackFunc(err);
+      }
     }
+
     return false;
   }
 };
