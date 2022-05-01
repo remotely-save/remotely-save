@@ -19,6 +19,7 @@ import {
   decryptBase32ToString,
   decryptBase64urlToString,
   encryptStringToBase64url,
+  getSizeFromOrigToEnc,
   MAGIC_ENCRYPTED_PREFIX_BASE32,
   MAGIC_ENCRYPTED_PREFIX_BASE64URL,
 } from "./encrypt";
@@ -217,22 +218,29 @@ export const parseRemoteItems = async (
     if (backwardMapping !== undefined) {
       key = backwardMapping.localKey;
       const mtimeRemote = backwardMapping.localMtime || entry.lastModified;
+
+      // the backwardMapping.localSize is the file BEFORE encryption
+      // we want to split two sizes for comparation later
+
       r = {
         key: key,
         existRemote: true,
         mtimeRemote: mtimeRemote,
         mtimeRemoteFmt: unixTimeToStr(mtimeRemote),
-        sizeRemote: backwardMapping.localSize || entry.size,
+        sizeRemote: backwardMapping.localSize,
+        sizeRemoteEnc: password === "" ? undefined : entry.size,
         remoteEncryptedKey: remoteEncryptedKey,
         changeRemoteMtimeUsingMapping: true,
       };
     } else {
+      // do not have backwardMapping
       r = {
         key: key,
         existRemote: true,
         mtimeRemote: entry.lastModified,
         mtimeRemoteFmt: unixTimeToStr(entry.lastModified),
-        sizeRemote: entry.size,
+        sizeRemote: password === "" ? entry.size : undefined,
+        sizeRemoteEnc: password === "" ? undefined : entry.size,
         remoteEncryptedKey: remoteEncryptedKey,
         changeRemoteMtimeUsingMapping: false,
       };
@@ -305,7 +313,8 @@ const ensembleMixedStates = async (
   localFileHistory: FileFolderHistoryRecord[],
   syncConfigDir: boolean,
   configDir: string,
-  syncUnderscoreItems: boolean
+  syncUnderscoreItems: boolean,
+  password: string
 ) => {
   const results = {} as Record<string, FileOrFolderMixedState>;
 
@@ -334,6 +343,8 @@ const ensembleMixedStates = async (
         mtimeLocal: mtimeLocal,
         mtimeLocalFmt: unixTimeToStr(mtimeLocal),
         sizeLocal: entry.stat.size,
+        sizeLocalEnc:
+          password === "" ? undefined : getSizeFromOrigToEnc(entry.stat.size),
       };
     } else if (entry instanceof TFolder) {
       key = `${entry.path}/`;
@@ -343,6 +354,7 @@ const ensembleMixedStates = async (
         mtimeLocal: undefined,
         mtimeLocalFmt: undefined,
         sizeLocal: 0,
+        sizeLocalEnc: password === "" ? undefined : getSizeFromOrigToEnc(0),
       };
     } else {
       throw Error(`unexpected ${entry}`);
@@ -358,6 +370,7 @@ const ensembleMixedStates = async (
       results[key].mtimeLocal = r.mtimeLocal;
       results[key].mtimeLocalFmt = r.mtimeLocalFmt;
       results[key].sizeLocal = r.sizeLocal;
+      results[key].sizeLocalEnc = r.sizeLocalEnc;
     } else {
       results[key] = r;
       results[key].existRemote = false;
@@ -374,6 +387,8 @@ const ensembleMixedStates = async (
         mtimeLocal: mtimeLocal,
         mtimeLocalFmt: unixTimeToStr(mtimeLocal),
         sizeLocal: entry.size,
+        sizeLocalEnc:
+          password === "" ? undefined : getSizeFromOrigToEnc(entry.size),
       };
 
       if (results.hasOwnProperty(key)) {
@@ -382,6 +397,7 @@ const ensembleMixedStates = async (
         results[key].mtimeLocal = r.mtimeLocal;
         results[key].mtimeLocalFmt = r.mtimeLocalFmt;
         results[key].sizeLocal = r.sizeLocal;
+        results[key].sizeLocalEnc = r.sizeLocalEnc;
       } else {
         results[key] = r;
         results[key].existRemote = false;
@@ -484,6 +500,7 @@ const ensembleMixedStates = async (
 const assignOperationToFileInplace = (
   origRecord: FileOrFolderMixedState,
   keptFolder: Set<string>,
+  skipSizeLargerThan: number,
   password: string = ""
 ) => {
   let r = origRecord;
@@ -526,6 +543,18 @@ const assignOperationToFileInplace = (
     );
   }
 
+  if (
+    (r.existLocal && password !== "" && r.sizeLocalEnc === undefined) ||
+    (r.existRemote && password !== "" && r.sizeRemoteEnc === undefined)
+  ) {
+    throw new Error(
+      `Error: No encryption sizes: ${JSON.stringify(r, null, 2)}`
+    );
+  }
+
+  const sizeLocalComp = password === "" ? r.sizeLocal : r.sizeLocalEnc;
+  const sizeRemoteComp = password === "" ? r.sizeRemote : r.sizeRemoteEnc;
+
   // 1. mtimeLocal
   if (r.existLocal) {
     const mtimeRemote = r.existRemote ? r.mtimeRemote : -1;
@@ -536,26 +565,79 @@ const assignOperationToFileInplace = (
       r.mtimeLocal >= deltimeLocal &&
       r.mtimeLocal >= deltimeRemote
     ) {
+      if (sizeLocalComp === undefined) {
+        throw new Error(
+          `Error: no local size but has local mtime: ${JSON.stringify(
+            r,
+            null,
+            2
+          )}`
+        );
+      }
       if (r.mtimeLocal === r.mtimeRemote) {
-        // mtime the same
-        if (password === "") {
-          // no password, we can also compare the sizes!
-          if (r.sizeLocal === r.sizeRemote) {
-            r.decision = "skipUploading";
-            r.decisionBranch = 1;
-          } else {
+        // local and remote both exist and mtimes are the same
+        if (sizeLocalComp === sizeRemoteComp) {
+          // do not need to consider skipSizeLargerThan in this case
+          r.decision = "skipUploading";
+          r.decisionBranch = 1;
+        } else {
+          if (skipSizeLargerThan <= 0) {
             r.decision = "uploadLocalToRemote";
             r.decisionBranch = 2;
+          } else {
+            // limit the sizes
+            if (sizeLocalComp <= skipSizeLargerThan) {
+              if (sizeRemoteComp <= skipSizeLargerThan) {
+                r.decision = "uploadLocalToRemote";
+                r.decisionBranch = 18;
+              } else {
+                r.decision = "errorRemoteTooLargeConflictLocal";
+                r.decisionBranch = 19;
+              }
+            } else {
+              if (sizeRemoteComp <= skipSizeLargerThan) {
+                r.decision = "errorLocalTooLargeConflictRemote";
+                r.decisionBranch = 20;
+              } else {
+                r.decision = "skipUploadingTooLarge";
+                r.decisionBranch = 21;
+              }
+            }
           }
-        } else {
-          // we have password, then the sizes are always unequal
-          // we can only rely on mtime
-          r.decision = "skipUploading";
-          r.decisionBranch = 3;
         }
       } else {
-        r.decision = "uploadLocalToRemote";
-        r.decisionBranch = 4;
+        // we have local laregest mtime,
+        // and the remote not existing or smaller mtime
+        if (skipSizeLargerThan <= 0) {
+          // no need to consider sizes
+          r.decision = "uploadLocalToRemote";
+          r.decisionBranch = 4;
+        } else {
+          // need to consider sizes
+          if (sizeLocalComp <= skipSizeLargerThan) {
+            if (sizeRemoteComp === undefined) {
+              r.decision = "uploadLocalToRemote";
+              r.decisionBranch = 22;
+            } else if (sizeRemoteComp <= skipSizeLargerThan) {
+              r.decision = "uploadLocalToRemote";
+              r.decisionBranch = 23;
+            } else {
+              r.decision = "errorRemoteTooLargeConflictLocal";
+              r.decisionBranch = 24;
+            }
+          } else {
+            if (sizeRemoteComp === undefined) {
+              r.decision = "skipUploadingTooLarge";
+              r.decisionBranch = 25;
+            } else if (sizeRemoteComp <= skipSizeLargerThan) {
+              r.decision = "errorLocalTooLargeConflictRemote";
+              r.decisionBranch = 26;
+            } else {
+              r.decision = "skipUploadingTooLarge";
+              r.decisionBranch = 27;
+            }
+          }
+        }
       }
       keptFolder.add(getParentFolder(r.key));
       return r;
@@ -572,8 +654,49 @@ const assignOperationToFileInplace = (
       r.mtimeRemote >= deltimeLocal &&
       r.mtimeRemote >= deltimeRemote
     ) {
-      r.decision = "downloadRemoteToLocal";
-      r.decisionBranch = 5;
+      // we have remote laregest mtime,
+      // and the local not existing or smaller mtime
+      if (sizeRemoteComp === undefined) {
+        throw new Error(
+          `Error: no remote size but has remote mtime: ${JSON.stringify(
+            r,
+            null,
+            2
+          )}`
+        );
+      }
+
+      if (skipSizeLargerThan <= 0) {
+        // no need to consider sizes
+        r.decision = "downloadRemoteToLocal";
+        r.decisionBranch = 5;
+      } else {
+        // need to consider sizes
+        if (sizeRemoteComp <= skipSizeLargerThan) {
+          if (sizeLocalComp === undefined) {
+            r.decision = "downloadRemoteToLocal";
+            r.decisionBranch = 28;
+          } else if (sizeLocalComp <= skipSizeLargerThan) {
+            r.decision = "downloadRemoteToLocal";
+            r.decisionBranch = 29;
+          } else {
+            r.decision = "errorLocalTooLargeConflictRemote";
+            r.decisionBranch = 30;
+          }
+        } else {
+          if (sizeLocalComp === undefined) {
+            r.decision = "skipDownloadingTooLarge";
+            r.decisionBranch = 31;
+          } else if (sizeLocalComp <= skipSizeLargerThan) {
+            r.decision = "errorRemoteTooLargeConflictLocal";
+            r.decisionBranch = 32;
+          } else {
+            r.decision = "skipDownloadingTooLarge";
+            r.decisionBranch = 33;
+          }
+        }
+      }
+
       keptFolder.add(getParentFolder(r.key));
       return r;
     }
@@ -589,10 +712,44 @@ const assignOperationToFileInplace = (
       r.deltimeLocal >= mtimeRemote &&
       r.deltimeLocal >= deltimeRemote
     ) {
-      r.decision = "uploadLocalDelHistToRemote";
-      r.decisionBranch = 6;
-      if (r.existLocal || r.existRemote) {
-        // actual deletion would happen
+      if (skipSizeLargerThan <= 0) {
+        r.decision = "uploadLocalDelHistToRemote";
+        r.decisionBranch = 6;
+        if (r.existLocal || r.existRemote) {
+          // actual deletion would happen
+        }
+      } else {
+        const localTooLargeToDelete =
+          r.existLocal && sizeLocalComp > skipSizeLargerThan;
+        const remoteTooLargeToDelete =
+          r.existRemote && sizeRemoteComp > skipSizeLargerThan;
+        if (localTooLargeToDelete) {
+          if (remoteTooLargeToDelete) {
+            r.decision = "skipUsingLocalDelTooLarge";
+            r.decisionBranch = 34;
+          } else {
+            if (r.existRemote) {
+              r.decision = "errorLocalTooLargeConflictRemote";
+              r.decisionBranch = 35;
+            } else {
+              r.decision = "skipUsingLocalDelTooLarge";
+              r.decisionBranch = 36;
+            }
+          }
+        } else {
+          if (remoteTooLargeToDelete) {
+            if (r.existLocal) {
+              r.decision = "errorLocalTooLargeConflictRemote";
+              r.decisionBranch = 37;
+            } else {
+              r.decision = "skipUsingLocalDelTooLarge";
+              r.decisionBranch = 38;
+            }
+          } else {
+            r.decision = "uploadLocalDelHistToRemote";
+            r.decisionBranch = 39;
+          }
+        }
       }
       return r;
     }
@@ -608,10 +765,44 @@ const assignOperationToFileInplace = (
       r.deltimeRemote >= mtimeRemote &&
       r.deltimeRemote >= deltimeLocal
     ) {
-      r.decision = "keepRemoteDelHist";
-      r.decisionBranch = 7;
-      if (r.existLocal || r.existRemote) {
-        // actual deletion would happen
+      if (skipSizeLargerThan <= 0) {
+        r.decision = "keepRemoteDelHist";
+        r.decisionBranch = 7;
+        if (r.existLocal || r.existRemote) {
+          // actual deletion would happen
+        }
+      } else {
+        const localTooLargeToDelete =
+          r.existLocal && sizeLocalComp > skipSizeLargerThan;
+        const remoteTooLargeToDelete =
+          r.existRemote && sizeRemoteComp > skipSizeLargerThan;
+        if (localTooLargeToDelete) {
+          if (remoteTooLargeToDelete) {
+            r.decision = "skipUsingRemoteDelTooLarge";
+            r.decisionBranch = 40;
+          } else {
+            if (r.existRemote) {
+              r.decision = "errorLocalTooLargeConflictRemote";
+              r.decisionBranch = 41;
+            } else {
+              r.decision = "skipUsingRemoteDelTooLarge";
+              r.decisionBranch = 42;
+            }
+          }
+        } else {
+          if (remoteTooLargeToDelete) {
+            if (r.existLocal) {
+              r.decision = "errorLocalTooLargeConflictRemote";
+              r.decisionBranch = 43;
+            } else {
+              r.decision = "skipUsingRemoteDelTooLarge";
+              r.decisionBranch = 44;
+            }
+          } else {
+            r.decision = "keepRemoteDelHist";
+            r.decisionBranch = 45;
+          }
+        }
       }
       return r;
     }
@@ -746,6 +937,10 @@ const DELETION_DECISIONS: Set<DecisionType> = new Set([
   "uploadLocalDelHistToRemoteFolder",
   "keepRemoteDelHistFolder",
 ]);
+const SIZES_GO_WRONG_DECISIONS: Set<DecisionType> = new Set([
+  "errorLocalTooLargeConflictRemote",
+  "errorRemoteTooLargeConflictLocal",
+]);
 
 export const getSyncPlan = async (
   remoteStates: FileOrFolderMixedState[],
@@ -759,6 +954,7 @@ export const getSyncPlan = async (
   syncConfigDir: boolean,
   configDir: string,
   syncUnderscoreItems: boolean,
+  skipSizeLargerThan: number,
   password: string = ""
 ) => {
   const mixedStates = await ensembleMixedStates(
@@ -769,13 +965,15 @@ export const getSyncPlan = async (
     localFileHistory,
     syncConfigDir,
     configDir,
-    syncUnderscoreItems
+    syncUnderscoreItems,
+    password
   );
 
   const sortedKeys = Object.keys(mixedStates).sort(
     (k1, k2) => k2.length - k1.length
   );
 
+  const sizesGoWrong: FileOrFolderMixedState[] = [];
   const deletions: DeletionOnRemote[] = [];
 
   const keptFolder = new Set<string>();
@@ -791,7 +989,16 @@ export const getSyncPlan = async (
     } else {
       // get all operations of files
       // and at the same time get some helper info for folders
-      assignOperationToFileInplace(val, keptFolder, password);
+      assignOperationToFileInplace(
+        val,
+        keptFolder,
+        skipSizeLargerThan,
+        password
+      );
+    }
+
+    if (SIZES_GO_WRONG_DECISIONS.has(val.decision)) {
+      sizesGoWrong.push(val);
     }
 
     if (DELETION_DECISIONS.has(val.decision)) {
@@ -834,6 +1041,7 @@ export const getSyncPlan = async (
     plan: plan,
     sortedKeys: sortedKeys,
     deletions: deletions,
+    sizesGoWrong: sizesGoWrong,
   };
 };
 
@@ -1015,6 +1223,14 @@ const dispatchOperationToActual = async (
     await clearDeleteRenameHistoryOfKeyAndVault(db, r.key, vaultRandomID);
   } else if (r.decision === "skipFolder") {
     // do nothing!
+  } else if (r.decision === "skipUploadingTooLarge") {
+    // do nothing!
+  } else if (r.decision === "skipDownloadingTooLarge") {
+    // do nothing!
+  } else if (r.decision === "skipUsingLocalDelTooLarge") {
+    // do nothing!
+  } else if (r.decision === "skipUsingRemoteDelTooLarge") {
+    // do nothing!
   } else {
     throw Error(`unknown decision in ${JSON.stringify(r)}`);
   }
@@ -1033,7 +1249,14 @@ const splitThreeSteps = (syncPlan: SyncPlanType, sortedKeys: string[]) => {
     const key = sortedKeys[i];
     const val: FileOrFolderMixedState = Object.assign({}, mixedStates[key]); // copy to avoid issue
 
-    if (val.decision === "skipFolder" || val.decision === "skipUploading") {
+    if (
+      val.decision === "skipFolder" ||
+      val.decision === "skipUploading" ||
+      val.decision === "skipDownloadingTooLarge" ||
+      val.decision === "skipUploadingTooLarge" ||
+      val.decision === "skipUsingLocalDelTooLarge" ||
+      val.decision === "skipUsingRemoteDelTooLarge"
+    ) {
       // pass
     } else if (val.decision === "createFolder") {
       const level = atWhichLevel(key);
@@ -1093,14 +1316,22 @@ export const doActualSync = async (
   sortedKeys: string[],
   metadataFile: FileOrFolderMixedState,
   origMetadata: MetadataOnRemote,
+  sizesGoWrong: FileOrFolderMixedState[],
   deletions: DeletionOnRemote[],
   localDeleteFunc: any,
   password: string = "",
   concurrency: number = 1,
+  callbackSizesGoWrong?: any,
   callbackSyncProcess?: any
 ) => {
   const mixedStates = syncPlan.mixedStates;
   const totalCount = sortedKeys.length || 0;
+
+  if (sizesGoWrong.length > 0) {
+    log.debug(`some sizes are larger than the threshold, abort and show hints`);
+    callbackSizesGoWrong(sizesGoWrong);
+    return;
+  }
 
   log.debug(`start syncing extra data firstly`);
   await uploadExtraMeta(

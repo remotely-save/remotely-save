@@ -10,6 +10,7 @@ import {
 import cloneDeep from "lodash/cloneDeep";
 import { createElement, RotateCcw, RefreshCcw, FileText } from "lucide";
 import type {
+  FileOrFolderMixedState,
   RemotelySavePluginSettings,
   SyncTriggerSourceType,
 } from "./baseTypes";
@@ -64,6 +65,7 @@ import {
   exportVaultLoggerOutputToFiles,
   exportVaultSyncPlansToFiles,
 } from "./debugMode";
+import { SizesConflictModal } from "./syncSizesConflictNotice";
 
 const DEFAULT_SETTINGS: RemotelySavePluginSettings = {
   s3: DEFAULT_S3_CONFIG,
@@ -82,6 +84,7 @@ const DEFAULT_SETTINGS: RemotelySavePluginSettings = {
   syncUnderscoreItems: false,
   lang: "auto",
   logToDB: false,
+  skipSizeLargerThan: -1,
 };
 
 interface OAuth2Info {
@@ -280,7 +283,7 @@ export default class RemotelySavePlugin extends Plugin {
         })
       );
       this.syncStatus = "generating_plan";
-      const { plan, sortedKeys, deletions } = await getSyncPlan(
+      const { plan, sortedKeys, deletions, sizesGoWrong } = await getSyncPlan(
         remoteStates,
         local,
         localConfigDirContents,
@@ -292,6 +295,7 @@ export default class RemotelySavePlugin extends Plugin {
         this.settings.syncConfigDir,
         this.app.vault.configDir,
         this.settings.syncUnderscoreItems,
+        this.settings.skipSizeLargerThan,
         this.settings.password
       );
       log.info(plan.mixedStates); // for debugging
@@ -317,10 +321,20 @@ export default class RemotelySavePlugin extends Plugin {
           sortedKeys,
           metadataFile,
           origMetadataOnRemote,
+          sizesGoWrong,
           deletions,
           (key: string) => self.trash(key),
           this.settings.password,
           this.settings.concurrency,
+          (ss: FileOrFolderMixedState[]) => {
+            new SizesConflictModal(
+              self.app,
+              self,
+              this.settings.skipSizeLargerThan,
+              ss,
+              this.settings.password !== ""
+            ).open();
+          },
           (i: number, totalCount: number, pathName: string, decision: string) =>
             self.setCurrSyncMsg(i, totalCount, pathName, decision)
         );

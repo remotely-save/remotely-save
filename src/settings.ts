@@ -767,6 +767,25 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
           });
       });
 
+    const skipLargeFilesDiv = generalDiv.createEl("div");
+    new Setting(skipLargeFilesDiv)
+      .setName(t("settings_skiplargefiles"))
+      .setDesc(t("settings_skiplargefiles_desc"))
+      .addDropdown((dropdown) => {
+        dropdown.addOption("-1", t("settings_skiplargefiles_notset"));
+
+        const mbs = [1, 5, 10, 50, 100, 500, 1000];
+        for (const mb of mbs) {
+          dropdown.addOption(`${mb * 1000 * 1000}`, `${mb} MB`);
+        }
+        dropdown
+          .setValue(`${this.plugin.settings.skipSizeLargerThan}`)
+          .onChange(async (val) => {
+            this.plugin.settings.skipSizeLargerThan = parseInt(val);
+            await this.plugin.saveSettings();
+          });
+      });
+
     //////////////////////////////////////////////////
     // below for general chooser (part 1/2)
     //////////////////////////////////////////////////

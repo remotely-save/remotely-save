@@ -85,6 +85,7 @@ export interface RemotelySavePluginSettings {
   syncUnderscoreItems?: boolean;
   lang?: LangTypeAndAuto;
   logToDB?: boolean;
+  skipSizeLargerThan?: number;
 
   /**
    * @deprecated
@@ -122,13 +123,24 @@ type DecisionTypeForFile =
   | "uploadLocalToRemote" // "skipLocal && uploadLocalToRemote && cleanLocalDelHist && cleanRemoteDelHist"
   | "downloadRemoteToLocal"; // "downloadRemoteToLocal && skipRemote && cleanLocalDelHist && cleanRemoteDelHist"
 
+type DecisionTypeForFileSize =
+  | "skipUploadingTooLarge"
+  | "skipDownloadingTooLarge"
+  | "skipUsingLocalDelTooLarge"
+  | "skipUsingRemoteDelTooLarge"
+  | "errorLocalTooLargeConflictRemote"
+  | "errorRemoteTooLargeConflictLocal";
+
 type DecisionTypeForFolder =
   | "createFolder"
   | "uploadLocalDelHistToRemoteFolder"
   | "keepRemoteDelHistFolder"
   | "skipFolder";
 
-export type DecisionType = DecisionTypeForFile | DecisionTypeForFolder;
+export type DecisionType =
+  | DecisionTypeForFile
+  | DecisionTypeForFileSize
+  | DecisionTypeForFolder;
 
 export interface FileOrFolderMixedState {
   key: string;
@@ -139,7 +151,9 @@ export interface FileOrFolderMixedState {
   deltimeLocal?: number;
   deltimeRemote?: number;
   sizeLocal?: number;
+  sizeLocalEnc?: number;
   sizeRemote?: number;
+  sizeRemoteEnc?: number;
   changeRemoteMtimeUsingMapping?: boolean;
   changeLocalMtimeUsingMapping?: boolean;
   decision?: DecisionType;
