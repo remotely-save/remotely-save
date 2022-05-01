@@ -86,6 +86,11 @@
   "modal_qr_button": "点击此按钮复制特殊 URI",
   "modal_qr_button_notice": "特殊 URI 已被复制到剪贴板！",
 
+  "modal_sizesconflict_title": "Remotely Save：跳过大文件的时候出现了一些冲突",
+  "modal_sizesconflict_desc": "您设置了跳过同步大于 {{thresholdMB}} MB（{{thresholdBytes}} bytes）的文件。\n但是以下文件的大小，在一端大于阈值，在另一端则小于阈值。\n为了避免意外的覆盖或删除，插件停止了运作，您需要手动处理至少一端的文件。",
+  "modal_sizesconflict_copybutton": "点击以复制以下所有文件大小冲突信息",
+  "modal_sizesconflict_copynotice": "所有的文件大小冲突信息，已被复制到剪贴板！",
+
   "settings_general": "通用",
   "settings_password": "密码",
   "settings_password_desc": "端到端加密的密码。不填写则代表没密码。您需要点击“确认”来修改。注意：密码和其它信息都会在本地保存。",
@@ -102,6 +107,9 @@
   "settings_runoncestartup_1sec": "启动后第 1 秒运行一次",
   "settings_runoncestartup_10sec": "启动后第 10 秒运行一次",
   "settings_runoncestartup_30sec": "启动后第 30 秒运行一次",
+  "settings_skiplargefiles": "跳过大文件（实验性质）",
+  "settings_skiplargefiles_desc": "跳过大于某一个阈值的文件。这里 1 MB = 10^6 bytes。",
+  "settings_skiplargefiles_notset": "（不设置）",
 
   "settings_checkonnectivity": "检查可否连接",
   "settings_checkonnectivity_desc": "检查可否连接。",

@@ -86,6 +86,11 @@
   "modal_qr_button": "點選此按鈕複製特殊 URI",
   "modal_qr_button_notice": "特殊 URI 已被複制到剪貼簿！",
 
+  "modal_sizesconflict_title": "Remotely Save：跳過大檔案的時候出現了一些衝突",
+  "modal_sizesconflict_desc": "您設定了跳過同步大於 {{thresholdMB}} MB（{{thresholdBytes}} bytes）的檔案。\n但是以下檔案的大小，在一端大於閾值，在另一端則小於閾值。\n為了避免意外的覆蓋或刪除，外掛停止了運作，您需要手動處理至少一端的檔案。",
+  "modal_sizesconflict_copybutton": "點選以複製以下所有檔案大小衝突資訊",
+  "modal_sizesconflict_copynotice": "所有的檔案大小衝突資訊，已被複制到剪貼簿！",
+
   "settings_general": "通用",
   "settings_password": "密碼",
   "settings_password_desc": "端到端加密的密碼。不填寫則代表沒密碼。您需要點選“確認”來修改。注意：密碼和其它資訊都會在本地儲存。",
@@ -102,6 +107,9 @@
   "settings_runoncestartup_1sec": "啟動後第 1 秒執行一次",
   "settings_runoncestartup_10sec": "啟動後第 10 秒執行一次",
   "settings_runoncestartup_30sec": "啟動後第 30 秒執行一次",
+  "settings_skiplargefiles": "跳過大檔案（實驗性質）",
+  "settings_skiplargefiles_desc": "跳過大於某一個閾值的檔案。這裡 1 MB = 10^6 bytes。",
+  "settings_skiplargefiles_notset": "（不設定）",
 
   "settings_checkonnectivity": "檢查可否連線",
   "settings_checkonnectivity_desc": "檢查可否連線。",

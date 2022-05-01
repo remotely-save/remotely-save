@@ -86,6 +86,11 @@
   "modal_qr_button": "Click to copy the special URI",
   "modal_qr_button_notice": "The special uri is copied to the clipboard!",
 
+  "modal_sizesconflict_title": "Remotely Save: Some conflict were found while skipping large files",
+  "modal_sizesconflict_desc": "You've set skipping files larger than {{thresholdMB}} MB ({{thresholdBytes}} bytes).\nBut the following files have sizes larger than the threshold on one side, and sizes smaller than the threshold on the other side.\nTo avoid unexpected overwriting or deleting, the plugin stops, and you have to manually deal with at least one side of the files.",
+  "modal_sizesconflict_copybutton": "Click to copy all the below sizes conflicts info",
+  "modal_sizesconflict_copynotice": "All the sizes conflicts info have been copied to the clipboard!",
+
   "settings_general": "General",
   "settings_password": "encryption password",
   "settings_password_desc": "Password for E2E encryption. Empty for no password. You need to click \"Confirm\". Attention: the password and other info are saved locally.",
@@ -102,6 +107,9 @@
   "settings_runoncestartup_1sec": "sync once after 1 second of start up",
   "settings_runoncestartup_10sec": "sync once after 10 seconds of start up",
   "settings_runoncestartup_30sec": "sync once after 30 seconds of start up",
+  "settings_skiplargefiles": "Skip Large Files (experimental)",
+  "settings_skiplargefiles_desc": "Skip files with sizes larger than the threshold. Here 1 MB = 10^6 bytes.",
+  "settings_skiplargefiles_notset": "(not set)",
 
   "settings_checkonnectivity": "Check Connectivity",
   "settings_checkonnectivity_desc": "Check connectivity.",
