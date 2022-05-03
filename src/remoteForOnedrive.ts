@@ -461,7 +461,6 @@ export class WrappedOnedriveClient {
         body: JSON.stringify(payload),
         headers: {
           Authorization: `Bearer ${await this.authGetter.getAccessToken()}`,
-          "Cache-Control": "no-cache",
         },
       })
     );
@@ -478,7 +477,6 @@ export class WrappedOnedriveClient {
         body: JSON.stringify(payload),
         headers: {
           Authorization: `Bearer ${await this.authGetter.getAccessToken()}`,
-          "Cache-Control": "no-cache",
         },
       })
     );
@@ -493,7 +491,6 @@ export class WrappedOnedriveClient {
         method: "DELETE",
         headers: {
           Authorization: `Bearer ${await this.authGetter.getAccessToken()}`,
-          "Cache-Control": "no-cache",
         },
       });
     } else {
@@ -501,7 +498,6 @@ export class WrappedOnedriveClient {
         method: "DELETE",
         headers: {
           Authorization: `Bearer ${await this.authGetter.getAccessToken()}`,
-          "Cache-Control": "no-cache",
         },
       });
     }
@@ -522,7 +518,6 @@ export class WrappedOnedriveClient {
         headers: {
           "Content-Type": DEFAULT_CONTENT_TYPE,
           Authorization: `Bearer ${await this.authGetter.getAccessToken()}`,
-          "Cache-Control": "no-cache",
         },
       });
     } else {
@@ -532,7 +527,6 @@ export class WrappedOnedriveClient {
         headers: {
           "Content-Type": DEFAULT_CONTENT_TYPE,
           Authorization: `Bearer ${await this.authGetter.getAccessToken()}`,
-          "Cache-Control": "no-cache",
         },
       });
     }
@@ -826,12 +820,9 @@ const downloadFromRemoteRaw = async (
     ).arrayBuffer;
     return content;
   } else {
-    const content = await (
-      await fetch(downloadUrl, {
-        headers: {
-          "Cache-Control": "no-cache",
-        },
-      })
+    const content = await // cannot set no-cache here, will have cors error
+    (
+      await fetch(downloadUrl)
     ).arrayBuffer();
     return content;
   }
