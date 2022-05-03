@@ -921,10 +921,10 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
 
     const dropboxSelectAuthDiv = dropboxDiv.createDiv();
     const dropboxAuthDiv = dropboxSelectAuthDiv.createDiv({
-      cls: "dropbox-auth-button-hide",
+      cls: "dropbox-auth-button-hide settings-auth-related",
     });
     const dropboxRevokeAuthDiv = dropboxSelectAuthDiv.createDiv({
-      cls: "dropbox-revoke-auth-button-hide",
+      cls: "dropbox-revoke-auth-button-hide settings-auth-related",
     });
 
     const dropboxRevokeAuthSetting = new Setting(dropboxRevokeAuthDiv)
@@ -1115,10 +1115,10 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
 
     const onedriveSelectAuthDiv = onedriveDiv.createDiv();
     const onedriveAuthDiv = onedriveSelectAuthDiv.createDiv({
-      cls: "onedrive-auth-button-hide",
+      cls: "onedrive-auth-button-hide settings-auth-related",
     });
     const onedriveRevokeAuthDiv = onedriveSelectAuthDiv.createDiv({
-      cls: "onedrive-revoke-auth-button-hide",
+      cls: "onedrive-revoke-auth-button-hide settings-auth-related",
     });
 
     const onedriveRevokeAuthSetting = new Setting(onedriveRevokeAuthDiv)
