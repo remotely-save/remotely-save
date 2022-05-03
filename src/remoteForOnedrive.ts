@@ -821,9 +821,7 @@ const downloadFromRemoteRaw = async (
     return content;
   } else {
     const content = await // cannot set no-cache here, will have cors error
-    (
-      await fetch(downloadUrl)
-    ).arrayBuffer();
+    (await fetch(downloadUrl)).arrayBuffer();
     return content;
   }
 };
