@@ -1681,7 +1681,8 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
       text: t("settings_importexport"),
     });
 
-    new Setting(importExportDiv)
+    const exportSubDiv = importExportDiv.createEl("div");
+    new Setting(exportSubDiv)
       .setName(t("settings_export"))
       .setDesc(t("settings_export_desc"))
       .addButton(async (button) => {
@@ -1691,7 +1692,8 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
         });
       });
 
-    new Setting(importExportDiv)
+    const importSubDiv = importExportDiv.createEl("div");
+    new Setting(importSubDiv)
       .setName(t("settings_import"))
       .setDesc(t("settings_import_desc"));
 
