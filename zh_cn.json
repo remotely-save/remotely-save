@@ -91,7 +91,7 @@
   "modal_sizesconflict_copybutton": "点击以复制以下所有文件大小冲突信息",
   "modal_sizesconflict_copynotice": "所有的文件大小冲突信息，已被复制到剪贴板！",
 
-  "settings_general": "通用",
+  "settings_basic": "基本设置",
   "settings_password": "密码",
   "settings_password_desc": "端到端加密的密码。不填写则代表没密码。您需要点击“确认”来修改。注意：密码和其它信息都会在本地保存。",
   "settings_autorun": "自动运行",
@@ -199,8 +199,8 @@
   "settings_webdav_connect_fail": "无法连接上 Webdav 服务器。（可能是地址/账号/密码/鉴权类型等错误。）",
   "settings_webdav_connect_fail_withcors": "无法连接上 Webdav 服务器。（可能是地址/账号/密码/鉴权类型/CORS 等错误。）",
 
-  "settings_chooseservice": "选择服务",
-  "settings_chooseservice_desc": "选择服务。",
+  "settings_chooseservice": "选择远程服务",
+  "settings_chooseservice_desc": "从这里开始设置。您想连接到哪一个服务？S3、Dropbox、Webdav、OneDrive（个人版）？",
   "settings_chooseservice_s3": "S3 或兼容 S3 的服务",
   "settings_chooseservice_dropbox": "Dropbox",
   "settings_chooseservice_webdav": "Webdav",

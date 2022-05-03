@@ -91,7 +91,7 @@
   "modal_sizesconflict_copybutton": "Click to copy all the below sizes conflicts info",
   "modal_sizesconflict_copynotice": "All the sizes conflicts info have been copied to the clipboard!",
 
-  "settings_general": "General",
+  "settings_basic": "Basic Settings",
   "settings_password": "encryption password",
   "settings_password_desc": "Password for E2E encryption. Empty for no password. You need to click \"Confirm\". Attention: the password and other info are saved locally.",
   "settings_autorun": "schedule for auto run",
@@ -199,8 +199,8 @@
   "settings_webdav_connect_fail": "The webdav server cannot be reached (possible to be any of address/username/password/authtype errors).",
   "settings_webdav_connect_fail_withcors": "The webdav server cannot be reached (possible to be any of address/username/password/authtype/CORS errors).",
 
-  "settings_chooseservice": "Choose A Service",
-  "settings_chooseservice_desc": "Choose a service.",
+  "settings_chooseservice": "Choose A Remote Service",
+  "settings_chooseservice_desc": "Start here. What service are you connecting to? S3, Dropbox, Webdav, or OneDrive for personl?",
   "settings_chooseservice_s3": "S3 or compatible",
   "settings_chooseservice_dropbox": "Dropbox",
   "settings_chooseservice_webdav": "Webdav",
