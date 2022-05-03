@@ -675,123 +675,13 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
     containerEl.createEl("h1", { text: "Remotely Save" });
 
     //////////////////////////////////////////////////
-    // below for general
-    //////////////////////////////////////////////////
-
-    const generalDiv = containerEl.createEl("div");
-    generalDiv.createEl("h2", { text: t("settings_general") });
-
-    const passwordDiv = generalDiv.createEl("div");
-    let newPassword = `${this.plugin.settings.password}`;
-    new Setting(passwordDiv)
-      .setName(t("settings_password"))
-      .setDesc(t("settings_password_desc"))
-      .addText((text) => {
-        wrapTextWithPasswordHide(text);
-        text
-          .setPlaceholder("")
-          .setValue(`${this.plugin.settings.password}`)
-          .onChange(async (value) => {
-            newPassword = value.trim();
-          });
-      })
-      .addButton(async (button) => {
-        button.setButtonText(t("confirm"));
-        button.onClick(async () => {
-          new PasswordModal(this.app, this.plugin, newPassword).open();
-        });
-      });
-
-    const scheduleDiv = generalDiv.createEl("div");
-    new Setting(scheduleDiv)
-      .setName(t("settings_autorun"))
-      .setDesc(t("settings_autorun_desc"))
-      .addDropdown((dropdown) => {
-        dropdown.addOption("-1", t("settings_autorun_notset"));
-        dropdown.addOption(`${1000 * 60 * 1}`, t("settings_autorun_1min"));
-        dropdown.addOption(`${1000 * 60 * 5}`, t("settings_autorun_5min"));
-        dropdown.addOption(`${1000 * 60 * 10}`, t("settings_autorun_10min"));
-        dropdown.addOption(`${1000 * 60 * 30}`, t("settings_autorun_30min"));
-
-        dropdown
-          .setValue(`${this.plugin.settings.autoRunEveryMilliseconds}`)
-          .onChange(async (val: string) => {
-            const realVal = parseInt(val);
-            this.plugin.settings.autoRunEveryMilliseconds = realVal;
-            await this.plugin.saveSettings();
-            if (
-              (realVal === undefined || realVal === null || realVal <= 0) &&
-              this.plugin.autoRunIntervalID !== undefined
-            ) {
-              // clear
-              window.clearInterval(this.plugin.autoRunIntervalID);
-              this.plugin.autoRunIntervalID = undefined;
-            } else if (
-              realVal !== undefined &&
-              realVal !== null &&
-              realVal > 0
-            ) {
-              const intervalID = window.setInterval(() => {
-                this.plugin.syncRun("auto");
-              }, realVal);
-              this.plugin.autoRunIntervalID = intervalID;
-              this.plugin.registerInterval(intervalID);
-            }
-          });
-      });
-
-    const runOnceStartUpDiv = generalDiv.createEl("div");
-    new Setting(runOnceStartUpDiv)
-      .setName(t("settings_runoncestartup"))
-      .setDesc(t("settings_runoncestartup_desc"))
-      .addDropdown((dropdown) => {
-        dropdown.addOption("-1", t("settings_runoncestartup_notset"));
-        dropdown.addOption(
-          `${1000 * 1 * 1}`,
-          t("settings_runoncestartup_1sec")
-        );
-        dropdown.addOption(
-          `${1000 * 10 * 1}`,
-          t("settings_runoncestartup_10sec")
-        );
-        dropdown.addOption(
-          `${1000 * 30 * 1}`,
-          t("settings_runoncestartup_30sec")
-        );
-        dropdown
-          .setValue(`${this.plugin.settings.initRunAfterMilliseconds}`)
-          .onChange(async (val: string) => {
-            const realVal = parseInt(val);
-            this.plugin.settings.initRunAfterMilliseconds = realVal;
-            await this.plugin.saveSettings();
-          });
-      });
-
-    const skipLargeFilesDiv = generalDiv.createEl("div");
-    new Setting(skipLargeFilesDiv)
-      .setName(t("settings_skiplargefiles"))
-      .setDesc(t("settings_skiplargefiles_desc"))
-      .addDropdown((dropdown) => {
-        dropdown.addOption("-1", t("settings_skiplargefiles_notset"));
-
-        const mbs = [1, 5, 10, 50, 100, 500, 1000];
-        for (const mb of mbs) {
-          dropdown.addOption(`${mb * 1000 * 1000}`, `${mb} MB`);
-        }
-        dropdown
-          .setValue(`${this.plugin.settings.skipSizeLargerThan}`)
-          .onChange(async (val) => {
-            this.plugin.settings.skipSizeLargerThan = parseInt(val);
-            await this.plugin.saveSettings();
-          });
-      });
-
-    //////////////////////////////////////////////////
-    // below for general chooser (part 1/2)
+    // below for service chooser (part 1/2)
     //////////////////////////////////////////////////
 
     // we need to create the div in advance of any other service divs
-    const serviceChooserDiv = generalDiv.createEl("div");
+    const serviceChooserFragDiv = containerEl.createEl("div");
+    serviceChooserFragDiv.createEl("h2", { text: t("settings_chooseservice") });
+    const serviceChooserDiv = serviceChooserFragDiv.createEl("div");
 
     //////////////////////////////////////////////////
     // below for s3
@@ -1584,6 +1474,118 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
               "webdav-hide",
               this.plugin.settings.serviceType !== "webdav"
             );
+            await this.plugin.saveSettings();
+          });
+      });
+
+    //////////////////////////////////////////////////
+    // below for basic settings
+    //////////////////////////////////////////////////
+
+    const basicDiv = containerEl.createEl("div");
+    basicDiv.createEl("h2", { text: t("settings_basic") });
+
+    const passwordDiv = basicDiv.createEl("div");
+    let newPassword = `${this.plugin.settings.password}`;
+    new Setting(passwordDiv)
+      .setName(t("settings_password"))
+      .setDesc(t("settings_password_desc"))
+      .addText((text) => {
+        wrapTextWithPasswordHide(text);
+        text
+          .setPlaceholder("")
+          .setValue(`${this.plugin.settings.password}`)
+          .onChange(async (value) => {
+            newPassword = value.trim();
+          });
+      })
+      .addButton(async (button) => {
+        button.setButtonText(t("confirm"));
+        button.onClick(async () => {
+          new PasswordModal(this.app, this.plugin, newPassword).open();
+        });
+      });
+
+    const scheduleDiv = basicDiv.createEl("div");
+    new Setting(scheduleDiv)
+      .setName(t("settings_autorun"))
+      .setDesc(t("settings_autorun_desc"))
+      .addDropdown((dropdown) => {
+        dropdown.addOption("-1", t("settings_autorun_notset"));
+        dropdown.addOption(`${1000 * 60 * 1}`, t("settings_autorun_1min"));
+        dropdown.addOption(`${1000 * 60 * 5}`, t("settings_autorun_5min"));
+        dropdown.addOption(`${1000 * 60 * 10}`, t("settings_autorun_10min"));
+        dropdown.addOption(`${1000 * 60 * 30}`, t("settings_autorun_30min"));
+
+        dropdown
+          .setValue(`${this.plugin.settings.autoRunEveryMilliseconds}`)
+          .onChange(async (val: string) => {
+            const realVal = parseInt(val);
+            this.plugin.settings.autoRunEveryMilliseconds = realVal;
+            await this.plugin.saveSettings();
+            if (
+              (realVal === undefined || realVal === null || realVal <= 0) &&
+              this.plugin.autoRunIntervalID !== undefined
+            ) {
+              // clear
+              window.clearInterval(this.plugin.autoRunIntervalID);
+              this.plugin.autoRunIntervalID = undefined;
+            } else if (
+              realVal !== undefined &&
+              realVal !== null &&
+              realVal > 0
+            ) {
+              const intervalID = window.setInterval(() => {
+                this.plugin.syncRun("auto");
+              }, realVal);
+              this.plugin.autoRunIntervalID = intervalID;
+              this.plugin.registerInterval(intervalID);
+            }
+          });
+      });
+
+    const runOnceStartUpDiv = basicDiv.createEl("div");
+    new Setting(runOnceStartUpDiv)
+      .setName(t("settings_runoncestartup"))
+      .setDesc(t("settings_runoncestartup_desc"))
+      .addDropdown((dropdown) => {
+        dropdown.addOption("-1", t("settings_runoncestartup_notset"));
+        dropdown.addOption(
+          `${1000 * 1 * 1}`,
+          t("settings_runoncestartup_1sec")
+        );
+        dropdown.addOption(
+          `${1000 * 10 * 1}`,
+          t("settings_runoncestartup_10sec")
+        );
+        dropdown.addOption(
+          `${1000 * 30 * 1}`,
+          t("settings_runoncestartup_30sec")
+        );
+        dropdown
+          .setValue(`${this.plugin.settings.initRunAfterMilliseconds}`)
+          .onChange(async (val: string) => {
+            const realVal = parseInt(val);
+            this.plugin.settings.initRunAfterMilliseconds = realVal;
+            await this.plugin.saveSettings();
+          });
+      });
+
+    const skipLargeFilesDiv = basicDiv.createEl("div");
+    new Setting(skipLargeFilesDiv)
+      .setName(t("settings_skiplargefiles"))
+      .setDesc(t("settings_skiplargefiles_desc"))
+      .addDropdown((dropdown) => {
+        dropdown.addOption("-1", t("settings_skiplargefiles_notset"));
+
+        const mbs = [1, 5, 10, 50, 100, 500, 1000];
+        for (const mb of mbs) {
+          dropdown.addOption(`${mb * 1000 * 1000}`, `${mb} MB`);
+        }
+        dropdown
+          .setValue(`${this.plugin.settings.skipSizeLargerThan}`)
+          .onChange(async (val) => {
+            this.plugin.settings.skipSizeLargerThan = parseInt(val);
             await this.plugin.saveSettings();
           });
       });
