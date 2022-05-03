@@ -679,9 +679,8 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
     //////////////////////////////////////////////////
 
     // we need to create the div in advance of any other service divs
-    const serviceChooserFragDiv = containerEl.createEl("div");
-    serviceChooserFragDiv.createEl("h2", { text: t("settings_chooseservice") });
-    const serviceChooserDiv = serviceChooserFragDiv.createEl("div");
+    const serviceChooserDiv = containerEl.createDiv();
+    serviceChooserDiv.createEl("h2", { text: t("settings_chooseservice") });
 
     //////////////////////////////////////////////////
     // below for s3
@@ -691,27 +690,29 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
     s3Div.toggleClass("s3-hide", this.plugin.settings.serviceType !== "s3");
     s3Div.createEl("h2", { text: t("settings_s3") });
 
+    const s3LongDescDiv = s3Div.createEl("div", { cls: "settings-long-desc" });
+
     for (const c of [
       t("settings_s3_disclaimer1"),
       t("settings_s3_disclaimer2"),
     ]) {
-      s3Div.createEl("p", {
+      s3LongDescDiv.createEl("p", {
         text: c,
         cls: "s3-disclaimer",
       });
     }
 
     if (!VALID_REQURL) {
-      s3Div.createEl("p", {
+      s3LongDescDiv.createEl("p", {
         text: t("settings_s3_cors"),
       });
     }
 
-    s3Div.createEl("p", {
+    s3LongDescDiv.createEl("p", {
       text: t("settings_s3_prod"),
     });
 
-    const s3LinksUl = s3Div.createEl("div").createEl("ul");
+    const s3LinksUl = s3LongDescDiv.createEl("ul");
 
     s3LinksUl.createEl("li").createEl("a", {
       href: "https://docs.aws.amazon.com/general/latest/gr/s3.html",
@@ -844,8 +845,7 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
         });
     }
 
-    const partsConcurrencyDiv = s3Div.createEl("div");
-    new Setting(partsConcurrencyDiv)
+    new Setting(s3Div)
       .setName(t("settings_s3_parts"))
       .setDesc(t("settings_s3_parts_desc"))
       .addDropdown((dropdown) => {
@@ -897,16 +897,20 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
       this.plugin.settings.serviceType !== "dropbox"
     );
     dropboxDiv.createEl("h2", { text: t("settings_dropbox") });
+
+    const dropboxLongDescDiv = dropboxDiv.createEl("div", {
+      cls: "settings-long-desc",
+    });
     for (const c of [
       t("settings_dropbox_disclaimer1"),
       t("settings_dropbox_disclaimer2"),
     ]) {
-      dropboxDiv.createEl("p", {
+      dropboxLongDescDiv.createEl("p", {
         text: c,
         cls: "dropbox-disclaimer",
       });
     }
-    dropboxDiv.createEl("p", {
+    dropboxLongDescDiv.createEl("p", {
       text: t("settings_dropbox_folder", {
         pluginID: this.plugin.manifest.id,
         remoteBaseDir:
@@ -1083,17 +1087,20 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
       this.plugin.settings.serviceType !== "onedrive"
     );
     onedriveDiv.createEl("h2", { text: t("settings_onedrive") });
+    const onedriveLongDescDiv = onedriveDiv.createEl("div", {
+      cls: "settings-long-desc",
+    });
     for (const c of [
       t("settings_onedrive_disclaimer1"),
       t("settings_onedrive_disclaimer2"),
     ]) {
-      onedriveDiv.createEl("p", {
+      onedriveLongDescDiv.createEl("p", {
         text: c,
         cls: "onedrive-disclaimer",
       });
     }
 
-    onedriveDiv.createEl("p", {
+    onedriveLongDescDiv.createEl("p", {
       text: t("settings_onedrive_folder", {
         pluginID: this.plugin.manifest.id,
         remoteBaseDir:
@@ -1102,7 +1109,7 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
       }),
     });
 
-    onedriveDiv.createEl("p", {
+    onedriveLongDescDiv.createEl("p", {
       text: t("settings_onedrive_nobiz"),
     });
 
@@ -1231,22 +1238,26 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
 
     webdavDiv.createEl("h2", { text: t("settings_webdav") });
 
-    webdavDiv.createEl("p", {
+    const webdavLongDescDiv = webdavDiv.createEl("div", {
+      cls: "settings-long-desc",
+    });
+
+    webdavLongDescDiv.createEl("p", {
       text: t("settings_webdav_disclaimer1"),
       cls: "webdav-disclaimer",
     });
 
     if (!VALID_REQURL) {
-      webdavDiv.createEl("p", {
+      webdavLongDescDiv.createEl("p", {
         text: t("settings_webdav_cors_os"),
       });
 
-      webdavDiv.createEl("p", {
+      webdavLongDescDiv.createEl("p", {
         text: t("settings_webdav_cors"),
       });
     }
 
-    webdavDiv.createEl("p", {
+    webdavLongDescDiv.createEl("p", {
       text: t("settings_webdav_folder", {
         remoteBaseDir:
           this.plugin.settings.webdav.remoteBaseDir || this.app.vault.getName(),
@@ -1485,9 +1496,8 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
     const basicDiv = containerEl.createEl("div");
     basicDiv.createEl("h2", { text: t("settings_basic") });
 
-    const passwordDiv = basicDiv.createEl("div");
     let newPassword = `${this.plugin.settings.password}`;
-    new Setting(passwordDiv)
+    new Setting(basicDiv)
       .setName(t("settings_password"))
       .setDesc(t("settings_password_desc"))
       .addText((text) => {
@@ -1506,8 +1516,7 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
         });
       });
 
-    const scheduleDiv = basicDiv.createEl("div");
-    new Setting(scheduleDiv)
+    new Setting(basicDiv)
       .setName(t("settings_autorun"))
       .setDesc(t("settings_autorun_desc"))
       .addDropdown((dropdown) => {
@@ -1544,8 +1553,7 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
           });
       });
 
-    const runOnceStartUpDiv = basicDiv.createEl("div");
-    new Setting(runOnceStartUpDiv)
+    new Setting(basicDiv)
       .setName(t("settings_runoncestartup"))
       .setDesc(t("settings_runoncestartup_desc"))
       .addDropdown((dropdown) => {
@@ -1570,9 +1578,7 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
             await this.plugin.saveSettings();
           });
       });
-
-    const skipLargeFilesDiv = basicDiv.createEl("div");
-    new Setting(skipLargeFilesDiv)
+    new Setting(basicDiv)
       .setName(t("settings_skiplargefiles"))
       .setDesc(t("settings_skiplargefiles_desc"))
       .addDropdown((dropdown) => {
@@ -1598,8 +1604,7 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
       text: t("settings_adv"),
     });
 
-    const concurrencyDiv = advDiv.createEl("div");
-    new Setting(concurrencyDiv)
+    new Setting(advDiv)
       .setName(t("settings_concurrency"))
       .setDesc(t("settings_concurrency_desc"))
       .addDropdown((dropdown) => {
@@ -1620,8 +1625,7 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
           });
       });
 
-    const syncUnderscoreItemsDiv = advDiv.createEl("div");
-    new Setting(syncUnderscoreItemsDiv)
+    new Setting(advDiv)
       .setName(t("settings_syncunderscore"))
       .setDesc(t("settings_syncunderscore_desc"))
       .addDropdown((dropdown) => {
@@ -1637,8 +1641,7 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
           });
       });
 
-    const syncConfigDirDiv = advDiv.createEl("div");
-    new Setting(syncConfigDirDiv)
+    new Setting(advDiv)
       .setName(t("settings_configdir"))
       .setDesc(
         t("settings_configdir_desc", {
@@ -1681,8 +1684,7 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
       text: t("settings_importexport"),
     });
 
-    const exportSubDiv = importExportDiv.createEl("div");
-    new Setting(exportSubDiv)
+    new Setting(importExportDiv)
       .setName(t("settings_export"))
       .setDesc(t("settings_export_desc"))
       .addButton(async (button) => {
@@ -1692,8 +1694,7 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
         });
       });
 
-    const importSubDiv = importExportDiv.createEl("div");
-    new Setting(importSubDiv)
+    new Setting(importExportDiv)
       .setName(t("settings_import"))
       .setDesc(t("settings_import_desc"));
 
@@ -1704,8 +1705,7 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
     const debugDiv = containerEl.createEl("div");
     debugDiv.createEl("h2", { text: t("settings_debug") });
 
-    const setConsoleLogLevelDiv = debugDiv.createDiv("div");
-    new Setting(setConsoleLogLevelDiv)
+    new Setting(debugDiv)
       .setName(t("settings_debuglevel"))
       .setDesc(t("settings_debuglevel_desc"))
       .addDropdown(async (dropdown) => {
@@ -1720,8 +1720,8 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
             log.info(`the log level is changed to ${val}`);
           });
       });
-    const outputCurrSettingsDiv = debugDiv.createDiv("div");
-    new Setting(outputCurrSettingsDiv)
+
+    new Setting(debugDiv)
       .setName(t("settings_outputsettingsconsole"))
       .setDesc(t("settings_outputsettingsconsole_desc"))
       .addButton(async (button) => {
@@ -1732,8 +1732,8 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
           new Notice(t("settings_outputsettingsconsole_notice"));
         });
       });
-    const syncPlanDiv = debugDiv.createEl("div");
-    new Setting(syncPlanDiv)
+
+    new Setting(debugDiv)
       .setName(t("settings_syncplans"))
       .setDesc(t("settings_syncplans_desc"))
       .addButton(async (button) => {
@@ -1760,7 +1760,7 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
           new Notice(t("settings_syncplans_notice"));
         });
       });
-    new Setting(syncPlanDiv)
+    new Setting(debugDiv)
       .setName(t("settings_delsyncplans"))
       .setDesc(t("settings_delsyncplans_desc"))
       .addButton(async (button) => {
@@ -1771,8 +1771,7 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
         });
       });
 
-    const logToDBDiv = debugDiv.createEl("div");
-    new Setting(logToDBDiv)
+    new Setting(debugDiv)
       .setName(t("settings_logtodb"))
       .setDesc(t("settings_logtodb_desc"))
       .addDropdown(async (dropdown) => {
@@ -1799,7 +1798,7 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
           });
       });
 
-    new Setting(logToDBDiv)
+    new Setting(debugDiv)
       .setName(t("settings_logtodbexport"))
       .setDesc(
         t("settings_logtodbexport_desc", {
@@ -1818,7 +1817,7 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
         });
       });
 
-    new Setting(logToDBDiv)
+    new Setting(debugDiv)
       .setName(t("settings_logtodbclear"))
       .setDesc(t("settings_logtodbclear_desc"))
       .addButton(async (button) => {
@@ -1829,8 +1828,7 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
         });
       });
 
-    const syncMappingDiv = debugDiv.createEl("div");
-    new Setting(syncMappingDiv)
+    new Setting(debugDiv)
       .setName(t("settings_delsyncmap"))
       .setDesc(t("settings_delsyncmap_desc"))
       .addButton(async (button) => {
@@ -1841,8 +1839,7 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
         });
       });
 
-    const outputCurrBasePathVaultIDDiv = debugDiv.createDiv("div");
-    new Setting(outputCurrBasePathVaultIDDiv)
+    new Setting(debugDiv)
       .setName(t("settings_outputbasepathvaultid"))
       .setDesc(t("settings_outputbasepathvaultid_desc"))
       .addButton(async (button) => {
@@ -1853,8 +1850,7 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
         });
       });
 
-    const dbsResetDiv = debugDiv.createEl("div");
-    new Setting(dbsResetDiv)
+    new Setting(debugDiv)
       .setName(t("settings_resetcache"))
       .setDesc(t("settings_resetcache_desc"))
       .addButton(async (button) => {
