@@ -1,6 +1,6 @@
 {
   "name": "remotely-save",
-  "version": "0.3.24",
+  "version": "0.3.25",
   "description": "This is yet another sync plugin for Obsidian app.",
   "scripts": {
     "dev2": "node esbuild.config.mjs",
