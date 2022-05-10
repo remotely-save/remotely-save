@@ -2,6 +2,7 @@ import { Vault, Stat, ListedFiles } from "obsidian";
 import { Queue } from "@fyears/tsqueue";
 import chunk from "lodash/chunk";
 import flatten from "lodash/flatten";
+import { statFix } from "./misc";
 
 export interface ObsConfigDirFileType {
   key: string;
@@ -12,7 +13,7 @@ export interface ObsConfigDirFileType {
 }
 
 const isFolderToSkip = (x: string) => {
-  let specialFolders = [".git", ".svn", "node_modules"];
+  let specialFolders = [".git", ".github", ".gitlab", ".svn", "node_modules"];
   for (const iterator of specialFolders) {
     if (
       x === iterator ||
@@ -75,7 +76,8 @@ export const listFilesInObsFolder = async (
     const itemsToFetchChunks = chunk(itemsToFetch, CHUNK_SIZE);
     for (const singleChunk of itemsToFetchChunks) {
       const r = singleChunk.map(async (x) => {
-        const statRes = await vault.adapter.stat(x);
+        const statRes = await statFix(vault, x);
+
         const isFolder = statRes.type === "folder";
         let children: ListedFiles = undefined;
         if (isFolder) {

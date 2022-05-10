@@ -5,7 +5,7 @@ import { requireApiVersion, TAbstractFile, TFile, TFolder } from "obsidian";
 
 import { API_VER_STAT_FOLDER, SUPPORTED_SERVICES_TYPE } from "./baseTypes";
 import type { SyncPlanType } from "./sync";
-import { toText, unixTimeToStr } from "./misc";
+import { statFix, toText, unixTimeToStr } from "./misc";
 
 import { log } from "./moreOnLog";
 
@@ -417,7 +417,7 @@ export const insertRenameRecordByVault = async (
     if (requireApiVersion(API_VER_STAT_FOLDER)) {
       // TAbstractFile does not contain these info
       // but from API_VER_STAT_FOLDER we can manually stat them by path.
-      const s = await fileOrFolder.vault.adapter.stat(fileOrFolder.path);
+      const s = await statFix(fileOrFolder.vault, fileOrFolder.path);
       ctime = s.ctime;
       mtime = s.mtime;
     }

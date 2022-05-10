@@ -166,18 +166,20 @@ export const decryptBase64urlToString = async (
 };
 
 export const getSizeFromOrigToEnc = (x: number) => {
-  if (x < 0 || !Number.isInteger(x)) {
-    throw Error(`x=${x} is not a valid size`);
+  if (x < 0 || Number.isNaN(x) || !Number.isInteger(x)) {
+    throw Error(`getSizeFromOrigToEnc: x=${x} is not a valid size`);
   }
   return (Math.floor(x / 16) + 1) * 16 + 16;
 };
 
 export const getSizeFromEncToOrig = (x: number) => {
-  if (x < 32 || !Number.isInteger(x)) {
-    throw Error(`${x} is not a valid size`);
+  if (x < 32 || Number.isNaN(x) || !Number.isInteger(x)) {
+    throw Error(`getSizeFromEncToOrig: ${x} is not a valid size`);
   }
   if (x % 16 !== 0) {
-    throw Error(`${x} is not a valid encrypted file size`);
+    throw Error(
+      `getSizeFromEncToOrig: ${x} is not a valid encrypted file size`
+    );
   }
   return {
     minSize: ((x - 16) / 16 - 1) * 16,

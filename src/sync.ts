@@ -37,6 +37,7 @@ import {
   getParentFolder,
   atWhichLevel,
   unixTimeToStr,
+  statFix,
 } from "./misc";
 import { RemoteClient } from "./remote";
 import {
@@ -336,7 +337,7 @@ const ensembleMixedStates = async (
       // ignore
       continue;
     } else if (entry instanceof TFile) {
-      const mtimeLocal = Math.max(entry.stat.mtime || 0, entry.stat.ctime || 0);
+      const mtimeLocal = Math.max(entry.stat.mtime ?? 0, entry.stat.ctime ?? 0);
       r = {
         key: entry.path,
         existLocal: true,
@@ -380,7 +381,10 @@ const ensembleMixedStates = async (
   if (syncConfigDir && localConfigDirContents !== undefined) {
     for (const entry of localConfigDirContents) {
       const key = entry.key;
-      const mtimeLocal = Math.max(entry.mtime, entry.ctime);
+      let mtimeLocal = Math.max(entry.mtime ?? 0, entry.ctime ?? 0);
+      if (Number.isNaN(mtimeLocal) || mtimeLocal === 0) {
+        mtimeLocal = undefined;
+      }
       const r: FileOrFolderMixedState = {
         key: key,
         existLocal: true,
@@ -468,10 +472,13 @@ const ensembleMixedStates = async (
         changeLocalMtimeUsingMapping: true,
       };
       if (results.hasOwnProperty(key)) {
-        const mtimeLocal = Math.max(
-          r.mtimeLocal || 0,
-          results[key].mtimeLocal || 0
+        let mtimeLocal = Math.max(
+          r.mtimeLocal ?? 0,
+          results[key].mtimeLocal ?? 0
         );
+        if (Number.isNaN(mtimeLocal) || mtimeLocal === 0) {
+          mtimeLocal = undefined;
+        }
         results[key].mtimeLocal = mtimeLocal;
         results[key].mtimeLocalFmt = unixTimeToStr(mtimeLocal);
         results[key].changeLocalMtimeUsingMapping =
@@ -838,9 +845,14 @@ const assignOperationToFolderInplace = async (
       // if it was created after deletion, we should keep it as is
       if (requireApiVersion(API_VER_STAT_FOLDER)) {
         if (r.existLocal) {
-          const { ctime, mtime } = await vault.adapter.stat(r.key);
-          const cmtime = Math.max(ctime, mtime);
-          if (cmtime > 0 && cmtime >= deltimeLocal && cmtime >= deltimeRemote) {
+          const { ctime, mtime } = await statFix(vault, r.key);
+          const cmtime = Math.max(ctime ?? 0, mtime ?? 0);
+          if (
+            !Number.isNaN(cmtime) &&
+            cmtime > 0 &&
+            cmtime >= deltimeLocal &&
+            cmtime >= deltimeRemote
+          ) {
             keptFolder.add(getParentFolder(r.key));
             if (r.existLocal && r.existRemote) {
               r.decision = "skipFolder";

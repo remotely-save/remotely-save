@@ -339,11 +339,8 @@ export const checkHasSpecialCharForDir = (x: string) => {
 };
 
 export const unixTimeToStr = (x: number | undefined | null) => {
-  if (x === undefined) {
+  if (x === undefined || x === null || Number.isNaN(x)) {
     return undefined;
-  }
-  if (x === null) {
-    return null;
   }
   return window.moment(x).format() as string;
 };
@@ -407,4 +404,26 @@ export const toText = (x: any) => {
   } catch {
     return `${x}`;
   }
+};
+
+/**
+ * On Android the stat has bugs for folders. So we need a fixed version.
+ * @param vault
+ * @param path
+ */
+export const statFix = async (vault: Vault, path: string) => {
+  const s = await vault.adapter.stat(path);
+  if (s.ctime === undefined || s.ctime === null || Number.isNaN(s.ctime)) {
+    s.ctime = undefined;
+  }
+  if (s.mtime === undefined || s.mtime === null || Number.isNaN(s.mtime)) {
+    s.mtime = undefined;
+  }
+  if (
+    (s.size === undefined || s.size === null || Number.isNaN(s.size)) &&
+    s.type === "folder"
+  ) {
+    s.size = 0;
+  }
+  return s;
 };
