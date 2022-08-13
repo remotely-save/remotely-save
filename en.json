@@ -122,6 +122,9 @@
   "settings_skiplargefiles": "Skip Large Files (experimental)",
   "settings_skiplargefiles_desc": "Skip files with sizes larger than the threshold. Here 1 MB = 10^6 bytes.",
   "settings_skiplargefiles_notset": "(not set)",
+  "settings_enablestatusbar_info": "Show Last Successful Sync In Status Bar",
+  "settings_enablestatusbar_info_desc": "Show the time of the last successful sync in the status bar.",
+  "settings_enablestatusbar_reloadrequired_notice": "Reload the plugin for the changes to take effect.",
 
   "settings_checkonnectivity": "Check Connectivity",
   "settings_checkonnectivity_desc": "Check connectivity.",
