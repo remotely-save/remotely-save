@@ -1,4 +1,7 @@
 import {
+  debounce,
+  Debouncer,
+  EventRef,
   Modal,
   Notice,
   Plugin,
@@ -77,6 +80,7 @@ const DEFAULT_SETTINGS: RemotelySavePluginSettings = {
   currLogLevel: "info",
   // vaultRandomID: "", // deprecated
   autoRunEveryMilliseconds: -1,
+  autoRunAfterModified: false,
   initRunAfterMilliseconds: -1,
   agreeToUploadExtraMetadata: false,
   concurrency: 5,
@@ -132,6 +136,9 @@ export default class RemotelySavePlugin extends Plugin {
   autoRunIntervalID?: number;
   i18n: I18n;
   vaultRandomID: string;
+  autoBackupDebouncer: Debouncer<any, void>;
+  onFileModifyEventRef?: EventRef;
+  timeoutIDBackup?: number;
 
   async syncRun(triggerSource: SyncTriggerSourceType = "manual") {
     const t = (x: TransItemType, vars?: any) => {
@@ -166,8 +173,7 @@ export default class RemotelySavePlugin extends Plugin {
 
     try {
       log.info(
-        `${
-          this.manifest.id
+        `${this.manifest.id
         }-${Date.now()}: start sync, triggerSource=${triggerSource}`
       );
 
@@ -361,8 +367,7 @@ export default class RemotelySavePlugin extends Plugin {
       }
 
       log.info(
-        `${
-          this.manifest.id
+        `${this.manifest.id
         }-${Date.now()}: finish sync, triggerSource=${triggerSource}`
       );
     } catch (error) {
@@ -456,6 +461,9 @@ export default class RemotelySavePlugin extends Plugin {
     this.enableAutoClearSyncPlanHist();
 
     this.syncStatus = "idle";
+
+    // 开启定时刷新
+    this.startAutoBackup();
 
     this.registerEvent(
       this.app.vault.on("delete", async (fileOrFolder) => {
@@ -895,6 +903,29 @@ export default class RemotelySavePlugin extends Plugin {
   async trash(x: string) {
     if (!(await this.app.vault.adapter.trashSystem(x))) {
       await this.app.vault.adapter.trashLocal(x);
+    }
+  }
+
+  startAutoBackup(mills?: number) {
+    // cancel timeout
+    if (this.onFileModifyEventRef) {
+      this.autoBackupDebouncer?.cancel();
+      this.app.vault.offref(this.onFileModifyEventRef);
+      this.onFileModifyEventRef = undefined;
+    }
+    if (this.timeoutIDBackup) {
+      window.clearInterval(this.timeoutIDBackup);
+    }
+
+    const time = mills || this.settings.autoRunEveryMilliseconds;
+
+    if (this.settings.autoRunAfterModified) {
+      if (time > 0) {
+        this.onFileModifyEventRef = this.app.vault.on("modify", () => this.autoBackupDebouncer());
+        this.autoBackupDebouncer = debounce(() => this.syncRun("auto"), time, true);
+      }
+    } else if (time > 0) {
+      this.timeoutIDBackup = window.setTimeout(() => this.syncRun("auto"), time);
     }
   }
 

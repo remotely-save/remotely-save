@@ -78,6 +78,7 @@ export interface RemotelySavePluginSettings {
   serviceType: SUPPORTED_SERVICES_TYPE;
   currLogLevel?: string;
   autoRunEveryMilliseconds?: number;
+  autoRunAfterModified?: boolean;
   initRunAfterMilliseconds?: number;
   agreeToUploadExtraMetadata?: boolean;
   concurrency?: number;

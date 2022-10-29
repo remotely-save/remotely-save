@@ -1532,24 +1532,24 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
             const realVal = parseInt(val);
             this.plugin.settings.autoRunEveryMilliseconds = realVal;
             await this.plugin.saveSettings();
-            if (
-              (realVal === undefined || realVal === null || realVal <= 0) &&
-              this.plugin.autoRunIntervalID !== undefined
-            ) {
-              // clear
-              window.clearInterval(this.plugin.autoRunIntervalID);
-              this.plugin.autoRunIntervalID = undefined;
-            } else if (
-              realVal !== undefined &&
-              realVal !== null &&
-              realVal > 0
-            ) {
-              const intervalID = window.setInterval(() => {
-                this.plugin.syncRun("auto");
-              }, realVal);
-              this.plugin.autoRunIntervalID = intervalID;
-              this.plugin.registerInterval(intervalID);
-            }
+            this.plugin.startAutoBackup()
+          });
+      });
+    
+    new Setting(basicDiv)
+      .setName(t("settings_modifyrun"))
+      .setDesc(t("settings_modifyrun_desc"))
+      .addDropdown((dropdown) => {
+        dropdown.addOption("false", t("settings_modifyrun_close"));
+        dropdown.addOption("true", t("settings_modifyrun_open"));
+
+        dropdown
+          .setValue(`${this.plugin.settings.autoRunAfterModified}`)
+          .onChange(async (val: string) => {
+            const open = Boolean(val);
+            this.plugin.settings.autoRunAfterModified = open;
+            await this.plugin.saveSettings();
+            this.plugin.startAutoBackup()
           });
       });
 
