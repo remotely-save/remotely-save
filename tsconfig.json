@@ -4,7 +4,7 @@
     "inlineSourceMap": true,
     "inlineSources": true,
     "module": "ESNext",
-    "target": "es6",
+    "target": "ESNext",
     "allowJs": true,
     "noImplicitAny": true,
     "moduleResolution": "node",
@@ -13,7 +13,14 @@
     "esModuleInterop": true,
     "importHelpers": true,
     "isolatedModules": true,
-    "lib": ["dom", "es5", "scripthost", "es2015"]
+    "lib": [
+      "dom",
+      "es5",
+      "scripthost",
+      "es2015"
+    ]
   },
-  "include": ["**/*.ts"]
+  "include": [
+    "**/*.ts"
+  ]
 }

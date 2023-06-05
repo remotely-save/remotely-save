@@ -15,6 +15,7 @@ export const applyLogWriterInplace = function (writer: (...msg: any[]) => any) {
     logLevel: LogLevelNumbers,
     loggerName: string | symbol
   ) {
+    // @ts-ignore
     const rawMethod = originalFactory(methodName, logLevel, loggerName);
 
     return function (...msg: any[]) {

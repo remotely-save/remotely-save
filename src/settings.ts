@@ -830,8 +830,7 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
 
           dropdown
             .setValue(
-              `${
-                this.plugin.settings.s3.bypassCorsLocally ? "enable" : "disable"
+              `${this.plugin.settings.s3.bypassCorsLocally ? "enable" : "disable"
               }`
             )
             .onChange(async (value) => {
@@ -1517,6 +1516,42 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
       });
 
     new Setting(basicDiv)
+      .setName(t("settings_saverun"))
+      .setDesc(t("settings_saverun_desc"))
+      .addDropdown((dropdown) => {
+        dropdown.addOption("-1", t("settings_saverun_notset"));
+        dropdown.addOption(`${1000 * 1}`, t("settings_saverun_1sec"));
+        dropdown.addOption(`${1000 * 5}`, t("settings_saverun_5sec"));
+        dropdown.addOption(`${1000 * 10}`, t("settings_saverun_10sec"));
+
+        dropdown
+          .setValue(`${this.plugin.settings.autoRunEveryMilliseconds}`)
+          .onChange(async (val: string) => {
+            const realVal = parseInt(val);
+            this.plugin.settings.autoRunEveryMilliseconds = realVal;
+            await this.plugin.saveSettings();
+            if (
+              (realVal === undefined || realVal === null || realVal <= 0) &&
+              this.plugin.autoRunIntervalID !== undefined
+            ) {
+              // clear
+              window.clearInterval(this.plugin.autoRunIntervalID);
+              this.plugin.autoRunIntervalID = undefined;
+            } else if (
+              realVal !== undefined &&
+              realVal !== null &&
+              realVal > 0
+            ) {
+              const intervalID = window.setInterval(() => {
+                this.plugin.syncRun("auto");
+              }, realVal);
+              this.plugin.autoRunIntervalID = intervalID;
+              this.plugin.registerInterval(intervalID);
+            }
+          });
+      });
+
+    new Setting(basicDiv)
       .setName(t("settings_autorun"))
       .setDesc(t("settings_autorun_desc"))
       .addDropdown((dropdown) => {
@@ -1578,6 +1613,7 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
             await this.plugin.saveSettings();
           });
       });
+
     new Setting(basicDiv)
       .setName(t("settings_skiplargefiles"))
       .setDesc(t("settings_skiplargefiles_desc"))

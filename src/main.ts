@@ -78,6 +78,7 @@ const DEFAULT_SETTINGS: RemotelySavePluginSettings = {
   // vaultRandomID: "", // deprecated
   autoRunEveryMilliseconds: -1,
   initRunAfterMilliseconds: -1,
+  syncOnSaveAfterMilliseconds: -1,
   agreeToUploadExtraMetadata: false,
   concurrency: 5,
   syncConfigDir: false,
@@ -130,6 +131,7 @@ export default class RemotelySavePlugin extends Plugin {
   currSyncMsg?: string;
   syncRibbon?: HTMLElement;
   autoRunIntervalID?: number;
+  syncOnSaveAfterMilliseconds?: number;
   i18n: I18n;
   vaultRandomID: string;
 
@@ -166,8 +168,7 @@ export default class RemotelySavePlugin extends Plugin {
 
     try {
       log.info(
-        `${
-          this.manifest.id
+        `${this.manifest.id
         }-${Date.now()}: start sync, triggerSource=${triggerSource}`
       );
 
@@ -361,8 +362,7 @@ export default class RemotelySavePlugin extends Plugin {
       }
 
       log.info(
-        `${
-          this.manifest.id
+        `${this.manifest.id
         }-${Date.now()}: finish sync, triggerSource=${triggerSource}`
       );
     } catch (error) {
@@ -918,6 +918,42 @@ export default class RemotelySavePlugin extends Plugin {
     );
     this.db = db;
     this.vaultRandomID = vaultRandomID;
+  }
+
+  enableSyncOnSaveIfSet() {
+    if (
+      this.settings.syncOnSaveAfterMilliseconds !== undefined &&
+      this.settings.syncOnSaveAfterMilliseconds !== null &&
+      this.settings.syncOnSaveAfterMilliseconds > 0
+    ) {
+      let triggerRun = false;
+      this.app.workspace.onLayoutReady(() => {
+        // need to get the last modified time of the current file
+        // if it was not modified in the last syncOnSaveAfterMilliseconds
+        // we will trigger a sync
+
+        const intervalID = window.setInterval(() => {
+          if (triggerRun) {
+            // this.syncRun("auto");
+            console.log("running sync because triggerRun is true");
+            triggerRun = false;
+            console.log("setting triggerRun to false");
+          }
+
+          const currentFile = this.app.workspace.getActiveFile();
+          if (currentFile) {
+            const lastModified = currentFile.stat.mtime;
+            const current = Date.now();
+            if (current - lastModified > this.settings.syncOnSaveAfterMilliseconds) {
+              triggerRun = true;
+              console.log("setting triggerRun to true");
+            }
+          }
+        }, 1_000);
+        this.autoRunIntervalID = intervalID;
+        this.registerInterval(intervalID);
+      });
+    }
   }
 
   enableAutoSyncIfSet() {
