@@ -1523,29 +1523,32 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
         dropdown.addOption(`${1000 * 1}`, t("settings_saverun_1sec"));
         dropdown.addOption(`${1000 * 5}`, t("settings_saverun_5sec"));
         dropdown.addOption(`${1000 * 10}`, t("settings_saverun_10sec"));
+        dropdown.addOption(`${1000 * 60}`, t("settings_saverun_1min"));
 
         dropdown
-          .setValue(`${this.plugin.settings.autoRunEveryMilliseconds}`)
+          .setValue(`${this.plugin.settings.syncOnSaveAfterMilliseconds}`)
           .onChange(async (val: string) => {
             const realVal = parseInt(val);
-            this.plugin.settings.autoRunEveryMilliseconds = realVal;
+            this.plugin.settings.syncOnSaveAfterMilliseconds = realVal;
             await this.plugin.saveSettings();
             if (
               (realVal === undefined || realVal === null || realVal <= 0) &&
-              this.plugin.autoRunIntervalID !== undefined
+              this.plugin.syncOnSaveIntervalID !== undefined
             ) {
               // clear
-              window.clearInterval(this.plugin.autoRunIntervalID);
-              this.plugin.autoRunIntervalID = undefined;
+              window.clearInterval(this.plugin.syncOnSaveIntervalID);
+              this.plugin.syncOnSaveIntervalID = undefined;
             } else if (
               realVal !== undefined &&
               realVal !== null &&
               realVal > 0
             ) {
               const intervalID = window.setInterval(() => {
+                log.info("sync on save from settings.ts");
+                console.log("sync on save from settings.ts");
                 this.plugin.syncRun("auto");
               }, realVal);
-              this.plugin.autoRunIntervalID = intervalID;
+              this.plugin.syncOnSaveIntervalID = intervalID;
               this.plugin.registerInterval(intervalID);
             }
           });
@@ -1580,6 +1583,8 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
               realVal > 0
             ) {
               const intervalID = window.setInterval(() => {
+                log.info("auto run from settings.ts");
+                console.log("auto run from settings.ts");
                 this.plugin.syncRun("auto");
               }, realVal);
               this.plugin.autoRunIntervalID = intervalID;

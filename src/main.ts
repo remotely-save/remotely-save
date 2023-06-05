@@ -131,7 +131,7 @@ export default class RemotelySavePlugin extends Plugin {
   currSyncMsg?: string;
   syncRibbon?: HTMLElement;
   autoRunIntervalID?: number;
-  syncOnSaveAfterMilliseconds?: number;
+  syncOnSaveIntervalID?: number;
   i18n: I18n;
   vaultRandomID: string;
 
@@ -745,6 +745,7 @@ export default class RemotelySavePlugin extends Plugin {
     } else {
       this.enableAutoSyncIfSet();
       this.enableInitSyncIfSet();
+      this.enableSyncOnSaveIfSet();
     }
   }
 
@@ -926,31 +927,33 @@ export default class RemotelySavePlugin extends Plugin {
       this.settings.syncOnSaveAfterMilliseconds !== null &&
       this.settings.syncOnSaveAfterMilliseconds > 0
     ) {
-      let triggerRun = false;
+      let runScheduled = false;
       this.app.workspace.onLayoutReady(() => {
-        // need to get the last modified time of the current file
-        // if it was not modified in the last syncOnSaveAfterMilliseconds
-        // we will trigger a sync
-
         const intervalID = window.setInterval(() => {
-          if (triggerRun) {
-            // this.syncRun("auto");
-            console.log("running sync because triggerRun is true");
-            triggerRun = false;
-            console.log("setting triggerRun to false");
-          }
-
           const currentFile = this.app.workspace.getActiveFile();
+
           if (currentFile) {
+            // get the last modified time of the current file
+            // if it has been modified within the last syncOnSaveAfterMilliseconds
+            // then schedule a run for syncOnSaveAfterMilliseconds after it was modified
             const lastModified = currentFile.stat.mtime;
-            const current = Date.now();
-            if (current - lastModified > this.settings.syncOnSaveAfterMilliseconds) {
-              triggerRun = true;
-              console.log("setting triggerRun to true");
+            const currentTime = Date.now();
+            if (currentTime - lastModified < this.settings.syncOnSaveAfterMilliseconds) {
+              if (!runScheduled) {
+                const scheduleTimeFromNow = this.settings.syncOnSaveAfterMilliseconds - (currentTime - lastModified)
+                console.log(`schedule a run for ${scheduleTimeFromNow} milliseconds later`)
+                runScheduled = true
+                setTimeout(() => {
+                  console.log(`this is a triggered run at ${new Date(Date.now())}`)
+                  runScheduled = false
+                },
+                  scheduleTimeFromNow
+                )
+              }
             }
           }
         }, 1_000);
-        this.autoRunIntervalID = intervalID;
+        this.syncOnSaveIntervalID = intervalID;
         this.registerInterval(intervalID);
       });
     }
