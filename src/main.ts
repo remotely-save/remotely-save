@@ -938,13 +938,16 @@ export default class RemotelySavePlugin extends Plugin {
             // then schedule a run for syncOnSaveAfterMilliseconds after it was modified
             const lastModified = currentFile.stat.mtime;
             const currentTime = Date.now();
+            log.debug(
+              `Checking if file was modified within last ${this.settings.syncOnSaveAfterMilliseconds / 1000} seconds, last modified: ${(currentTime - lastModified) / 1000} seconds ago`
+            );
             if (currentTime - lastModified < this.settings.syncOnSaveAfterMilliseconds) {
               if (!runScheduled) {
                 const scheduleTimeFromNow = this.settings.syncOnSaveAfterMilliseconds - (currentTime - lastModified)
-                console.log(`schedule a run for ${scheduleTimeFromNow} milliseconds later`)
+                log.info(`schedule a run for ${scheduleTimeFromNow} milliseconds later`)
                 runScheduled = true
                 setTimeout(() => {
-                  console.log(`this is a triggered run at ${new Date(Date.now())}`)
+                  this.syncRun("auto")
                   runScheduled = false
                 },
                   scheduleTimeFromNow

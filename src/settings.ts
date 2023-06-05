@@ -1524,7 +1524,7 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
         dropdown.addOption(`${1000 * 5}`, t("settings_saverun_5sec"));
         dropdown.addOption(`${1000 * 10}`, t("settings_saverun_10sec"));
         dropdown.addOption(`${1000 * 60}`, t("settings_saverun_1min"));
-
+        let runScheduled = false
         dropdown
           .setValue(`${this.plugin.settings.syncOnSaveAfterMilliseconds}`)
           .onChange(async (val: string) => {
@@ -1544,9 +1544,31 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
               realVal > 0
             ) {
               const intervalID = window.setInterval(() => {
-                log.info("sync on save from settings.ts");
-                console.log("sync on save from settings.ts");
-                this.plugin.syncRun("auto");
+                const currentFile = this.app.workspace.getActiveFile();
+
+                if (currentFile) {
+                  // get the last modified time of the current file
+                  // if it has been modified within the last syncOnSaveAfterMilliseconds
+                  // then schedule a run for syncOnSaveAfterMilliseconds after it was modified
+                  const lastModified = currentFile.stat.mtime;
+                  const currentTime = Date.now();
+                  log.debug(
+                    `Checking if file was modified within last ${this.plugin.settings.syncOnSaveAfterMilliseconds / 1000} seconds, last modified: ${(currentTime - lastModified) / 1000} seconds ago`
+                  );
+                  if (currentTime - lastModified < this.plugin.settings.syncOnSaveAfterMilliseconds) {
+                    if (!runScheduled) {
+                      const scheduleTimeFromNow = this.plugin.settings.syncOnSaveAfterMilliseconds - (currentTime - lastModified)
+                      log.info(`schedule a run for ${scheduleTimeFromNow} milliseconds later`)
+                      runScheduled = true
+                      setTimeout(() => {
+                        this.plugin.syncRun("auto")
+                        runScheduled = false
+                      },
+                        scheduleTimeFromNow
+                      )
+                    }
+                  }
+                }
               }, realVal);
               this.plugin.syncOnSaveIntervalID = intervalID;
               this.plugin.registerInterval(intervalID);
