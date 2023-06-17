@@ -4,15 +4,15 @@ import { reverseString } from "./misc";
 import { log } from "./moreOnLog";
 
 const DEFAULT_README_FOR_METADATAONREMOTE =
-  "Do NOT edit or delete the file manually. This file is for the plugin remotely-save to store some necessary meta data on the remote services. Its content is slightly obfuscated.";
+  "Do NOT edit or delete the file manually. This file is for the plugin notesync to store some necessary meta data on the remote services. Its content is slightly obfuscated.";
 
 const DEFAULT_VERSION_FOR_METADATAONREMOTE = "20220220";
 
 export const DEFAULT_FILE_NAME_FOR_METADATAONREMOTE =
-  "_remotely-save-metadata-on-remote.json";
+  "_notesync-metadata-on-remote.json";
 
 export const DEFAULT_FILE_NAME_FOR_METADATAONREMOTE2 =
-  "_remotely-save-metadata-on-remote.bin";
+  "__notesync-metadata-on-remote.bin";
 
 export interface DeletionOnRemote {
   key: string;

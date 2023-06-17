@@ -1,10 +1,10 @@
 {
-  "id": "remotely-save",
-  "name": "Remotely Save",
+  "id": "notesync",
+  "name": "NoteSync",
   "version": "0.3.25",
   "minAppVersion": "0.13.21",
   "description": "Yet another unofficial plugin allowing users to synchronize notes between local device and the cloud service.",
-  "author": "fyears",
-  "authorUrl": "https://github.com/fyears",
+  "author": "notesync-org",
+  "authorUrl": "https://github.com/notesync-org",
   "isDesktopOnly": false
 }

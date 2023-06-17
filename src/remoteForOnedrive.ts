@@ -253,12 +253,12 @@ const fromDriveItemToRemoteItem = (
   let key = "";
 
   // possible prefix:
-  // pure english: /drive/root:/Apps/remotely-save/${remoteBaseDir}
-  // or localized, e.g.: /drive/root:/应用/remotely-save/${remoteBaseDir}
-  const FIRST_COMMON_PREFIX_REGEX = /^\/drive\/root:\/[^\/]+\/remotely-save\//g;
+  // pure english: /drive/root:/Apps/notesync/${remoteBaseDir}
+  // or localized, e.g.: /drive/root:/应用/notesync/${remoteBaseDir}
+  const FIRST_COMMON_PREFIX_REGEX = /^\/drive\/root:\/[^\/]+\/notesync\//g;
   // or the root is absolute path /Livefolders,
-  // e.g.: /Livefolders/应用/remotely-save/${remoteBaseDir}
-  const SECOND_COMMON_PREFIX_REGEX = /^\/Livefolders\/[^\/]+\/remotely-save\//g;
+  // e.g.: /Livefolders/应用/notesync/${remoteBaseDir}
+  const SECOND_COMMON_PREFIX_REGEX = /^\/Livefolders\/[^\/]+\/notesync\//g;
 
   // another possibile prefix
   const THIRD_COMMON_PREFIX_RAW = `/drive/items/`;

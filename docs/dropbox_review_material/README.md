@@ -5,15 +5,15 @@ To apply for the production use of Dropbox API, some descriptions are needed to 
 ## Some Backgrounds
 
 1. Obsidian allows users to take notes using markdown files.
-2. The "app", remotely-save. is an unofficial Obsidian plugin, helping users download and upload ("sync") their notes from and to Dropbox.
-3. Technically, remotely-save is developed using web technologies.
+2. The "app", notesync. is an unofficial Obsidian plugin, helping users download and upload ("sync") their notes from and to Dropbox.
+3. Technically, plugin is developed using web technologies.
 
 ## Api Usages
 
-1. remotely-save uses "App folder", to avoid unnecessary accessing users' other files.
-2. remotely-save uses "account_info.read", to get the displayed username, so that users know which of their accounts has been logged in after OAuth steps.
-3. remotely-save uses "files.content.read", so that it can read the "last modified time", and the content of files on Dropbox. Under some conditions, the plugin would download the files. For example, the plugin would compare the last modified timestamps of the file in the local device and that on Dropbox, and if the timestamp on Dropbox is larger, the plugin would download the "newer" file from Dropbox to local.
-4. remotely-save uses "files.content.write", so that it can upload or overwrite the content of files on Dropbox. Under some conditions, the plugin would do that. For example, the plugin would compare the last modified timestamps of the file in the local device and that on Dropbox, and if the timestamp in the local device is larger, the plugin would upload the "newer" file from local to Dropbox, and overwrite that file on Dropbox.
+1. Plugin uses "App folder", to avoid unnecessary accessing users' other files.
+2. Plugin uses "account_info.read", to get the displayed username, so that users know which of their accounts has been logged in after OAuth steps.
+3. Plugin uses "files.content.read", so that it can read the "last modified time", and the content of files on Dropbox. Under some conditions, the plugin would download the files. For example, the plugin would compare the last modified timestamps of the file in the local device and that on Dropbox, and if the timestamp on Dropbox is larger, the plugin would download the "newer" file from Dropbox to local.
+4. Plugin uses "files.content.write", so that it can upload or overwrite the content of files on Dropbox. Under some conditions, the plugin would do that. For example, the plugin would compare the last modified timestamps of the file in the local device and that on Dropbox, and if the timestamp in the local device is larger, the plugin would upload the "newer" file from local to Dropbox, and overwrite that file on Dropbox.
 
 ## Steps
 

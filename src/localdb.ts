@@ -11,7 +11,7 @@ import { log } from "./moreOnLog";
 
 const DB_VERSION_NUMBER_IN_HISTORY = [20211114, 20220108, 20220326];
 export const DEFAULT_DB_VERSION_NUMBER: number = 20220326;
-export const DEFAULT_DB_NAME = "remotelysavedb";
+export const DEFAULT_DB_NAME = "notesyncdb";
 export const DEFAULT_TBL_VERSION = "schemaversion";
 export const DEFAULT_TBL_FILE_HISTORY = "filefolderoperationhistory";
 export const DEFAULT_TBL_SYNC_MAPPING = "syncmetadatahistory";

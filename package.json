@@ -1,5 +1,5 @@
 {
-  "name": "remotely-save",
+  "name": "notesync",
   "version": "0.3.25",
   "description": "This is yet another sync plugin for Obsidian app.",
   "scripts": {

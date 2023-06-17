@@ -672,7 +672,7 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
       return this.plugin.i18n.t(x, vars);
     };
 
-    containerEl.createEl("h1", { text: "Remotely Save" });
+    containerEl.createEl("h1", { text: "Note Sync" });
 
     //////////////////////////////////////////////////
     // below for service chooser (part 1/2)
