@@ -11,13 +11,13 @@ import { log } from "./moreOnLog";
 
 const DB_VERSION_NUMBER_IN_HISTORY = [20211114, 20220108, 20220326];
 export const DEFAULT_DB_VERSION_NUMBER: number = 20220326;
-export const DEFAULT_DB_NAME = "notesyncdb";
-export const DEFAULT_TBL_VERSION = "schemaversion";
-export const DEFAULT_TBL_FILE_HISTORY = "filefolderoperationhistory";
-export const DEFAULT_TBL_SYNC_MAPPING = "syncmetadatahistory";
-export const DEFAULT_SYNC_PLANS_HISTORY = "syncplanshistory";
-export const DEFAULT_TBL_VAULT_RANDOM_ID_MAPPING = "vaultrandomidmapping";
-export const DEFAULT_TBL_LOGGER_OUTPUT = "loggeroutput";
+export const DEFAULT_DB_NAME = "notesync_db";
+export const DEFAULT_TBL_VERSION = "schema_version";
+export const DEFAULT_TBL_FILE_HISTORY = "file_folder_operation_history";
+export const DEFAULT_TBL_SYNC_MAPPING = "sync_metadata_history";
+export const DEFAULT_SYNC_PLANS_HISTORY = "sync_plans_history";
+export const DEFAULT_TBL_VAULT_RANDOM_ID_MAPPING = "vault_random_id_mapping";
+export const DEFAULT_TBL_LOGGER_OUTPUT = "logger_output";
 
 export interface FileFolderHistoryRecord {
   key: string;
