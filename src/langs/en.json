@@ -8,17 +8,17 @@
 
   "syncrun_alreadyrunning": "{{pluginName}} already running in stage {{syncStatus}}!",
   "syncrun_syncingribbon": "{{pluginName}}: syncing from {{triggerSource}}",
-  "syncrun_step0": "0/{{maxSteps}} Remotely Save running in dry mode, not actual file changes would happen.",
-  "syncrun_step1": "1/{{maxSteps}} Remotely Save Sync Preparing ({{serviceType}})",
+  "syncrun_step0": "0/{{maxSteps}} Note Sync running in dry mode, not actual file changes would happen.",
+  "syncrun_step1": "1/{{maxSteps}} Note Sync Sync Preparing ({{serviceType}})",
   "syncrun_step2": "2/{{maxSteps}} Starting to fetch remote meta data.",
   "syncrun_step3": "3/{{maxSteps}} Checking password correct or not.",
   "syncrun_passworderr": "Something goes wrong while checking password.",
   "syncrun_step4": "4/{{maxSteps}} Trying to fetch extra meta data from remote.",
   "syncrun_step5": "5/{{maxSteps}} Starting to fetch local meta data.",
   "syncrun_step6": "6/{{maxSteps}} Starting to generate sync plan.",
-  "syncrun_step7": "7/{{maxSteps}} Remotely Save Sync data exchanging!",
-  "syncrun_step7skip": "7/{{maxSteps}} Remotely Save real sync is skipped in dry run mode.",
-  "syncrun_step8": "8/{{maxSteps}} Remotely Save finish!",
+  "syncrun_step7": "7/{{maxSteps}} Note Sync Sync data exchanging!",
+  "syncrun_step7skip": "7/{{maxSteps}} Note Sync real sync is skipped in dry run mode.",
+  "syncrun_step8": "8/{{maxSteps}} Note Sync finish!",
   "syncrun_abort": "{{manifestID}}-{{theDate}}: abort sync, triggerSource={{triggerSource}}, error while {{syncStatus}}",
 
   "protocol_saveqr": "New not-oauth2 settings for {{manifestName}} saved. Reopen the plugin Settings to the effect.",
@@ -86,7 +86,7 @@
   "modal_qr_button": "Click to copy the special URI",
   "modal_qr_button_notice": "The special uri is copied to the clipboard!",
 
-  "modal_sizesconflict_title": "Remotely Save: Some conflict were found while skipping large files",
+  "modal_sizesconflict_title": "Note Sync: Some conflict were found while skipping large files",
   "modal_sizesconflict_desc": "You've set skipping files larger than {{thresholdMB}} MB ({{thresholdBytes}} bytes).\nBut the following files have sizes larger than the threshold on one side, and sizes smaller than the threshold on the other side.\nTo avoid unexpected overwriting or deleting, the plugin stops, and you have to manually deal with at least one side of the files.",
   "modal_sizesconflict_copybutton": "Click to copy all the below sizes conflicts info",
   "modal_sizesconflict_copynotice": "All the sizes conflicts info have been copied to the clipboard!",
@@ -259,8 +259,8 @@
   "settings_resetcache_button": "Reset",
   "settings_resetcache_notice": "Local internal cache/databases deleted. Please manually reload the plugin.",
 
-  "syncalgov2_title": "Remotely Save has a better sync algorithm",
-  "syncalgov2_texts": "Welcome to use Remotely Save!\nFrom version 0.3.0, a new algorithm has been developed, but it needs uploading extra meta data files _remotely-save-metadata-on-remote.{json,bin} to YOUR configured cloud destinations, besides your notes.\nSo that, for example, the second device can know that what files/folders have been deleted on the first device by reading those files.\nIf you agree, plase click the button \"Agree\", and enjoy the plugin! AND PLEASE REMEMBER TO BACKUP YOUR VAULT FIRSTLY!\nIf you do not agree, you should stop using the current and later versions of Remotely Save. You could consider manually install the old version 0.2.14 which uses old algorithm and does not upload any extra meta data files. By clicking the \"Do Not Agree\" button, the plugin will unload itself, and you need to manually disable it in Obsidian settings.",
+  "syncalgov2_title": "Note Sync has a better sync algorithm",
+  "syncalgov2_texts": "Welcome to use Note Sync!\nFrom version 0.3.0, a new algorithm has been developed, but it needs uploading extra meta data files _remotely-save-metadata-on-remote.{json,bin} to YOUR configured cloud destinations, besides your notes.\nSo that, for example, the second device can know that what files/folders have been deleted on the first device by reading those files.\nIf you agree, plase click the button \"Agree\", and enjoy the plugin! AND PLEASE REMEMBER TO BACKUP YOUR VAULT FIRSTLY!\nIf you do not agree, you should stop using the current and later versions of Note Sync. You could consider manually install the old version 0.2.14 which uses old algorithm and does not upload any extra meta data files. By clicking the \"Do Not Agree\" button, the plugin will unload itself, and you need to manually disable it in Obsidian settings.",
   "syncalgov2_button_agree": "Agree",
   "syncalgov2_button_disagree": "Do Not Agree"
 }

@@ -8,17 +8,17 @@
 
   "syncrun_alreadyrunning": "{{pluginName}} 正處於此階段：{{syncStatus}}!",
   "syncrun_syncingribbon": "{{pluginName}}：正在由 {{triggerSource}} 觸發執行",
-  "syncrun_step0": "0/{{maxSteps}} Remotely Save 在空跑（dry run）模式，不會發生實際的檔案交換。",
-  "syncrun_step1": "1/{{maxSteps}} Remotely Save 準備同步（{{serviceType}}）",
+  "syncrun_step0": "0/{{maxSteps}} Note Sync 在空跑（dry run）模式，不會發生實際的檔案交換。",
+  "syncrun_step1": "1/{{maxSteps}} Note Sync 準備同步（{{serviceType}}）",
   "syncrun_step2": "2/{{maxSteps}} 正在獲取遠端的元資料。",
   "syncrun_step3": "3/{{maxSteps}} 正在檢查密碼正確與否。",
   "syncrun_passworderr": "檢查密碼時候出錯。",
   "syncrun_step4": "4/{{maxSteps}} 正在獲取遠端的額外的元資料。",
   "syncrun_step5": "5/{{maxSteps}} 正在獲取本地的元資料。",
   "syncrun_step6": "6/{{maxSteps}} 正在生成同步計劃。",
-  "syncrun_step7": "7/{{maxSteps}} Remotely Save 開始發生資料交換！",
-  "syncrun_step7skip": "7/{{maxSteps}} Remotely Save 在空跑模式，跳過實際資料交換步驟。",
-  "syncrun_step8": "8/{{maxSteps}} Remotely Save 已完成同步！",
+  "syncrun_step7": "7/{{maxSteps}} Note Sync 開始發生資料交換！",
+  "syncrun_step7skip": "7/{{maxSteps}} Note Sync 在空跑模式，跳過實際資料交換步驟。",
+  "syncrun_step8": "8/{{maxSteps}} Note Sync 已完成同步！",
   "syncrun_abort": "{{manifestID}}-{{theDate}}：中斷同步，同步來源={{triggerSource}}，出錯階段={{syncStatus}}",
 
   "protocol_saveqr": " {{manifestName}} 新的非 oauth2 設定儲存完成。請重啟外掛設定頁使之生效。",
@@ -86,7 +86,7 @@
   "modal_qr_button": "點選此按鈕複製特殊 URI",
   "modal_qr_button_notice": "特殊 URI 已被複制到剪貼簿！",
 
-  "modal_sizesconflict_title": "Remotely Save：跳過大檔案的時候出現了一些衝突",
+  "modal_sizesconflict_title": "Note Sync：跳過大檔案的時候出現了一些衝突",
   "modal_sizesconflict_desc": "您設定了跳過同步大於 {{thresholdMB}} MB（{{thresholdBytes}} bytes）的檔案。\n但是以下檔案的大小，在一端大於閾值，在另一端則小於閾值。\n為了避免意外的覆蓋或刪除，外掛停止了運作，您需要手動處理至少一端的檔案。",
   "modal_sizesconflict_copybutton": "點選以複製以下所有檔案大小衝突資訊",
   "modal_sizesconflict_copynotice": "所有的檔案大小衝突資訊，已被複制到剪貼簿！",
@@ -259,8 +259,8 @@
   "settings_resetcache_button": "重設",
   "settings_resetcache_notice": "本地同步快取和資料庫已被刪除。請手動重新載入此外掛。",
 
-  "syncalgov2_title": "Remotely Save 的同步演算法得到最佳化",
-  "syncalgov2_texts": "歡迎使用 Remotely Save!\n從版本 0.3.0 開始，它帶來了新的同步演算法，但是，除了您的筆記之外，它還需要上傳額外的帶有元資訊的檔案 _remotely-save-metadata-on-remote.{json,bin} 到您的雲服務目的地上。\n從而，比如說，透過讀取這些資訊，另一臺裝置可以知道什麼檔案或資料夾在第一臺裝置上被刪除了。\n如果您同意此策略，請點選按鈕 \"同意\"，然後開始享用此外掛！且特別要注意：使用外掛之前，請首先備份好您的儲存庫（Vault）！\n如果您不同意此策略，您應該停止使用此版本和之後版本的 Remotely Save。您可以考慮手動安裝舊版 0.2.14，它使用舊的同步演算法，並不上傳額外元資訊檔案。點選 \"不同意\" 之後，外掛會自動停止執行（unload），然後您需要 Obsidian 設定裡手動停用（disable）此外掛。",
+  "syncalgov2_title": "Note Sync 的同步演算法得到最佳化",
+  "syncalgov2_texts": "歡迎使用 Note Sync!\n從版本 0.3.0 開始，它帶來了新的同步演算法，但是，除了您的筆記之外，它還需要上傳額外的帶有元資訊的檔案 _remotely-save-metadata-on-remote.{json,bin} 到您的雲服務目的地上。\n從而，比如說，透過讀取這些資訊，另一臺裝置可以知道什麼檔案或資料夾在第一臺裝置上被刪除了。\n如果您同意此策略，請點選按鈕 \"同意\"，然後開始享用此外掛！且特別要注意：使用外掛之前，請首先備份好您的儲存庫（Vault）！\n如果您不同意此策略，您應該停止使用此版本和之後版本的 Note Sync。您可以考慮手動安裝舊版 0.2.14，它使用舊的同步演算法，並不上傳額外元資訊檔案。點選 \"不同意\" 之後，外掛會自動停止執行（unload），然後您需要 Obsidian 設定裡手動停用（disable）此外掛。",
   "syncalgov2_button_agree": "同意",
   "syncalgov2_button_disagree": "不同意"
 }

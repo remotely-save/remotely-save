@@ -8,17 +8,17 @@
 
   "syncrun_alreadyrunning": "{{pluginName}} 正处于此阶段：{{syncStatus}}!",
   "syncrun_syncingribbon": "{{pluginName}}：正在由 {{triggerSource}} 触发运行",
-  "syncrun_step0": "0/{{maxSteps}} Remotely Save 在空跑（dry run）模式，不会发生实际的文件交换。",
-  "syncrun_step1": "1/{{maxSteps}} Remotely Save 准备同步（{{serviceType}}）",
+  "syncrun_step0": "0/{{maxSteps}} Note Sync 在空跑（dry run）模式，不会发生实际的文件交换。",
+  "syncrun_step1": "1/{{maxSteps}} Note Sync 准备同步（{{serviceType}}）",
   "syncrun_step2": "2/{{maxSteps}} 正在获取远端的元数据。",
   "syncrun_step3": "3/{{maxSteps}} 正在检查密码正确与否。",
   "syncrun_passworderr": "检查密码时候出错。",
   "syncrun_step4": "4/{{maxSteps}} 正在获取远端的额外的元数据。",
   "syncrun_step5": "5/{{maxSteps}} 正在获取本地的元数据。",
   "syncrun_step6": "6/{{maxSteps}} 正在生成同步计划。",
-  "syncrun_step7": "7/{{maxSteps}} Remotely Save 开始发生数据交换！",
-  "syncrun_step7skip": "7/{{maxSteps}} Remotely Save 在空跑模式，跳过实际数据交换步骤。",
-  "syncrun_step8": "8/{{maxSteps}} Remotely Save 已完成同步！",
+  "syncrun_step7": "7/{{maxSteps}} Note Sync 开始发生数据交换！",
+  "syncrun_step7skip": "7/{{maxSteps}} Note Sync 在空跑模式，跳过实际数据交换步骤。",
+  "syncrun_step8": "8/{{maxSteps}} Note Sync 已完成同步！",
   "syncrun_abort": "{{manifestID}}-{{theDate}}：中断同步，同步来源={{triggerSource}}，出错阶段={{syncStatus}}",
 
   "protocol_saveqr": " {{manifestName}} 新的非 oauth2 设置保存完成。请重启插件设置页使之生效。",
@@ -86,7 +86,7 @@
   "modal_qr_button": "点击此按钮复制特殊 URI",
   "modal_qr_button_notice": "特殊 URI 已被复制到剪贴板！",
 
-  "modal_sizesconflict_title": "Remotely Save：跳过大文件的时候出现了一些冲突",
+  "modal_sizesconflict_title": "Note Sync：跳过大文件的时候出现了一些冲突",
   "modal_sizesconflict_desc": "您设置了跳过同步大于 {{thresholdMB}} MB（{{thresholdBytes}} bytes）的文件。\n但是以下文件的大小，在一端大于阈值，在另一端则小于阈值。\n为了避免意外的覆盖或删除，插件停止了运作，您需要手动处理至少一端的文件。",
   "modal_sizesconflict_copybutton": "点击以复制以下所有文件大小冲突信息",
   "modal_sizesconflict_copynotice": "所有的文件大小冲突信息，已被复制到剪贴板！",
@@ -259,8 +259,8 @@
   "settings_resetcache_button": "重设",
   "settings_resetcache_notice": "本地同步缓存和数据库已被删除。请手动重新载入此插件。",
 
-  "syncalgov2_title": "Remotely Save 的同步算法得到优化",
-  "syncalgov2_texts": "欢迎使用 Remotely Save!\n从版本 0.3.0 开始，它带来了新的同步算法，但是，除了您的笔记之外，它还需要上传额外的带有元信息的文件 _remotely-save-metadata-on-remote.{json,bin} 到您的云服务目的地上。\n从而，比如说，通过读取这些信息，另一台设备可以知道什么文件或文件夹在第一台设备上被删除了。\n如果您同意此策略，请点击按钮 \"同意\"，然后开始享用此插件！且特别要注意：使用插件之前，请首先备份好您的库（Vault）！\n如果您不同意此策略，您应该停止使用此版本和之后版本的 Remotely Save。您可以考虑手动安装旧版 0.2.14，它使用旧的同步算法，并不上传额外元信息文件。点击 \"不同意\" 之后，插件会自动停止运行（unload），然后您需要 Obsidian 设置里手动停用（disable）此插件。",
+  "syncalgov2_title": "Note Sync 的同步算法得到优化",
+  "syncalgov2_texts": "欢迎使用 Note Sync!\n从版本 0.3.0 开始，它带来了新的同步算法，但是，除了您的笔记之外，它还需要上传额外的带有元信息的文件 _remotely-save-metadata-on-remote.{json,bin} 到您的云服务目的地上。\n从而，比如说，通过读取这些信息，另一台设备可以知道什么文件或文件夹在第一台设备上被删除了。\n如果您同意此策略，请点击按钮 \"同意\"，然后开始享用此插件！且特别要注意：使用插件之前，请首先备份好您的库（Vault）！\n如果您不同意此策略，您应该停止使用此版本和之后版本的 Note Sync。您可以考虑手动安装旧版 0.2.14，它使用旧的同步算法，并不上传额外元信息文件。点击 \"不同意\" 之后，插件会自动停止运行（unload），然后您需要 Obsidian 设置里手动停用（disable）此插件。",
   "syncalgov2_button_agree": "同意",
   "syncalgov2_button_disagree": "不同意"
 }
