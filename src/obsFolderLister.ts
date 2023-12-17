@@ -13,7 +13,14 @@ export interface ObsConfigDirFileType {
 }
 
 const isFolderToSkip = (x: string) => {
-  let specialFolders = [".git", ".github", ".gitlab", ".svn", "node_modules"];
+  let specialFolders = [
+    ".git",
+    ".github",
+    ".gitlab",
+    ".svn",
+    "node_modules",
+    ".DS_Store",
+  ];
   for (const iterator of specialFolders) {
     if (
       x === iterator ||
