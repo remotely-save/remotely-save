@@ -976,9 +976,8 @@ export default class RemotelySavePlugin extends Plugin {
     const pluginConfigDir =
       this.manifest.dir ||
       `${this.app.vault.configDir}/plugins/${this.manifest.dir}`;
-    const pluginConfigDirExists = await this.app.vault.adapter.exists(
-      pluginConfigDir
-    );
+    const pluginConfigDirExists =
+      await this.app.vault.adapter.exists(pluginConfigDir);
     if (!pluginConfigDirExists) {
       // what happened?
       return;

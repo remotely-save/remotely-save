@@ -5,7 +5,7 @@ import { LANGS } from "./langs";
 
 export type LangType = keyof typeof LANGS;
 export type LangTypeAndAuto = LangType | "auto";
-export type TransItemType = keyof typeof LANGS["en"];
+export type TransItemType = keyof (typeof LANGS)["en"];
 
 export class I18n {
   lang: LangTypeAndAuto;
@@ -31,7 +31,7 @@ export class I18n {
     }
 
     const res: string =
-      (LANGS[realLang] as typeof LANGS["en"])[key] || LANGS["en"][key] || key;
+      (LANGS[realLang] as (typeof LANGS)["en"])[key] || LANGS["en"][key] || key;
     return res;
   }
 
