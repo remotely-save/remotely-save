@@ -312,9 +312,8 @@ export const clearDeleteRenameHistoryOfKeyAndVault = async (
   vaultRandomID: string
 ) => {
   const fullKey = `${vaultRandomID}\t${key}`;
-  const item: FileFolderHistoryRecord | null = await db.fileHistoryTbl.getItem(
-    fullKey
-  );
+  const item: FileFolderHistoryRecord | null =
+    await db.fileHistoryTbl.getItem(fullKey);
   if (
     item !== null &&
     (item.actionType === "delete" || item.actionType === "rename")

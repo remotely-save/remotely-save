@@ -17,8 +17,8 @@ import type {
   RequestOptionsWithState,
   Response,
   ResponseDataDetailed,
-} from "webdav/web";
-import { getPatcher } from "webdav/web";
+} from "webdav";
+import { getPatcher } from "webdav";
 if (VALID_REQURL) {
   getPatcher().patch(
     "request",
@@ -38,28 +38,28 @@ if (VALID_REQURL) {
       });
 
       let r2: Response | ResponseDataDetailed<any> = undefined;
-      if (options.responseType === undefined) {
+      if ((options as any).responseType === undefined) {
         r2 = {
           data: undefined,
           status: r.status,
           statusText: getReasonPhrase(r.status),
           headers: r.headers,
         };
-      } else if (options.responseType === "json") {
+      } else if ((options as any).responseType === "json") {
         r2 = {
           data: r.json,
           status: r.status,
           statusText: getReasonPhrase(r.status),
           headers: r.headers,
         };
-      } else if (options.responseType === "text") {
+      } else if ((options as any).responseType === "text") {
         r2 = {
           data: r.text,
           status: r.status,
           statusText: getReasonPhrase(r.status),
           headers: r.headers,
         };
-      } else if (options.responseType === "arraybuffer") {
+      } else if ((options as any).responseType === "arraybuffer") {
         r2 = {
           data: r.arrayBuffer,
           status: r.status,
@@ -68,7 +68,9 @@ if (VALID_REQURL) {
         };
       } else {
         throw Error(
-          `do not know how to deal with responseType = ${options.responseType}`
+          `do not know how to deal with responseType = ${
+            (options as any).responseType
+          }`
         );
       }
       return r2;
@@ -108,8 +110,8 @@ if (VALID_REQURL) {
 //   // console.log("using fetch");
 //   return r;
 // });
-import { AuthType, BufferLike, createClient } from "webdav/web";
-export type { WebDAVClient } from "webdav/web";
+import { AuthType, BufferLike, createClient } from "webdav";
+export type { WebDAVClient } from "webdav";
 
 export const DEFAULT_WEBDAV_CONFIG = {
   address: "",
@@ -234,7 +236,7 @@ export class WrappedWebdavClient {
             Depth: "infinity",
           },
           responseType: "text",
-        });
+        } as any);
         if (res.status === 403) {
           throw Error("not support Infinity, get 403");
         } else {
@@ -255,7 +257,7 @@ export class WrappedWebdavClient {
                 Depth: "1",
               },
               responseType: "text",
-            }
+            } as any
           );
           testPassed = true;
           this.webdavConfig.depth = "auto_1";

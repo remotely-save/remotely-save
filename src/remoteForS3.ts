@@ -11,14 +11,14 @@ import {
   S3Client,
 } from "@aws-sdk/client-s3";
 import { Upload } from "@aws-sdk/lib-storage";
-import { HttpHandler, HttpRequest, HttpResponse } from "@aws-sdk/protocol-http";
+import { HttpHandler, HttpRequest, HttpResponse } from "@smithy/protocol-http";
 import {
   FetchHttpHandler,
   FetchHttpHandlerOptions,
-} from "@aws-sdk/fetch-http-handler";
+} from "@smithy/fetch-http-handler";
 // @ts-ignore
-import { requestTimeout } from "@aws-sdk/fetch-http-handler/dist-es/request-timeout";
-import { buildQueryString } from "@aws-sdk/querystring-builder";
+import { requestTimeout } from "@smithy/fetch-http-handler/dist-es/request-timeout";
+import { buildQueryString } from "@smithy/querystring-builder";
 import { HeaderBag, HttpHandlerOptions, Provider } from "@aws-sdk/types";
 import { Buffer } from "buffer";
 import * as mime from "mime-types";
