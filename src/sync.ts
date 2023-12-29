@@ -293,8 +293,12 @@ const isSkipItem = (
   key: string,
   syncConfigDir: boolean,
   syncUnderscoreItems: boolean,
-  configDir: string
+  configDir: string,
+  ignorePaths: string[]
 ) => {
+  if (ignorePaths.includes(key)) {
+    return true;
+  }
   if (syncConfigDir && isInsideObsFolder(key, configDir)) {
     return false;
   }
@@ -315,6 +319,7 @@ const ensembleMixedStates = async (
   syncConfigDir: boolean,
   configDir: string,
   syncUnderscoreItems: boolean,
+  ignorePaths: string[],
   password: string
 ) => {
   const results = {} as Record<string, FileOrFolderMixedState>;
@@ -322,7 +327,7 @@ const ensembleMixedStates = async (
   for (const r of remoteStates) {
     const key = r.key;
 
-    if (isSkipItem(key, syncConfigDir, syncUnderscoreItems, configDir)) {
+    if (isSkipItem(key, syncConfigDir, syncUnderscoreItems, configDir, ignorePaths)) {
       continue;
     }
     results[key] = r;
@@ -361,7 +366,7 @@ const ensembleMixedStates = async (
       throw Error(`unexpected ${entry}`);
     }
 
-    if (isSkipItem(key, syncConfigDir, syncUnderscoreItems, configDir)) {
+    if (isSkipItem(key, syncConfigDir, syncUnderscoreItems, configDir, ignorePaths)) {
       continue;
     }
 
@@ -395,6 +400,10 @@ const ensembleMixedStates = async (
           password === "" ? undefined : getSizeFromOrigToEnc(entry.size),
       };
 
+      if (isSkipItem(key, syncConfigDir, syncUnderscoreItems, configDir, ignorePaths)) {
+        continue;
+      }
+
       if (results.hasOwnProperty(key)) {
         results[key].key = r.key;
         results[key].existLocal = r.existLocal;
@@ -417,7 +426,7 @@ const ensembleMixedStates = async (
       deltimeRemoteFmt: unixTimeToStr(entry.actionWhen),
     } as FileOrFolderMixedState;
 
-    if (isSkipItem(key, syncConfigDir, syncUnderscoreItems, configDir)) {
+    if (isSkipItem(key, syncConfigDir, syncUnderscoreItems, configDir, ignorePaths)) {
       continue;
     }
 
@@ -445,7 +454,7 @@ const ensembleMixedStates = async (
       throw Error(`unexpected ${entry}`);
     }
 
-    if (isSkipItem(key, syncConfigDir, syncUnderscoreItems, configDir)) {
+    if (isSkipItem(key, syncConfigDir, syncUnderscoreItems, configDir, ignorePaths)) {
       continue;
     }
 
@@ -967,6 +976,7 @@ export const getSyncPlan = async (
   configDir: string,
   syncUnderscoreItems: boolean,
   skipSizeLargerThan: number,
+  ignorePaths: string[],
   password: string = ""
 ) => {
   const mixedStates = await ensembleMixedStates(
@@ -978,8 +988,10 @@ export const getSyncPlan = async (
     syncConfigDir,
     configDir,
     syncUnderscoreItems,
+    ignorePaths,
     password
   );
+  console.table(mixedStates)
 
   const sortedKeys = Object.keys(mixedStates).sort(
     (k1, k2) => k2.length - k1.length
