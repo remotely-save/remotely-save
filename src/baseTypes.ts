@@ -86,6 +86,7 @@ export interface RemotelySavePluginSettings {
   lang?: LangTypeAndAuto;
   logToDB?: boolean;
   skipSizeLargerThan?: number;
+  ignorePaths?: string[];
 
   /**
    * @deprecated

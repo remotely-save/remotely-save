@@ -1596,6 +1596,18 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
           });
       });
 
+    new Setting(basicDiv)
+      .setName(t("settings_ignorepaths"))
+      .setDesc(t("settings_ignorepaths_desc"))
+      .addTextArea((textArea) => {
+        textArea
+          .setValue(`${this.plugin.settings.ignorePaths.join("\n")}`)
+          .onChange(async (value) => {
+            this.plugin.settings.ignorePaths = value.split("\n");
+            await this.plugin.saveSettings();
+          });
+      });
+
     //////////////////////////////////////////////////
     // below for advanced settings
     //////////////////////////////////////////////////

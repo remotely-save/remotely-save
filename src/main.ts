@@ -85,6 +85,7 @@ const DEFAULT_SETTINGS: RemotelySavePluginSettings = {
   lang: "auto",
   logToDB: false,
   skipSizeLargerThan: -1,
+  ignorePaths: [".obsidian/workspace.json", ".obsidian/workspace-mobile.json", ".obsidian/community-plugins.json"],
 };
 
 interface OAuth2Info {
@@ -296,6 +297,7 @@ export default class RemotelySavePlugin extends Plugin {
         this.app.vault.configDir,
         this.settings.syncUnderscoreItems,
         this.settings.skipSizeLargerThan,
+        this.settings.ignorePaths,
         this.settings.password
       );
       log.info(plan.mixedStates); // for debugging
