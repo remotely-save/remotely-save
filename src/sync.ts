@@ -991,7 +991,6 @@ export const getSyncPlan = async (
     ignorePaths,
     password
   );
-  console.table(mixedStates)
 
   const sortedKeys = Object.keys(mixedStates).sort(
     (k1, k2) => k2.length - k1.length
