@@ -110,6 +110,8 @@
   "settings_skiplargefiles": "跳过大文件（实验性质）",
   "settings_skiplargefiles_desc": "跳过大于某一个阈值的文件。这里 1 MB = 10^6 bytes。",
   "settings_skiplargefiles_notset": "（不设置）",
+  "settings_ignorepaths": "忽略的文件夹或文件",
+  "settings_ignorepaths_desc": "忽略的文件夹或文件。每行一个。路径是相对于库（Vault）根目录的。",
 
   "settings_checkonnectivity": "检查可否连接",
   "settings_checkonnectivity_desc": "检查可否连接。",
