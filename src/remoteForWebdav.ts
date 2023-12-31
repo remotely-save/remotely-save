@@ -97,11 +97,23 @@ if (VALID_REQURL) {
       //   );
       // }
 
-      const r2 = new Response(r.arrayBuffer, {
-        status: r.status,
-        statusText: getReasonPhrase(r.status),
-        headers: r.headers,
-      });
+      let r2: Response = undefined;
+      if ([101, 103, 204, 205, 304].includes(r.status)) {
+        // A null body status is a status that is 101, 103, 204, 205, or 304.
+        // fix this: Failed to construct 'Response': Response with null body status cannot have body
+        r2 = new Response(null, {
+          status: r.status,
+          statusText: getReasonPhrase(r.status),
+          headers: r.headers,
+        });
+      } else {
+        r2 = new Response(r.arrayBuffer, {
+          status: r.status,
+          statusText: getReasonPhrase(r.status),
+          headers: r.headers,
+        });
+      }
+
       return r2;
     }
   );
