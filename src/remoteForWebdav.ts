@@ -30,6 +30,7 @@ if (VALID_REQURL) {
       delete transformedHeaders["Host"];
       delete transformedHeaders["content-length"];
       delete transformedHeaders["Content-Length"];
+
       const r = await requestUrl({
         url: options.url,
         method: options.method,
@@ -47,48 +48,60 @@ if (VALID_REQURL) {
       if (contentType !== undefined) {
         contentType = contentType.toLowerCase();
       }
-      // console.log(`contentType=${contentType}`)
+      // console.log(`requesting url=${options.url}`);
+      // console.log(`contentType=${contentType}`);
 
-      let r2: Response = undefined;
-      if (contentType.includes("xml")) {
-        r2 = new Response(r.text, {
-          status: r.status,
-          statusText: getReasonPhrase(r.status),
-          headers: r.headers,
-        });
-      } else if (
-        contentType.includes("json") ||
-        contentType.includes("javascript")
-      ) {
-        r2 = new Response(r.json, {
-          status: r.status,
-          statusText: getReasonPhrase(r.status),
-          headers: r.headers,
-        });
-      } else if (contentType.includes("text")) {
-        // avoid text/json,
-        // so we split this out from the above xml or json branch
-        r2 = new Response(r.text, {
-          status: r.status,
-          statusText: getReasonPhrase(r.status),
-          headers: r.headers,
-        });
-      } else if (
-        contentType.includes("octet-stream") ||
-        contentType.includes("binary") ||
-        contentType.includes("buffer")
-      ) {
-        // application/octet-stream
-        r2 = new Response(r.arrayBuffer, {
-          status: r.status,
-          statusText: getReasonPhrase(r.status),
-          headers: r.headers,
-        });
-      } else {
-        throw Error(
-          `do not know how to deal with requested content type = ${contentType}`
-        );
-      }
+      // let r2: Response = undefined;
+      // if (contentType.includes("xml")) {
+      //   r2 = new Response(r.text, {
+      //     status: r.status,
+      //     statusText: getReasonPhrase(r.status),
+      //     headers: r.headers,
+      //   });
+      // } else if (
+      //   contentType.includes("json") ||
+      //   contentType.includes("javascript")
+      // ) {
+      //   console.log('inside json branch');
+      //   // const j = r.json;
+      //   // console.log(j);
+      //   r2 = new Response(
+      //     r.text,  // yea, here is the text because Response constructor expects a text
+      //     {
+      //     status: r.status,
+      //     statusText: getReasonPhrase(r.status),
+      //     headers: r.headers,
+      //   });
+      // } else if (contentType.includes("text")) {
+      //   // avoid text/json,
+      //   // so we split this out from the above xml or json branch
+      //   r2 = new Response(r.text, {
+      //     status: r.status,
+      //     statusText: getReasonPhrase(r.status),
+      //     headers: r.headers,
+      //   });
+      // } else if (
+      //   contentType.includes("octet-stream") ||
+      //   contentType.includes("binary") ||
+      //   contentType.includes("buffer")
+      // ) {
+      //   // application/octet-stream
+      //   r2 = new Response(r.arrayBuffer, {
+      //     status: r.status,
+      //     statusText: getReasonPhrase(r.status),
+      //     headers: r.headers,
+      //   });
+      // } else {
+      //   throw Error(
+      //     `do not know how to deal with requested content type = ${contentType}`
+      //   );
+      // }
+
+      const r2 = new Response(r.arrayBuffer, {
+        status: r.status,
+        statusText: getReasonPhrase(r.status),
+        headers: r.headers,
+      });
       return r2;
     }
   );
@@ -444,9 +457,9 @@ const downloadFromRemoteRaw = async (
   fileOrFolderPath: string
 ) => {
   await client.init();
-  const buff = (await client.client.getFileContents(
-    getWebdavPath(fileOrFolderPath, client.remoteBaseDir)
-  )) as BufferLike;
+  const p = getWebdavPath(fileOrFolderPath, client.remoteBaseDir);
+  // console.log(`getWebdavPath=${p}`);
+  const buff = (await client.client.getFileContents(p)) as BufferLike;
   if (buff instanceof ArrayBuffer) {
     return buff;
   } else if (buff instanceof Buffer) {
@@ -485,6 +498,7 @@ export const downloadFromRemote = async (
       downloadFile = remoteEncryptedKey;
     }
     downloadFile = getWebdavPath(downloadFile, client.remoteBaseDir);
+    // console.log(`downloadFile=${downloadFile}`);
     const remoteContent = await downloadFromRemoteRaw(client, downloadFile);
     let localContent = remoteContent;
     if (password !== "") {
