@@ -15,16 +15,16 @@ import type {
   FileStat,
   WebDAVClient,
   RequestOptionsWithState,
-  Response,
-  ResponseDataDetailed,
+  // Response,
+  // ResponseDataDetailed,
 } from "webdav";
-import { getPatcher } from "webdav";
+
+// @ts-ignore
+import { getPatcher } from "webdav/dist/web/index.js";
 if (VALID_REQURL) {
   getPatcher().patch(
     "request",
-    async (
-      options: RequestOptionsWithState
-    ): Promise<Response | ResponseDataDetailed<any>> => {
+    async (options: RequestOptionsWithState): Promise<Response> => {
       const transformedHeaders = { ...options.headers };
       delete transformedHeaders["host"];
       delete transformedHeaders["Host"];
@@ -37,80 +37,65 @@ if (VALID_REQURL) {
         headers: transformedHeaders,
       });
 
-      let r2: Response | ResponseDataDetailed<any> = undefined;
-      if ((options as any).responseType === undefined) {
-        r2 = {
-          data: undefined,
+      let contentType: string | undefined =
+        r.headers["Content-Type"] ||
+        r.headers["content-type"] ||
+        options.headers["Content-Type"] ||
+        options.headers["content-type"] ||
+        options.headers["Accept"] ||
+        options.headers["accept"];
+      if (contentType !== undefined) {
+        contentType = contentType.toLowerCase();
+      }
+      // console.log(`contentType=${contentType}`)
+
+      let r2: Response = undefined;
+      if (contentType.includes("xml")) {
+        r2 = new Response(r.text, {
           status: r.status,
           statusText: getReasonPhrase(r.status),
           headers: r.headers,
-        };
-      } else if ((options as any).responseType === "json") {
-        r2 = {
-          data: r.json,
+        });
+      } else if (
+        contentType.includes("json") ||
+        contentType.includes("javascript")
+      ) {
+        r2 = new Response(r.json, {
           status: r.status,
           statusText: getReasonPhrase(r.status),
           headers: r.headers,
-        };
-      } else if ((options as any).responseType === "text") {
-        r2 = {
-          data: r.text,
+        });
+      } else if (contentType.includes("text")) {
+        // avoid text/json,
+        // so we split this out from the above xml or json branch
+        r2 = new Response(r.text, {
           status: r.status,
           statusText: getReasonPhrase(r.status),
           headers: r.headers,
-        };
-      } else if ((options as any).responseType === "arraybuffer") {
-        r2 = {
-          data: r.arrayBuffer,
+        });
+      } else if (
+        contentType.includes("octet-stream") ||
+        contentType.includes("binary") ||
+        contentType.includes("buffer")
+      ) {
+        // application/octet-stream
+        r2 = new Response(r.arrayBuffer, {
           status: r.status,
           statusText: getReasonPhrase(r.status),
           headers: r.headers,
-        };
+        });
       } else {
         throw Error(
-          `do not know how to deal with responseType = ${
-            (options as any).responseType
-          }`
+          `do not know how to deal with requested content type = ${contentType}`
         );
       }
       return r2;
     }
   );
 }
-// getPatcher().patch("request", (options: any) => {
-//   // console.log("using fetch");
-//   const r = fetch(options.url, {
-//     method: options.method,
-//     body: options.data as any,
-//     headers: options.headers,
-//     signal: options.signal,
-//   })
-//     .then((rsp) => {
-//       if (options.responseType === undefined) {
-//         return Promise.all([undefined, rsp]);
-//       }
-//       if (options.responseType === "json") {
-//         return Promise.all([rsp.json(), rsp]);
-//       }
-//       if (options.responseType === "text") {
-//         return Promise.all([rsp.text(), rsp]);
-//       }
-//       if (options.responseType === "arraybuffer") {
-//         return Promise.all([rsp.arrayBuffer(), rsp]);
-//       }
-//     })
-//     .then(([d, r]) => {
-//       return {
-//         data: d,
-//         status: r.status,
-//         statusText: r.statusText,
-//         headers: r.headers,
-//       };
-//     });
-//   // console.log("using fetch");
-//   return r;
-// });
-import { AuthType, BufferLike, createClient } from "webdav";
+
+// @ts-ignore
+import { AuthType, BufferLike, createClient } from "webdav/dist/web/index.js";
 export type { WebDAVClient } from "webdav";
 
 export const DEFAULT_WEBDAV_CONFIG = {
@@ -234,8 +219,9 @@ export class WrappedWebdavClient {
           method: "PROPFIND",
           headers: {
             Depth: "infinity",
+            Accept: "text/plain,application/xml",
           },
-          responseType: "text",
+          // responseType: "text",
         } as any);
         if (res.status === 403) {
           throw Error("not support Infinity, get 403");
@@ -255,8 +241,9 @@ export class WrappedWebdavClient {
               method: "PROPFIND",
               headers: {
                 Depth: "1",
+                Accept: "text/plain,application/xml",
               },
-              responseType: "text",
+              // responseType: "text",
             } as any
           );
           testPassed = true;
