@@ -48,15 +48,24 @@ if (VALID_REQURL) {
       if (contentType !== undefined) {
         contentType = contentType.toLowerCase();
       }
+      const rspHeaders = { ...r.headers };
+      for (let key in rspHeaders) {
+        if (rspHeaders.hasOwnProperty(key)) {
+          if (key === "content-disposition" || key === "Content-Disposition") {
+            rspHeaders[key] = encodeURIComponent(rspHeaders[key]);
+          }
+        }
+      }
       // console.log(`requesting url=${options.url}`);
       // console.log(`contentType=${contentType}`);
+      // console.log(`rspHeaders=${JSON.stringify(rspHeaders)}`)
 
       // let r2: Response = undefined;
       // if (contentType.includes("xml")) {
       //   r2 = new Response(r.text, {
       //     status: r.status,
       //     statusText: getReasonPhrase(r.status),
-      //     headers: r.headers,
+      //     headers: rspHeaders,
       //   });
       // } else if (
       //   contentType.includes("json") ||
@@ -70,7 +79,7 @@ if (VALID_REQURL) {
       //     {
       //     status: r.status,
       //     statusText: getReasonPhrase(r.status),
-      //     headers: r.headers,
+      //     headers: rspHeaders,
       //   });
       // } else if (contentType.includes("text")) {
       //   // avoid text/json,
@@ -78,7 +87,7 @@ if (VALID_REQURL) {
       //   r2 = new Response(r.text, {
       //     status: r.status,
       //     statusText: getReasonPhrase(r.status),
-      //     headers: r.headers,
+      //     headers: rspHeaders,
       //   });
       // } else if (
       //   contentType.includes("octet-stream") ||
@@ -89,7 +98,7 @@ if (VALID_REQURL) {
       //   r2 = new Response(r.arrayBuffer, {
       //     status: r.status,
       //     statusText: getReasonPhrase(r.status),
-      //     headers: r.headers,
+      //     headers: rspHeaders,
       //   });
       // } else {
       //   throw Error(
@@ -105,13 +114,13 @@ if (VALID_REQURL) {
         r2 = new Response(null, {
           status: r.status,
           statusText: getReasonPhrase(r.status),
-          headers: r.headers,
+          headers: rspHeaders,
         });
       } else {
         r2 = new Response(r.arrayBuffer, {
           status: r.status,
           statusText: getReasonPhrase(r.status),
-          headers: r.headers,
+          headers: rspHeaders,
         });
       }
 
