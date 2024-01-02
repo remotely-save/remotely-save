@@ -61,6 +61,7 @@ Additionally, the plugin author may occasionally visit Obsidian official forum a
 ### S3
 
 - Tutorials / Examples:
+  - [Cloudflare R2](./docs/remote_services/s3_cloudflare_r2/README.md)
   - [MinIO](./docs/remote_services/s3_minio/README.md)
 - Prepare your S3 (-compatible) service information: [endpoint, region](https://docs.aws.amazon.com/general/latest/gr/s3.html), [access key id, secret access key](https://docs.aws.amazon.com/sdk-for-javascript/v3/developer-guide/getting-your-credentials.html), bucket name. The bucket should be empty and solely for syncing a vault.
 - About CORS:
