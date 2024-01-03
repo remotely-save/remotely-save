@@ -17,3 +17,11 @@
    ![](./minio_rs_settings.png)
 6. Sync!
    ![](./minio_sync_success.png)
+
+## Ports In Address
+
+Just type in the full address with `http(s)://` and `:port` in remotely-save settings, for example `http://192.168.31.198:9000`.
+
+It's verified that everything is ok.
+
+![](./minio_custom_port.png)
