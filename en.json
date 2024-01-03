@@ -109,8 +109,8 @@
   "settings_skiplargefiles": "Skip Large Files (experimental)",
   "settings_skiplargefiles_desc": "Skip files with sizes larger than the threshold. Here 1 MB = 10^6 bytes.",
   "settings_skiplargefiles_notset": "(not set)",
-  "settings_ignorepaths": "Folders Or Files To Ignore",
-  "settings_ignorepaths_desc": "Folders or files to ignore. One path per line. The path is relative to the vault root.",
+  "settings_ignorepaths": "Regex Of Paths To Ignore",
+  "settings_ignorepaths_desc": "Regex of paths of folders or files to ignore. One regex per line. The path is relative to the vault root without leading slash.",
 
   "settings_checkonnectivity": "Check Connectivity",
   "settings_checkonnectivity_desc": "Check connectivity.",
