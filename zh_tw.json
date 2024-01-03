@@ -110,6 +110,8 @@
   "settings_skiplargefiles": "跳過大檔案（實驗性質）",
   "settings_skiplargefiles_desc": "跳過大於某一個閾值的檔案。這裡 1 MB = 10^6 bytes。",
   "settings_skiplargefiles_notset": "（不設定）",
+  "settings_ignorepaths": "忽略的資料夾或檔案",
+  "settings_ignorepaths_desc": "忽略的資料夾或檔案。每行一個。路徑是相對於庫（Vault）根目錄的。",
 
   "settings_checkonnectivity": "檢查可否連線",
   "settings_checkonnectivity_desc": "檢查可否連線。",
