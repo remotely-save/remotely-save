@@ -1599,13 +1599,18 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
     new Setting(basicDiv)
       .setName(t("settings_ignorepaths"))
       .setDesc(t("settings_ignorepaths_desc"))
+      .setClass("ignorepaths-settings")
+
       .addTextArea((textArea) => {
         textArea
           .setValue(`${this.plugin.settings.ignorePaths.join("\n")}`)
           .onChange(async (value) => {
-            this.plugin.settings.ignorePaths = value.split("\n");
+            this.plugin.settings.ignorePaths = value.trim().split("\n");
             await this.plugin.saveSettings();
           });
+        textArea.inputEl.rows = 10;
+
+        textArea.inputEl.addClass("ignorepaths-textarea");
       });
 
     //////////////////////////////////////////////////
