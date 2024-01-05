@@ -1,5 +1,17 @@
 # AWS S3 Bucket: How to configure user's policy
 
+## Attention
+
+Please read the doc carefully and adjust the optional fields accordingly. The doc is not fully tested and contributions are welcome.
+
+## AWS Official Docs
+
+* <https://docs.aws.amazon.com/AmazonS3/latest/userguide/access-policy-language-overview.html>
+* <https://docs.aws.amazon.com/AmazonS3/latest/userguide/using-with-s3-actions.html>
+* <https://docs.aws.amazon.com/AmazonS3/latest/API/API_Operations.html>
+
+## Prerequisites
+
 Using the principle of least privilege is crucial for security when allowing a third party system to access your AWS resources.
 
 **Prerequisites**: Ensure you have an AWS account and administrative access to manage IAM policies.
@@ -20,7 +32,7 @@ Using the principle of least privilege is crucial for security when allowing a t
             "Sid": "ObsidianBucket",
             "Effect": "Allow",
             "Action": [
-                "s3:ListBucket"
+                "s3:HeadBucket"
             ],
             "Resource": "arn:aws:s3:::my-bucket"
         },
@@ -28,9 +40,21 @@ Using the principle of least privilege is crucial for security when allowing a t
             "Sid": "ObsidianObjects",
             "Effect": "Allow",
             "Action": [
+                "s3:HeadObject",
                 "s3:PutObject",
+                "s3:CopyObject",
+                "s3:UploadPart",
+                "s3:UploadPartCopy",
+                "s3:ListMultipartUploads",
+                "s3:AbortMultipartUpload",
+                "s3:CompleteMultipartUpload",
+                "s3:ListObjects",
+                "s3:ListObjectsV2",
+                "s3:ListParts",
                 "s3:GetObject",
-                "s3:DeleteObject"
+                "s3:GetObjectAttributes",
+                "s3:DeleteObject",
+                "s3:DeleteObjects"
             ],
             "Resource": "arn:aws:s3:::my-bucket/*"
         }
