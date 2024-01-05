@@ -85,6 +85,7 @@ const DEFAULT_SETTINGS: RemotelySavePluginSettings = {
   lang: "auto",
   logToDB: false,
   skipSizeLargerThan: -1,
+  ignorePaths: [],
 };
 
 interface OAuth2Info {
@@ -296,6 +297,7 @@ export default class RemotelySavePlugin extends Plugin {
         this.app.vault.configDir,
         this.settings.syncUnderscoreItems,
         this.settings.skipSizeLargerThan,
+        this.settings.ignorePaths,
         this.settings.password
       );
       log.info(plan.mixedStates); // for debugging
@@ -792,6 +794,9 @@ export default class RemotelySavePlugin extends Plugin {
     }
     if (this.settings.s3.forcePathStyle === undefined) {
       this.settings.s3.forcePathStyle = false;
+    }
+    if (this.settings.ignorePaths === undefined) {
+      this.settings.ignorePaths = [];
     }
   }
 

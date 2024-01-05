@@ -61,3 +61,7 @@
   width: 350px;
   height: 350px;
 }
+
+.ignorepaths-textarea {
+  font-family: monospace;
+}
