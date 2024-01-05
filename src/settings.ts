@@ -30,6 +30,7 @@ import {
   clearAllLoggerOutputRecords,
   insertLoggerOutputByVault,
   clearExpiredLoggerOutputRecords,
+  upsertLastSuccessSyncByVault,
 } from "./localdb";
 import type RemotelySavePlugin from "./main"; // unavoidable
 import { RemoteClient } from "./remote";
@@ -197,8 +198,6 @@ class ChangeRemoteBaseDirModal extends Modal {
           button.onClick(async () => {
             this.plugin.settings[this.service].remoteBaseDir =
               this.newRemoteBaseDir;
-            // reset last sync time
-            this.plugin.settings.lastSuccessSync = -1;
             await this.plugin.saveSettings();
             new Notice(t("modal_remotebasedir_notice"));
             this.close();
@@ -1611,6 +1610,23 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
               await this.plugin.saveSettings();
               new Notice(t("settings_enablestatusbar_reloadrequired_notice"));
             });
+        });
+
+      new Setting(basicDiv)
+        .setName(t("settings_resetstatusbar_time"))
+        .setDesc(t("settings_resetstatusbar_time_desc"))
+        .addButton((button) => {
+          button.setButtonText(t("settings_resetstatusbar_button"));
+          button.onClick(async () => {
+            // reset last sync time
+            await upsertLastSuccessSyncByVault(
+              this.plugin.db,
+              this.plugin.vaultRandomID,
+              -1
+            );
+            this.plugin.updateLastSuccessSyncMsg(-1);
+            new Notice(t("settings_resetstatusbar_notice"));
+          });
         });
     }
 

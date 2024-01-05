@@ -18,6 +18,7 @@ export const DEFAULT_TBL_SYNC_MAPPING = "syncmetadatahistory";
 export const DEFAULT_SYNC_PLANS_HISTORY = "syncplanshistory";
 export const DEFAULT_TBL_VAULT_RANDOM_ID_MAPPING = "vaultrandomidmapping";
 export const DEFAULT_TBL_LOGGER_OUTPUT = "loggeroutput";
+export const DEFAULT_TBL_SIMPLE_KV_FOR_MISC = "simplekvformisc";
 
 export interface FileFolderHistoryRecord {
   key: string;
@@ -58,6 +59,7 @@ export interface InternalDBs {
   syncPlansTbl: LocalForage;
   vaultRandomIDMappingTbl: LocalForage;
   loggerOutputTbl: LocalForage;
+  simpleKVForMiscTbl: LocalForage;
 }
 
 /**
@@ -215,6 +217,10 @@ export const prepareDBs = async (
     loggerOutputTbl: localforage.createInstance({
       name: DEFAULT_DB_NAME,
       storeName: DEFAULT_TBL_LOGGER_OUTPUT,
+    }),
+    simpleKVForMiscTbl: localforage.createInstance({
+      name: DEFAULT_DB_NAME,
+      storeName: DEFAULT_TBL_SIMPLE_KV_FOR_MISC,
     }),
   } as InternalDBs;
 
@@ -679,4 +685,24 @@ export const clearExpiredLoggerOutputRecords = async (db: InternalDBs) => {
     ps.push(db.loggerOutputTbl.removeItem(element));
   });
   await Promise.all(ps);
+};
+
+export const upsertLastSuccessSyncByVault = async (
+  db: InternalDBs,
+  vaultRandomID: string,
+  millis: number
+) => {
+  await db.simpleKVForMiscTbl.setItem(
+    `${vaultRandomID}-lastSuccessSyncMillis`,
+    millis
+  );
+};
+
+export const getLastSuccessSyncByVault = async (
+  db: InternalDBs,
+  vaultRandomID: string
+) => {
+  return (await db.simpleKVForMiscTbl.getItem(
+    `${vaultRandomID}-lastSuccessSyncMillis`
+  )) as number;
 };

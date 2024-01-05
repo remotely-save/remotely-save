@@ -32,6 +32,8 @@ import {
   insertLoggerOutputByVault,
   clearExpiredLoggerOutputRecords,
   clearExpiredSyncPlanRecords,
+  upsertLastSuccessSyncByVault,
+  getLastSuccessSyncByVault,
 } from "./localdb";
 import { RemoteClient } from "./remote";
 import {
@@ -88,7 +90,6 @@ const DEFAULT_SETTINGS: RemotelySavePluginSettings = {
   skipSizeLargerThan: -1,
   ignorePaths: [],
   enableStatusBarInfo: true,
-  lastSuccessSync: -1,
 };
 
 interface OAuth2Info {
@@ -361,7 +362,12 @@ export default class RemotelySavePlugin extends Plugin {
       this.syncStatus = "finish";
       this.syncStatus = "idle";
 
-      this.settings.lastSuccessSync = Date.now();
+      const lastSuccessSyncMillis = Date.now();
+      await upsertLastSuccessSyncByVault(
+        this.db,
+        this.vaultRandomID,
+        lastSuccessSyncMillis
+      );
 
       if (this.syncRibbon !== undefined) {
         setIcon(this.syncRibbon, iconNameSyncWait);
@@ -369,7 +375,7 @@ export default class RemotelySavePlugin extends Plugin {
       }
 
       if (this.statusBarElement !== undefined) {
-        this.updateLastSuccessSyncMsg(this.settings.lastSuccessSync);
+        this.updateLastSuccessSyncMsg(lastSuccessSyncMillis);
       }
 
       log.info(
@@ -689,11 +695,15 @@ export default class RemotelySavePlugin extends Plugin {
       this.statusBarElement = statusBarItem.createEl("span");
       this.statusBarElement.setAttribute("aria-label-position", "top");
 
-      this.updateLastSuccessSyncMsg(this.settings.lastSuccessSync);
+      this.updateLastSuccessSyncMsg(
+        await getLastSuccessSyncByVault(this.db, this.vaultRandomID)
+      );
       // update statusbar text every 30 seconds
       this.registerInterval(
-        window.setInterval(() => {
-          this.updateLastSuccessSyncMsg(this.settings.lastSuccessSync);
+        window.setInterval(async () => {
+          this.updateLastSuccessSyncMsg(
+            await getLastSuccessSyncByVault(this.db, this.vaultRandomID)
+          );
         }, 1000 * 30)
       );
     }
@@ -822,6 +832,9 @@ export default class RemotelySavePlugin extends Plugin {
     }
     if (this.settings.ignorePaths === undefined) {
       this.settings.ignorePaths = [];
+    }
+    if (this.settings.enableStatusBarInfo === undefined) {
+      this.settings.enableStatusBarInfo = true;
     }
   }
 
