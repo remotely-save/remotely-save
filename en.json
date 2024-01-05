@@ -126,6 +126,10 @@
   "settings_enablestatusbar_info": "Show Last Successful Sync In Status Bar",
   "settings_enablestatusbar_info_desc": "Show the time of the last successful sync in the status bar.",
   "settings_enablestatusbar_reloadrequired_notice": "Reload the plugin for the changes to take effect.",
+  "settings_resetstatusbar_time": "Reset Last Successful Sync Time",
+  "settings_resetstatusbar_time_desc": "Reset last successful sync time.",
+  "settings_resetstatusbar_button": "Reset",
+  "settings_resetstatusbar_notice": "Reset done!",
 
   "settings_checkonnectivity": "Check Connectivity",
   "settings_checkonnectivity_desc": "Check connectivity.",
