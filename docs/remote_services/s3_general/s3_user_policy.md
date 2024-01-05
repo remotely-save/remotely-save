@@ -6,9 +6,9 @@ Please read the doc carefully and adjust the optional fields accordingly. The do
 
 ## AWS Official Docs
 
-* <https://docs.aws.amazon.com/AmazonS3/latest/userguide/access-policy-language-overview.html>
-* <https://docs.aws.amazon.com/AmazonS3/latest/userguide/using-with-s3-actions.html>
-* <https://docs.aws.amazon.com/AmazonS3/latest/API/API_Operations.html>
+- <https://docs.aws.amazon.com/AmazonS3/latest/userguide/access-policy-language-overview.html>
+- <https://docs.aws.amazon.com/AmazonS3/latest/userguide/using-with-s3-actions.html>
+- <https://docs.aws.amazon.com/AmazonS3/latest/API/API_Operations.html>
 
 ## Prerequisites
 
@@ -61,6 +61,7 @@ Using the principle of least privilege is crucial for security when allowing a t
     ]
 }
 ```
+
 > The policy allows the Obsidian plugin to list, add, retrieve, and delete objects in the specified S3 bucket.
 
 ## Step 2: Attach the Policy to Obsidian user
