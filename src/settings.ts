@@ -197,6 +197,8 @@ class ChangeRemoteBaseDirModal extends Modal {
           button.onClick(async () => {
             this.plugin.settings[this.service].remoteBaseDir =
               this.newRemoteBaseDir;
+            // reset last sync time
+            this.plugin.settings.lastSuccessSync = -1;
             await this.plugin.saveSettings();
             new Notice(t("modal_remotebasedir_notice"));
             this.close();
@@ -1595,6 +1597,22 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
             await this.plugin.saveSettings();
           });
       });
+
+    // custom status bar items is not supported on mobile
+    if (!Platform.isMobileApp) {
+      new Setting(basicDiv)
+        .setName(t("settings_enablestatusbar_info"))
+        .setDesc(t("settings_enablestatusbar_info_desc"))
+        .addToggle((toggle) => {
+          toggle
+            .setValue(this.plugin.settings.enableStatusBarInfo)
+            .onChange(async (val) => {
+              this.plugin.settings.enableStatusBarInfo = val;
+              await this.plugin.saveSettings();
+              new Notice(t("settings_enablestatusbar_reloadrequired_notice"));
+            });
+        });
+    }
 
     new Setting(basicDiv)
       .setName(t("settings_ignorepaths"))

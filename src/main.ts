@@ -6,6 +6,7 @@ import {
   addIcon,
   setIcon,
   FileSystemAdapter,
+  Platform,
 } from "obsidian";
 import cloneDeep from "lodash/cloneDeep";
 import { createElement, RotateCcw, RefreshCcw, FileText } from "lucide";
@@ -86,6 +87,8 @@ const DEFAULT_SETTINGS: RemotelySavePluginSettings = {
   logToDB: false,
   skipSizeLargerThan: -1,
   ignorePaths: [],
+  enableStatusBarInfo: true,
+  lastSuccessSync: -1,
 };
 
 interface OAuth2Info {
@@ -126,6 +129,7 @@ export default class RemotelySavePlugin extends Plugin {
   settings: RemotelySavePluginSettings;
   db: InternalDBs;
   syncStatus: SyncStatusType;
+  statusBarElement: HTMLSpanElement;
   oauth2Info: OAuth2Info;
   currLogLevel: string;
   currSyncMsg?: string;
@@ -357,9 +361,15 @@ export default class RemotelySavePlugin extends Plugin {
       this.syncStatus = "finish";
       this.syncStatus = "idle";
 
+      this.settings.lastSuccessSync = Date.now();
+
       if (this.syncRibbon !== undefined) {
         setIcon(this.syncRibbon, iconNameSyncWait);
         this.syncRibbon.setAttribute("aria-label", originLabel);
+      }
+
+      if (this.statusBarElement !== undefined) {
+        this.updateLastSuccessSyncMsg(this.settings.lastSuccessSync);
       }
 
       log.info(
@@ -673,6 +683,21 @@ export default class RemotelySavePlugin extends Plugin {
       async () => this.syncRun("manual")
     );
 
+    // Create Status Bar Item (not supported on mobile)
+    if (!Platform.isMobileApp && this.settings.enableStatusBarInfo === true) {
+      const statusBarItem = this.addStatusBarItem();
+      this.statusBarElement = statusBarItem.createEl("span");
+      this.statusBarElement.setAttribute("aria-label-position", "top");
+
+      this.updateLastSuccessSyncMsg(this.settings.lastSuccessSync);
+      // update statusbar text every 30 seconds
+      this.registerInterval(
+        window.setInterval(() => {
+          this.updateLastSuccessSyncMsg(this.settings.lastSuccessSync);
+        }, 1000 * 30)
+      );
+    }
+
     this.addCommand({
       id: "start-sync",
       name: t("command_startsync"),
@@ -968,6 +993,62 @@ export default class RemotelySavePlugin extends Plugin {
   ) {
     const msg = `syncing progress=${i}/${totalCount},decision=${decision},path=${pathName}`;
     this.currSyncMsg = msg;
+  }
+
+  updateLastSuccessSyncMsg(lastSuccessSyncMillis?: number) {
+    if (this.statusBarElement === undefined) return;
+
+    const t = (x: TransItemType, vars?: any) => {
+      return this.i18n.t(x, vars);
+    };
+
+    let lastSyncMsg = t("statusbar_lastsync_never");
+    let lastSyncLabelMsg = t("statusbar_lastsync_never_label");
+
+    if (lastSuccessSyncMillis !== undefined && lastSuccessSyncMillis > 0) {
+      const deltaTime = Date.now() - lastSuccessSyncMillis;
+
+      // create human readable time
+      const years = Math.floor(deltaTime / 31556952000);
+      const months = Math.floor(deltaTime / 2629746000);
+      const weeks = Math.floor(deltaTime / 604800000);
+      const days = Math.floor(deltaTime / 86400000);
+      const hours = Math.floor(deltaTime / 3600000);
+      const minutes = Math.floor(deltaTime / 60000);
+      let timeText = "";
+
+      if (years > 0) {
+        timeText = t("statusbar_time_years", { time: years });
+      } else if (months > 0) {
+        timeText = t("statusbar_time_months", { time: months });
+      } else if (weeks > 0) {
+        timeText = t("statusbar_time_weeks", { time: weeks });
+      } else if (days > 0) {
+        timeText = t("statusbar_time_days", { time: days });
+      } else if (hours > 0) {
+        timeText = t("statusbar_time_hours", { time: hours });
+      } else if (minutes > 0) {
+        timeText = t("statusbar_time_minutes", { time: minutes });
+      } else {
+        timeText = t("statusbar_time_lessminute");
+      }
+
+      let dateText = new Date(lastSuccessSyncMillis).toLocaleTimeString(
+        navigator.language,
+        {
+          weekday: "long",
+          year: "numeric",
+          month: "long",
+          day: "numeric",
+        }
+      );
+
+      lastSyncMsg = t("statusbar_lastsync", { time: timeText });
+      lastSyncLabelMsg = t("statusbar_lastsync_label", { date: dateText });
+    }
+
+    this.statusBarElement.setText(lastSyncMsg);
+    this.statusBarElement.setAttribute("aria-label", lastSyncLabelMsg);
   }
 
   /**
