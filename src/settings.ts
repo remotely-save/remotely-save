@@ -1609,6 +1609,7 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
             await this.plugin.saveSettings();
           });
         textArea.inputEl.rows = 10;
+        textArea.inputEl.cols = 30;
 
         textArea.inputEl.addClass("ignorepaths-textarea");
       });
