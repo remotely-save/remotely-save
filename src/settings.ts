@@ -1817,7 +1817,10 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
         textArea
           .setValue(`${this.plugin.settings.ignorePaths.join("\n")}`)
           .onChange(async (value) => {
-            this.plugin.settings.ignorePaths = value.trim().split("\n");
+            this.plugin.settings.ignorePaths = value
+              .trim()
+              .split("\n")
+              .filter((x) => x.trim() !== "");
             await this.plugin.saveSettings();
           });
         textArea.inputEl.rows = 10;
