@@ -79,6 +79,7 @@ export interface RemotelySavePluginSettings {
   currLogLevel?: string;
   autoRunEveryMilliseconds?: number;
   initRunAfterMilliseconds?: number;
+  syncOnSaveAfterMilliseconds?: number;
   agreeToUploadExtraMetadata?: boolean;
   concurrency?: number;
   syncConfigDir?: boolean;
