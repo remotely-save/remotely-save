@@ -6,6 +6,7 @@ import {
   Setting,
   Platform,
   requireApiVersion,
+  requestUrl,
 } from "obsidian";
 import type { TextComponent } from "obsidian";
 import { createElement, Eye, EyeOff } from "lucide";
@@ -705,6 +706,65 @@ class ExportSettingsQrCodeModal extends Modal {
         el.src = imgUri;
       }
     );
+  }
+
+  onClose() {
+    let { contentEl } = this;
+    contentEl.empty();
+  }
+}
+
+class SetLogToHttpServerModal extends Modal {
+  plugin: RemotelySavePlugin;
+  serverAddr: string;
+  callBack: any;
+  constructor(
+    app: App,
+    plugin: RemotelySavePlugin,
+    serverAddr: string,
+    callBack: any
+  ) {
+    super(app);
+    this.plugin = plugin;
+    this.serverAddr = serverAddr;
+    this.callBack = callBack;
+  }
+
+  onOpen() {
+    let { contentEl } = this;
+
+    const t = (x: TransItemType, vars?: any) => {
+      return this.plugin.i18n.t(x, vars);
+    };
+
+    contentEl.createEl("h2", { text: t("modal_logtohttpserver_title") });
+
+    const div1 = contentEl.createDiv();
+    div1.addClass("logtohttpserver-warning");
+    t("modal_logtohttpserver_desc")
+      .split("\n")
+      .forEach((val) => {
+        div1.createEl("p", {
+          text: val,
+        });
+      });
+
+    new Setting(contentEl)
+      .addButton((button) => {
+        button.setButtonText(t("modal_logtohttpserver_secondconfirm"));
+        button.setClass("logtohttpserver-warning");
+        button.onClick(async () => {
+          this.callBack();
+          new Notice(t("modal_logtohttpserver_notice"));
+          this.close();
+        });
+      })
+      .addButton((button) => {
+        button.setButtonText(t("goback"));
+        button.onClick(() => {
+          this.close();
+        });
+      });
   }
 
   onClose() {
@@ -2075,6 +2135,53 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
         button.onClick(async () => {
           await clearAllLoggerOutputRecords(this.plugin.db);
           new Notice(t("settings_logtodbclear_notice"));
+        });
+      });
+
+    let logToHttpServer = this.plugin.debugServerTemp || "";
+    new Setting(debugDiv)
+      .setName(t("settings_logtohttpserver"))
+      .setDesc(t("settings_logtohttpserver_desc"))
+      .addText(async (text) => {
+        text.setValue(logToHttpServer).onChange(async (value) => {
+          logToHttpServer = value.trim();
+        });
+      })
+      .addButton(async (button) => {
+        button.setButtonText(t("confirm"));
+        button.onClick(async () => {
+          if (logToHttpServer === "" || !logToHttpServer.startsWith("http")) {
+            this.plugin.debugServerTemp = "";
+            logToHttpServer = "";
+            restoreLogWritterInplace();
+            new Notice(t("settings_logtohttpserver_reset_notice"));
+          } else {
+            new SetLogToHttpServerModal(
+              this.app,
+              this.plugin,
+              logToHttpServer,
+              () => {
+                this.plugin.debugServerTemp = logToHttpServer;
+                applyLogWriterInplace((...msg: any[]) => {
+                  try {
+                    requestUrl({
+                      url: logToHttpServer,
+                      method: "POST",
+                      headers: {
+                        "Content-Type": "application/json",
+                      },
+                      body: JSON.stringify({
+                        send_time: Date.now(),
+                        log_text: msg,
+                      }),
+                    });
+                  } catch (e) {
+                    // pass
+                  }
+                });
+              }
+            ).open();
+          }
         });
       });
 

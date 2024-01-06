@@ -143,6 +143,7 @@ export default class RemotelySavePlugin extends Plugin {
   syncOnSaveIntervalID?: number;
   i18n: I18n;
   vaultRandomID: string;
+  debugServerTemp?: string;
 
   async syncRun(triggerSource: SyncTriggerSourceType = "manual") {
     const t = (x: TransItemType, vars?: any) => {

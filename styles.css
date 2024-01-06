@@ -65,3 +65,8 @@
 .ignorepaths-textarea {
   font-family: monospace;
 }
+
+.logtohttpserver-warning {
+  color: red;
+  font-weight: bolder;
+}
