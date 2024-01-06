@@ -7,6 +7,8 @@ import {
   setIcon,
   FileSystemAdapter,
   Platform,
+  TFile,
+  TFolder,
 } from "obsidian";
 import cloneDeep from "lodash/cloneDeep";
 import { createElement, RotateCcw, RefreshCcw, FileText } from "lucide";
@@ -493,6 +495,31 @@ export default class RemotelySavePlugin extends Plugin {
           oldPath,
           this.vaultRandomID
         );
+      })
+    );
+
+    function getMethods(obj: any) {
+      var result = [];
+      for (var id in obj) {
+        try {
+          if (typeof obj[id] == "function") {
+            result.push(id + ": " + obj[id].toString());
+          }
+        } catch (err) {
+          result.push(id + ": inaccessible");
+        }
+      }
+      return result.join("\n");
+    }
+    this.registerEvent(
+      this.app.vault.on("raw" as any, async (fileOrFolder) => {
+        // special track on .obsidian folder
+        const name = `${fileOrFolder}`;
+        if (name.startsWith(this.app.vault.configDir)) {
+          if (!(await this.app.vault.adapter.exists(name))) {
+            await insertDeleteRecordByVault(this.db, name, this.vaultRandomID);
+          }
+        }
       })
     );
 

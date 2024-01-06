@@ -427,3 +427,31 @@ export const statFix = async (vault: Vault, path: string) => {
   }
   return s;
 };
+
+export const isFolderToSkip = (x: string, more: string[] | undefined) => {
+  let specialFolders = [
+    ".git",
+    ".github",
+    ".gitlab",
+    ".svn",
+    "node_modules",
+    ".DS_Store",
+    "__MACOSX ",
+    "Icon\r", // https://superuser.com/questions/298785/icon-file-on-os-x-desktop
+    "desktop.ini",
+    "Desktop.ini",
+    "thumbs.db",
+    "Thumbs.db",
+  ].concat(more !== undefined ? more : []);
+  for (const iterator of specialFolders) {
+    if (
+      x === iterator ||
+      x === `${iterator}/` ||
+      x.endsWith(`/${iterator}`) ||
+      x.endsWith(`/${iterator}/`)
+    ) {
+      return true;
+    }
+  }
+  return false;
+};

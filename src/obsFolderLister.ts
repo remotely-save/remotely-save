@@ -2,7 +2,7 @@ import { Vault, Stat, ListedFiles } from "obsidian";
 import { Queue } from "@fyears/tsqueue";
 import chunk from "lodash/chunk";
 import flatten from "lodash/flatten";
-import { statFix } from "./misc";
+import { statFix, isFolderToSkip } from "./misc";
 
 export interface ObsConfigDirFileType {
   key: string;
@@ -11,28 +11,6 @@ export interface ObsConfigDirFileType {
   size: number;
   type: "folder" | "file";
 }
-
-const isFolderToSkip = (x: string) => {
-  let specialFolders = [
-    ".git",
-    ".github",
-    ".gitlab",
-    ".svn",
-    "node_modules",
-    ".DS_Store",
-  ];
-  for (const iterator of specialFolders) {
-    if (
-      x === iterator ||
-      x === `${iterator}/` ||
-      x.endsWith(`/${iterator}`) ||
-      x.endsWith(`/${iterator}/`)
-    ) {
-      return true;
-    }
-  }
-  return false;
-};
 
 const isPluginDirItself = (x: string, pluginId: string) => {
   return (
@@ -106,7 +84,7 @@ export const listFilesInObsFolder = async (
         const isInsideSelfPlugin = isPluginDirItself(iter.itself.key, pluginId);
         if (iter.children !== undefined) {
           for (const iter2 of iter.children.folders) {
-            if (isFolderToSkip(iter2)) {
+            if (isFolderToSkip(iter2, ["workspace", "workspace.json"])) {
               continue;
             }
             if (isInsideSelfPlugin && !isLikelyPluginSubFiles(iter2)) {
@@ -116,7 +94,7 @@ export const listFilesInObsFolder = async (
             q.push(iter2);
           }
           for (const iter2 of iter.children.files) {
-            if (isFolderToSkip(iter2)) {
+            if (isFolderToSkip(iter2, ["workspace", "workspace.json"])) {
               continue;
             }
             if (isInsideSelfPlugin && !isLikelyPluginSubFiles(iter2)) {

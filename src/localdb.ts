@@ -330,7 +330,7 @@ export const clearDeleteRenameHistoryOfKeyAndVault = async (
 
 export const insertDeleteRecordByVault = async (
   db: InternalDBs,
-  fileOrFolder: TAbstractFile,
+  fileOrFolder: TAbstractFile | string,
   vaultRandomID: string
 ) => {
   // log.info(fileOrFolder);
@@ -347,6 +347,7 @@ export const insertDeleteRecordByVault = async (
       renameTo: "",
       vaultRandomID: vaultRandomID,
     };
+    await db.fileHistoryTbl.setItem(`${vaultRandomID}\t${k.key}`, k);
   } else if (fileOrFolder instanceof TFolder) {
     // key should endswith "/"
     const key = fileOrFolder.path.endsWith("/")
@@ -365,8 +366,57 @@ export const insertDeleteRecordByVault = async (
       renameTo: "",
       vaultRandomID: vaultRandomID,
     };
+    await db.fileHistoryTbl.setItem(`${vaultRandomID}\t${k.key}`, k);
+  } else if (typeof fileOrFolder === "string") {
+    // always the deletions in .obsidian folder
+    // so annoying that the path doesn't exists
+    // and we have to guess whether the path is folder or file
+    k = {
+      key: fileOrFolder,
+      ctime: 0,
+      mtime: 0,
+      size: 0,
+      actionWhen: Date.now(),
+      actionType: "delete",
+      keyType: "file",
+      renameTo: "",
+      vaultRandomID: vaultRandomID,
+    };
+    await db.fileHistoryTbl.setItem(`${vaultRandomID}\t${k.key}`, k);
+    for (const ext of [
+      "json",
+      "js",
+      "mjs",
+      "ts",
+      "md",
+      "txt",
+      "css",
+      "png",
+      "gif",
+      "jpg",
+      "jpeg",
+      "gitignore",
+      "gitkeep",
+    ]) {
+      if (fileOrFolder.endsWith(`.${ext}`)) {
+        // stop here, no more need to insert the folder record later
+        return;
+      }
+    }
+    // also add a deletion record as folder if not ending with special exts
+    k = {
+      key: `${fileOrFolder}/`,
+      ctime: 0,
+      mtime: 0,
+      size: 0,
+      actionWhen: Date.now(),
+      actionType: "delete",
+      keyType: "folder",
+      renameTo: "",
+      vaultRandomID: vaultRandomID,
+    };
+    await db.fileHistoryTbl.setItem(`${vaultRandomID}\t${k.key}`, k);
   }
-  await db.fileHistoryTbl.setItem(`${vaultRandomID}\t${k.key}`, k);
 };
 
 /**
