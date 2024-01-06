@@ -193,18 +193,35 @@ export default class RemotelySavePlugin extends Plugin {
       }
 
       if (triggerSource === "dry") {
-        getNotice(t("syncrun_step0"));
+        if (this.settings.currLogLevel === "info") {
+          getNotice(t("syncrun_shortstep0"));
+        } else {
+          getNotice(t("syncrun_step0"));
+        }
       }
 
       //log.info(`huh ${this.settings.password}`)
-      getNotice(
-        t("syncrun_step1", {
-          serviceType: this.settings.serviceType,
-        })
-      );
+      if (this.settings.currLogLevel === "info") {
+        getNotice(
+          t("syncrun_shortstep1", {
+            serviceType: this.settings.serviceType,
+          })
+        );
+      } else {
+        getNotice(
+          t("syncrun_step1", {
+            serviceType: this.settings.serviceType,
+          })
+        );
+      }
+
       this.syncStatus = "preparing";
 
-      getNotice(t("syncrun_step2"));
+      if (this.settings.currLogLevel === "info") {
+        // pass
+      } else {
+        getNotice(t("syncrun_step2"));
+      }
       this.syncStatus = "getting_remote_files_list";
       const self = this;
       const client = new RemoteClient(
@@ -219,7 +236,11 @@ export default class RemotelySavePlugin extends Plugin {
       const remoteRsp = await client.listFromRemote();
       // log.debug(remoteRsp);
 
-      getNotice(t("syncrun_step3"));
+      if (this.settings.currLogLevel === "info") {
+        // pass
+      } else {
+        getNotice(t("syncrun_step3"));
+      }
       this.syncStatus = "checking_password";
       const passwordCheckResult = await isPasswordOk(
         remoteRsp.Contents,
@@ -230,7 +251,11 @@ export default class RemotelySavePlugin extends Plugin {
         throw Error(passwordCheckResult.reason);
       }
 
-      getNotice(t("syncrun_step4"));
+      if (this.settings.currLogLevel === "info") {
+        // pass
+      } else {
+        getNotice(t("syncrun_step4"));
+      }
       this.syncStatus = "getting_remote_extra_meta";
       const { remoteStates, metadataFile } = await parseRemoteItems(
         remoteRsp.Contents,
@@ -246,7 +271,11 @@ export default class RemotelySavePlugin extends Plugin {
         this.settings.password
       );
 
-      getNotice(t("syncrun_step5"));
+      if (this.settings.currLogLevel === "info") {
+        // pass
+      } else {
+        getNotice(t("syncrun_step5"));
+      }
       this.syncStatus = "getting_local_meta";
       const local = this.app.vault.getAllLoadedFiles();
       const localHistory = await loadFileHistoryTableByVault(
@@ -264,7 +293,11 @@ export default class RemotelySavePlugin extends Plugin {
       // log.info(local);
       // log.info(localHistory);
 
-      getNotice(t("syncrun_step6"));
+      if (this.settings.currLogLevel === "info") {
+        // pass
+      } else {
+        getNotice(t("syncrun_step6"));
+      }
       this.syncStatus = "generating_plan";
       const { plan, sortedKeys, deletions, sizesGoWrong } = await getSyncPlan(
         remoteStates,
@@ -289,8 +322,11 @@ export default class RemotelySavePlugin extends Plugin {
       // The operations below begins to write or delete (!!!) something.
 
       if (triggerSource !== "dry") {
-        getNotice(t("syncrun_step7"));
-
+        if (this.settings.currLogLevel === "info") {
+          // pass
+        } else {
+          getNotice(t("syncrun_step7"));
+        }
         this.syncStatus = "syncing";
         await doActualSync(
           client,
@@ -320,10 +356,19 @@ export default class RemotelySavePlugin extends Plugin {
         );
       } else {
         this.syncStatus = "syncing";
-        getNotice(t("syncrun_step7skip"));
+        if (this.settings.currLogLevel === "info") {
+          getNotice(t("syncrun_shortstep2skip"));
+        } else {
+          getNotice(t("syncrun_step7skip"));
+        }
       }
 
-      getNotice(t("syncrun_step8"));
+      if (this.settings.currLogLevel === "info") {
+        getNotice(t("syncrun_shortstep2"));
+      } else {
+        getNotice(t("syncrun_step8"));
+      }
+
       this.syncStatus = "finish";
       this.syncStatus = "idle";
 
