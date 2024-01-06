@@ -174,7 +174,7 @@ export const simpleTransRemotePrefix = (x: string) => {
     return "";
   }
   let y = path.posix.normalize(x.trim());
-  if (y === undefined || y === "" || y === "/") {
+  if (y === undefined || y === "" || y === "/" || y === ".") {
     return "";
   }
   if (y.startsWith("/")) {
@@ -186,9 +186,41 @@ export const simpleTransRemotePrefix = (x: string) => {
   return y;
 };
 
-const fromS3ObjectToRemoteItem = (x: S3ObjectType) => {
+const getRemoteWithPrefixPath = (
+  fileOrFolderPath: string,
+  remotePrefix: string
+) => {
+  let key = fileOrFolderPath;
+  if (fileOrFolderPath === "/" || fileOrFolderPath === "") {
+    // special
+    key = remotePrefix;
+  }
+  if (!fileOrFolderPath.startsWith("/")) {
+    key = `${remotePrefix}${fileOrFolderPath}`;
+  }
+  return key;
+};
+
+const getLocalNoPrefixPath = (
+  fileOrFolderPathWithRemotePrefix: string,
+  remotePrefix: string
+) => {
+  if (
+    !(
+      fileOrFolderPathWithRemotePrefix === `${remotePrefix}` ||
+      fileOrFolderPathWithRemotePrefix.startsWith(`${remotePrefix}`)
+    )
+  ) {
+    throw Error(
+      `"${fileOrFolderPathWithRemotePrefix}" doesn't starts with "${remotePrefix}"`
+    );
+  }
+  return fileOrFolderPathWithRemotePrefix.slice(`${remotePrefix}`.length);
+};
+
+const fromS3ObjectToRemoteItem = (x: S3ObjectType, remotePrefix: string) => {
   return {
-    key: x.Key,
+    key: getLocalNoPrefixPath(x.Key, remotePrefix),
     lastModified: x.LastModified.valueOf(),
     size: x.Size,
     remoteType: "s3",
@@ -197,11 +229,12 @@ const fromS3ObjectToRemoteItem = (x: S3ObjectType) => {
 };
 
 const fromS3HeadObjectToRemoteItem = (
-  key: string,
-  x: HeadObjectCommandOutput
+  fileOrFolderPathWithRemotePrefix: string,
+  x: HeadObjectCommandOutput,
+  remotePrefix: string
 ) => {
   return {
-    key: key,
+    key: getLocalNoPrefixPath(fileOrFolderPathWithRemotePrefix, remotePrefix),
     lastModified: x.LastModified.valueOf(),
     size: x.ContentLength,
     remoteType: "s3",
@@ -256,16 +289,26 @@ export const getS3Client = (s3Config: S3Config) => {
 export const getRemoteMeta = async (
   s3Client: S3Client,
   s3Config: S3Config,
-  fileOrFolderPath: string
+  fileOrFolderPathWithRemotePrefix: string
 ) => {
+  if (
+    s3Config.remotePrefix !== "" &&
+    !fileOrFolderPathWithRemotePrefix.startsWith(s3Config.remotePrefix)
+  ) {
+    throw Error(`s3 getRemoteMeta should only accept prefix-ed path`);
+  }
   const res = await s3Client.send(
     new HeadObjectCommand({
       Bucket: s3Config.s3BucketName,
-      Key: fileOrFolderPath,
+      Key: fileOrFolderPathWithRemotePrefix,
     })
   );
 
-  return fromS3HeadObjectToRemoteItem(fileOrFolderPath, res);
+  return fromS3HeadObjectToRemoteItem(
+    fileOrFolderPathWithRemotePrefix,
+    res,
+    s3Config.remotePrefix
+  );
 };
 
 export const uploadToRemote = async (
@@ -283,6 +326,7 @@ export const uploadToRemote = async (
   if (password !== "") {
     uploadFile = remoteEncryptedKey;
   }
+  uploadFile = getRemoteWithPrefixPath(uploadFile, s3Config.remotePrefix);
   const isFolder = fileOrFolderPath.endsWith("/");
 
   if (isFolder && isRecursively) {
@@ -350,16 +394,16 @@ export const uploadToRemote = async (
   }
 };
 
-export const listFromRemote = async (
+const listFromRemoteRaw = async (
   s3Client: S3Client,
   s3Config: S3Config,
-  prefix?: string
+  prefixOfRawKeys?: string
 ) => {
   const confCmd = {
     Bucket: s3Config.s3BucketName,
   } as ListObjectsV2CommandInput;
-  if (prefix !== undefined) {
-    confCmd.Prefix = prefix;
+  if (prefixOfRawKeys !== undefined && prefixOfRawKeys !== "") {
+    confCmd.Prefix = prefixOfRawKeys;
   }
 
   const contents = [] as _Object[];
@@ -388,9 +432,20 @@ export const listFromRemote = async (
   } while (isTruncated);
 
   // ensemble fake rsp
+  // in the end, we need to transform the response list
+  // back to the local contents-alike list
   return {
-    Contents: contents.map((x) => fromS3ObjectToRemoteItem(x)),
+    Contents: contents.map((x) =>
+      fromS3ObjectToRemoteItem(x, s3Config.remotePrefix)
+    ),
   };
+};
+
+export const listAllFromRemote = async (
+  s3Client: S3Client,
+  s3Config: S3Config
+) => {
+  return await listFromRemoteRaw(s3Client, s3Config, s3Config.remotePrefix);
 };
 
 /**
@@ -422,12 +477,18 @@ const getObjectBodyToArrayBuffer = async (
 const downloadFromRemoteRaw = async (
   s3Client: S3Client,
   s3Config: S3Config,
-  fileOrFolderPath: string
+  fileOrFolderPathWithRemotePrefix: string
 ) => {
+  if (
+    s3Config.remotePrefix !== "" &&
+    !fileOrFolderPathWithRemotePrefix.startsWith(s3Config.remotePrefix)
+  ) {
+    throw Error(`downloadFromRemoteRaw should only accept prefix-ed path`);
+  }
   const data = await s3Client.send(
     new GetObjectCommand({
       Bucket: s3Config.s3BucketName,
-      Key: fileOrFolderPath,
+      Key: fileOrFolderPathWithRemotePrefix,
     })
   );
   const bodyContents = await getObjectBodyToArrayBuffer(data.Body);
@@ -462,6 +523,7 @@ export const downloadFromRemote = async (
     if (password !== "") {
       downloadFile = remoteEncryptedKey;
     }
+    downloadFile = getRemoteWithPrefixPath(downloadFile, s3Config.remotePrefix);
     const remoteContent = await downloadFromRemoteRaw(
       s3Client,
       s3Config,
@@ -501,6 +563,10 @@ export const deleteFromRemote = async (
   if (password !== "") {
     remoteFileName = remoteEncryptedKey;
   }
+  remoteFileName = getRemoteWithPrefixPath(
+    remoteFileName,
+    s3Config.remotePrefix
+  );
   await s3Client.send(
     new DeleteObjectCommand({
       Bucket: s3Config.s3BucketName,
@@ -509,7 +575,7 @@ export const deleteFromRemote = async (
   );
 
   if (fileOrFolderPath.endsWith("/") && password === "") {
-    const x = await listFromRemote(s3Client, s3Config, fileOrFolderPath);
+    const x = await listFromRemoteRaw(s3Client, s3Config, remoteFileName);
     x.Contents.forEach(async (element) => {
       await s3Client.send(
         new DeleteObjectCommand({

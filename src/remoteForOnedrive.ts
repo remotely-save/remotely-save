@@ -602,15 +602,8 @@ export const getOnedriveClient = (
  * Use delta api to list all files and folders
  * https://docs.microsoft.com/en-us/onedrive/developer/rest-api/api/driveitem_delta?view=odsp-graph-online
  * @param client
- * @param prefix
  */
-export const listFromRemote = async (
-  client: WrappedOnedriveClient,
-  prefix?: string
-) => {
-  if (prefix !== undefined) {
-    throw Error("prefix not supported (yet)");
-  }
+export const listAllFromRemote = async (client: WrappedOnedriveClient) => {
   await client.init();
 
   const NEXT_LINK_KEY = "@odata.nextLink";

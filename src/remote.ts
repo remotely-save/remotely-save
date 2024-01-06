@@ -164,19 +164,18 @@ export class RemoteClient {
     }
   };
 
-  listFromRemote = async (prefix?: string) => {
+  listAllFromRemote = async () => {
     if (this.serviceType === "s3") {
-      return await s3.listFromRemote(
+      return await s3.listAllFromRemote(
         s3.getS3Client(this.s3Config),
-        this.s3Config,
-        prefix
+        this.s3Config
       );
     } else if (this.serviceType === "webdav") {
-      return await webdav.listFromRemote(this.webdavClient, prefix);
+      return await webdav.listAllFromRemote(this.webdavClient);
     } else if (this.serviceType === "dropbox") {
-      return await dropbox.listFromRemote(this.dropboxClient, prefix);
+      return await dropbox.listAllFromRemote(this.dropboxClient);
     } else if (this.serviceType === "onedrive") {
-      return await onedrive.listFromRemote(this.onedriveClient, prefix);
+      return await onedrive.listAllFromRemote(this.onedriveClient);
     } else {
       throw Error(`not supported service type ${this.serviceType}`);
     }

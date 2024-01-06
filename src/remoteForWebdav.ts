@@ -405,13 +405,7 @@ export const uploadToRemote = async (
   }
 };
 
-export const listFromRemote = async (
-  client: WrappedWebdavClient,
-  prefix?: string
-) => {
-  if (prefix !== undefined) {
-    throw Error("prefix not supported");
-  }
+export const listAllFromRemote = async (client: WrappedWebdavClient) => {
   await client.init();
 
   let contents = [] as FileStat[];

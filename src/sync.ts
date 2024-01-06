@@ -219,6 +219,7 @@ export const parseRemoteItems = async (
 
     let r = {} as FileOrFolderMixedState;
     if (backwardMapping !== undefined) {
+      // log.debug(`backwardMapping=${backwardMapping}`);
       key = backwardMapping.localKey;
       const mtimeRemote = backwardMapping.localMtime || entry.lastModified;
 
@@ -236,7 +237,7 @@ export const parseRemoteItems = async (
         changeRemoteMtimeUsingMapping: true,
       };
     } else {
-      // do not have backwardMapping
+      // log.debug(`do not have backwardMapping`);
       r = {
         key: key,
         existRemote: true,

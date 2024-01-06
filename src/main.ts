@@ -233,7 +233,7 @@ export default class RemotelySavePlugin extends Plugin {
         this.app.vault.getName(),
         () => self.saveSettings()
       );
-      const remoteRsp = await client.listFromRemote();
+      const remoteRsp = await client.listAllFromRemote();
       // log.debug(remoteRsp);
 
       if (this.settings.currLogLevel === "info") {

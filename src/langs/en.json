@@ -70,7 +70,7 @@
   "modal_remoteprefix_title": "You are changing the remote prefix config",
   "modal_remoteprefix_shortdesc": "1. The plugin would NOT automatically move the content from the old directory to the new one directly on the remote. Everything syncs from the beginning again.\n2. If you set the string to the empty, the prefix will be empty and the files will be saved at the root of the bucket.\n3. The remote directory name itself would not be encrypted even you've set an E2E password.\n4. Some special char like '?', '/', '\\' are not allowed. Spaces in the beginning or in the end are also trimmed.",
   "modal_remoteprefix_invaliddirhint": "Your input contains special characters like '?', '/', '\\' which are not allowed.",
-  "modal_remoteprefix_tosave": "The prefix to save is {{{prefix}}}",
+  "modal_remoteprefix_tosave": "The prefix to save is \"{{{prefix}}}\"",
   "modal_remoteprefix_secondconfirm_empty": "The prefix is empty and the files will be saved at the root of the bucket.",
   "modal_remoteprefix_secondconfirm_change": "Confirm To Change",
   "modal_remoteprefix_notice": "New remote prefix config saved!",

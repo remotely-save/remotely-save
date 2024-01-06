@@ -615,13 +615,7 @@ export const uploadToRemote = async (
   }
 };
 
-export const listFromRemote = async (
-  client: WrappedDropboxClient,
-  prefix?: string
-) => {
-  if (prefix !== undefined) {
-    throw Error("prefix not supported (yet)");
-  }
+export const listAllFromRemote = async (client: WrappedDropboxClient) => {
   await client.init();
   let res = await client.dropbox.filesListFolder({
     path: `/${client.remoteBaseDir}`,
