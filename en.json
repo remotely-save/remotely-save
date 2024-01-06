@@ -89,7 +89,7 @@
   "modal_onedriverevokeauth_clean_button": "Clean",
   "modal_onedriverevokeauth_clean_notice": "Cleaned!",
   "modal_onedriverevokeauth_clean_fail": "Something goes wrong while revoking.",
-  "modal_syncconfig_attn": "Attention 1/3: This only syncs (copies) the whole Obsidian config dir, not other startting-with-dot folders or files. Except for ignoring folders .git and node_modules, it also doesn't understand the meaning of sub-files and sub-folders inside the config dir.\nAttention 2/3: After the config dir is synced, plugins settings might be corrupted, and Obsidian might need to be restarted to load the new settings.\nAttention 3/3: The deletion (uninstallation) operations of or inside Obsidian config dir cannot be tracked. So if you want to uninstall a plugin, you need to manually uninstall it on all device, before next sync.\nIf you are agreed to take your own risk, please click the following second confirm button.",
+  "modal_syncconfig_attn": "Attention 1/2: This only syncs (copies) the whole Obsidian config dir, not other startting-with-dot folders or files. Except for ignoring folders .git and node_modules, it also doesn't understand the meaning of sub-files and sub-folders inside the config dir.\nAttention 2/2: After the config dir is synced, plugins settings might be corrupted, and Obsidian might need to be restarted to load the new settings.\nIf you are agreed to take your own risk, please click the following second confirm button.",
   "modal_syncconfig_secondconfirm": "The Second Confirm To Enable.",
   "modal_syncconfig_notice": "You've enabled syncing config folder!",
 

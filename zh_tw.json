@@ -90,7 +90,7 @@
   "modal_onedriverevokeauth_clean_notice": "已清理！",
   "modal_onedriverevokeauth_clean_fail": "鑑權途中出錯了。",
 
-  "modal_syncconfig_attn": "注意 1/3：此設定只同步（複製）整個 Obsidian 的配置資料夾，但是不會同步其它 . 開頭的資料夾或檔案。除了會忽略 .git 和 node_modules 資料夾之外，它也並不理解配置資料夾的裡各個子檔案或子資料夾的含義。\n注意 2/3：配置資料夾被同步之後，各外掛的設定或許會出錯，且 Obsidian 或許需要重啟來過載各外掛的新配置。\n注意 3/3：配置資料夾內的刪除（解除安裝）操作無法被識別，因此，如果您想解除安裝一個外掛，在下一次同步之前，您需要手動在所有裝置上先手動解除安裝那個外掛。\n如果您同意自行承受以上風險，您可以點選以下再次確認按鈕。",
+  "modal_syncconfig_attn": "注意 1/2：此設定只同步（複製）整個 Obsidian 的配置資料夾，但是不會同步其它 . 開頭的資料夾或檔案。除了會忽略 .git 和 node_modules 資料夾之外，它也並不理解配置資料夾的裡各個子檔案或子資料夾的含義。\n注意 2/2：配置資料夾被同步之後，各外掛的設定或許會出錯，且 Obsidian 或許需要重啟來過載各外掛的新配置。\n如果您同意自行承受以上風險，您可以點選以下再次確認按鈕。",
   "modal_syncconfig_secondconfirm": "再次確認開啟",
   "modal_syncconfig_notice": "您已開啟配置資料夾的同步！",
 

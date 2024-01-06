@@ -90,7 +90,7 @@
   "modal_onedriverevokeauth_clean_notice": "已清理！",
   "modal_onedriverevokeauth_clean_fail": "鉴权途中出错了。",
 
-  "modal_syncconfig_attn": "注意 1/3：此设置只同步（复制）整个 Obsidian 的配置文件夹，但是不会同步其它 . 开头的文件夹或文件。除了会忽略 .git 和 node_modules 文件夹之外，它也并不理解配置文件夹的里各个子文件或子文件夹的含义。\n注意 2/3：配置文件夹被同步之后，各插件的设置或许会出错，且 Obsidian 或许需要重启来重载各插件的新配置。\n注意 3/3：配置文件夹内的删除（卸载）操作无法被识别，因此，如果您想卸载一个插件，在下一次同步之前，您需要手动在所有设备上先手动卸载那个插件。\n如果您同意自行承受以上风险，您可以点击以下再次确认按钮。",
+  "modal_syncconfig_attn": "注意 1/2：此设置只同步（复制）整个 Obsidian 的配置文件夹，但是不会同步其它 . 开头的文件夹或文件。除了会忽略 .git 和 node_modules 文件夹之外，它也并不理解配置文件夹的里各个子文件或子文件夹的含义。\n注意 2/2：配置文件夹被同步之后，各插件的设置或许会出错，且 Obsidian 或许需要重启来重载各插件的新配置。\n如果您同意自行承受以上风险，您可以点击以下再次确认按钮。",
   "modal_syncconfig_secondconfirm": "再次确认开启",
   "modal_syncconfig_notice": "您已开启配置文件夹的同步！",
 
