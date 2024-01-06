@@ -39,6 +39,7 @@ import {
   atWhichLevel,
   unixTimeToStr,
   statFix,
+  isFolderToSkip,
 } from "./misc";
 import { RemoteClient } from "./remote";
 import {
@@ -306,6 +307,10 @@ const isSkipItem = (
   }
   if (syncConfigDir && isInsideObsFolder(key, configDir)) {
     return false;
+  }
+  if (isFolderToSkip(key, []))  {
+    // some special dirs and files are always skipped
+    return true;
   }
   return (
     isHiddenPath(key, true, false) ||
