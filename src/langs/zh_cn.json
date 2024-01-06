@@ -127,7 +127,7 @@
   "settings_saverun_5sec": "隔 5 秒检查一次",
   "settings_saverun_10sec": "隔 10 秒检查一次（推荐）",
   "settings_saverun_1min": "隔 1 分钟检查一次",
-  "settings_skiplargefiles": "跳过大文件（实验性质）",
+  "settings_skiplargefiles": "跳过大文件",
   "settings_skiplargefiles_desc": "跳过大于某一个阈值的文件。这里 1 MB = 10^6 bytes。",
   "settings_skiplargefiles_notset": "（不设置）",
 

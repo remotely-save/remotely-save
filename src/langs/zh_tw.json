@@ -127,7 +127,7 @@
   "settings_saverun_5sec": "隔 5 秒檢查一次",
   "settings_saverun_10sec": "隔 10 秒檢查一次（推薦）",
   "settings_saverun_1min": "隔 1 分鐘檢查一次",
-  "settings_skiplargefiles": "跳過大檔案（實驗性質）",
+  "settings_skiplargefiles": "跳過大檔案",
   "settings_skiplargefiles_desc": "跳過大於某一個閾值的檔案。這裡 1 MB = 10^6 bytes。",
   "settings_skiplargefiles_notset": "（不設定）",
 

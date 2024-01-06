@@ -127,7 +127,7 @@
   "settings_saverun_5sec": "check every 5 seconds",
   "settings_saverun_10sec": "check every 10 seconds (recommended)",
   "settings_saverun_1min": "check every 1 minute",
-  "settings_skiplargefiles": "Skip Large Files (experimental)",
+  "settings_skiplargefiles": "Skip Large Files",
   "settings_skiplargefiles_desc": "Skip files with sizes larger than the threshold. Here 1 MB = 10^6 bytes.",
   "settings_skiplargefiles_notset": "(not set)",
 
