@@ -183,4 +183,9 @@ export const DEFAULT_SYNC_PLANS_HISTORY_FILE_PREFIX =
   "sync_plans_hist_exported_on_";
 export const DEFAULT_LOG_HISTORY_FILE_PREFIX = "log_hist_exported_on_";
 
-export type SyncTriggerSourceType = "manual" | "auto" | "dry" | "autoOnceInit";
+export type SyncTriggerSourceType =
+  | "manual"
+  | "auto"
+  | "dry"
+  | "autoOnceInit"
+  | "auto_sync_on_save";

@@ -308,7 +308,7 @@ const isSkipItem = (
   if (syncConfigDir && isInsideObsFolder(key, configDir)) {
     return false;
   }
-  if (isFolderToSkip(key, []))  {
+  if (isFolderToSkip(key, [])) {
     // some special dirs and files are always skipped
     return true;
   }

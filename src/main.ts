@@ -176,7 +176,8 @@ export default class RemotelySavePlugin extends Plugin {
 
     try {
       log.info(
-        `${this.manifest.id
+        `${
+          this.manifest.id
         }-${Date.now()}: start sync, triggerSource=${triggerSource}`
       );
 
@@ -382,7 +383,8 @@ export default class RemotelySavePlugin extends Plugin {
       }
 
       log.info(
-        `${this.manifest.id
+        `${
+          this.manifest.id
         }-${Date.now()}: finish sync, triggerSource=${triggerSource}`
       );
     } catch (error) {
@@ -864,6 +866,9 @@ export default class RemotelySavePlugin extends Plugin {
     if (this.settings.enableStatusBarInfo === undefined) {
       this.settings.enableStatusBarInfo = true;
     }
+    if (this.settings.syncOnSaveAfterMilliseconds === undefined) {
+      this.settings.syncOnSaveAfterMilliseconds = -1;
+    }
   }
 
   async checkIfPresetRulesFollowed() {
@@ -991,47 +996,6 @@ export default class RemotelySavePlugin extends Plugin {
     this.vaultRandomID = vaultRandomID;
   }
 
-  enableSyncOnSaveIfSet() {
-    if (
-      this.settings.syncOnSaveAfterMilliseconds !== undefined &&
-      this.settings.syncOnSaveAfterMilliseconds !== null &&
-      this.settings.syncOnSaveAfterMilliseconds > 0
-    ) {
-      let runScheduled = false;
-      this.app.workspace.onLayoutReady(() => {
-        const intervalID = window.setInterval(() => {
-          const currentFile = this.app.workspace.getActiveFile();
-
-          if (currentFile) {
-            // get the last modified time of the current file
-            // if it has been modified within the last syncOnSaveAfterMilliseconds
-            // then schedule a run for syncOnSaveAfterMilliseconds after it was modified
-            const lastModified = currentFile.stat.mtime;
-            const currentTime = Date.now();
-            log.debug(
-              `Checking if file was modified within last ${this.settings.syncOnSaveAfterMilliseconds / 1000} seconds, last modified: ${(currentTime - lastModified) / 1000} seconds ago`
-            );
-            if (currentTime - lastModified < this.settings.syncOnSaveAfterMilliseconds) {
-              if (!runScheduled) {
-                const scheduleTimeFromNow = this.settings.syncOnSaveAfterMilliseconds - (currentTime - lastModified)
-                log.info(`schedule a run for ${scheduleTimeFromNow} milliseconds later`)
-                runScheduled = true
-                setTimeout(() => {
-                  this.syncRun("auto")
-                  runScheduled = false
-                },
-                  scheduleTimeFromNow
-                )
-              }
-            }
-          }
-        }, 1_000);
-        this.syncOnSaveIntervalID = intervalID;
-        this.registerInterval(intervalID);
-      });
-    }
-  }
-
   enableAutoSyncIfSet() {
     if (
       this.settings.autoRunEveryMilliseconds !== undefined &&
@@ -1058,6 +1022,56 @@ export default class RemotelySavePlugin extends Plugin {
         window.setTimeout(() => {
           this.syncRun("autoOnceInit");
         }, this.settings.initRunAfterMilliseconds);
+      });
+    }
+  }
+
+  enableSyncOnSaveIfSet() {
+    if (
+      this.settings.syncOnSaveAfterMilliseconds !== undefined &&
+      this.settings.syncOnSaveAfterMilliseconds !== null &&
+      this.settings.syncOnSaveAfterMilliseconds > 0
+    ) {
+      let runScheduled = false;
+      this.app.workspace.onLayoutReady(() => {
+        const intervalID = window.setInterval(() => {
+          const currentFile = this.app.workspace.getActiveFile();
+
+          if (currentFile) {
+            // get the last modified time of the current file
+            // if it has been modified within the last syncOnSaveAfterMilliseconds
+            // then schedule a run for syncOnSaveAfterMilliseconds after it was modified
+            const lastModified = currentFile.stat.mtime;
+            const currentTime = Date.now();
+            // log.debug(
+            //   `Checking if file was modified within last ${
+            //     this.settings.syncOnSaveAfterMilliseconds / 1000
+            //   } seconds, last modified: ${
+            //     (currentTime - lastModified) / 1000
+            //   } seconds ago`
+            // );
+            if (
+              currentTime - lastModified <
+              this.settings.syncOnSaveAfterMilliseconds
+            ) {
+              if (!runScheduled) {
+                const scheduleTimeFromNow =
+                  this.settings.syncOnSaveAfterMilliseconds -
+                  (currentTime - lastModified);
+                log.info(
+                  `schedule a run for ${scheduleTimeFromNow} milliseconds later`
+                );
+                runScheduled = true;
+                setTimeout(() => {
+                  this.syncRun("auto_sync_on_save");
+                  runScheduled = false;
+                }, scheduleTimeFromNow);
+              }
+            }
+          }
+        }, this.settings.syncOnSaveAfterMilliseconds);
+        this.syncOnSaveIntervalID = intervalID;
+        this.registerInterval(intervalID);
       });
     }
   }
