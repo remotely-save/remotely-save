@@ -93,6 +93,7 @@ const DEFAULT_SETTINGS: RemotelySavePluginSettings = {
   skipSizeLargerThan: -1,
   ignorePaths: [],
   enableStatusBarInfo: true,
+  deleteToWhere: "system",
 };
 
 interface OAuth2Info {
@@ -878,6 +879,9 @@ export default class RemotelySavePlugin extends Plugin {
     if (this.settings.syncOnSaveAfterMilliseconds === undefined) {
       this.settings.syncOnSaveAfterMilliseconds = -1;
     }
+    if (this.settings.deleteToWhere === undefined) {
+      this.settings.deleteToWhere = "system";
+    }
   }
 
   async checkIfPresetRulesFollowed() {
@@ -978,8 +982,13 @@ export default class RemotelySavePlugin extends Plugin {
   }
 
   async trash(x: string) {
-    if (!(await this.app.vault.adapter.trashSystem(x))) {
+    if (this.settings.deleteToWhere === "obsidian") {
       await this.app.vault.adapter.trashLocal(x);
+    } else {
+      // "system"
+      if (!(await this.app.vault.adapter.trashSystem(x))) {
+        await this.app.vault.adapter.trashLocal(x);
+      }
     }
   }
 

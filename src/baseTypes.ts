@@ -90,6 +90,7 @@ export interface RemotelySavePluginSettings {
   skipSizeLargerThan?: number;
   ignorePaths?: string[];
   enableStatusBarInfo?: boolean;
+  deleteToWhere?: "system" | "obsidian";
 
   /**
    * @deprecated

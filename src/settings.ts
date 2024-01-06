@@ -1904,6 +1904,23 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
           });
       });
 
+    new Setting(advDiv)
+      .setName(t("settings_deletetowhere"))
+      .setDesc(t("settings_deletetowhere_desc"))
+      .addDropdown((dropdown) => {
+        dropdown.addOption("system", t("settings_deletetowhere_system_trash"));
+        dropdown.addOption(
+          "obsidian",
+          t("settings_deletetowhere_obsidian_trash")
+        );
+        dropdown
+          .setValue(this.plugin.settings.deleteToWhere)
+          .onChange(async (val: "system" | "obsidian") => {
+            this.plugin.settings.deleteToWhere = val;
+            await this.plugin.saveSettings();
+          });
+      });
+
     //////////////////////////////////////////////////
     // below for import and export functions
     //////////////////////////////////////////////////
