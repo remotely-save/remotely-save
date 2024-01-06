@@ -866,6 +866,9 @@ export default class RemotelySavePlugin extends Plugin {
     if (this.settings.s3.forcePathStyle === undefined) {
       this.settings.s3.forcePathStyle = false;
     }
+    if (this.settings.s3.remotePrefix === undefined) {
+      this.settings.s3.remotePrefix = "";
+    }
     if (this.settings.ignorePaths === undefined) {
       this.settings.ignorePaths = [];
     }

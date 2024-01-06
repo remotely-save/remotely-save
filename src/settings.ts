@@ -54,6 +54,7 @@ import {
   log,
   restoreLogWritterInplace,
 } from "./moreOnLog";
+import { simpleTransRemotePrefix } from "./remoteForS3";
 
 class PasswordModal extends Modal {
   plugin: RemotelySavePlugin;
@@ -203,6 +204,88 @@ class ChangeRemoteBaseDirModal extends Modal {
             this.close();
           });
           button.setClass("remotebasedir-second-confirm");
+        })
+        .addButton((button) => {
+          button.setButtonText(t("goback"));
+          button.onClick(() => {
+            this.close();
+          });
+        });
+    }
+  }
+
+  onClose() {
+    let { contentEl } = this;
+    contentEl.empty();
+  }
+}
+
+/**
+ * s3 is special and do not necessarily the same as others
+ * thus a new Modal here
+ */
+class ChangeRemotePrefixModal extends Modal {
+  readonly plugin: RemotelySavePlugin;
+  readonly newRemotePrefix: string;
+  constructor(app: App, plugin: RemotelySavePlugin, newRemotePrefix: string) {
+    super(app);
+    this.plugin = plugin;
+    this.newRemotePrefix = newRemotePrefix;
+  }
+
+  onOpen() {
+    let { contentEl } = this;
+
+    const t = (x: TransItemType, vars?: any) => {
+      return this.plugin.i18n.t(x, vars);
+    };
+
+    contentEl.createEl("h2", { text: t("modal_remoteprefix_title") });
+    t("modal_remoteprefix_shortdesc")
+      .split("\n")
+      .forEach((val, idx) => {
+        contentEl.createEl("p", {
+          text: val,
+        });
+      });
+
+    contentEl.createEl("p", {
+      text: t("modal_remoteprefix_tosave", { prefix: this.newRemotePrefix }),
+    });
+
+    if (
+      this.newRemotePrefix === "" ||
+      this.newRemotePrefix === this.app.vault.getName()
+    ) {
+      new Setting(contentEl)
+        .addButton((button) => {
+          button.setButtonText(t("modal_remoteprefix_secondconfirm_empty"));
+          button.onClick(async () => {
+            // in the settings, the value is reset to the special case ""
+            this.plugin.settings.s3.remotePrefix = "";
+            await this.plugin.saveSettings();
+            new Notice(t("modal_remoteprefix_notice"));
+            this.close();
+          });
+          button.setClass("remoteprefix-second-confirm");
+        })
+        .addButton((button) => {
+          button.setButtonText(t("goback"));
+          button.onClick(() => {
+            this.close();
+          });
+        });
+    } else {
+      new Setting(contentEl)
+        .addButton((button) => {
+          button.setButtonText(t("modal_remoteprefix_secondconfirm_change"));
+          button.onClick(async () => {
+            this.plugin.settings.s3.remotePrefix = this.newRemotePrefix;
+            await this.plugin.saveSettings();
+            new Notice(t("modal_remoteprefix_notice"));
+            this.close();
+          });
+          button.setClass("remoteprefix-second-confirm");
         })
         .addButton((button) => {
           button.setButtonText(t("goback"));
@@ -865,6 +948,29 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
             this.plugin.settings.s3.partsConcurrency = realVal;
             await this.plugin.saveSettings();
           });
+      });
+
+    let newS3RemotePrefix = this.plugin.settings.s3.remotePrefix || "";
+    new Setting(s3Div)
+      .setName(t("settings_remoteprefix"))
+      .setDesc(t("settings_remoteprefix_desc"))
+      .addText((text) =>
+        text
+          .setPlaceholder("")
+          .setValue(newS3RemotePrefix)
+          .onChange((value) => {
+            newS3RemotePrefix = simpleTransRemotePrefix(value.trim());
+          })
+      )
+      .addButton((button) => {
+        button.setButtonText(t("confirm"));
+        button.onClick(() => {
+          new ChangeRemotePrefixModal(
+            this.app,
+            this.plugin,
+            simpleTransRemotePrefix(newS3RemotePrefix.trim())
+          ).open();
+        });
       });
 
     new Setting(s3Div)

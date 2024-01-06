@@ -24,6 +24,7 @@ import { Buffer } from "buffer";
 import * as mime from "mime-types";
 import { Vault, requestUrl, RequestUrlParam } from "obsidian";
 import { Readable } from "stream";
+import * as path from "path";
 import AggregateError from "aggregate-error";
 import {
   DEFAULT_CONTENT_TYPE,
@@ -163,9 +164,27 @@ export const DEFAULT_S3_CONFIG = {
   bypassCorsLocally: true,
   partsConcurrency: 20,
   forcePathStyle: false,
+  remotePrefix: "",
 };
 
 export type S3ObjectType = _Object;
+
+export const simpleTransRemotePrefix = (x: string) => {
+  if (x === undefined) {
+    return "";
+  }
+  let y = path.posix.normalize(x.trim());
+  if (y === undefined || y === "" || y === "/") {
+    return "";
+  }
+  if (y.startsWith("/")) {
+    y = y.slice(1);
+  }
+  if (!y.endsWith("/")) {
+    y = `${y}/`;
+  }
+  return y;
+};
 
 const fromS3ObjectToRemoteItem = (x: S3ObjectType) => {
   return {
