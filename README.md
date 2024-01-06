@@ -26,12 +26,13 @@ This is yet another unofficial sync plugin for Obsidian. If you like it or find 
 - **[End-to-end encryption](./docs/encryption.md) supported.** Files would be encrypted using openssl format before being sent to the cloud **if** user specify a password.
 - **Scheduled auto sync supported.** You can also manually trigger the sync using sidebar ribbon, or using the command from the command palette (or even bind the hot key combination to the command then press the hot key combination).
 - **[Minimal Intrusive](./docs/minimal_intrusive_design.md).**
+- \*\*Skip Large files and skip paths by custom regex conditions!
 - **Fully open source under [Apache-2.0 License](./LICENSE).**
 - **[Sync Algorithm open](./docs/sync_algorithm_v2.md) for discussion.**
 
 ## Limitations
 
-- **To support deltions sync, extra metadata will also be uploaded.** See [Minimal Intrusive](./docs/minimal_intrusive_design.md).
+- **To support deletions sync, extra metadata will also be uploaded.** See [Minimal Intrusive](./docs/minimal_intrusive_design.md).
 - **No Conflict resolution. No content-diff-and-patch algorithm.** All files and folders are compared using their local and remote "last modified time" and those with later "last modified time" wins.
 - **Cloud services cost you money.** Always be aware of the costs and pricing. Specifically, all the operations, including but not limited to downloading, uploading, listing all files, calling any api, storage sizes, may or may not cost you money.
 - **Some limitations from the browser environment.** More technical details are [in the doc](./docs/browser_env.md).
@@ -60,10 +61,12 @@ Additionally, the plugin author may occasionally visit Obsidian official forum a
 
 ### S3
 
+- Tutorials / Examples:
+  - [Cloudflare R2](./docs/remote_services/s3_cloudflare_r2/README.md)
+  - [MinIO](./docs/remote_services/s3_minio/README.md)
 - Prepare your S3 (-compatible) service information: [endpoint, region](https://docs.aws.amazon.com/general/latest/gr/s3.html), [access key id, secret access key](https://docs.aws.amazon.com/sdk-for-javascript/v3/developer-guide/getting-your-credentials.html), bucket name. The bucket should be empty and solely for syncing a vault.
-- About CORS:
-  - If you are using Obsidian desktop >= 0.13.25 or mobile >= 1.1.1, you can skip this CORS part.
-  - If you are using Obsidian desktop < 0.13.25 or mobile < 1.1.1, you need to configure (enable) [CORS](https://docs.aws.amazon.com/AmazonS3/latest/userguide/enabling-cors-examples.html) for requests from `app://obsidian.md` and `capacitor://localhost` and `http://localhost`, and add at least `ETag` into exposed headers. Full example is [here](./docs/s3_cors_configure.md). It's unfortunately required, because the plugin sends requests from a browser-like envirement. And those addresses are tested and found on desktop and ios and android.
+- If you are using AWS S3, create [policy and user](./docs/remote_services/s3_general/s3_user_policy.md).
+- Very old version of Obsidian needs [configuring CORS](./docs/remote_services/s3_general/s3_cors_configure.md).
 - Download and enable this plugin.
 - Enter your information to the settings of this plugin.
 - If you want to enable end-to-end encryption, also set a password in settings. If you do not specify a password, the files and folders are synced in plain, original content to the cloud.
@@ -87,14 +90,11 @@ Additionally, the plugin author may occasionally visit Obsidian official forum a
 
 ### webdav
 
-- About CORS:
-  - If you are using Obsidian desktop >= 0.13.25 or iOS >= 1.1.1, you can skip this CORS part.
-  - If you are using Obsidian desktop < 0.13.25 or iOS < 1.1.1 or any Android version:
-    - The webdav server has to be enabled CORS for requests from `app://obsidian.md` and `capacitor://localhost` and `http://localhost`, **AND** all webdav HTTP methods, **AND** all webdav headers. These are required, because Obsidian mobile works like a browser and mobile plugins are limited by CORS policies unless under a upgraded Obsidian version.
-    - Popular software NextCloud, OwnCloud, `rclone serve webdav` do **NOT** enable CORS by default. If you are using any of them, you should evaluate the risk, and find a way to enable CORS, before using this plugin, or use a upgraded Obsidian version.
-      - **Unofficial** workaround: NextCloud users can **evaluate the risk by themselves**, and if decide to accept the risk, they can install [WebAppPassword](https://apps.nextcloud.com/apps/webapppassword) app, and add `app://obsidian.md`, `capacitor://localhost`, `http://localhost` to `Allowed origins`
-      - **Unofficial** workaround: OwnCloud users can **evaluate the risk by themselves**, and if decide to accept the risk, they can download `.tar.gz` of `WebAppPassword` above and manually install and configure it on their instances.
-    - The plugin is tested successfully under python package [`wsgidav` (version 4.0)](https://github.com/mar10/wsgidav). See [this issue](https://github.com/mar10/wsgidav/issues/239) for some details.
+- Tutorials / Examples:
+  - [ownCloud](./docs/remote_services/webdav_owncloud/README.md)
+  - [InfiniCloud](./docs/remote_services/webdav_infinicloud_teracloud/README.md)
+  - [坚果云 JianGuoYun/NutStore](./docs/remote_services/webdav_jianguoyun/README.md)
+- Very old version of Obsidian needs [configuring CORS](./docs/remote_services/webdav_general/webav_cors.md).
 - Your data would be synced to a `${vaultName}` sub folder on your webdav server.
 - Password-based end-to-end encryption is also supported. But please be aware that **the vault name itself is not encrypted**.
 

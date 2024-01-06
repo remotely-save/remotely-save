@@ -30,6 +30,7 @@ import {
   clearAllLoggerOutputRecords,
   insertLoggerOutputByVault,
   clearExpiredLoggerOutputRecords,
+  upsertLastSuccessSyncByVault,
 } from "./localdb";
 import type RemotelySavePlugin from "./main"; // unavoidable
 import { RemoteClient } from "./remote";
@@ -1657,6 +1658,57 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
             this.plugin.settings.skipSizeLargerThan = parseInt(val);
             await this.plugin.saveSettings();
           });
+      });
+
+    // custom status bar items is not supported on mobile
+    if (!Platform.isMobileApp) {
+      new Setting(basicDiv)
+        .setName(t("settings_enablestatusbar_info"))
+        .setDesc(t("settings_enablestatusbar_info_desc"))
+        .addToggle((toggle) => {
+          toggle
+            .setValue(this.plugin.settings.enableStatusBarInfo)
+            .onChange(async (val) => {
+              this.plugin.settings.enableStatusBarInfo = val;
+              await this.plugin.saveSettings();
+              new Notice(t("settings_enablestatusbar_reloadrequired_notice"));
+            });
+        });
+
+      new Setting(basicDiv)
+        .setName(t("settings_resetstatusbar_time"))
+        .setDesc(t("settings_resetstatusbar_time_desc"))
+        .addButton((button) => {
+          button.setButtonText(t("settings_resetstatusbar_button"));
+          button.onClick(async () => {
+            // reset last sync time
+            await upsertLastSuccessSyncByVault(
+              this.plugin.db,
+              this.plugin.vaultRandomID,
+              -1
+            );
+            this.plugin.updateLastSuccessSyncMsg(-1);
+            new Notice(t("settings_resetstatusbar_notice"));
+          });
+        });
+    }
+
+    new Setting(basicDiv)
+      .setName(t("settings_ignorepaths"))
+      .setDesc(t("settings_ignorepaths_desc"))
+      .setClass("ignorepaths-settings")
+
+      .addTextArea((textArea) => {
+        textArea
+          .setValue(`${this.plugin.settings.ignorePaths.join("\n")}`)
+          .onChange(async (value) => {
+            this.plugin.settings.ignorePaths = value.trim().split("\n");
+            await this.plugin.saveSettings();
+          });
+        textArea.inputEl.rows = 10;
+        textArea.inputEl.cols = 30;
+
+        textArea.inputEl.addClass("ignorepaths-textarea");
       });
 
     //////////////////////////////////////////////////

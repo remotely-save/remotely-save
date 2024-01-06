@@ -29,6 +29,14 @@ describe("Encryption tests", () => {
     expect(await encryptStringToBase32(k, password)).to.not.equal(k);
   });
 
+  it("should encrypt string and return different results each time", async () => {
+    const k = "dkjdhkfhdkjgsdklxxd";
+    const password = "hey";
+    const res1 = await encryptStringToBase32(k, password);
+    const res2 = await encryptStringToBase32(k, password);
+    expect(res1).to.not.equal(res2);
+  });
+
   it("should raise error using different password", async () => {
     const k = "secret text";
     const password = "hey";
@@ -97,7 +105,21 @@ describe("Encryption tests", () => {
     expect(Buffer.from(enc).equals(Buffer.from(opensslArrBuf))).to.be.true;
   });
 
-  it("should descypt binary file and get the same result as openssl", async () => {
+  it("should encrypt binary file not deterministically", async () => {
+    const testFolder = path.join(__dirname, "static_assets", "mona_lisa");
+    const testFileName =
+      "1374px-Mona_Lisa,_by_Leonardo_da_Vinci,_from_C2RMF_retouched.jpg";
+    const fileArrBuf = bufferToArrayBuffer(
+      await fs.readFileSync(path.join(testFolder, testFileName))
+    );
+    const password = "somepassword";
+    const res1 = await encryptArrayBuffer(fileArrBuf, password);
+    const res2 = await encryptArrayBuffer(fileArrBuf, password);
+
+    expect(Buffer.from(res1).equals(Buffer.from(res2))).to.be.false;
+  });
+
+  it("should decrypt binary file and get the same result as openssl", async () => {
     const testFolder = path.join(__dirname, "static_assets", "mona_lisa");
     const testFileName =
       "1374px-Mona_Lisa,_by_Leonardo_da_Vinci,_from_C2RMF_retouched.jpg";

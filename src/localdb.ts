@@ -18,6 +18,7 @@ export const DEFAULT_TBL_SYNC_MAPPING = "syncmetadatahistory";
 export const DEFAULT_SYNC_PLANS_HISTORY = "syncplanshistory";
 export const DEFAULT_TBL_VAULT_RANDOM_ID_MAPPING = "vaultrandomidmapping";
 export const DEFAULT_TBL_LOGGER_OUTPUT = "loggeroutput";
+export const DEFAULT_TBL_SIMPLE_KV_FOR_MISC = "simplekvformisc";
 
 export interface FileFolderHistoryRecord {
   key: string;
@@ -58,6 +59,7 @@ export interface InternalDBs {
   syncPlansTbl: LocalForage;
   vaultRandomIDMappingTbl: LocalForage;
   loggerOutputTbl: LocalForage;
+  simpleKVForMiscTbl: LocalForage;
 }
 
 /**
@@ -216,6 +218,10 @@ export const prepareDBs = async (
       name: DEFAULT_DB_NAME,
       storeName: DEFAULT_TBL_LOGGER_OUTPUT,
     }),
+    simpleKVForMiscTbl: localforage.createInstance({
+      name: DEFAULT_DB_NAME,
+      storeName: DEFAULT_TBL_SIMPLE_KV_FOR_MISC,
+    }),
   } as InternalDBs;
 
   // try to get vaultRandomID firstly
@@ -312,9 +318,8 @@ export const clearDeleteRenameHistoryOfKeyAndVault = async (
   vaultRandomID: string
 ) => {
   const fullKey = `${vaultRandomID}\t${key}`;
-  const item: FileFolderHistoryRecord | null = await db.fileHistoryTbl.getItem(
-    fullKey
-  );
+  const item: FileFolderHistoryRecord | null =
+    await db.fileHistoryTbl.getItem(fullKey);
   if (
     item !== null &&
     (item.actionType === "delete" || item.actionType === "rename")
@@ -325,7 +330,7 @@ export const clearDeleteRenameHistoryOfKeyAndVault = async (
 
 export const insertDeleteRecordByVault = async (
   db: InternalDBs,
-  fileOrFolder: TAbstractFile,
+  fileOrFolder: TAbstractFile | string,
   vaultRandomID: string
 ) => {
   // log.info(fileOrFolder);
@@ -342,6 +347,7 @@ export const insertDeleteRecordByVault = async (
       renameTo: "",
       vaultRandomID: vaultRandomID,
     };
+    await db.fileHistoryTbl.setItem(`${vaultRandomID}\t${k.key}`, k);
   } else if (fileOrFolder instanceof TFolder) {
     // key should endswith "/"
     const key = fileOrFolder.path.endsWith("/")
@@ -360,8 +366,57 @@ export const insertDeleteRecordByVault = async (
       renameTo: "",
       vaultRandomID: vaultRandomID,
     };
+    await db.fileHistoryTbl.setItem(`${vaultRandomID}\t${k.key}`, k);
+  } else if (typeof fileOrFolder === "string") {
+    // always the deletions in .obsidian folder
+    // so annoying that the path doesn't exists
+    // and we have to guess whether the path is folder or file
+    k = {
+      key: fileOrFolder,
+      ctime: 0,
+      mtime: 0,
+      size: 0,
+      actionWhen: Date.now(),
+      actionType: "delete",
+      keyType: "file",
+      renameTo: "",
+      vaultRandomID: vaultRandomID,
+    };
+    await db.fileHistoryTbl.setItem(`${vaultRandomID}\t${k.key}`, k);
+    for (const ext of [
+      "json",
+      "js",
+      "mjs",
+      "ts",
+      "md",
+      "txt",
+      "css",
+      "png",
+      "gif",
+      "jpg",
+      "jpeg",
+      "gitignore",
+      "gitkeep",
+    ]) {
+      if (fileOrFolder.endsWith(`.${ext}`)) {
+        // stop here, no more need to insert the folder record later
+        return;
+      }
+    }
+    // also add a deletion record as folder if not ending with special exts
+    k = {
+      key: `${fileOrFolder}/`,
+      ctime: 0,
+      mtime: 0,
+      size: 0,
+      actionWhen: Date.now(),
+      actionType: "delete",
+      keyType: "folder",
+      renameTo: "",
+      vaultRandomID: vaultRandomID,
+    };
+    await db.fileHistoryTbl.setItem(`${vaultRandomID}\t${k.key}`, k);
   }
-  await db.fileHistoryTbl.setItem(`${vaultRandomID}\t${k.key}`, k);
 };
 
 /**
@@ -680,4 +735,24 @@ export const clearExpiredLoggerOutputRecords = async (db: InternalDBs) => {
     ps.push(db.loggerOutputTbl.removeItem(element));
   });
   await Promise.all(ps);
+};
+
+export const upsertLastSuccessSyncByVault = async (
+  db: InternalDBs,
+  vaultRandomID: string,
+  millis: number
+) => {
+  await db.simpleKVForMiscTbl.setItem(
+    `${vaultRandomID}-lastSuccessSyncMillis`,
+    millis
+  );
+};
+
+export const getLastSuccessSyncByVault = async (
+  db: InternalDBs,
+  vaultRandomID: string
+) => {
+  return (await db.simpleKVForMiscTbl.getItem(
+    `${vaultRandomID}-lastSuccessSyncMillis`
+  )) as number;
 };

@@ -15,21 +15,22 @@ import type {
   FileStat,
   WebDAVClient,
   RequestOptionsWithState,
-  Response,
-  ResponseDataDetailed,
-} from "webdav/web";
-import { getPatcher } from "webdav/web";
+  // Response,
+  // ResponseDataDetailed,
+} from "webdav";
+
+// @ts-ignore
+import { getPatcher } from "webdav/dist/web/index.js";
 if (VALID_REQURL) {
   getPatcher().patch(
     "request",
-    async (
-      options: RequestOptionsWithState
-    ): Promise<Response | ResponseDataDetailed<any>> => {
+    async (options: RequestOptionsWithState): Promise<Response> => {
       const transformedHeaders = { ...options.headers };
       delete transformedHeaders["host"];
       delete transformedHeaders["Host"];
       delete transformedHeaders["content-length"];
       delete transformedHeaders["Content-Length"];
+
       const r = await requestUrl({
         url: options.url,
         method: options.method,
@@ -37,79 +38,100 @@ if (VALID_REQURL) {
         headers: transformedHeaders,
       });
 
-      let r2: Response | ResponseDataDetailed<any> = undefined;
-      if (options.responseType === undefined) {
-        r2 = {
-          data: undefined,
-          status: r.status,
-          statusText: getReasonPhrase(r.status),
-          headers: r.headers,
-        };
-      } else if (options.responseType === "json") {
-        r2 = {
-          data: r.json,
-          status: r.status,
-          statusText: getReasonPhrase(r.status),
-          headers: r.headers,
-        };
-      } else if (options.responseType === "text") {
-        r2 = {
-          data: r.text,
-          status: r.status,
-          statusText: getReasonPhrase(r.status),
-          headers: r.headers,
-        };
-      } else if (options.responseType === "arraybuffer") {
-        r2 = {
-          data: r.arrayBuffer,
-          status: r.status,
-          statusText: getReasonPhrase(r.status),
-          headers: r.headers,
-        };
-      } else {
-        throw Error(
-          `do not know how to deal with responseType = ${options.responseType}`
-        );
+      let contentType: string | undefined =
+        r.headers["Content-Type"] ||
+        r.headers["content-type"] ||
+        options.headers["Content-Type"] ||
+        options.headers["content-type"] ||
+        options.headers["Accept"] ||
+        options.headers["accept"];
+      if (contentType !== undefined) {
+        contentType = contentType.toLowerCase();
       }
+      const rspHeaders = { ...r.headers };
+      for (let key in rspHeaders) {
+        if (rspHeaders.hasOwnProperty(key)) {
+          if (key === "content-disposition" || key === "Content-Disposition") {
+            rspHeaders[key] = encodeURIComponent(rspHeaders[key]);
+          }
+        }
+      }
+      // console.log(`requesting url=${options.url}`);
+      // console.log(`contentType=${contentType}`);
+      // console.log(`rspHeaders=${JSON.stringify(rspHeaders)}`)
+
+      // let r2: Response = undefined;
+      // if (contentType.includes("xml")) {
+      //   r2 = new Response(r.text, {
+      //     status: r.status,
+      //     statusText: getReasonPhrase(r.status),
+      //     headers: rspHeaders,
+      //   });
+      // } else if (
+      //   contentType.includes("json") ||
+      //   contentType.includes("javascript")
+      // ) {
+      //   console.log('inside json branch');
+      //   // const j = r.json;
+      //   // console.log(j);
+      //   r2 = new Response(
+      //     r.text,  // yea, here is the text because Response constructor expects a text
+      //     {
+      //     status: r.status,
+      //     statusText: getReasonPhrase(r.status),
+      //     headers: rspHeaders,
+      //   });
+      // } else if (contentType.includes("text")) {
+      //   // avoid text/json,
+      //   // so we split this out from the above xml or json branch
+      //   r2 = new Response(r.text, {
+      //     status: r.status,
+      //     statusText: getReasonPhrase(r.status),
+      //     headers: rspHeaders,
+      //   });
+      // } else if (
+      //   contentType.includes("octet-stream") ||
+      //   contentType.includes("binary") ||
+      //   contentType.includes("buffer")
+      // ) {
+      //   // application/octet-stream
+      //   r2 = new Response(r.arrayBuffer, {
+      //     status: r.status,
+      //     statusText: getReasonPhrase(r.status),
+      //     headers: rspHeaders,
+      //   });
+      // } else {
+      //   throw Error(
+      //     `do not know how to deal with requested content type = ${contentType}`
+      //   );
+      // }
+
+      let r2: Response = undefined;
+      if ([101, 103, 204, 205, 304].includes(r.status)) {
+        // A null body status is a status that is 101, 103, 204, 205, or 304.
+        // https://fetch.spec.whatwg.org/#statuses
+        // fix this: Failed to construct 'Response': Response with null body status cannot have body
+        r2 = new Response(null, {
+          status: r.status,
+          statusText: getReasonPhrase(r.status),
+          headers: rspHeaders,
+        });
+      } else {
+        r2 = new Response(r.arrayBuffer, {
+          status: r.status,
+          statusText: getReasonPhrase(r.status),
+          headers: rspHeaders,
+        });
+      }
+
       return r2;
     }
   );
 }
-// getPatcher().patch("request", (options: any) => {
-//   // console.log("using fetch");
-//   const r = fetch(options.url, {
-//     method: options.method,
-//     body: options.data as any,
-//     headers: options.headers,
-//     signal: options.signal,
-//   })
-//     .then((rsp) => {
-//       if (options.responseType === undefined) {
-//         return Promise.all([undefined, rsp]);
-//       }
-//       if (options.responseType === "json") {
-//         return Promise.all([rsp.json(), rsp]);
-//       }
-//       if (options.responseType === "text") {
-//         return Promise.all([rsp.text(), rsp]);
-//       }
-//       if (options.responseType === "arraybuffer") {
-//         return Promise.all([rsp.arrayBuffer(), rsp]);
-//       }
-//     })
-//     .then(([d, r]) => {
-//       return {
-//         data: d,
-//         status: r.status,
-//         statusText: r.statusText,
-//         headers: r.headers,
-//       };
-//     });
-//   // console.log("using fetch");
-//   return r;
-// });
-import { AuthType, BufferLike, createClient } from "webdav/web";
-export type { WebDAVClient } from "webdav/web";
+
+// @ts-ignore
+import { AuthType, BufferLike, createClient } from "webdav/dist/web/index.js";
+export type { WebDAVClient } from "webdav";
 
 export const DEFAULT_WEBDAV_CONFIG = {
   address: "",
@@ -232,9 +254,10 @@ export class WrappedWebdavClient {
           method: "PROPFIND",
           headers: {
             Depth: "infinity",
+            Accept: "text/plain,application/xml",
           },
-          responseType: "text",
-        });
+          // responseType: "text",
+        } as any);
         if (res.status === 403) {
           throw Error("not support Infinity, get 403");
         } else {
@@ -253,9 +276,10 @@ export class WrappedWebdavClient {
               method: "PROPFIND",
               headers: {
                 Depth: "1",
+                Accept: "text/plain,application/xml",
               },
-              responseType: "text",
-            }
+              // responseType: "text",
+            } as any
           );
           testPassed = true;
           this.webdavConfig.depth = "auto_1";
@@ -455,9 +479,9 @@ const downloadFromRemoteRaw = async (
   fileOrFolderPath: string
 ) => {
   await client.init();
-  const buff = (await client.client.getFileContents(
-    getWebdavPath(fileOrFolderPath, client.remoteBaseDir)
-  )) as BufferLike;
+  const p = getWebdavPath(fileOrFolderPath, client.remoteBaseDir);
+  // console.log(`getWebdavPath=${p}`);
+  const buff = (await client.client.getFileContents(p)) as BufferLike;
   if (buff instanceof ArrayBuffer) {
     return buff;
   } else if (buff instanceof Buffer) {
@@ -496,6 +520,7 @@ export const downloadFromRemote = async (
       downloadFile = remoteEncryptedKey;
     }
     downloadFile = getWebdavPath(downloadFile, client.remoteBaseDir);
+    // console.log(`downloadFile=${downloadFile}`);
     const remoteContent = await downloadFromRemoteRaw(client, downloadFile);
     let localContent = remoteContent;
     if (password !== "") {

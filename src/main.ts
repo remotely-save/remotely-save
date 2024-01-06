@@ -6,6 +6,9 @@ import {
   addIcon,
   setIcon,
   FileSystemAdapter,
+  Platform,
+  TFile,
+  TFolder,
 } from "obsidian";
 import cloneDeep from "lodash/cloneDeep";
 import { createElement, RotateCcw, RefreshCcw, FileText } from "lucide";
@@ -31,6 +34,8 @@ import {
   insertLoggerOutputByVault,
   clearExpiredLoggerOutputRecords,
   clearExpiredSyncPlanRecords,
+  upsertLastSuccessSyncByVault,
+  getLastSuccessSyncByVault,
 } from "./localdb";
 import { RemoteClient } from "./remote";
 import {
@@ -86,6 +91,8 @@ const DEFAULT_SETTINGS: RemotelySavePluginSettings = {
   lang: "auto",
   logToDB: false,
   skipSizeLargerThan: -1,
+  ignorePaths: [],
+  enableStatusBarInfo: true,
 };
 
 interface OAuth2Info {
@@ -126,6 +133,7 @@ export default class RemotelySavePlugin extends Plugin {
   settings: RemotelySavePluginSettings;
   db: InternalDBs;
   syncStatus: SyncStatusType;
+  statusBarElement: HTMLSpanElement;
   oauth2Info: OAuth2Info;
   currLogLevel: string;
   currSyncMsg?: string;
@@ -297,6 +305,7 @@ export default class RemotelySavePlugin extends Plugin {
         this.app.vault.configDir,
         this.settings.syncUnderscoreItems,
         this.settings.skipSizeLargerThan,
+        this.settings.ignorePaths,
         this.settings.password
       );
       log.info(plan.mixedStates); // for debugging
@@ -356,9 +365,20 @@ export default class RemotelySavePlugin extends Plugin {
       this.syncStatus = "finish";
       this.syncStatus = "idle";
 
+      const lastSuccessSyncMillis = Date.now();
+      await upsertLastSuccessSyncByVault(
+        this.db,
+        this.vaultRandomID,
+        lastSuccessSyncMillis
+      );
+
       if (this.syncRibbon !== undefined) {
         setIcon(this.syncRibbon, iconNameSyncWait);
         this.syncRibbon.setAttribute("aria-label", originLabel);
+      }
+
+      if (this.statusBarElement !== undefined) {
+        this.updateLastSuccessSyncMsg(lastSuccessSyncMillis);
       }
 
       log.info(
@@ -475,6 +495,31 @@ export default class RemotelySavePlugin extends Plugin {
           oldPath,
           this.vaultRandomID
         );
+      })
+    );
+
+    function getMethods(obj: any) {
+      var result = [];
+      for (var id in obj) {
+        try {
+          if (typeof obj[id] == "function") {
+            result.push(id + ": " + obj[id].toString());
+          }
+        } catch (err) {
+          result.push(id + ": inaccessible");
+        }
+      }
+      return result.join("\n");
+    }
+    this.registerEvent(
+      this.app.vault.on("raw" as any, async (fileOrFolder) => {
+        // special track on .obsidian folder
+        const name = `${fileOrFolder}`;
+        if (name.startsWith(this.app.vault.configDir)) {
+          if (!(await this.app.vault.adapter.exists(name))) {
+            await insertDeleteRecordByVault(this.db, name, this.vaultRandomID);
+          }
+        }
       })
     );
 
@@ -671,6 +716,25 @@ export default class RemotelySavePlugin extends Plugin {
       async () => this.syncRun("manual")
     );
 
+    // Create Status Bar Item (not supported on mobile)
+    if (!Platform.isMobileApp && this.settings.enableStatusBarInfo === true) {
+      const statusBarItem = this.addStatusBarItem();
+      this.statusBarElement = statusBarItem.createEl("span");
+      this.statusBarElement.setAttribute("aria-label-position", "top");
+
+      this.updateLastSuccessSyncMsg(
+        await getLastSuccessSyncByVault(this.db, this.vaultRandomID)
+      );
+      // update statusbar text every 30 seconds
+      this.registerInterval(
+        window.setInterval(async () => {
+          this.updateLastSuccessSyncMsg(
+            await getLastSuccessSyncByVault(this.db, this.vaultRandomID)
+          );
+        }, 1000 * 30)
+      );
+    }
+
     this.addCommand({
       id: "start-sync",
       name: t("command_startsync"),
@@ -793,6 +857,12 @@ export default class RemotelySavePlugin extends Plugin {
     }
     if (this.settings.s3.forcePathStyle === undefined) {
       this.settings.s3.forcePathStyle = false;
+    }
+    if (this.settings.ignorePaths === undefined) {
+      this.settings.ignorePaths = [];
+    }
+    if (this.settings.enableStatusBarInfo === undefined) {
+      this.settings.enableStatusBarInfo = true;
     }
   }
 
@@ -1007,6 +1077,62 @@ export default class RemotelySavePlugin extends Plugin {
     this.currSyncMsg = msg;
   }
 
+  updateLastSuccessSyncMsg(lastSuccessSyncMillis?: number) {
+    if (this.statusBarElement === undefined) return;
+
+    const t = (x: TransItemType, vars?: any) => {
+      return this.i18n.t(x, vars);
+    };
+
+    let lastSyncMsg = t("statusbar_lastsync_never");
+    let lastSyncLabelMsg = t("statusbar_lastsync_never_label");
+
+    if (lastSuccessSyncMillis !== undefined && lastSuccessSyncMillis > 0) {
+      const deltaTime = Date.now() - lastSuccessSyncMillis;
+
+      // create human readable time
+      const years = Math.floor(deltaTime / 31556952000);
+      const months = Math.floor(deltaTime / 2629746000);
+      const weeks = Math.floor(deltaTime / 604800000);
+      const days = Math.floor(deltaTime / 86400000);
+      const hours = Math.floor(deltaTime / 3600000);
+      const minutes = Math.floor(deltaTime / 60000);
+      let timeText = "";
+
+      if (years > 0) {
+        timeText = t("statusbar_time_years", { time: years });
+      } else if (months > 0) {
+        timeText = t("statusbar_time_months", { time: months });
+      } else if (weeks > 0) {
+        timeText = t("statusbar_time_weeks", { time: weeks });
+      } else if (days > 0) {
+        timeText = t("statusbar_time_days", { time: days });
+      } else if (hours > 0) {
+        timeText = t("statusbar_time_hours", { time: hours });
+      } else if (minutes > 0) {
+        timeText = t("statusbar_time_minutes", { time: minutes });
+      } else {
+        timeText = t("statusbar_time_lessminute");
+      }
+
+      let dateText = new Date(lastSuccessSyncMillis).toLocaleTimeString(
+        navigator.language,
+        {
+          weekday: "long",
+          year: "numeric",
+          month: "long",
+          day: "numeric",
+        }
+      );
+
+      lastSyncMsg = t("statusbar_lastsync", { time: timeText });
+      lastSyncLabelMsg = t("statusbar_lastsync_label", { date: dateText });
+    }
+
+    this.statusBarElement.setText(lastSyncMsg);
+    this.statusBarElement.setAttribute("aria-label", lastSyncLabelMsg);
+  }
+
   /**
    * Because data.json contains sensitive information,
    * We usually want to ignore it in the version control.
@@ -1018,9 +1144,8 @@ export default class RemotelySavePlugin extends Plugin {
     const pluginConfigDir =
       this.manifest.dir ||
       `${this.app.vault.configDir}/plugins/${this.manifest.dir}`;
-    const pluginConfigDirExists = await this.app.vault.adapter.exists(
-      pluginConfigDir
-    );
+    const pluginConfigDirExists =
+      await this.app.vault.adapter.exists(pluginConfigDir);
     if (!pluginConfigDirExists) {
       // what happened?
       return;

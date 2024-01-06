@@ -1,4 +1,4 @@
-import delay from "delay";
+import { rangeDelay } from "delay";
 import { Dropbox, DropboxAuth } from "dropbox";
 import type { files, DropboxResponseError, DropboxResponse } from "dropbox";
 import { Vault } from "obsidian";
@@ -340,7 +340,7 @@ async function retryReq<T>(
           2
         )}`
       );
-      await delay.range(secMin * 1000, secMax * 1000);
+      await rangeDelay(secMin * 1000, secMax * 1000);
     }
   }
 }

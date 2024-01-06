@@ -11,14 +11,14 @@ import {
   S3Client,
 } from "@aws-sdk/client-s3";
 import { Upload } from "@aws-sdk/lib-storage";
-import { HttpHandler, HttpRequest, HttpResponse } from "@aws-sdk/protocol-http";
+import { HttpHandler, HttpRequest, HttpResponse } from "@smithy/protocol-http";
 import {
   FetchHttpHandler,
   FetchHttpHandlerOptions,
-} from "@aws-sdk/fetch-http-handler";
+} from "@smithy/fetch-http-handler";
 // @ts-ignore
-import { requestTimeout } from "@aws-sdk/fetch-http-handler/dist-es/request-timeout";
-import { buildQueryString } from "@aws-sdk/querystring-builder";
+import { requestTimeout } from "@smithy/fetch-http-handler/dist-es/request-timeout";
+import { buildQueryString } from "@smithy/querystring-builder";
 import { HeaderBag, HttpHandlerOptions, Provider } from "@aws-sdk/types";
 import { Buffer } from "buffer";
 import * as mime from "mime-types";
@@ -509,6 +509,11 @@ export const deleteFromRemote = async (
 /**
  * Check the config of S3 by heading bucket
  * https://stackoverflow.com/questions/50842835
+ *
+ * Updated on 20240102:
+ * Users are not always have permission of heading bucket,
+ * so we need to use listing objects instead...
+ *
  * @param s3Client
  * @param s3Config
  * @returns
@@ -519,9 +524,15 @@ export const checkConnectivity = async (
   callbackFunc?: any
 ) => {
   try {
-    const results = await s3Client.send(
-      new HeadBucketCommand({ Bucket: s3Config.s3BucketName })
-    );
+    // const results = await s3Client.send(
+    //   new HeadBucketCommand({ Bucket: s3Config.s3BucketName })
+    // );
+    // very simplified version of listing objects
+    const confCmd = {
+      Bucket: s3Config.s3BucketName,
+    } as ListObjectsV2CommandInput;
+    const results = await s3Client.send(new ListObjectsV2Command(confCmd));
+
     if (
       results === undefined ||
       results.$metadata === undefined ||

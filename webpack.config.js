@@ -41,6 +41,12 @@ module.exports = {
         test: /\.svg?$/,
         type: "asset/source",
       },
+      {
+        test: /\.m?js$/,
+        resolve: {
+          fullySpecified: false, // process/browser returns some errors before
+        },
+      },
     ],
   },
   resolve: {
@@ -55,7 +61,9 @@ module.exports = {
       // crypto: false,
       // domain: require.resolve("domain-browser"),
       // events: require.resolve("events"),
+      http: false,
       // http: require.resolve("stream-http"),
+      https: false,
       // https: require.resolve("https-browserify"),
       net: false,
       // os: require.resolve("os-browserify/browser"),
