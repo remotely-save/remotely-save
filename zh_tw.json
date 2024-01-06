@@ -5,7 +5,6 @@
   "goback": "返回",
   "submit": "提交",
   "sometext": "這裡有一段文字。",
-
   "syncrun_alreadyrunning": "{{pluginName}} 正處於此階段：{{syncStatus}}!",
   "syncrun_syncingribbon": "{{pluginName}}：正在由 {{triggerSource}} 觸發執行",
   "syncrun_step0": "0/{{maxSteps}} Remotely Save 在空跑（dry run）模式，不會發生實際的檔案交換。",
@@ -20,7 +19,6 @@
   "syncrun_step7skip": "7/{{maxSteps}} Remotely Save 在空跑模式，跳過實際資料交換步驟。",
   "syncrun_step8": "8/{{maxSteps}} Remotely Save 已完成同步！",
   "syncrun_abort": "{{manifestID}}-{{theDate}}：中斷同步，同步來源={{triggerSource}}，出錯階段={{syncStatus}}",
-
   "protocol_saveqr": " {{manifestName}} 新的非 oauth2 設定儲存完成。請重啟外掛設定頁使之生效。",
   "protocol_callbacknotsupported": "您的 uri callback 暫不支援： {{params}}",
   "protocol_dropbox_connecting": "正在連線 Dropbox……\n請不要關閉此彈窗。",
@@ -32,7 +30,6 @@
   "protocol_onedrive_connect_succ_revoke": "您已作為使用者 {{username}} 連線上了。如果您想取消連線，請點選此按鈕。",
   "protocol_onedrive_connect_fail": "OneDrive 的回撥請求有點異常。您是否拒絕了鑑權？",
   "protocol_onedrive_connect_unknown": "不知道如何處理此 callback：{{params}}",
-
   "command_startsync": "開始同步（start sync）",
   "command_drynrun": "開始同步（空跑模式）（start sync (dry run only)）",
   "command_exportsyncplans_json": "匯出同步計劃為 json 格式（export sync plans in json format）",
@@ -60,14 +57,12 @@
   "modal_password_attn5": "注意 5/5：密碼越長越好。",
   "modal_password_secondconfirm": "再次確認儲存新密碼",
   "modal_password_notice": "新密碼已儲存！",
-
   "modal_remotebasedir_title": "您正在修改遠端基資料夾設定",
   "modal_remotebasedir_shortdesc": "1. 本外掛並不會自動在遠端把內容從舊資料夾移動到新資料夾。所有內容都會重新同步。\n2. 如果你使得文字輸入框為空，那麼本設定會被重設回庫的資料夾名（預設設定）。\n3. 即使您設定了端對端加密的密碼，遠端資料夾名稱本身也不會被加密。\n4. 某些特殊字元，如“?”、“/”、“\\”是不允許的。文字前後的空格也會被自動刪去。",
   "modal_remotebasedir_invaliddirhint": "您所輸入的內容含有某些特殊字元，如“?”、“/”、“\\”，它們是不允許的。",
   "modal_remotebasedir_secondconfirm_vaultname": "重設回預設的庫資料夾名",
   "modal_remotebasedir_secondconfirm_change": "確認修改",
   "modal_remotebasedir_notice": "新的遠端基資料夾設定已儲存！",
-
   "modal_dropboxauth_manualsteps": "第 1 步：在瀏覽器中訪問以下地址，然後按照網頁提示操作。\n到了最後，您應該會獲得一串很長的程式碼文字，請複製貼上到下方，並點選“提交”",
   "modal_dropboxauth_autosteps": "在瀏覽器中訪問以下地址，然後按照網頁提示操作。\n到了最後，您應該會被自動重定向回來 Obsidian。",
   "modal_dropboxauth_copybutton": "點選此按鈕從而複製鑑權 url",
@@ -78,7 +73,6 @@
   "modal_dropboxauth_maualinput_conn_succ": "很好！我們作為使用者 {{username}} 連線到 Dropbox 了！",
   "modal_dropboxauth_maualinput_conn_succ_revoke": "您已作為使用者 {{username}} 連線到 Dropbox。如果您想斷開連線，點選此按鈕。",
   "modal_dropboxauth_maualinput_conn_fail": "連線 Dropbox 途中出錯了。",
-
   "modal_onedriveauth_shortdesc": "現在只支援個人版 OneDrive，（暫）不支援企業版。\n在瀏覽器中訪問以下地址，然後按照網頁提示操作。\n到了最後，您應該會被自動重定向回來 Obsidian。",
   "modal_onedriveauth_copybutton": "點選此按鈕從而複製鑑權 url",
   "modal_onedriveauth_copynotice": "鑑權 url 已複製到剪貼簿！",
@@ -89,20 +83,16 @@
   "modal_onedriverevokeauth_clean_button": "清理",
   "modal_onedriverevokeauth_clean_notice": "已清理！",
   "modal_onedriverevokeauth_clean_fail": "鑑權途中出錯了。",
-
   "modal_syncconfig_attn": "注意 1/2：此設定只同步（複製）整個 Obsidian 的配置資料夾，但是不會同步其它 . 開頭的資料夾或檔案。除了會忽略 .git 和 node_modules 資料夾之外，它也並不理解配置資料夾的裡各個子檔案或子資料夾的含義。\n注意 2/2：配置資料夾被同步之後，各外掛的設定或許會出錯，且 Obsidian 或許需要重啟來過載各外掛的新配置。\n如果您同意自行承受以上風險，您可以點選以下再次確認按鈕。",
   "modal_syncconfig_secondconfirm": "再次確認開啟",
   "modal_syncconfig_notice": "您已開啟配置資料夾的同步！",
-
   "modal_qr_shortdesc": "這裡可匯出非 oauth2 設定。（意味著：Dropbox 和 OneDrive 資訊不會被匯出。）\n您可以使用另一個裝置來掃描此 QR 碼。\n又或者，您可以點選以下按鈕複製此特殊 URI。",
   "modal_qr_button": "點選此按鈕複製特殊 URI",
   "modal_qr_button_notice": "特殊 URI 已被複制到剪貼簿！",
-
   "modal_sizesconflict_title": "Remotely Save：跳過大檔案的時候出現了一些衝突",
   "modal_sizesconflict_desc": "您設定了跳過同步大於 {{thresholdMB}} MB（{{thresholdBytes}} bytes）的檔案。\n但是以下檔案的大小，在一端大於閾值，在另一端則小於閾值。\n為了避免意外的覆蓋或刪除，外掛停止了運作，您需要手動處理至少一端的檔案。",
   "modal_sizesconflict_copybutton": "點選以複製以下所有檔案大小衝突資訊",
   "modal_sizesconflict_copynotice": "所有的檔案大小衝突資訊，已被複制到剪貼簿！",
-
   "settings_basic": "基本設定",
   "settings_password": "密碼",
   "settings_password_desc": "端到端加密的密碼。不填寫則代表沒密碼。您需要點選“確認”來修改。注意：密碼和其它資訊都會在本地儲存。",
@@ -113,6 +103,13 @@
   "settings_autorun_5min": "每 5 分鐘",
   "settings_autorun_10min": "每 10 分鐘",
   "settings_autorun_30min": "每 30 分鐘",
+  "settings_saverun": "保存時同步",
+  "settings_saverun_desc": "插件在每次保存文件後嘗試同步。電池可能會受到影響。",
+  "settings_saverun_notset": "（未設置）",
+  "settings_saverun_1sec": "每1秒",
+  "settings_saverun_5sec": "每5秒",
+  "settings_saverun_10sec": "每10秒",
+  "settings_saverun_1min": "每1分鐘",
   "settings_runoncestartup": "啟動後自動執行一次",
   "settings_runoncestartup_desc": "本設定使得外掛在程式啟動後自動觸發一次同步。修改後，會在下一次啟動生效。本設定和“自動執行”是不同的，那個設定是指“每隔一段時間”都自動同步一次。",
   "settings_runoncestartup_notset": "（不設定）",
@@ -122,6 +119,7 @@
   "settings_skiplargefiles": "跳過大檔案（實驗性質）",
   "settings_skiplargefiles_desc": "跳過大於某一個閾值的檔案。這裡 1 MB = 10^6 bytes。",
   "settings_skiplargefiles_notset": "（不設定）",
+
   "settings_ignorepaths": "忽略的檔案或資料夾的正則表示式",
   "settings_ignorepaths_desc": "忽略的檔案或資料夾的正則表示式。每行一條。路徑是相對於庫（Vault）根目錄的，沒有前置 / 符號。",
   "settings_enablestatusbar_info": "在狀態列顯示上一次成功的同步",
@@ -136,10 +134,8 @@
   "settings_checkonnectivity_desc": "檢查可否連線。",
   "settings_checkonnectivity_button": "檢查",
   "settings_checkonnectivity_checking": "正在檢查……",
-
   "settings_remotebasedir": "修改遠端基資料夾（實驗性質）",
   "settings_remotebasedir_desc": "預設設定，內容會被同步到遠端的和資料庫同名的資料夾下。您可以在此修改遠端資料夾名，或刪除輸入框文字從而重設到預設值。您需要點選“確認”。",
-
   "settings_s3": "S3 或相容 S3 的服務的設定",
   "settings_s3_disclaimer1": "宣告：本外掛不是 Amazon 的官方產品。",
   "settings_s3_disclaimer2": "宣告：您所輸入的資訊儲存於本地。其它有害的或者出錯的外掛，是有可能讀取到這些資訊的。如果您發現了儲存桶有不符合預期的訪問，請立刻從 AWS（或其它 S3 服務商）刪除記錄於此的 access key。",
@@ -164,7 +160,6 @@
   "settings_s3_urlstyle_desc": "是否對 S3 物件強制使用 path style URL（例如使用 https://s3.amazonaws.com/*/ 而不是 https://*.s3.amazonaws.com/）。",
   "settings_s3_connect_succ": "很好！可以訪問到對應儲存桶。",
   "settings_s3_connect_fail": "無法訪問到對應儲存桶。",
-
   "settings_dropbox": "Dropbox 設定",
   "settings_dropbox_disclaimer1": "宣告：此外掛不是 Dropbox 官方產品。",
   "settings_dropbox_disclaimer2": "宣告：您所輸入的資訊儲存於本地。其它有害的或者出錯的外掛，是有可能讀取到這些資訊的。如果您發現了 Dropbox 有不符合預期的訪問，請立刻從 https://www.dropbox.com/account/connected_apps 刪除記錄於此外掛的連線鑑權。",
@@ -183,7 +178,6 @@
   "settings_dropbox_auth_button": "鑑權",
   "settings_dropbox_connect_succ": "很好！我們可連線上 Dropbox！",
   "settings_dropbox_connect_fail": "我們未能連線上 Dropbox。",
-
   "settings_onedrive": "Onedrive（個人版）設定",
   "settings_onedrive_disclaimer1": "宣告：此外掛不是微軟或 OneDrive 的官方產品。",
   "settings_onedrive_disclaimer2": "宣告：您所輸入的資訊儲存於本地。其它有害的或者出錯的外掛，是有可能讀取到這些資訊的。如果您發現了 OneDrive 有不符合預期的訪問，請立刻從 https://microsoft.com/consent 刪除記錄於此外掛的連線鑑權。",
@@ -197,7 +191,6 @@
   "settings_onedrive_auth_button": "鑑權",
   "settings_onedrive_connect_succ": "很好！我們可連線上 OneDrive！",
   "settings_onedrive_connect_fail": "我們未能連線上 OneDrive。",
-
   "settings_webdav": "Webdav 設定",
   "settings_webdav_disclaimer1": "宣告：您所輸入的資訊儲存於本地。其它有害的或者出錯的外掛，是有可能讀取到這些資訊的。如果您發現了 Webdav 伺服器有不符合預期的訪問，請立刻修改使用者名稱和密碼。",
   "settings_webdav_cors_os": "Obsidian 桌面版>=0.13.25 或 iOS>=1.1.1 或 Android>=1.1.1 支援跳過 CORS 設定。但您正在使用舊版，建議升級。",
@@ -219,14 +212,12 @@
   "settings_webdav_connect_succ": "很好！可以連線上 Webdav 伺服器。",
   "settings_webdav_connect_fail": "無法連線上 Webdav 伺服器。（可能是地址/賬號/密碼/鑑權型別等錯誤。）",
   "settings_webdav_connect_fail_withcors": "無法連線上 Webdav 伺服器。（可能是地址/賬號/密碼/鑑權型別/CORS 等錯誤。）",
-
   "settings_chooseservice": "選擇遠端服務",
   "settings_chooseservice_desc": "從這裡開始設定。您想連線到哪一個服務？S3、Dropbox、Webdav、OneDrive（個人版）？",
   "settings_chooseservice_s3": "S3 或相容 S3 的服務",
   "settings_chooseservice_dropbox": "Dropbox",
   "settings_chooseservice_webdav": "Webdav",
   "settings_chooseservice_onedrive": "OneDrive（個人版）",
-
   "settings_adv": "進階設定",
   "settings_concurrency": "並行度",
   "settings_concurrency_desc": "您希望同時最多有多少個檔案被上傳和下載？預設值是 5。如果您遇到了一些問題（如訪問頻率限制），您可以減少並行度。",
@@ -234,14 +225,12 @@
   "settings_syncunderscore_desc": "是否同步“_”（下劃線）開始的檔案或資料夾。",
   "settings_configdir": "同步配置資料夾（實驗性質）",
   "settings_configdir_desc": "是否同步 Obsidian 的配置資料夾 {{configDir}}（其中的 .git 和 node_modules 依然會被忽略）。請注意，此設定可能會影響到您 Obsidian 或者所有的外掛設定，也可能需要您同步完畢後重啟 Obsidian。如果您同意自行承受其風險，則可以開啟本設定。",
-
   "settings_importexport": "匯入匯出部分設定",
   "settings_export": "匯出",
   "settings_export_desc": "用 QR 碼匯出非 oauth2 的設定資訊。",
   "settings_export_desc_button": "生成 QR 碼",
   "settings_import": "匯入",
   "settings_import_desc": "您需要使用系統拍攝 app 或者掃描 QR 碼的app，來掃描對應的 QR 碼。",
-
   "settings_debug": "除錯",
   "settings_debuglevel": "修改終端輸出的 level",
   "settings_debuglevel_desc": "預設值為 \"info\"。您可以改為 \"debug\" 從而在終端裡獲取更多資訊。",
@@ -279,7 +268,6 @@
   "settings_resetcache_desc": "（出於除錯原因）重設本地快取和資料庫。您需要在重設之後重新載入此外掛。本重設不會刪除 s3，密碼……等設定。",
   "settings_resetcache_button": "重設",
   "settings_resetcache_notice": "本地同步快取和資料庫已被刪除。請手動重新載入此外掛。",
-
   "syncalgov2_title": "Remotely Save 的同步演算法得到最佳化",
   "syncalgov2_texts": "歡迎使用 Remotely Save!\n從版本 0.3.0 開始，它帶來了新的同步演算法，但是，除了您的筆記之外，它還需要上傳額外的帶有元資訊的檔案 _remotely-save-metadata-on-remote.{json,bin} 到您的雲服務目的地上。\n從而，比如說，透過讀取這些資訊，另一臺裝置可以知道什麼檔案或資料夾在第一臺裝置上被刪除了。\n如果您同意此策略，請點選按鈕 \"同意\"，然後開始享用此外掛！且特別要注意：使用外掛之前，請首先備份好您的儲存庫（Vault）！\n如果您不同意此策略，您應該停止使用此版本和之後版本的 Remotely Save。您可以考慮手動安裝舊版 0.2.14，它使用舊的同步演算法，並不上傳額外元資訊檔案。點選 \"不同意\" 之後，外掛會自動停止執行（unload），然後您需要 Obsidian 設定裡手動停用（disable）此外掛。",
   "syncalgov2_button_agree": "同意",

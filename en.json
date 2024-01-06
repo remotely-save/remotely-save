@@ -5,7 +5,6 @@
   "goback": "Go Back",
   "submit": "Submit",
   "sometext": "Here are some texts.",
-
   "syncrun_alreadyrunning": "{{pluginName}} already running in stage {{syncStatus}}!",
   "syncrun_syncingribbon": "{{pluginName}}: syncing from {{triggerSource}}",
   "syncrun_step0": "0/{{maxSteps}} Remotely Save running in dry mode, not actual file changes would happen.",
@@ -20,7 +19,6 @@
   "syncrun_step7skip": "7/{{maxSteps}} Remotely Save real sync is skipped in dry run mode.",
   "syncrun_step8": "8/{{maxSteps}} Remotely Save finish!",
   "syncrun_abort": "{{manifestID}}-{{theDate}}: abort sync, triggerSource={{triggerSource}}, error while {{syncStatus}}",
-
   "protocol_saveqr": "New not-oauth2 settings for {{manifestName}} saved. Reopen the plugin Settings to the effect.",
   "protocol_callbacknotsupported": "Your uri call a callback that's not supported yet: {{params}}",
   "protocol_dropbox_connecting": "Connecting to Dropbox...\nPlease DO NOT close this modal.",
@@ -32,7 +30,6 @@
   "protocol_onedrive_connect_succ_revoke": "You've connected as user {{username}}. If you want to disconnect, click this button.",
   "protocol_onedrive_connect_fail": "Something went wrong from response from OneDrive. Maybe you rejected the auth?",
   "protocol_onedrive_connect_unknown": "Do not know how to deal with the callback: {{params}}",
-
   "command_startsync": "start sync",
   "command_drynrun": "start sync (dry run only)",
   "command_exportsyncplans_json": "export sync plans in json format",
@@ -60,14 +57,12 @@
   "modal_password_attn5": "Attention 5/5: The longer the password, the better.",
   "modal_password_secondconfirm": "The Second Confirm to change password.",
   "modal_password_notice": "New password saved!",
-
   "modal_remotebasedir_title": "You are changing the remote base directory config",
   "modal_remotebasedir_shortdesc": "1. The plugin would NOT automatically move the content from the old directory to the new one directly on the remote. Everything syncs from the beginning again.\n2. If you set the string to the empty, the config would be reset to use the vault folder name (the default config).\n3. The remote directory name itself would not be encrypted even you've set an E2E password.\n4. Some special char like '?', '/', '\\' are not allowed. Spaces in the beginning or in the end are also trimmed.",
   "modal_remotebasedir_invaliddirhint": "Your input contains special characters like '?', '/', '\\' which are not allowed.",
   "modal_remotebasedir_secondconfirm_vaultname": "Reset To The Default Vault Folder Name",
   "modal_remotebasedir_secondconfirm_change": "Confirm To Change",
   "modal_remotebasedir_notice": "New remote base directory config saved!",
-
   "modal_dropboxauth_manualsteps": "Step 1: Visit the address in a browser, and follow the steps.\nStep 2: In the end of the web flow, you obtain a long code. Paste it here then click \"Submit\".",
   "modal_dropboxauth_autosteps": "Visit the address in a browser, and follow the steps.\nFinally you should be redirected to Obsidian.",
   "modal_dropboxauth_copybutton": "Click to copy the auth url",
@@ -78,7 +73,6 @@
   "modal_dropboxauth_maualinput_conn_succ": "Good! We've connected to Dropbox as user {{username}}!",
   "modal_dropboxauth_maualinput_conn_succ_revoke": "You've connected as user {{username}}. If you want to disconnect, click this button.",
   "modal_dropboxauth_maualinput_conn_fail": "Something goes wrong while connecting to Dropbox.",
-
   "modal_onedriveauth_shortdesc": "Currently only OneDrive for personal is supported. OneDrive for Business is NOT supported (yet).\nVisit the address in a browser, and follow the steps.\nFinally you should be redirected to Obsidian.",
   "modal_onedriveauth_copybutton": "Click to copy the auth url",
   "modal_onedriveauth_copynotice": "The auth url is copied to the clipboard!",
@@ -92,16 +86,13 @@
   "modal_syncconfig_attn": "Attention 1/2: This only syncs (copies) the whole Obsidian config dir, not other startting-with-dot folders or files. Except for ignoring folders .git and node_modules, it also doesn't understand the meaning of sub-files and sub-folders inside the config dir.\nAttention 2/2: After the config dir is synced, plugins settings might be corrupted, and Obsidian might need to be restarted to load the new settings.\nIf you are agreed to take your own risk, please click the following second confirm button.",
   "modal_syncconfig_secondconfirm": "The Second Confirm To Enable.",
   "modal_syncconfig_notice": "You've enabled syncing config folder!",
-
   "modal_qr_shortdesc": "This exports not-oauth2 settings. (It means that Dropbox, OneDrive info are NOT exported.)\nYou can use another device to scan this qrcode.\nOr, you can click the button to copy the special url.",
   "modal_qr_button": "Click to copy the special URI",
   "modal_qr_button_notice": "The special uri is copied to the clipboard!",
-
   "modal_sizesconflict_title": "Remotely Save: Some conflict were found while skipping large files",
   "modal_sizesconflict_desc": "You've set skipping files larger than {{thresholdMB}} MB ({{thresholdBytes}} bytes).\nBut the following files have sizes larger than the threshold on one side, and sizes smaller than the threshold on the other side.\nTo avoid unexpected overwriting or deleting, the plugin stops, and you have to manually deal with at least one side of the files.",
   "modal_sizesconflict_copybutton": "Click to copy all the below sizes conflicts info",
   "modal_sizesconflict_copynotice": "All the sizes conflicts info have been copied to the clipboard!",
-
   "settings_basic": "Basic Settings",
   "settings_password": "Encryption Password",
   "settings_password_desc": "Password for E2E encryption. Empty for no password. You need to click \"Confirm\". Attention: the password and other info are saved locally.",
@@ -112,6 +103,13 @@
   "settings_autorun_5min": "every 5 minutes",
   "settings_autorun_10min": "every 10 minutes",
   "settings_autorun_30min": "every 30 minutes",
+  "settings_saverun": "Sync on Save",
+  "settings_saverun_desc": "The plugin tries to sync on after each file save. Battery may be impacted. (May need to restart after changing)",
+  "settings_saverun_notset": "(not set)",
+  "settings_saverun_1sec": "every 1 second",
+  "settings_saverun_5sec": "every 5 seconds",
+  "settings_saverun_10sec": "every 10 seconds",
+  "settings_saverun_1min": "every 1 minute",
   "settings_runoncestartup": "Run Once On Start Up Automatically",
   "settings_runoncestartup_desc": "This settings allows setting running ONCE on start up automatically. This will take effect on NEXT start up after changing. This setting, is different from \"schedule for auto run\" which starts syncing after EVERY interval.",
   "settings_runoncestartup_notset": "(not set)",
@@ -121,6 +119,7 @@
   "settings_skiplargefiles": "Skip Large Files (experimental)",
   "settings_skiplargefiles_desc": "Skip files with sizes larger than the threshold. Here 1 MB = 10^6 bytes.",
   "settings_skiplargefiles_notset": "(not set)",
+
   "settings_ignorepaths": "Regex Of Paths To Ignore",
   "settings_ignorepaths_desc": "Regex of paths of folders or files to ignore. One regex per line. The path is relative to the vault root without leading slash.",
   "settings_enablestatusbar_info": "Show Last Successful Sync In Status Bar",
@@ -135,10 +134,8 @@
   "settings_checkonnectivity_desc": "Check connectivity.",
   "settings_checkonnectivity_button": "Check",
   "settings_checkonnectivity_checking": "Checking...",
-
   "settings_remotebasedir": "Change The Remote Base Directory (experimental)",
   "settings_remotebasedir_desc": "By default the content is synced to a remote directory with the same name as the vault name. You can change the remote folder name here, or keep the input field empty to reset to the default. You need to click \"Confirm\".",
-
   "settings_s3": "Remote For S3 or compatible",
   "settings_s3_disclaimer1": "Disclaimer: This plugin is NOT an official Amazon product.",
   "settings_s3_disclaimer2": "Disclaimer: The information is stored locally. Other malicious/harmful/faulty plugins could read the info. If you see any unintentional access to your bucket, please immediately delete the access key on your AWS (or other S3-service provider) settings.",
@@ -163,7 +160,6 @@
   "settings_s3_urlstyle_desc": "Whether to force path-style URLs for S3 objects (e.g., https://s3.amazonaws.com/*/ instead of https://*.s3.amazonaws.com/).",
   "settings_s3_connect_succ": "Great! The bucket can be accessed.",
   "settings_s3_connect_fail": "The S3 bucket cannot be reached.",
-
   "settings_dropbox": "Remote For Dropbox",
   "settings_dropbox_disclaimer1": "Disclaimer: This app is NOT an official Dropbox product.",
   "settings_dropbox_disclaimer2": "Disclaimer: The information is stored locally. Other malicious/harmful/faulty plugins could read the info. If you see any unintentional access to your Dropbox, please immediately disconnect this app on https://www.dropbox.com/account/connected_apps .",
@@ -182,7 +178,6 @@
   "settings_dropbox_auth_button": "Auth",
   "settings_dropbox_connect_succ": "Great! We can connect to Dropbox!",
   "settings_dropbox_connect_fail": "We cannot connect to Dropbox.",
-
   "settings_onedrive": "Remote For Onedrive (for personal)",
   "settings_onedrive_disclaimer1": "Disclaimer: This app is NOT an official Microsoft / OneDrive product.",
   "settings_onedrive_disclaimer2": "Disclaimer: The information is stored locally. Other malicious/harmful/faulty plugins could read the info. If you see any unintentional access to your Onedrive, please immediately disconnect this app on https://microsoft.com/consent .",
@@ -196,7 +191,6 @@
   "settings_onedrive_auth_button": "Auth",
   "settings_onedrive_connect_succ": "Great! We can connect to Onedrive!",
   "settings_onedrive_connect_fail": "We cannot connect to Onedrive.",
-
   "settings_webdav": "Remote For Webdav",
   "settings_webdav_disclaimer1": "Disclaimer: The information is stored locally. Other malicious/harmful/faulty plugins may read the info. If you see any unintentional access to your webdav server, please immediately change the username and password.",
   "settings_webdav_cors_os": "Obsidian desktop>=0.13.25 or iOS>=1.1.1 or Android>=1.2.1 supports bypassing CORS locally. But you are using an old version, and you're suggested to upgrade Obsidian.",
@@ -218,14 +212,12 @@
   "settings_webdav_connect_succ": "Great! The webdav server can be accessed.",
   "settings_webdav_connect_fail": "The webdav server cannot be reached (possible to be any of address/username/password/authtype errors).",
   "settings_webdav_connect_fail_withcors": "The webdav server cannot be reached (possible to be any of address/username/password/authtype/CORS errors).",
-
   "settings_chooseservice": "Choose A Remote Service",
   "settings_chooseservice_desc": "Start here. What service are you connecting to? S3, Dropbox, Webdav, or OneDrive for personal?",
   "settings_chooseservice_s3": "S3 or compatible",
   "settings_chooseservice_dropbox": "Dropbox",
   "settings_chooseservice_webdav": "Webdav",
   "settings_chooseservice_onedrive": "OneDrive for personal",
-
   "settings_adv": "Advanced Settings",
   "settings_concurrency": "Concurrency",
   "settings_concurrency_desc": "How many files do you want to download or upload in parallel at most? By default it's set to 5. If you meet any problems such as rate limit, you can reduce the concurrency to a lower value.",
@@ -233,14 +225,12 @@
   "settings_syncunderscore_desc": "Sync files or folders starting with _ (\"underscore\") or not",
   "settings_configdir": "Sync Config Dir (experimental)",
   "settings_configdir_desc": "Sync config dir {{configDir}} or not (inner folder .git and node_modules would be ignored). Please be aware that this may impact all your plugins' or Obsidian's settings, and may require you restart Obsidian after sync. Enable this at your own risk.",
-
   "settings_importexport": "Import and Export Partial Settings",
   "settings_export": "Export",
   "settings_export_desc": "Export not-oauth2 settings by generating a qrcode.",
   "settings_export_desc_button": "Get QR Code",
   "settings_import": "Import",
   "settings_import_desc": "You should open a camera or scan-qrcode app, to manually scan the QR code.",
-
   "settings_debug": "Debug",
   "settings_debuglevel": "Alter Console Log Level",
   "settings_debuglevel_desc": "By default the log level is \"info\". You can change to \"debug\" to get verbose information in console.",
@@ -278,7 +268,6 @@
   "settings_resetcache_desc": "Reset local internal caches/databases (for debugging purposes). You would want to reload the plugin after resetting this. This option will not empty the {s3, password...} settings.",
   "settings_resetcache_button": "Reset",
   "settings_resetcache_notice": "Local internal cache/databases deleted. Please manually reload the plugin.",
-
   "syncalgov2_title": "Remotely Save has a better sync algorithm",
   "syncalgov2_texts": "Welcome to use Remotely Save!\nFrom version 0.3.0, a new algorithm has been developed, but it needs uploading extra meta data files _remotely-save-metadata-on-remote.{json,bin} to YOUR configured cloud destinations, besides your notes.\nSo that, for example, the second device can know that what files/folders have been deleted on the first device by reading those files.\nIf you agree, plase click the button \"Agree\", and enjoy the plugin! AND PLEASE REMEMBER TO BACKUP YOUR VAULT FIRSTLY!\nIf you do not agree, you should stop using the current and later versions of Remotely Save. You could consider manually install the old version 0.2.14 which uses old algorithm and does not upload any extra meta data files. By clicking the \"Do Not Agree\" button, the plugin will unload itself, and you need to manually disable it in Obsidian settings.",
   "syncalgov2_button_agree": "Agree",
