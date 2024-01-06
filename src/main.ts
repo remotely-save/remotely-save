@@ -192,30 +192,19 @@ export default class RemotelySavePlugin extends Plugin {
         );
       }
 
-      const MAX_STEPS = 8;
-
       if (triggerSource === "dry") {
-        getNotice(
-          t("syncrun_step0", {
-            maxSteps: `${MAX_STEPS}`,
-          })
-        );
+        getNotice(t("syncrun_step0"));
       }
 
       //log.info(`huh ${this.settings.password}`)
       getNotice(
         t("syncrun_step1", {
-          maxSteps: `${MAX_STEPS}`,
           serviceType: this.settings.serviceType,
         })
       );
       this.syncStatus = "preparing";
 
-      getNotice(
-        t("syncrun_step2", {
-          maxSteps: `${MAX_STEPS}`,
-        })
-      );
+      getNotice(t("syncrun_step2"));
       this.syncStatus = "getting_remote_files_list";
       const self = this;
       const client = new RemoteClient(
@@ -230,11 +219,7 @@ export default class RemotelySavePlugin extends Plugin {
       const remoteRsp = await client.listFromRemote();
       // log.debug(remoteRsp);
 
-      getNotice(
-        t("syncrun_step3", {
-          maxSteps: `${MAX_STEPS}`,
-        })
-      );
+      getNotice(t("syncrun_step3"));
       this.syncStatus = "checking_password";
       const passwordCheckResult = await isPasswordOk(
         remoteRsp.Contents,
@@ -245,11 +230,7 @@ export default class RemotelySavePlugin extends Plugin {
         throw Error(passwordCheckResult.reason);
       }
 
-      getNotice(
-        t("syncrun_step4", {
-          maxSteps: `${MAX_STEPS}`,
-        })
-      );
+      getNotice(t("syncrun_step4"));
       this.syncStatus = "getting_remote_extra_meta";
       const { remoteStates, metadataFile } = await parseRemoteItems(
         remoteRsp.Contents,
@@ -265,11 +246,7 @@ export default class RemotelySavePlugin extends Plugin {
         this.settings.password
       );
 
-      getNotice(
-        t("syncrun_step5", {
-          maxSteps: `${MAX_STEPS}`,
-        })
-      );
+      getNotice(t("syncrun_step5"));
       this.syncStatus = "getting_local_meta";
       const local = this.app.vault.getAllLoadedFiles();
       const localHistory = await loadFileHistoryTableByVault(
@@ -287,11 +264,7 @@ export default class RemotelySavePlugin extends Plugin {
       // log.info(local);
       // log.info(localHistory);
 
-      getNotice(
-        t("syncrun_step6", {
-          maxSteps: `${MAX_STEPS}`,
-        })
-      );
+      getNotice(t("syncrun_step6"));
       this.syncStatus = "generating_plan";
       const { plan, sortedKeys, deletions, sizesGoWrong } = await getSyncPlan(
         remoteStates,
@@ -316,11 +289,7 @@ export default class RemotelySavePlugin extends Plugin {
       // The operations below begins to write or delete (!!!) something.
 
       if (triggerSource !== "dry") {
-        getNotice(
-          t("syncrun_step7", {
-            maxSteps: `${MAX_STEPS}`,
-          })
-        );
+        getNotice(t("syncrun_step7"));
 
         this.syncStatus = "syncing";
         await doActualSync(
@@ -351,18 +320,10 @@ export default class RemotelySavePlugin extends Plugin {
         );
       } else {
         this.syncStatus = "syncing";
-        getNotice(
-          t("syncrun_step7skip", {
-            maxSteps: `${MAX_STEPS}`,
-          })
-        );
+        getNotice(t("syncrun_step7skip"));
       }
 
-      getNotice(
-        t("syncrun_step8", {
-          maxSteps: `${MAX_STEPS}`,
-        })
-      );
+      getNotice(t("syncrun_step8"));
       this.syncStatus = "finish";
       this.syncStatus = "idle";
 
