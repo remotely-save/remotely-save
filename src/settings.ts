@@ -2091,17 +2091,17 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
           .setValue(this.plugin.settings.logToDB ? "enable" : "disable")
           .onChange(async (val: string) => {
             const logToDB = val === "enable";
-            if (logToDB) {
-              applyLogWriterInplace((...msg: any[]) => {
-                insertLoggerOutputByVault(
-                  this.plugin.db,
-                  this.plugin.vaultRandomID,
-                  ...msg
-                );
-              });
-            } else {
-              restoreLogWritterInplace();
-            }
+            // if (logToDB) {
+            //   applyLogWriterInplace((...msg: any[]) => {
+            //     insertLoggerOutputByVault(
+            //       this.plugin.db,
+            //       this.plugin.vaultRandomID,
+            //       ...msg
+            //     );
+            //   });
+            // } else {
+            //   restoreLogWritterInplace();
+            // }
             clearExpiredLoggerOutputRecords(this.plugin.db);
             this.plugin.settings.logToDB = logToDB;
             await this.plugin.saveSettings();
@@ -2153,7 +2153,7 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
           if (logToHttpServer === "" || !logToHttpServer.startsWith("http")) {
             this.plugin.debugServerTemp = "";
             logToHttpServer = "";
-            restoreLogWritterInplace();
+            // restoreLogWritterInplace();
             new Notice(t("settings_logtohttpserver_reset_notice"));
           } else {
             new SetLogToHttpServerModal(
@@ -2162,23 +2162,23 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
               logToHttpServer,
               () => {
                 this.plugin.debugServerTemp = logToHttpServer;
-                applyLogWriterInplace((...msg: any[]) => {
-                  try {
-                    requestUrl({
-                      url: logToHttpServer,
-                      method: "POST",
-                      headers: {
-                        "Content-Type": "application/json",
-                      },
-                      body: JSON.stringify({
-                        send_time: Date.now(),
-                        log_text: msg,
-                      }),
-                    });
-                  } catch (e) {
-                    // pass
-                  }
-                });
+                // applyLogWriterInplace((...msg: any[]) => {
+                //   try {
+                //     requestUrl({
+                //       url: logToHttpServer,
+                //       method: "POST",
+                //       headers: {
+                //         "Content-Type": "application/json",
+                //       },
+                //       body: JSON.stringify({
+                //         send_time: Date.now(),
+                //         log_text: msg,
+                //       }),
+                //     });
+                //   } catch (e) {
+                //     // pass
+                //   }
+                // });
               }
             ).open();
           }

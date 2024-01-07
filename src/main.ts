@@ -9,6 +9,7 @@ import {
   Platform,
   TFile,
   TFolder,
+  requestUrl,
 } from "obsidian";
 import cloneDeep from "lodash/cloneDeep";
 import { createElement, RotateCcw, RefreshCcw, FileText } from "lucide";
@@ -479,7 +480,7 @@ export default class RemotelySavePlugin extends Plugin {
     }
 
     // must AFTER preparing DB
-    this.addOutputToDBIfSet();
+    this.redirectLoggingOuputBasedOnSetting();
     this.enableAutoClearOutputToDBHistIfSet();
 
     // must AFTER preparing DB
@@ -1199,12 +1200,32 @@ export default class RemotelySavePlugin extends Plugin {
     }
   }
 
-  addOutputToDBIfSet() {
-    if (this.settings.logToDB) {
-      applyLogWriterInplace((...msg: any[]) => {
+  redirectLoggingOuputBasedOnSetting() {
+    applyLogWriterInplace((...msg: any[]) => {
+      if (this.settings.logToDB) {
         insertLoggerOutputByVault(this.db, this.vaultRandomID, ...msg);
-      });
-    }
+      }
+      if (
+        this.debugServerTemp !== undefined &&
+        this.debugServerTemp.trim().startsWith("http")
+      ) {
+        try {
+          requestUrl({
+            url: this.debugServerTemp,
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              send_time: Date.now(),
+              log_text: msg,
+            }),
+          });
+        } catch (e) {
+          // pass
+        }
+      }
+    });
   }
 
   enableAutoClearOutputToDBHistIfSet() {
