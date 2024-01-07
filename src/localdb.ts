@@ -756,3 +756,25 @@ export const getLastSuccessSyncByVault = async (
     `${vaultRandomID}-lastSuccessSyncMillis`
   )) as number;
 };
+
+export const upsertPluginVersionByVault = async (
+  db: InternalDBs,
+  vaultRandomID: string,
+  newVersion: string
+) => {
+  let oldVersion: string | null = await db.simpleKVForMiscTbl.getItem(
+    `${vaultRandomID}-pluginversion`
+  );
+  if (oldVersion === null) {
+    oldVersion = "0.0.0";
+  }
+  await db.simpleKVForMiscTbl.setItem(
+    `${vaultRandomID}-pluginversion`,
+    newVersion
+  );
+
+  return {
+    oldVersion: oldVersion,
+    newVersion: newVersion,
+  };
+};

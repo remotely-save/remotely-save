@@ -23,6 +23,7 @@ import {
   COMMAND_CALLBACK_ONEDRIVE,
   COMMAND_CALLBACK_DROPBOX,
   COMMAND_URI,
+  REMOTELY_SAVE_VERSION_2024PREPARE,
 } from "./baseTypes";
 import { importQrCodeUri } from "./importExport";
 import {
@@ -37,6 +38,7 @@ import {
   clearExpiredSyncPlanRecords,
   upsertLastSuccessSyncByVault,
   getLastSuccessSyncByVault,
+  upsertPluginVersionByVault,
 } from "./localdb";
 import { RemoteClient } from "./remote";
 import {
@@ -72,6 +74,7 @@ import {
   exportVaultSyncPlansToFiles,
 } from "./debugMode";
 import { SizesConflictModal } from "./syncSizesConflictNotice";
+import { compareVersion } from "./misc";
 
 const DEFAULT_SETTINGS: RemotelySavePluginSettings = {
   s3: DEFAULT_S3_CONFIG,
@@ -821,6 +824,16 @@ export default class RemotelySavePlugin extends Plugin {
       this.enableAutoSyncIfSet();
       this.enableInitSyncIfSet();
       this.enableSyncOnSaveIfSet();
+    }
+
+    // compare versions and read new versions
+    const { oldVersion } = await upsertPluginVersionByVault(
+      this.db,
+      this.vaultRandomID,
+      this.manifest.version
+    );
+    if (compareVersion(REMOTELY_SAVE_VERSION_2024PREPARE, oldVersion) >= 0) {
+      new Notice(t("official_notice_2024_first_party"), 10 * 1000);
     }
   }
 

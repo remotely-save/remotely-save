@@ -295,5 +295,7 @@
   "syncalgov2_title": "Remotely Save has a better sync algorithm",
   "syncalgov2_texts": "Welcome to use Remotely Save!\nFrom version 0.3.0, a new algorithm has been developed, but it needs uploading extra meta data files _remotely-save-metadata-on-remote.{json,bin} to YOUR configured cloud destinations, besides your notes.\nSo that, for example, the second device can know that what files/folders have been deleted on the first device by reading those files.\nIf you agree, plase click the button \"Agree\", and enjoy the plugin! AND PLEASE REMEMBER TO BACKUP YOUR VAULT FIRSTLY!\nIf you do not agree, you should stop using the current and later versions of Remotely Save. You could consider manually install the old version 0.2.14 which uses old algorithm and does not upload any extra meta data files. By clicking the \"Do Not Agree\" button, the plugin will unload itself, and you need to manually disable it in Obsidian settings.",
   "syncalgov2_button_agree": "Agree",
-  "syncalgov2_button_disagree": "Do Not Agree"
+  "syncalgov2_button_disagree": "Do Not Agree",
+
+  "official_notice_2024_first_party": "Plugin Remotely-Save is back to the party and get a HUGE update!🎉🎉🎉 Try it yourself or see the release note on https://github.com/remotely-save/remotely-save/releases."
 }

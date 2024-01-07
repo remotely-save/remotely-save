@@ -455,3 +455,31 @@ export const isFolderToSkip = (x: string, more: string[] | undefined) => {
   }
   return false;
 };
+
+/**
+ *
+ * @param x versionX
+ * @param y versionY
+ * @returns 1(x>y), 0(x==y), -1(x<y)
+ */
+export const compareVersion = (x: string | null, y: string | null) => {
+  if (x === undefined || x === null) {
+    return -1;
+  }
+  if (y === undefined || y === null) {
+    return 1;
+  }
+  if (x === y) {
+    return 0;
+  }
+  const [x1, x2, x3] = x.split(".").map((k) => Number(k));
+  const [y1, y2, y3] = y.split(".").map((k) => Number(k));
+  if (
+    x1 > y1 ||
+    (x1 === y1 && x2 > y2) ||
+    (x1 === y1 && x2 === y2 && x3 > y3)
+  ) {
+    return 1;
+  }
+  return -1;
+};

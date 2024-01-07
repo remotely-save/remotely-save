@@ -191,3 +191,6 @@ export type SyncTriggerSourceType =
   | "dry"
   | "autoOnceInit"
   | "auto_sync_on_save";
+
+export const REMOTELY_SAVE_VERSION_2022 = "0.3.25";
+export const REMOTELY_SAVE_VERSION_2024PREPARE = "0.3.32";
