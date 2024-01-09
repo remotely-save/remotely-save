@@ -17,7 +17,7 @@ This is yet another unofficial sync plugin for Obsidian. If you like it or find 
 ## Features
 
 - Supports:
-  - Amazon S3 or S3-compatible
+  - Amazon S3 or S3-compatible (Cloudflare R2 / BackBlaze B2 / MinIO / ...)
   - Dropbox
   - OneDrive for personal
   - Webdav
@@ -63,6 +63,7 @@ Additionally, the plugin author may occasionally visit Obsidian official forum a
 
 - Tutorials / Examples:
   - [Cloudflare R2](./docs/remote_services/s3_cloudflare_r2/README.md)
+  - [BackBlaze B2](./docs/remote_services/s3_backblaze_b2/README.md)
   - [MinIO](./docs/remote_services/s3_minio/README.md)
 - Prepare your S3 (-compatible) service information: [endpoint, region](https://docs.aws.amazon.com/general/latest/gr/s3.html), [access key id, secret access key](https://docs.aws.amazon.com/sdk-for-javascript/v3/developer-guide/getting-your-credentials.html), bucket name. The bucket should be empty and solely for syncing a vault.
 - If you are using AWS S3, create [policy and user](./docs/remote_services/s3_general/s3_user_policy.md).
