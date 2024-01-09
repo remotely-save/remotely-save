@@ -451,7 +451,7 @@ class DropboxAuthModal extends Modal {
               );
               this.close();
             } catch (err) {
-              console.error(err);
+              log.error(err);
               new Notice(t("modal_dropboxauth_maualinput_conn_fail"));
             }
           });
@@ -587,7 +587,7 @@ export class OnedriveRevokeAuthModal extends Modal {
             new Notice(t("modal_onedriverevokeauth_clean_notice"));
             this.close();
           } catch (err) {
-            console.error(err);
+            log.error(err);
             new Notice(t("modal_onedriverevokeauth_clean_fail"));
           }
         });
@@ -1130,7 +1130,7 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
             );
             new Notice(t("settings_dropbox_revoke_notice"));
           } catch (err) {
-            console.error(err);
+            log.error(err);
             new Notice(t("settings_dropbox_revoke_noticeerr"));
           }
         });

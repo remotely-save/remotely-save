@@ -752,8 +752,8 @@ export const deleteFromRemote = async (
       fileOrFolderPath
     );
   } catch (err) {
-    console.error("some error while deleting");
-    console.error(err);
+    log.error("some error while deleting");
+    log.error(err);
   }
 };
 

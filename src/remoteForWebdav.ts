@@ -56,9 +56,9 @@ if (VALID_REQURL) {
           }
         }
       }
-      // console.log(`requesting url=${options.url}`);
-      // console.log(`contentType=${contentType}`);
-      // console.log(`rspHeaders=${JSON.stringify(rspHeaders)}`)
+      // log.info(`requesting url=${options.url}`);
+      // log.info(`contentType=${contentType}`);
+      // log.info(`rspHeaders=${JSON.stringify(rspHeaders)}`)
 
       // let r2: Response = undefined;
       // if (contentType.includes("xml")) {
@@ -71,9 +71,9 @@ if (VALID_REQURL) {
       //   contentType.includes("json") ||
       //   contentType.includes("javascript")
       // ) {
-      //   console.log('inside json branch');
+      //   log.info('inside json branch');
       //   // const j = r.json;
-      //   // console.log(j);
+      //   // log.info(j);
       //   r2 = new Response(
       //     r.text,  // yea, here is the text because Response constructor expects a text
       //     {
@@ -483,7 +483,7 @@ const downloadFromRemoteRaw = async (
 ) => {
   await client.init();
   const p = getWebdavPath(fileOrFolderPath, client.remoteBaseDir);
-  // console.log(`getWebdavPath=${p}`);
+  // log.info(`getWebdavPath=${p}`);
   const buff = (await client.client.getFileContents(p)) as BufferLike;
   if (buff instanceof ArrayBuffer) {
     return buff;
@@ -523,7 +523,7 @@ export const downloadFromRemote = async (
       downloadFile = remoteEncryptedKey;
     }
     downloadFile = getWebdavPath(downloadFile, client.remoteBaseDir);
-    // console.log(`downloadFile=${downloadFile}`);
+    // log.info(`downloadFile=${downloadFile}`);
     const remoteContent = await downloadFromRemoteRaw(client, downloadFile);
     let localContent = remoteContent;
     if (password !== "") {
