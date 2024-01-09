@@ -148,8 +148,12 @@ const getWebdavPath = (fileOrFolderPath: string, remoteBaseDir: string) => {
   if (fileOrFolderPath === "/" || fileOrFolderPath === "") {
     // special
     key = `/${remoteBaseDir}/`;
-  }
-  if (!fileOrFolderPath.startsWith("/")) {
+  } else if (fileOrFolderPath.startsWith("/")) {
+    log.warn(
+      `why the path ${fileOrFolderPath} starts with '/'? but we just go on.`
+    );
+    key = `/${remoteBaseDir}${fileOrFolderPath}`;
+  } else {
     key = `/${remoteBaseDir}/${fileOrFolderPath}`;
   }
   return key;
@@ -314,12 +318,17 @@ export const getWebdavClient = (
   );
 };
 
+/**
+ *
+ * @param client
+ * @param remotePath It should be prefix-ed already
+ * @returns
+ */
 export const getRemoteMeta = async (
   client: WrappedWebdavClient,
-  fileOrFolderPath: string
+  remotePath: string
 ) => {
   await client.init();
-  const remotePath = getWebdavPath(fileOrFolderPath, client.remoteBaseDir);
   // log.info(`remotePath = ${remotePath}`);
   const res = (await client.client.stat(remotePath, {
     details: false,
@@ -549,8 +558,8 @@ export const deleteFromRemote = async (
     await client.client.deleteFile(remoteFileName);
     // log.info(`delete ${remoteFileName} succeeded`);
   } catch (err) {
-    console.error("some error while deleting");
-    log.info(err);
+    log.error("some error while deleting");
+    log.error(err);
   }
 };
 
