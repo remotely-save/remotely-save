@@ -41,9 +41,12 @@ export const getDropboxPath = (
   if (fileOrFolderPath === "/" || fileOrFolderPath === "") {
     // special
     key = `/${remoteBaseDir}`;
-  }
-  if (!fileOrFolderPath.startsWith("/")) {
-    // then this is original path in Obsidian
+  } else if (fileOrFolderPath.startsWith("/")) {
+    log.warn(
+      `why the path ${fileOrFolderPath} starts with '/'? but we just go on.`
+    );
+    key = `/${remoteBaseDir}${fileOrFolderPath}`;
+  } else {
     key = `/${remoteBaseDir}/${fileOrFolderPath}`;
   }
   if (key.endsWith("/")) {
@@ -210,38 +213,49 @@ export interface DropboxSuccessAuthRes {
 export const sendAuthReq = async (
   appKey: string,
   verifier: string,
-  authCode: string
+  authCode: string,
+  errorCallBack: any
 ) => {
-  const resp1 = await fetch("https://api.dropboxapi.com/oauth2/token", {
-    method: "POST",
-    body: new URLSearchParams({
-      code: authCode,
-      grant_type: "authorization_code",
-      code_verifier: verifier,
-      client_id: appKey,
-      redirect_uri: `obsidian://${COMMAND_CALLBACK_DROPBOX}`,
-    }),
-  });
-  const resp2 = (await resp1.json()) as DropboxSuccessAuthRes;
-  return resp2;
+  try {
+    const resp1 = await fetch("https://api.dropboxapi.com/oauth2/token", {
+      method: "POST",
+      body: new URLSearchParams({
+        code: authCode,
+        grant_type: "authorization_code",
+        code_verifier: verifier,
+        client_id: appKey,
+        redirect_uri: `obsidian://${COMMAND_CALLBACK_DROPBOX}`,
+      }),
+    });
+    const resp2 = (await resp1.json()) as DropboxSuccessAuthRes;
+    return resp2;
+  } catch (e) {
+    log.error(e);
+    await errorCallBack(e);
+  }
 };
 
 export const sendRefreshTokenReq = async (
   appKey: string,
   refreshToken: string
 ) => {
-  log.info("start auto getting refreshed Dropbox access token.");
-  const resp1 = await fetch("https://api.dropboxapi.com/oauth2/token", {
-    method: "POST",
-    body: new URLSearchParams({
-      grant_type: "refresh_token",
-      refresh_token: refreshToken,
-      client_id: appKey,
-    }),
-  });
-  const resp2 = (await resp1.json()) as DropboxSuccessAuthRes;
-  log.info("finish auto getting refreshed Dropbox access token.");
-  return resp2;
+  try {
+    log.info("start auto getting refreshed Dropbox access token.");
+    const resp1 = await fetch("https://api.dropboxapi.com/oauth2/token", {
+      method: "POST",
+      body: new URLSearchParams({
+        grant_type: "refresh_token",
+        refresh_token: refreshToken,
+        client_id: appKey,
+      }),
+    });
+    const resp2 = (await resp1.json()) as DropboxSuccessAuthRes;
+    log.info("finish auto getting refreshed Dropbox access token.");
+    return resp2;
+  } catch (e) {
+    log.error(e);
+    throw e;
+  }
 };
 
 export const setConfigBySuccessfullAuthInplace = async (
@@ -457,36 +471,34 @@ export const getDropboxClient = (
 
 export const getRemoteMeta = async (
   client: WrappedDropboxClient,
-  fileOrFolderPath: string
+  remotePath: string
 ) => {
   await client.init();
-  if (fileOrFolderPath === "" || fileOrFolderPath === "/") {
-    // filesGetMetadata doesn't support root folder
-    // we instead try to list files
-    // if no error occurs, we ensemble a fake result.
-    const rsp = await retryReq(() =>
-      client.dropbox.filesListFolder({
-        path: `/${client.remoteBaseDir}`,
-        recursive: false, // don't need to recursive here
-      })
-    );
-    if (rsp.status !== 200) {
-      throw Error(JSON.stringify(rsp));
-    }
-    return {
-      key: fileOrFolderPath,
-      lastModified: undefined,
-      size: 0,
-      remoteType: "dropbox",
-      etag: undefined,
-    } as RemoteItem;
-  }
-
-  const key = getDropboxPath(fileOrFolderPath, client.remoteBaseDir);
+  // if (remotePath === "" || remotePath === "/") {
+  //   // filesGetMetadata doesn't support root folder
+  //   // we instead try to list files
+  //   // if no error occurs, we ensemble a fake result.
+  //   const rsp = await retryReq(() =>
+  //     client.dropbox.filesListFolder({
+  //       path: `/${client.remoteBaseDir}`,
+  //       recursive: false, // don't need to recursive here
+  //     })
+  //   );
+  //   if (rsp.status !== 200) {
+  //     throw Error(JSON.stringify(rsp));
+  //   }
+  //   return {
+  //     key: remotePath,
+  //     lastModified: undefined,
+  //     size: 0,
+  //     remoteType: "dropbox",
+  //     etag: undefined,
+  //   } as RemoteItem;
+  // }
 
   const rsp = await retryReq(() =>
     client.dropbox.filesGetMetadata({
-      path: key,
+      path: remotePath,
     })
   );
   if (rsp.status !== 200) {
@@ -659,16 +671,15 @@ export const listAllFromRemote = async (client: WrappedDropboxClient) => {
 
 const downloadFromRemoteRaw = async (
   client: WrappedDropboxClient,
-  fileOrFolderPath: string
+  remotePath: string
 ) => {
   await client.init();
-  const key = getDropboxPath(fileOrFolderPath, client.remoteBaseDir);
   const rsp = await retryReq(
     () =>
       client.dropbox.filesDownload({
-        path: key,
+        path: remotePath,
       }),
-    fileOrFolderPath
+    `downloadFromRemoteRaw=${remotePath}`
   );
   if ((rsp.result as any).fileBlob !== undefined) {
     // we get a Blob
@@ -762,7 +773,8 @@ export const checkConnectivity = async (
   callbackFunc?: any
 ) => {
   try {
-    const results = await getRemoteMeta(client, "/");
+    await client.init();
+    const results = await getRemoteMeta(client, `/${client.remoteBaseDir}`);
     if (results === undefined) {
       return false;
     }

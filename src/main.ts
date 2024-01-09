@@ -579,12 +579,20 @@ export default class RemotelySavePlugin extends Plugin {
                   text: val,
                 });
               });
+          } else {
+            new Notice(t("protocol_dropbox_no_modal"));
+            return;
           }
 
           let authRes = await sendAuthReqDropbox(
             this.settings.dropbox.clientID,
             this.oauth2Info.verifier,
-            inputParams.code
+            inputParams.code,
+            async (e: any) => {
+              new Notice(t("protocol_dropbox_connect_fail"));
+              new Notice(`${e}`);
+              return;
+            }
           );
 
           const self = this;
