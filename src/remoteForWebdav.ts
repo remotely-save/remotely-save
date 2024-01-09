@@ -329,10 +329,11 @@ export const getRemoteMeta = async (
   remotePath: string
 ) => {
   await client.init();
-  // log.info(`remotePath = ${remotePath}`);
+  log.debug(`getRemoteMeta remotePath = ${remotePath}`);
   const res = (await client.client.stat(remotePath, {
     details: false,
   })) as FileStat;
+  log.debug(`getRemoteMeta res=${JSON.stringify(res)}`);
   return fromWebdavItemToRemoteItem(res, client.remoteBaseDir);
 };
 
@@ -479,12 +480,11 @@ export const listAllFromRemote = async (client: WrappedWebdavClient) => {
 
 const downloadFromRemoteRaw = async (
   client: WrappedWebdavClient,
-  fileOrFolderPath: string
+  remotePath: string
 ) => {
   await client.init();
-  const p = getWebdavPath(fileOrFolderPath, client.remoteBaseDir);
-  // log.info(`getWebdavPath=${p}`);
-  const buff = (await client.client.getFileContents(p)) as BufferLike;
+  // log.info(`getWebdavPath=${remotePath}`);
+  const buff = (await client.client.getFileContents(remotePath)) as BufferLike;
   if (buff instanceof ArrayBuffer) {
     return buff;
   } else if (buff instanceof Buffer) {
@@ -574,7 +574,7 @@ export const checkConnectivity = async (
     )
   ) {
     const err = "Error: the url should start with http(s):// but it does not!";
-    log.debug(err);
+    log.error(err);
     if (callbackFunc !== undefined) {
       callbackFunc(err);
     }
@@ -582,10 +582,10 @@ export const checkConnectivity = async (
   }
   try {
     await client.init();
-    const results = await getRemoteMeta(client, "/");
+    const results = await getRemoteMeta(client, `/${client.remoteBaseDir}`);
     if (results === undefined) {
       const err = "results is undefined";
-      log.debug(err);
+      log.error(err);
       if (callbackFunc !== undefined) {
         callbackFunc(err);
       }
@@ -593,7 +593,7 @@ export const checkConnectivity = async (
     }
     return true;
   } catch (err) {
-    log.debug(err);
+    log.error(err);
     if (callbackFunc !== undefined) {
       callbackFunc(err);
     }
