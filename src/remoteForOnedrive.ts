@@ -105,7 +105,8 @@ export const sendAuthReq = async (
   clientID: string,
   authority: string,
   authCode: string,
-  verifier: string
+  verifier: string,
+  errorCallBack: any
 ) => {
   // // original code snippets for references
   // const authResponse = await pca.acquireTokenByCode({
@@ -123,28 +124,33 @@ export const sendAuthReq = async (
   // instead of using msal
   // https://docs.microsoft.com/en-us/azure/active-directory/develop/v2-oauth2-auth-code-flow
   // https://docs.microsoft.com/en-us/onedrive/developer/rest-api/getting-started/graph-oauth?view=odsp-graph-online#code-flow
-  const rsp1 = await request({
-    url: `${authority}/oauth2/v2.0/token`,
-    method: "POST",
-    contentType: "application/x-www-form-urlencoded",
-    body: new URLSearchParams({
-      tenant: "consumers",
-      client_id: clientID,
-      scope: SCOPES.join(" "),
-      code: authCode,
-      redirect_uri: REDIRECT_URI,
-      grant_type: "authorization_code",
-      code_verifier: verifier,
-    }).toString(),
-  });
+  try {
+    const rsp1 = await request({
+      url: `${authority}/oauth2/v2.0/token`,
+      method: "POST",
+      contentType: "application/x-www-form-urlencoded",
+      body: new URLSearchParams({
+        tenant: "consumers",
+        client_id: clientID,
+        scope: SCOPES.join(" "),
+        code: authCode,
+        redirect_uri: REDIRECT_URI,
+        grant_type: "authorization_code",
+        code_verifier: verifier,
+      }).toString(),
+    });
 
-  const rsp2 = JSON.parse(rsp1);
-  // log.info(rsp2);
+    const rsp2 = JSON.parse(rsp1);
+    // log.info(rsp2);
 
-  if (rsp2.error !== undefined) {
-    return rsp2 as AccessCodeResponseFailedType;
-  } else {
-    return rsp2 as AccessCodeResponseSuccessfulType;
+    if (rsp2.error !== undefined) {
+      return rsp2 as AccessCodeResponseFailedType;
+    } else {
+      return rsp2 as AccessCodeResponseSuccessfulType;
+    }
+  } catch (e) {
+    log.error(e);
+    await errorCallBack(e);
   }
 };
 
@@ -154,26 +160,31 @@ export const sendRefreshTokenReq = async (
   refreshToken: string
 ) => {
   // also use Obsidian request to bypass CORS issue.
-  const rsp1 = await request({
-    url: `${authority}/oauth2/v2.0/token`,
-    method: "POST",
-    contentType: "application/x-www-form-urlencoded",
-    body: new URLSearchParams({
-      tenant: "consumers",
-      client_id: clientID,
-      scope: SCOPES.join(" "),
-      refresh_token: refreshToken,
-      grant_type: "refresh_token",
-    }).toString(),
-  });
+  try {
+    const rsp1 = await request({
+      url: `${authority}/oauth2/v2.0/token`,
+      method: "POST",
+      contentType: "application/x-www-form-urlencoded",
+      body: new URLSearchParams({
+        tenant: "consumers",
+        client_id: clientID,
+        scope: SCOPES.join(" "),
+        refresh_token: refreshToken,
+        grant_type: "refresh_token",
+      }).toString(),
+    });
 
-  const rsp2 = JSON.parse(rsp1);
-  // log.info(rsp2);
+    const rsp2 = JSON.parse(rsp1);
+    // log.info(rsp2);
 
-  if (rsp2.error !== undefined) {
-    return rsp2 as AccessCodeResponseFailedType;
-  } else {
-    return rsp2 as AccessCodeResponseSuccessfulType;
+    if (rsp2.error !== undefined) {
+      return rsp2 as AccessCodeResponseFailedType;
+    } else {
+      return rsp2 as AccessCodeResponseSuccessfulType;
+    }
+  } catch (e) {
+    log.error(e);
+    throw e;
   }
 };
 
@@ -207,10 +218,6 @@ export const setConfigBySuccessfullAuthInplace = async (
 const getOnedrivePath = (fileOrFolderPath: string, remoteBaseDir: string) => {
   // https://docs.microsoft.com/en-us/onedrive/developer/rest-api/concepts/special-folders-appfolder?view=odsp-graph-online
   const prefix = `/drive/special/approot:/${remoteBaseDir}`;
-  if (fileOrFolderPath.startsWith(prefix)) {
-    // already transformed, return as is
-    return fileOrFolderPath;
-  }
 
   let key = fileOrFolderPath;
   if (fileOrFolderPath === "/" || fileOrFolderPath === "") {
@@ -221,7 +228,12 @@ const getOnedrivePath = (fileOrFolderPath: string, remoteBaseDir: string) => {
     key = key.slice(0, key.length - 1);
   }
 
-  key = `${prefix}/${key}`;
+  if (key.startsWith("/")) {
+    log.warn(`why the path ${key} starts with '/'? but we just go on.`);
+    key = `${prefix}${key}`;
+  } else {
+    key = `${prefix}/${key}`;
+  }
   return key;
 };
 
@@ -638,10 +650,9 @@ export const listAllFromRemote = async (client: WrappedOnedriveClient) => {
 
 export const getRemoteMeta = async (
   client: WrappedOnedriveClient,
-  fileOrFolderPath: string
+  remotePath: string
 ) => {
   await client.init();
-  const remotePath = getOnedrivePath(fileOrFolderPath, client.remoteBaseDir);
   // log.info(`remotePath=${remotePath}`);
   const rsp = await client.getJson(
     `${remotePath}?$select=cTag,eTag,fileSystemInfo,folder,file,name,parentReference,size`
@@ -796,12 +807,11 @@ export const uploadToRemote = async (
 
 const downloadFromRemoteRaw = async (
   client: WrappedOnedriveClient,
-  fileOrFolderPath: string
+  remotePath: string
 ): Promise<ArrayBuffer> => {
   await client.init();
-  const key = getOnedrivePath(fileOrFolderPath, client.remoteBaseDir);
   const rsp = await client.getJson(
-    `${key}?$select=@microsoft.graph.downloadUrl`
+    `${remotePath}?$select=@microsoft.graph.downloadUrl`
   );
   const downloadUrl: string = rsp["@microsoft.graph.downloadUrl"];
   if (VALID_REQURL) {

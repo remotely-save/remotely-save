@@ -674,10 +674,16 @@ export default class RemotelySavePlugin extends Plugin {
             this.settings.onedrive.clientID,
             this.settings.onedrive.authority,
             inputParams.code,
-            this.oauth2Info.verifier
+            this.oauth2Info.verifier,
+            async (e: any) => {
+              new Notice(t("protocol_onedrive_connect_fail"));
+              new Notice(`${e}`);
+              return; // throw?
+            }
           );
 
           if ((rsp as any).error !== undefined) {
+            new Notice(`${JSON.stringify(rsp)}`);
             throw Error(`${JSON.stringify(rsp)}`);
           }
 
