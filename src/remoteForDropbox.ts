@@ -90,9 +90,13 @@ const fromDropboxItemToRemoteItem = (
       etag: `${x.id}\t`,
     } as RemoteItem;
   } else if (x[".tag"] === "file") {
+    let mtime = Date.parse(x.client_modified).valueOf();
+    if (mtime === 0) {
+      mtime = Date.parse(x.server_modified).valueOf();
+    }
     return {
       key: key,
-      lastModified: Date.parse(x.server_modified).valueOf(),
+      lastModified: mtime,
       size: x.size,
       remoteType: "dropbox",
       etag: `${x.id}\t${x.content_hash}`,
@@ -518,7 +522,9 @@ export const uploadToRemote = async (
   remoteEncryptedKey: string = "",
   foldersCreatedBefore: Set<string> | undefined = undefined,
   uploadRaw: boolean = false,
-  rawContent: string | ArrayBuffer = ""
+  rawContent: string | ArrayBuffer = "",
+  rawContentMTime: number = 0,
+  rawContentCTime: number = 0
 ) => {
   await client.init();
 
@@ -533,6 +539,15 @@ export const uploadToRemote = async (
       `${uploadFile}: Error: Dropbox does not support emoji in file / folder names.`
     );
   }
+
+  let mtime = 0;
+  let ctime = 0;
+  const s = await vault.adapter.stat(fileOrFolderPath);
+  if (s !== null) {
+    mtime = s.mtime;
+    ctime = s.ctime;
+  }
+  const mtimeStr = new Date(mtime).toISOString().replace(/\.\d{3}Z$/, "Z");
 
   const isFolder = fileOrFolderPath.endsWith("/");
 
@@ -579,6 +594,7 @@ export const uploadToRemote = async (
           client.dropbox.filesUpload({
             path: uploadFile,
             contents: "",
+            client_modified: mtimeStr,
           }),
         fileOrFolderPath
       );
@@ -612,6 +628,7 @@ export const uploadToRemote = async (
           mode: {
             ".tag": "overwrite",
           },
+          client_modified: mtimeStr,
         }),
       fileOrFolderPath
     );
