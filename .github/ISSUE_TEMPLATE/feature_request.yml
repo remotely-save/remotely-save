@@ -21,9 +21,24 @@ body:
       multiple: true
       options:
         - S3
+        - S3 (Cloudflare R2)
+        - S3 (BackBlaze B2)
+        - S3 (腾讯云 COS Tencent Cloud COS)
+        - S3 (阿里云 OSS Alibaba Cloud OSS)
+        - S3 (MinIO)
+        - S3 (Wasabi)
+        - S3 (Storj)
         - OneDrive for personal
+        - OneDrive for business
         - Dropbox
-        - webdav
+        - webdav       
+        - webdav (ownCloud)
+        - webdav (InfiniCloud (formally TeraCLOUD))
+        - webdav (坚果云 JianGuoYun/NutStore)
+        - webdav (NextCloud)
+        - webdav (FastMail)
+        - webdav (rclone webdav)
+        - webdav (nginx)
         - others
     validations:
       required: false
