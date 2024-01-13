@@ -544,8 +544,8 @@ export const uploadToRemote = async (
   let ctime = 0;
   const s = await vault.adapter.stat(fileOrFolderPath);
   if (s !== null) {
-    mtime = s.mtime;
-    ctime = s.ctime;
+    mtime = Math.round(s.mtime / 1000.0) * 1000;
+    ctime = Math.round(s.ctime / 1000.0) * 1000;
   }
   const mtimeStr = new Date(mtime).toISOString().replace(/\.\d{3}Z$/, "Z");
 
