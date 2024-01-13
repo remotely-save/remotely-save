@@ -98,27 +98,3 @@ export const exportVaultSyncPlansToFiles = async (
   });
   log.info("finish exporting");
 };
-
-export const exportVaultLoggerOutputToFiles = async (
-  db: InternalDBs,
-  vault: Vault,
-  vaultRandomID: string
-) => {
-  await mkdirpInVault(DEFAULT_DEBUG_FOLDER, vault);
-  const records = await readAllLogRecordTextsByVault(db, vaultRandomID);
-  let md = "";
-  if (records.length === 0) {
-    md = "No logger history found.";
-  } else {
-    md =
-      "Logger history found:\n\n" +
-      "```text\n" +
-      records.join("\n") +
-      "\n```\n";
-  }
-  const ts = Date.now();
-  const filePath = `${DEFAULT_DEBUG_FOLDER}${DEFAULT_LOG_HISTORY_FILE_PREFIX}${ts}.md`;
-  await vault.create(filePath, md, {
-    mtime: ts,
-  });
-};

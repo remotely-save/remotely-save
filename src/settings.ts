@@ -21,16 +21,12 @@ import {
 } from "./baseTypes";
 import {
   exportVaultSyncPlansToFiles,
-  exportVaultLoggerOutputToFiles,
 } from "./debugMode";
 import { exportQrCodeUri } from "./importExport";
 import {
   clearAllSyncMetaMapping,
   clearAllSyncPlanRecords,
   destroyDBs,
-  clearAllLoggerOutputRecords,
-  insertLoggerOutputByVault,
-  clearExpiredLoggerOutputRecords,
   upsertLastSuccessSyncByVault,
 } from "./localdb";
 import type RemotelySavePlugin from "./main"; // unavoidable
@@ -2066,63 +2062,6 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
         button.onClick(async () => {
           await clearAllSyncPlanRecords(this.plugin.db);
           new Notice(t("settings_delsyncplans_notice"));
-        });
-      });
-
-    new Setting(debugDiv)
-      .setName(t("settings_logtodb"))
-      .setDesc(t("settings_logtodb_desc"))
-      .addDropdown(async (dropdown) => {
-        dropdown.addOption("enable", t("enable"));
-        dropdown.addOption("disable", t("disable"));
-        dropdown
-          .setValue(this.plugin.settings.logToDB ? "enable" : "disable")
-          .onChange(async (val: string) => {
-            const logToDB = val === "enable";
-            // if (logToDB) {
-            //   applyLogWriterInplace((...msg: any[]) => {
-            //     insertLoggerOutputByVault(
-            //       this.plugin.db,
-            //       this.plugin.vaultRandomID,
-            //       ...msg
-            //     );
-            //   });
-            // } else {
-            //   restoreLogWritterInplace();
-            // }
-            clearExpiredLoggerOutputRecords(this.plugin.db);
-            this.plugin.settings.logToDB = logToDB;
-            await this.plugin.saveSettings();
-          });
-      });
-
-    new Setting(debugDiv)
-      .setName(t("settings_logtodbexport"))
-      .setDesc(
-        t("settings_logtodbexport_desc", {
-          debugFolder: DEFAULT_DEBUG_FOLDER,
-        })
-      )
-      .addButton(async (button) => {
-        button.setButtonText(t("settings_logtodbexport_button"));
-        button.onClick(async () => {
-          await exportVaultLoggerOutputToFiles(
-            this.plugin.db,
-            this.app.vault,
-            this.plugin.vaultRandomID
-          );
-          new Notice(t("settings_logtodbexport_notice"));
-        });
-      });
-
-    new Setting(debugDiv)
-      .setName(t("settings_logtodbclear"))
-      .setDesc(t("settings_logtodbclear_desc"))
-      .addButton(async (button) => {
-        button.setButtonText(t("settings_logtodbclear_button"));
-        button.onClick(async () => {
-          await clearAllLoggerOutputRecords(this.plugin.db);
-          new Notice(t("settings_logtodbclear_notice"));
         });
       });
 

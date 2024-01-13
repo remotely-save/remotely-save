@@ -33,12 +33,11 @@ import {
   loadFileHistoryTableByVault,
   prepareDBs,
   InternalDBs,
-  insertLoggerOutputByVault,
-  clearExpiredLoggerOutputRecords,
   clearExpiredSyncPlanRecords,
   upsertLastSuccessSyncByVault,
   getLastSuccessSyncByVault,
   upsertPluginVersionByVault,
+  clearAllLoggerOutputRecords,
 } from "./localdb";
 import { RemoteClient } from "./remote";
 import {
@@ -70,7 +69,6 @@ import { applyPresetRulesInplace } from "./presetRules";
 import { applyLogWriterInplace, log } from "./moreOnLog";
 import AggregateError from "aggregate-error";
 import {
-  exportVaultLoggerOutputToFiles,
   exportVaultSyncPlansToFiles,
 } from "./debugMode";
 import { SizesConflictModal } from "./syncSizesConflictNotice";
@@ -795,35 +793,6 @@ export default class RemotelySavePlugin extends Plugin {
       },
     });
 
-    this.addCommand({
-      id: "export-sync-plans-table",
-      name: t("command_exportsyncplans_table"),
-      icon: iconNameLogs,
-      callback: async () => {
-        await exportVaultSyncPlansToFiles(
-          this.db,
-          this.app.vault,
-          this.vaultRandomID,
-          "table"
-        );
-        new Notice(t("settings_syncplans_notice"));
-      },
-    });
-
-    this.addCommand({
-      id: "export-logs-in-db",
-      name: t("command_exportlogsindb"),
-      icon: iconNameLogs,
-      callback: async () => {
-        await exportVaultLoggerOutputToFiles(
-          this.db,
-          this.app.vault,
-          this.vaultRandomID
-        );
-        new Notice(t("settings_logtodbexport_notice"));
-      },
-    });
-
     this.addSettingTab(new RemotelySaveSettingTab(this.app, this));
 
     // this.registerDomEvent(document, "click", (evt: MouseEvent) => {
@@ -910,6 +879,7 @@ export default class RemotelySavePlugin extends Plugin {
     if (this.settings.deleteToWhere === undefined) {
       this.settings.deleteToWhere = "system";
     }
+    this.settings.logToDB = false; // deprecated as of 20240113
   }
 
   async checkIfPresetRulesFollowed() {
@@ -1228,9 +1198,6 @@ export default class RemotelySavePlugin extends Plugin {
 
   redirectLoggingOuputBasedOnSetting() {
     applyLogWriterInplace((...msg: any[]) => {
-      if (this.settings.logToDB) {
-        insertLoggerOutputByVault(this.db, this.vaultRandomID, ...msg);
-      }
       if (
         this.debugServerTemp !== undefined &&
         this.debugServerTemp.trim().startsWith("http")
@@ -1255,24 +1222,13 @@ export default class RemotelySavePlugin extends Plugin {
   }
 
   enableAutoClearOutputToDBHistIfSet() {
-    const initClearOutputToDBHistAfterMilliseconds = 1000 * 45;
-    const autoClearOutputToDBHistAfterMilliseconds = 1000 * 60 * 5;
+    const initClearOutputToDBHistAfterMilliseconds = 1000 * 30;
 
     this.app.workspace.onLayoutReady(() => {
       // init run
       window.setTimeout(() => {
-        if (this.settings.logToDB) {
-          clearExpiredLoggerOutputRecords(this.db);
-        }
+        clearAllLoggerOutputRecords(this.db);
       }, initClearOutputToDBHistAfterMilliseconds);
-
-      // scheduled run
-      const intervalID = window.setInterval(() => {
-        if (this.settings.logToDB) {
-          clearExpiredLoggerOutputRecords(this.db);
-        }
-      }, autoClearOutputToDBHistAfterMilliseconds);
-      this.registerInterval(intervalID);
     });
   }
 

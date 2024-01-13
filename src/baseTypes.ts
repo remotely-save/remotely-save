@@ -86,7 +86,7 @@ export interface RemotelySavePluginSettings {
   syncConfigDir?: boolean;
   syncUnderscoreItems?: boolean;
   lang?: LangTypeAndAuto;
-  logToDB?: boolean;
+
   skipSizeLargerThan?: number;
   ignorePaths?: string[];
   enableStatusBarInfo?: boolean;
@@ -96,6 +96,11 @@ export interface RemotelySavePluginSettings {
    * @deprecated
    */
   vaultRandomID?: string;
+
+  /**
+   * @deprecated
+   */
+  logToDB?: boolean;
 }
 
 export interface RemoteItem {

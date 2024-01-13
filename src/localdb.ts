@@ -674,67 +674,9 @@ export const readAllLogRecordTextsByVault = async (
   }
 };
 
-export const insertLoggerOutputByVault = async (
-  db: InternalDBs,
-  vaultRandomID: string,
-  ...msg: any[]
-) => {
-  const ts = Date.now();
-  const tsFmt = unixTimeToStr(ts);
-  const key = `${vaultRandomID}\t${ts}`;
-
-  try {
-    const val = [`[${tsFmt}]`, ...msg.map((x) => toText(x))].join(" ");
-    db.loggerOutputTbl.setItem(key, val);
-  } catch (err) {
-    // give up, and let it pass
-  }
-};
-
 export const clearAllLoggerOutputRecords = async (db: InternalDBs) => {
   await db.loggerOutputTbl.clear();
-};
-
-/**
- * We remove records that are older than 7 days or 10000 records.
- * It's a heavy operation, so we shall not place it in the start up.
- * @param db
- */
-export const clearExpiredLoggerOutputRecords = async (db: InternalDBs) => {
-  const MILLISECONDS_OLD = 1000 * 60 * 60 * 24 * 7; // 7 days
-  const COUNT_TO_MANY = 10000;
-
-  const currTs = Date.now();
-  const expiredTs = currTs - MILLISECONDS_OLD;
-
-  let records = (await db.loggerOutputTbl.keys()).map((key) => {
-    const ts = parseInt(key.split("\t")[1]);
-    const expired = ts <= expiredTs;
-    return {
-      ts: ts,
-      key: key,
-      expired: expired,
-    };
-  });
-
-  const keysToRemove = new Set(
-    records.filter((x) => x.expired).map((x) => x.key)
-  );
-
-  if (records.length - keysToRemove.size > COUNT_TO_MANY) {
-    // we need to find out records beyond 10000 records
-    records = records.filter((x) => !x.expired); // shrink the array
-    records.sort((a, b) => -(a.ts - b.ts)); // descending
-    records.slice(COUNT_TO_MANY).forEach((element) => {
-      keysToRemove.add(element.key);
-    });
-  }
-
-  const ps = [] as Promise<void>[];
-  keysToRemove.forEach((element) => {
-    ps.push(db.loggerOutputTbl.removeItem(element));
-  });
-  await Promise.all(ps);
+  log.debug(`successfully clearAllLoggerOutputRecords`);
 };
 
 export const upsertLastSuccessSyncByVault = async (
