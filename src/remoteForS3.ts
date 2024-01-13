@@ -42,6 +42,7 @@ import {
 export { S3Client } from "@aws-sdk/client-s3";
 
 import { log } from "./moreOnLog";
+import PQueue from "p-queue";
 
 ////////////////////////////////////////////////////////////////////////////////
 // special handler using Obsidian requestUrl
@@ -155,7 +156,7 @@ class ObsHttpHandler extends FetchHttpHandler {
 // other stuffs
 ////////////////////////////////////////////////////////////////////////////////
 
-export const DEFAULT_S3_CONFIG = {
+export const DEFAULT_S3_CONFIG: S3Config = {
   s3Endpoint: "",
   s3Region: "",
   s3AccessKeyID: "",
@@ -165,6 +166,7 @@ export const DEFAULT_S3_CONFIG = {
   partsConcurrency: 20,
   forcePathStyle: false,
   remotePrefix: "",
+  useAccurateMTime: false, // it causes money, disable by default
 };
 
 export type S3ObjectType = _Object;
@@ -218,24 +220,47 @@ const getLocalNoPrefixPath = (
   return fileOrFolderPathWithRemotePrefix.slice(`${remotePrefix}`.length);
 };
 
-const fromS3ObjectToRemoteItem = (x: S3ObjectType, remotePrefix: string) => {
-  return {
+const fromS3ObjectToRemoteItem = (
+  x: S3ObjectType,
+  remotePrefix: string,
+  mtimeRecords: Record<string, number>,
+  ctimeRecords: Record<string, number>
+) => {
+  let mtime = x.LastModified.valueOf();
+  if (x.Key in mtimeRecords) {
+    const m2 = mtimeRecords[x.Key];
+    if (m2 !== 0) {
+      mtime = m2;
+    }
+  }
+  const r: RemoteItem = {
     key: getLocalNoPrefixPath(x.Key, remotePrefix),
-    lastModified: x.LastModified.valueOf(),
+    lastModified: mtime,
     size: x.Size,
     remoteType: "s3",
     etag: x.ETag,
-  } as RemoteItem;
+  };
+  return r;
 };
 
 const fromS3HeadObjectToRemoteItem = (
   fileOrFolderPathWithRemotePrefix: string,
   x: HeadObjectCommandOutput,
-  remotePrefix: string
+  remotePrefix: string,
+  useAccurateMTime: boolean
 ) => {
+  let mtime = x.LastModified.valueOf();
+  if (useAccurateMTime && x.Metadata !== undefined) {
+    const m2 = Math.round(
+      parseFloat(x.Metadata.mtime || x.Metadata.MTime || "0")
+    );
+    if (m2 !== 0) {
+      mtime = m2;
+    }
+  }
   return {
     key: getLocalNoPrefixPath(fileOrFolderPathWithRemotePrefix, remotePrefix),
-    lastModified: x.LastModified.valueOf(),
+    lastModified: mtime,
     size: x.ContentLength,
     remoteType: "s3",
     etag: x.ETag,
@@ -307,7 +332,8 @@ export const getRemoteMeta = async (
   return fromS3HeadObjectToRemoteItem(
     fileOrFolderPathWithRemotePrefix,
     res,
-    s3Config.remotePrefix
+    s3Config.remotePrefix,
+    s3Config.useAccurateMTime
   );
 };
 
@@ -320,7 +346,9 @@ export const uploadToRemote = async (
   password: string = "",
   remoteEncryptedKey: string = "",
   uploadRaw: boolean = false,
-  rawContent: string | ArrayBuffer = ""
+  rawContent: string | ArrayBuffer = "",
+  rawContentMTime: number = 0,
+  rawContentCTime: number = 0
 ) => {
   let uploadFile = fileOrFolderPath;
   if (password !== "") {
@@ -336,6 +364,13 @@ export const uploadToRemote = async (
       throw Error(`you specify uploadRaw, but you also provide a folder key!`);
     }
     // folder
+    let mtime = 0;
+    let ctime = 0;
+    const s = await vault.adapter.stat(fileOrFolderPath);
+    if (s !== null) {
+      mtime = s.mtime;
+      ctime = s.ctime;
+    }
     const contentType = DEFAULT_CONTENT_TYPE;
     await s3Client.send(
       new PutObjectCommand({
@@ -343,6 +378,10 @@ export const uploadToRemote = async (
         Key: uploadFile,
         Body: "",
         ContentType: contentType,
+        Metadata: {
+          MTime: `${mtime}`,
+          CTime: `${ctime}`,
+        },
       })
     );
     return await getRemoteMeta(s3Client, s3Config, uploadFile);
@@ -357,14 +396,23 @@ export const uploadToRemote = async (
         ) || DEFAULT_CONTENT_TYPE;
     }
     let localContent = undefined;
+    let mtime = 0;
+    let ctime = 0;
     if (uploadRaw) {
       if (typeof rawContent === "string") {
         localContent = new TextEncoder().encode(rawContent).buffer;
       } else {
         localContent = rawContent;
       }
+      mtime = rawContentMTime;
+      ctime = rawContentCTime;
     } else {
       localContent = await vault.adapter.readBinary(fileOrFolderPath);
+      const s = await vault.adapter.stat(fileOrFolderPath);
+      if (s !== null) {
+        mtime = s.mtime;
+        ctime = s.ctime;
+      }
     }
     let remoteContent = localContent;
     if (password !== "") {
@@ -373,6 +421,7 @@ export const uploadToRemote = async (
 
     const bytesIn5MB = 5242880;
     const body = new Uint8Array(remoteContent);
+
     const upload = new Upload({
       client: s3Client,
       queueSize: s3Config.partsConcurrency, // concurrency
@@ -383,6 +432,10 @@ export const uploadToRemote = async (
         Key: uploadFile,
         Body: body,
         ContentType: contentType,
+        Metadata: {
+          MTime: `${mtime}`,
+          CTime: `${ctime}`,
+        },
       },
     });
     upload.on("httpUploadProgress", (progress) => {
@@ -407,6 +460,17 @@ const listFromRemoteRaw = async (
   }
 
   const contents = [] as _Object[];
+  const mtimeRecords: Record<string, number> = {};
+  const ctimeRecords: Record<string, number> = {};
+  const queueHead = new PQueue({
+    concurrency: s3Config.partsConcurrency,
+    autoStart: true,
+  });
+  queueHead.on("error", (error) => {
+    queueHead.pause();
+    queueHead.clear();
+    throw error;
+  });
 
   let isTruncated = true;
   do {
@@ -420,6 +484,37 @@ const listFromRemoteRaw = async (
     }
     contents.push(...rsp.Contents);
 
+    if (s3Config.useAccurateMTime) {
+      // head requests of all objects, love it
+      for (const content of rsp.Contents) {
+        queueHead.add(async () => {
+          const rspHead = await s3Client.send(
+            new HeadObjectCommand({
+              Bucket: s3Config.s3BucketName,
+              Key: content.Key,
+            })
+          );
+          if (rspHead.$metadata.httpStatusCode !== 200) {
+            throw Error("some thing bad while heading single object!");
+          }
+          if (rspHead.Metadata === undefined) {
+            // pass
+          } else {
+            mtimeRecords[content.Key] = Math.round(
+              parseFloat(
+                rspHead.Metadata.mtime || rspHead.Metadata.MTime || "0"
+              )
+            );
+            ctimeRecords[content.Key] = Math.round(
+              parseFloat(
+                rspHead.Metadata.ctime || rspHead.Metadata.CTime || "0"
+              )
+            );
+          }
+        });
+      }
+    }
+
     isTruncated = rsp.IsTruncated;
     confCmd.ContinuationToken = rsp.NextContinuationToken;
     if (
@@ -431,12 +526,20 @@ const listFromRemoteRaw = async (
     }
   } while (isTruncated);
 
+  // wait for any head requests
+  await queueHead.onIdle();
+
   // ensemble fake rsp
   // in the end, we need to transform the response list
   // back to the local contents-alike list
   return {
     Contents: contents.map((x) =>
-      fromS3ObjectToRemoteItem(x, s3Config.remotePrefix)
+      fromS3ObjectToRemoteItem(
+        x,
+        s3Config.remotePrefix,
+        mtimeRecords,
+        ctimeRecords
+      )
     ),
   };
 };

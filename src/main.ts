@@ -867,6 +867,10 @@ export default class RemotelySavePlugin extends Plugin {
     if (this.settings.s3.remotePrefix === undefined) {
       this.settings.s3.remotePrefix = "";
     }
+    if (this.settings.s3.useAccurateMTime === undefined) {
+      // it causes money, so disable it by default
+      this.settings.s3.useAccurateMTime = false;
+    }
     if (this.settings.ignorePaths === undefined) {
       this.settings.ignorePaths = [];
     }
@@ -884,6 +888,8 @@ export default class RemotelySavePlugin extends Plugin {
     if (requireApiVersion(API_VER_ENSURE_REQURL_OK)) {
       this.settings.s3.bypassCorsLocally = true; // deprecated as of 20240113
     }
+
+    await this.saveSettings();
   }
 
   async checkIfPresetRulesFollowed() {

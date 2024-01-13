@@ -173,6 +173,8 @@
   "settings_s3_bypasscorslocally_desc": "The plugin allows skipping server CORS config in new version of Obsidian ( desktop>=0.13.25 or iOS>=1.1.1 or Android>=1.2.1). If you encounter any issues, please disable this setting and config CORS on servers (allowing requests from app://obsidian.md and capacitor://localhost and http://localhost and add ETag into exposed headers).",
   "settings_s3_parts": "Parts Concurrency",
   "settings_s3_parts_desc": "Large files are split into small parts to upload in S3. How many parts do you want to upload in parallel at most?",
+  "settings_s3_accuratemtime": "Use Accurate MTime",
+  "settings_s3_accuratemtime_desc": "Read the uploaded accurate last modified time for better sync algorithm. But it causes extra api requests / time / money to the S3 endpoint.",
   "settings_s3_urlstyle": "S3 URL style",
   "settings_s3_urlstyle_desc": "Whether to force path-style URLs for S3 objects (e.g., https://s3.amazonaws.com/*/ instead of https://*.s3.amazonaws.com/).",
   "settings_s3_connect_succ": "Great! The bucket can be accessed.",

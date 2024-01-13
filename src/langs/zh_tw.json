@@ -173,6 +173,8 @@
   "settings_s3_bypasscorslocally_desc": "對於 Obsidian 新版本（桌面版>=0.13.25 或 iOS>=1.1.1 或 Android>=1.2.1），本外掛可以跳過伺服器設定 CORS 的步驟。如果您遇到任意問題，可以關閉此設定，並在服務端設定 CORS（允許來自 app://obsidian.md 和 capacitor://localhost 和 http://localhost 的請求且增加 ETag 到暴露 headers 裡）。",
   "settings_s3_parts": "分塊並行度",
   "settings_s3_parts_desc": "在 S3 裡，大檔案會被分塊上傳。您希望同一時間最多有多少個分塊被上傳？",
+  "settings_s3_accuratemtime": "使用準確的檔案修改時間",
+  "settings_s3_accuratemtime_desc": "讀取（已上傳的）準確的檔案修改時間，有助於同步演算法更加準確和穩定。但是它也會導致額外的 api 請求、時間、金錢花費。",
   "settings_s3_urlstyle": "S3 URL style",
   "settings_s3_urlstyle_desc": "是否對 S3 物件強制使用 path style URL（例如使用 https://s3.amazonaws.com/*/ 而不是 https://*.s3.amazonaws.com/）。",
   "settings_s3_connect_succ": "很好！可以訪問到對應儲存桶。",

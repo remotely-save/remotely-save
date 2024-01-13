@@ -1010,6 +1010,29 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
           });
       });
 
+    new Setting(s3Div)
+      .setName(t("settings_s3_accuratemtime"))
+      .setDesc(t("settings_s3_accuratemtime_desc"))
+      .addDropdown((dropdown) => {
+        dropdown
+            .addOption("disable", t("disable"))
+            .addOption("enable", t("enable"));
+
+        dropdown
+          .setValue(`${
+            this.plugin.settings.s3.useAccurateMTime ? "enable" : "disable"
+          }`)
+          .onChange(async (val) => {
+            if (val === "enable") {
+              this.plugin.settings.s3.useAccurateMTime = true;
+            } else {
+              this.plugin.settings.s3.useAccurateMTime = false;
+            }
+            await this.plugin.saveSettings();
+          });
+      });
+
+
     let newS3RemotePrefix = this.plugin.settings.s3.remotePrefix || "";
     new Setting(s3Div)
       .setName(t("settings_remoteprefix"))

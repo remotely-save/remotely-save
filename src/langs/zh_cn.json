@@ -173,6 +173,8 @@
   "settings_s3_bypasscorslocally_desc": "对于 Obsidian 新版本（桌面版>=0.13.25 或 iOS>=1.1.1 或 Android>=1.2.1），本插件可以跳过服务器设置 CORS 的步骤。如果您遇到任意问题，可以关闭此设定，并在服务端设置 CORS（允许来自 app://obsidian.md 和 capacitor://localhost 和 http://localhost 的请求且增加 ETag 到暴露 headers 里）。",
   "settings_s3_parts": "分块并行度",
   "settings_s3_parts_desc": "在 S3 里，大文件会被分块上传。您希望同一时间最多有多少个分块被上传？",
+  "settings_s3_accuratemtime": "使用准确的文件修改时间",
+  "settings_s3_accuratemtime_desc": "读取（已上传的）准确的文件修改时间，有助于同步算法更加准确和稳定。但是它也会导致额外的 api 请求、时间、金钱花费。",
   "settings_s3_urlstyle": "S3 URL style",
   "settings_s3_urlstyle_desc": "是否对 S3 对象强制使用 path style URL（例如使用 https://s3.amazonaws.com/*/ 而不是 https://*.s3.amazonaws.com/）。",
   "settings_s3_connect_succ": "很好！可以访问到对应存储桶。",
