@@ -608,13 +608,13 @@ export const readAllSyncPlanRecordTextsByVault = async (
 };
 
 /**
- * We remove records that are older than 7 days or 10000 records.
+ * We remove records that are older than 3 days or 100 records.
  * It's a heavy operation, so we shall not place it in the start up.
  * @param db
  */
 export const clearExpiredSyncPlanRecords = async (db: InternalDBs) => {
-  const MILLISECONDS_OLD = 1000 * 60 * 60 * 24 * 7; // 7 days
-  const COUNT_TO_MANY = 10000;
+  const MILLISECONDS_OLD = 1000 * 60 * 60 * 24 * 3; // 3 days
+  const COUNT_TO_MANY = 100;
 
   const currTs = Date.now();
   const expiredTs = currTs - MILLISECONDS_OLD;
@@ -634,7 +634,7 @@ export const clearExpiredSyncPlanRecords = async (db: InternalDBs) => {
   );
 
   if (records.length - keysToRemove.size > COUNT_TO_MANY) {
-    // we need to find out records beyond 10000 records
+    // we need to find out records beyond 100 records
     records = records.filter((x) => !x.expired); // shrink the array
     records.sort((a, b) => -(a.ts - b.ts)); // descending
     records.slice(COUNT_TO_MANY).forEach((element) => {
