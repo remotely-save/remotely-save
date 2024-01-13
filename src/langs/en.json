@@ -269,7 +269,7 @@
   "settings_delsyncplans_notice": "Sync plans history (in DB) deleted.",
   "settings_logtohttpserver": "Log To HTTP Server Temporarily",
   "settings_logtohttpserver_desc": "It's very dangerous and please use the function with greate cautions!!!!! It will temporarily allow sending console loggins to HTTP server.",
-  "settings_logtohttpserver_reset_notice": "Already removed the setting of logging to HTTP server.",
+  "settings_logtohttpserver_reset_notice": "Your input doesn't starts with \"http(s)\". Already removed the setting of logging to HTTP(S) server.",
   "settings_delsyncmap": "Delete Sync Mappings History In DB",
   "settings_delsyncmap_desc": "Sync mappings history stores the actual LOCAL last modified time of the REMOTE objects. Clearing it may cause unnecessary data exchanges in next-time sync. Click the button to delete sync mappings history in DB.",
   "settings_delsyncmap_button": "Delete Sync Mappings",
