@@ -2,6 +2,7 @@ import { CryptoProvider, PublicClientApplication } from "@azure/msal-node";
 import { AuthenticationProvider } from "@microsoft/microsoft-graph-client";
 import type {
   DriveItem,
+  FileSystemInfo,
   UploadSession,
   User,
 } from "@microsoft/microsoft-graph-types";
@@ -684,6 +685,16 @@ export const uploadToRemote = async (
   uploadFile = getOnedrivePath(uploadFile, client.remoteBaseDir);
   log.debug(`uploadFile=${uploadFile}`);
 
+  let mtime = 0;
+  let ctime = 0;
+  const s = await vault.adapter.stat(fileOrFolderPath);
+  if (s !== null) {
+    mtime = s.mtime;
+    ctime = s.ctime;
+  }
+  const ctimeStr = new Date(ctime).toISOString();
+  const mtimeStr = new Date(mtime).toISOString();
+
   const isFolder = fileOrFolderPath.endsWith("/");
 
   if (isFolder && isRecursively) {
@@ -700,10 +711,21 @@ export const uploadToRemote = async (
       } else {
         // https://stackoverflow.com/questions/56479865/creating-nested-folders-in-one-go-onedrive-api
         // use PATCH to create folder recursively!!!
-        await client.patchJson(uploadFile, {
+        let k: any = {
           folder: {},
           "@microsoft.graph.conflictBehavior": "replace",
-        });
+        };
+        if (mtime !== 0 && ctime !== 0) {
+          k = {
+            folder: {},
+            "@microsoft.graph.conflictBehavior": "replace",
+            fileSystemInfo: {
+              lastModifiedDateTime: mtimeStr,
+              createdDateTime: ctimeStr,
+            } as FileSystemInfo,
+          };
+        }
+        await client.patchJson(uploadFile, k);
       }
       const res = await getRemoteMeta(client, uploadFile);
       return res;
@@ -727,6 +749,14 @@ export const uploadToRemote = async (
         })}`,
         arrBufRandom
       );
+      if (mtime !== 0 && ctime !== 0) {
+        await client.patchJson(`${uploadFile}`, {
+          fileSystemInfo: {
+            lastModifiedDateTime: mtimeStr,
+            createdDateTime: ctimeStr,
+          } as FileSystemInfo,
+        });
+      }
       // log.info(uploadResult)
       const res = await getRemoteMeta(client, uploadFile);
       return res;
@@ -764,19 +794,41 @@ export const uploadToRemote = async (
         })}`,
         remoteContent
       );
+      if (mtime !== 0 && ctime !== 0) {
+        await client.patchJson(`${uploadFile}`, {
+          fileSystemInfo: {
+            lastModifiedDateTime: mtimeStr,
+            createdDateTime: ctimeStr,
+          } as FileSystemInfo,
+        });
+      }
     } else {
       // upload large files!
       // ref: https://docs.microsoft.com/en-us/onedrive/developer/rest-api/api/driveitem_createuploadsession?view=odsp-graph-online
 
       // 1. create uploadSession
       // uploadFile already starts with /drive/special/approot:/${remoteBaseDir}
-      const s: UploadSession = await client.postJson(
-        `${uploadFile}:/createUploadSession`,
-        {
+      let k: any = {
+        item: {
+          "@microsoft.graph.conflictBehavior": "replace",
+        },
+      };
+      if (mtime !== 0 && ctime !== 0) {
+        k = {
           item: {
             "@microsoft.graph.conflictBehavior": "replace",
+
+            // this is only possible using uploadSession
+            fileSystemInfo: {
+              lastModifiedDateTime: mtimeStr,
+              createdDateTime: ctimeStr,
+            } as FileSystemInfo,
           },
-        }
+        };
+      }
+      const s: UploadSession = await client.postJson(
+        `${uploadFile}:/createUploadSession`,
+        k
       );
       const uploadUrl = s.uploadUrl;
       log.debug("uploadSession = ");
