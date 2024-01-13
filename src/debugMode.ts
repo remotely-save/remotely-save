@@ -78,8 +78,7 @@ const turnSyncPlanToTable = (record: string) => {
 export const exportVaultSyncPlansToFiles = async (
   db: InternalDBs,
   vault: Vault,
-  vaultRandomID: string,
-  toFormat: "table" | "json" = "json"
+  vaultRandomID: string
 ) => {
   log.info("exporting");
   await mkdirpInVault(DEFAULT_DEBUG_FOLDER, vault);
@@ -88,16 +87,9 @@ export const exportVaultSyncPlansToFiles = async (
   if (records.length === 0) {
     md = "No sync plans history found";
   } else {
-    if (toFormat === "json") {
-      md =
-        "Sync plans found:\n\n" +
-        records.map((x) => "```json\n" + x + "\n```\n").join("\n");
-    } else if (toFormat === "table") {
-      md =
-        "Sync plans found:\n\n" + records.map(turnSyncPlanToTable).join("\n\n");
-    } else {
-      const _: never = toFormat;
-    }
+    md =
+      "Sync plans found:\n\n" +
+      records.map((x) => "```json\n" + x + "\n```\n").join("\n");
   }
   const ts = Date.now();
   const filePath = `${DEFAULT_DEBUG_FOLDER}${DEFAULT_SYNC_PLANS_HISTORY_FILE_PREFIX}${ts}.md`;

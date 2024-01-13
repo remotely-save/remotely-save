@@ -789,8 +789,7 @@ export default class RemotelySavePlugin extends Plugin {
         await exportVaultSyncPlansToFiles(
           this.db,
           this.app.vault,
-          this.vaultRandomID,
-          "json"
+          this.vaultRandomID
         );
         new Notice(t("settings_syncplans_notice"));
       },
