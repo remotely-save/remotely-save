@@ -649,31 +649,6 @@ export const clearExpiredSyncPlanRecords = async (db: InternalDBs) => {
   await Promise.all(ps);
 };
 
-export const readAllLogRecordTextsByVault = async (
-  db: InternalDBs,
-  vaultRandomID: string
-) => {
-  const records = [] as { ts: number; r: string }[];
-  await db.loggerOutputTbl.iterate((value, key, iterationNumber) => {
-    if (key.startsWith(`${vaultRandomID}\t`)) {
-      const item = {
-        ts: parseInt(key.split("\t")[1]),
-        r: value as string,
-      };
-      records.push(item);
-    }
-  });
-
-  // while reading the logs, we want it to be ascending
-  records.sort((a, b) => a.ts - b.ts);
-
-  if (records === undefined) {
-    return [] as string[];
-  } else {
-    return records.map((x) => x.r);
-  }
-};
-
 export const clearAllLoggerOutputRecords = async (db: InternalDBs) => {
   await db.loggerOutputTbl.clear();
   log.debug(`successfully clearAllLoggerOutputRecords`);

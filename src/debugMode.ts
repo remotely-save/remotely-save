@@ -1,10 +1,7 @@
 import { TAbstractFile, TFolder, TFile, Vault } from "obsidian";
 
 import type { SyncPlanType } from "./sync";
-import {
-  readAllSyncPlanRecordTextsByVault,
-  readAllLogRecordTextsByVault,
-} from "./localdb";
+import { readAllSyncPlanRecordTextsByVault } from "./localdb";
 import type { InternalDBs } from "./localdb";
 import { mkdirpInVault } from "./misc";
 import {
