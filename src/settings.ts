@@ -2146,6 +2146,7 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
         button.onClick(async () => {
           await destroyDBs();
           new Notice(t("settings_resetcache_notice"));
+          this.plugin.unload();
         });
       });
   }
