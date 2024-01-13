@@ -277,7 +277,7 @@ export const getS3Client = (s3Config: S3Config) => {
 
   if (VALID_REQURL && s3Config.bypassCorsLocally) {
     s3Client = new S3Client({
-      region: s3Config.s3Region !== "" ? s3Config.s3Region : undefined,
+      region: s3Config.s3Region,
       endpoint: endpoint,
       forcePathStyle: s3Config.forcePathStyle,
       credentials: {
@@ -288,7 +288,7 @@ export const getS3Client = (s3Config: S3Config) => {
     });
   } else {
     s3Client = new S3Client({
-      region: s3Config.s3Region !== "" ? s3Config.s3Region : undefined,
+      region: s3Config.s3Region,
       endpoint: endpoint,
       forcePathStyle: s3Config.forcePathStyle,
       credentials: {

@@ -163,7 +163,7 @@
   "settings_s3_prod3": "Configuring CORS",
   "settings_s3_endpoint": "Endpoint",
   "settings_s3_region": "Region",
-  "settings_s3_region_desc": "If you are not sure what to enter, you could try the value: us-east-1 . If you leave it empty, the client will try to ignore this setting.",
+  "settings_s3_region_desc": "If you are not sure what to enter, you could try the value: us-east-1 .",
   "settings_s3_accesskeyid": "Access Key ID",
   "settings_s3_accesskeyid_desc": "Access key ID. Attention: Access key ID and other info are saved locally.",
   "settings_s3_secretaccesskey": "Secret Access Key",

@@ -163,7 +163,7 @@
   "settings_s3_prod3": "設定 CORS",
   "settings_s3_endpoint": "服務地址（Endpoint）",
   "settings_s3_region": "區域（Region）",
-  "settings_s3_region_desc": "如果您不知道這個值填什麼，可以嘗試填寫：us-east-1。如果您不填寫，客戶端會嘗試不設定此選項。",
+  "settings_s3_region_desc": "如果您不知道這個值填什麼，可以嘗試填寫：us-east-1。",
   "settings_s3_accesskeyid": "Access Key ID",
   "settings_s3_accesskeyid_desc": "Access key ID。注意：access key ID 和其它資訊都會在本地儲存。",
   "settings_s3_secretaccesskey": "Secret Access Key",
