@@ -11,6 +11,7 @@ import {
 import type { TextComponent } from "obsidian";
 import { createElement, Eye, EyeOff } from "lucide";
 import {
+  API_VER_ENSURE_REQURL_OK,
   API_VER_REQURL,
   DEFAULT_DEBUG_FOLDER,
   SUPPORTED_SERVICES_TYPE,
@@ -962,7 +963,7 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
           });
       });
 
-    if (VALID_REQURL) {
+    if (VALID_REQURL && !requireApiVersion(API_VER_ENSURE_REQURL_OK)) {
       new Setting(s3Div)
         .setName(t("settings_s3_bypasscorslocally"))
         .setDesc(t("settings_s3_bypasscorslocally_desc"))

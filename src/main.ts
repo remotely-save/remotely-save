@@ -10,6 +10,7 @@ import {
   TFile,
   TFolder,
   requestUrl,
+  requireApiVersion,
 } from "obsidian";
 import cloneDeep from "lodash/cloneDeep";
 import { createElement, RotateCcw, RefreshCcw, FileText } from "lucide";
@@ -24,6 +25,7 @@ import {
   COMMAND_CALLBACK_DROPBOX,
   COMMAND_URI,
   REMOTELY_SAVE_VERSION_2024PREPARE,
+  API_VER_ENSURE_REQURL_OK,
 } from "./baseTypes";
 import { importQrCodeUri } from "./importExport";
 import {
@@ -878,6 +880,10 @@ export default class RemotelySavePlugin extends Plugin {
       this.settings.deleteToWhere = "system";
     }
     this.settings.logToDB = false; // deprecated as of 20240113
+
+    if (requireApiVersion(API_VER_ENSURE_REQURL_OK)) {
+      this.settings.s3.bypassCorsLocally = true; // deprecated as of 20240113
+    }
   }
 
   async checkIfPresetRulesFollowed() {
