@@ -26,6 +26,8 @@ export interface S3Config {
   forcePathStyle?: boolean;
   remotePrefix?: string;
 
+  useAccurateMTime?: boolean;
+
   /**
    * @deprecated
    */
