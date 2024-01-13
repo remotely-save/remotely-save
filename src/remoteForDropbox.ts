@@ -231,7 +231,9 @@ export const sendAuthReq = async (
     return resp2;
   } catch (e) {
     log.error(e);
-    await errorCallBack(e);
+    if (errorCallBack !== undefined) {
+      await errorCallBack(e);
+    }
   }
 };
 

@@ -68,9 +68,7 @@ import { applyPresetRulesInplace } from "./presetRules";
 
 import { applyLogWriterInplace, log } from "./moreOnLog";
 import AggregateError from "aggregate-error";
-import {
-  exportVaultSyncPlansToFiles,
-} from "./debugMode";
+import { exportVaultSyncPlansToFiles } from "./debugMode";
 import { SizesConflictModal } from "./syncSizesConflictNotice";
 import { compareVersion } from "./misc";
 
@@ -589,7 +587,7 @@ export default class RemotelySavePlugin extends Plugin {
             async (e: any) => {
               new Notice(t("protocol_dropbox_connect_fail"));
               new Notice(`${e}`);
-              return;
+              throw e;
             }
           );
 

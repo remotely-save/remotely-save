@@ -19,9 +19,7 @@ import {
   WebdavAuthType,
   WebdavDepthType,
 } from "./baseTypes";
-import {
-  exportVaultSyncPlansToFiles,
-} from "./debugMode";
+import { exportVaultSyncPlansToFiles } from "./debugMode";
 import { exportQrCodeUri } from "./importExport";
 import {
   clearAllSyncMetaMapping,
@@ -407,7 +405,12 @@ class DropboxAuthModal extends Modal {
               const authRes = await sendAuthReqDropbox(
                 this.plugin.settings.dropbox.clientID,
                 verifier,
-                authCode
+                authCode,
+                async (e: any) => {
+                  new Notice(t("protocol_dropbox_connect_fail"));
+                  new Notice(`${e}`);
+                  throw e;
+                }
               );
               const self = this;
               setConfigBySuccessfullAuthInplace(
