@@ -48,6 +48,8 @@ body:
         - webdav       
         - webdav (ownCloud)
         - webdav (InfiniCloud (formally TeraCLOUD))
+        - webdav (AList)
+        - webdav (Cloudreve)
         - webdav (坚果云 JianGuoYun/NutStore)
         - webdav (NextCloud)
         - webdav (FastMail)

@@ -95,6 +95,7 @@ Additionally, the plugin author may occasionally visit Obsidian official forum a
 - Tutorials / Examples:
   - [ownCloud](./docs/remote_services/webdav_owncloud/README.md)
   - [InfiniCloud](./docs/remote_services/webdav_infinicloud_teracloud/README.md)
+  - [AList](./docs/remote_services/webdav_alist/README.md)
   - [坚果云 JianGuoYun/NutStore](./docs/remote_services/webdav_jianguoyun/README.md)
 - Very old version of Obsidian needs [configuring CORS](./docs/remote_services/webdav_general/webav_cors.md).
 - Your data would be synced to a `${vaultName}` sub folder on your webdav server.
