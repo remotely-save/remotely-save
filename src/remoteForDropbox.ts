@@ -24,7 +24,7 @@ import { log } from "./moreOnLog";
 
 export const DEFAULT_DROPBOX_CONFIG: DropboxConfig = {
   accessToken: "",
-  clientID: process.env.DEFAULT_DROPBOX_APP_KEY,
+  clientID: process.env.DEFAULT_DROPBOX_APP_KEY ?? "",
   refreshToken: "",
   accessTokenExpiresInSeconds: 0,
   accessTokenExpiresAtTime: 0,
@@ -76,7 +76,7 @@ const fromDropboxItemToRemoteItem = (
     | files.DeletedMetadataReference,
   remoteBaseDir: string
 ): RemoteItem => {
-  let key = getNormPath(x.path_display, remoteBaseDir);
+  let key = getNormPath(x.path_display!, remoteBaseDir);
   if (x[".tag"] === "folder" && !key.endsWith("/")) {
     key = `${key}/`;
   }
@@ -101,7 +101,8 @@ const fromDropboxItemToRemoteItem = (
       remoteType: "dropbox",
       etag: `${x.id}\t${x.content_hash}`,
     } as RemoteItem;
-  } else if (x[".tag"] === "deleted") {
+  } else {
+    // x[".tag"] === "deleted"
     throw Error("do not support deleted tag");
   }
 };
@@ -188,7 +189,7 @@ export const getAuthUrlAndVerifier = async (
     : `obsidian://${COMMAND_CALLBACK_DROPBOX}`;
   const authUrl = (
     await auth.getAuthenticationUrl(
-      callback,
+      callback as any,
       undefined,
       "code",
       "offline",
@@ -282,9 +283,7 @@ export const setConfigBySuccessfullAuthInplace = async (
 
   if (authRes.refresh_token !== undefined) {
     config.refreshToken = authRes.refresh_token;
-  }
-  if (authRes.refresh_token !== undefined) {
-    config.accountID = authRes.account_id;
+    config.accountID = authRes.account_id!;
   }
 
   if (saveUpdatedConfigFunc !== undefined) {
@@ -307,7 +306,7 @@ interface ErrSubType {
 async function retryReq<T>(
   reqFunc: () => Promise<DropboxResponse<T>>,
   extraHint: string = ""
-): Promise<DropboxResponse<T>> {
+): Promise<DropboxResponse<T> | undefined> {
   const waitSeconds = [1, 2, 4, 8]; // hard code exponential backoff
   for (let idx = 0; idx < waitSeconds.length; ++idx) {
     try {
@@ -369,7 +368,7 @@ export class WrappedDropboxClient {
   dropboxConfig: DropboxConfig;
   remoteBaseDir: string;
   saveUpdatedConfigFunc: () => Promise<any>;
-  dropbox: Dropbox;
+  dropbox!: Dropbox;
   vaultFolderExists: boolean;
   constructor(
     dropboxConfig: DropboxConfig,
@@ -507,6 +506,9 @@ export const getRemoteMeta = async (
       path: remotePath,
     })
   );
+  if (rsp === undefined) {
+    throw Error("dropbox.filesGetMetadata undefinded");
+  }
   if (rsp.status !== 200) {
     throw Error(JSON.stringify(rsp));
   }
@@ -516,7 +518,7 @@ export const getRemoteMeta = async (
 export const uploadToRemote = async (
   client: WrappedDropboxClient,
   fileOrFolderPath: string,
-  vault: Vault,
+  vault: Vault | undefined,
   isRecursively: boolean = false,
   password: string = "",
   remoteEncryptedKey: string = "",
@@ -611,6 +613,11 @@ export const uploadToRemote = async (
         localContent = rawContent;
       }
     } else {
+      if (vault === undefined) {
+        throw new Error(
+          `the vault variable is not passed but we want to read ${fileOrFolderPath} for Dropbox`
+        );
+      }
       localContent = await vault.adapter.readBinary(fileOrFolderPath);
     }
     let remoteContent = localContent;
@@ -700,6 +707,9 @@ const downloadFromRemoteRaw = async (
       }),
     `downloadFromRemoteRaw=${remotePath}`
   );
+  if (rsp === undefined) {
+    throw Error(`unknown rsp from dropbox download: ${rsp}`);
+  }
   if ((rsp.result as any).fileBlob !== undefined) {
     // we get a Blob
     const content = (rsp.result as any).fileBlob as Blob;

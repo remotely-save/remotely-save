@@ -26,8 +26,8 @@ export interface MetadataOnRemote {
 }
 
 export const isEqualMetadataOnRemote = (
-  a: MetadataOnRemote,
-  b: MetadataOnRemote
+  a: MetadataOnRemote | undefined,
+  b: MetadataOnRemote | undefined
 ) => {
   const m1 = a === undefined ? { deletions: [] } : a;
   const m2 = b === undefined ? { deletions: [] } : b;

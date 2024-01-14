@@ -126,8 +126,12 @@ export const base64ToArrayBuffer = (b64text: string) => {
  * @returns
  */
 export const hexStringToTypedArray = (hex: string) => {
+  const f = hex.match(/[\da-f]{2}/gi);
+  if (f === null) {
+    throw Error(`input ${hex} is not hex, no way to transform`);
+  }
   return new Uint8Array(
-    hex.match(/[\da-f]{2}/gi).map(function (h) {
+    f.map(function (h) {
       return parseInt(h, 16);
     })
   );
@@ -236,7 +240,7 @@ export const setToString = (a: Set<string>, delimiter: string = ",") => {
 export const extractSvgSub = (x: string, subEl: string = "rect") => {
   const parser = new window.DOMParser();
   const dom = parser.parseFromString(x, "image/svg+xml");
-  const svg = dom.querySelector("svg");
+  const svg = dom.querySelector("svg")!;
   svg.setAttribute("viewbox", "0 0 10 10");
   return svg.innerHTML;
 };
@@ -317,7 +321,7 @@ export const getTypeName = (obj: any) => {
  * @param x
  * @returns
  */
-export const atWhichLevel = (x: string) => {
+export const atWhichLevel = (x: string | undefined) => {
   if (
     x === undefined ||
     x === "" ||
@@ -413,11 +417,14 @@ export const toText = (x: any) => {
  */
 export const statFix = async (vault: Vault, path: string) => {
   const s = await vault.adapter.stat(path);
+  if (s === undefined || s === null) {
+    return s;
+  }
   if (s.ctime === undefined || s.ctime === null || Number.isNaN(s.ctime)) {
-    s.ctime = undefined;
+    s.ctime = undefined as any; // force assignment
   }
   if (s.mtime === undefined || s.mtime === null || Number.isNaN(s.mtime)) {
-    s.mtime = undefined;
+    s.mtime = undefined as any; // force assignment
   }
   if (
     (s.size === undefined || s.size === null || Number.isNaN(s.size)) &&

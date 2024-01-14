@@ -48,6 +48,7 @@ export interface DropboxConfig {
 
 export type WebdavAuthType = "digest" | "basic";
 export type WebdavDepthType =
+  | "auto"
   | "auto_unknown"
   | "auto_1"
   | "auto_infinity"
@@ -112,7 +113,7 @@ export interface RemotelySavePluginSettings {
 
 export interface RemoteItem {
   key: string;
-  lastModified: number;
+  lastModified?: number;
   size: number;
   remoteType: SUPPORTED_SERVICES_TYPE;
   etag?: string;

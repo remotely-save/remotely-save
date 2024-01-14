@@ -45,8 +45,8 @@ describe("Metadata operations tests", () => {
   });
 
   it("should treat undefined correctly", async () => {
-    const a: MetadataOnRemote = undefined;
-    let b: MetadataOnRemote = {
+    const a: MetadataOnRemote | undefined = undefined;
+    let b: MetadataOnRemote | undefined = {
       deletions: [
         { key: "xxx", actionWhen: 1 },
         { key: "yyy", actionWhen: 2 },

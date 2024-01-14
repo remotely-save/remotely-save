@@ -416,7 +416,7 @@ class DropboxAuthModal extends Modal {
               const self = this;
               setConfigBySuccessfullAuthInplace(
                 this.plugin.settings.dropbox,
-                authRes,
+                authRes!,
                 () => self.plugin.saveSettings()
               );
               const client = new RemoteClient(
@@ -784,7 +784,7 @@ const getEyesElements = () => {
 
 const wrapTextWithPasswordHide = (text: TextComponent) => {
   const { eye, eyeOff } = getEyesElements();
-  const hider = text.inputEl.insertAdjacentElement("afterend", createSpan());
+  const hider = text.inputEl.insertAdjacentElement("afterend", createSpan())!;
   // the init type of hider is "hidden" === eyeOff === password
   hider.innerHTML = eyeOff;
   hider.addEventListener("click", (e) => {
@@ -1534,8 +1534,8 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
 
         dropdown
           .setValue(this.plugin.settings.webdav.authType)
-          .onChange(async (val: WebdavAuthType) => {
-            this.plugin.settings.webdav.authType = val;
+          .onChange(async (val) => {
+            this.plugin.settings.webdav.authType = val as WebdavAuthType;
             await this.plugin.saveSettings();
           });
       });
@@ -1548,20 +1548,20 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
         dropdown.addOption("manual_1", t("settings_webdav_depth_1"));
         dropdown.addOption("manual_infinity", t("settings_webdav_depth_inf"));
 
-        let initVal = "auto";
+        let initVal: WebdavDepthType = "auto";
         const autoOptions: Set<WebdavDepthType> = new Set([
           "auto_unknown",
           "auto_1",
           "auto_infinity",
         ]);
-        if (autoOptions.has(this.plugin.settings.webdav.depth)) {
+        if (autoOptions.has(this.plugin.settings.webdav.depth as any)) {
           initVal = "auto";
         } else {
           initVal = this.plugin.settings.webdav.depth || "auto";
         }
 
         type DepthOption = "auto" | "manual_1" | "manual_infinity";
-        dropdown.setValue(initVal).onChange(async (val: DepthOption) => {
+        dropdown.setValue(initVal).onChange(async (val) => {
           if (val === "auto") {
             this.plugin.settings.webdav.depth = "auto_unknown";
             this.plugin.settings.webdav.manualRecursive = false;
@@ -1656,8 +1656,8 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
         dropdown.addOption("onedrive", t("settings_chooseservice_onedrive"));
         dropdown
           .setValue(this.plugin.settings.serviceType)
-          .onChange(async (val: SUPPORTED_SERVICES_TYPE) => {
-            this.plugin.settings.serviceType = val;
+          .onChange(async (val) => {
+            this.plugin.settings.serviceType = val as SUPPORTED_SERVICES_TYPE;
             s3Div.toggleClass(
               "s3-hide",
               this.plugin.settings.serviceType !== "s3"
@@ -1815,11 +1815,11 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
                   // );
                   if (
                     currentTime - lastModified <
-                    this.plugin.settings.syncOnSaveAfterMilliseconds
+                    this.plugin.settings.syncOnSaveAfterMilliseconds!
                   ) {
                     if (!runScheduled) {
                       const scheduleTimeFromNow =
-                        this.plugin.settings.syncOnSaveAfterMilliseconds -
+                        this.plugin.settings.syncOnSaveAfterMilliseconds! -
                         (currentTime - lastModified);
                       log.info(
                         `schedule a run for ${scheduleTimeFromNow} milliseconds later`
@@ -1864,7 +1864,7 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
         .setDesc(t("settings_enablestatusbar_info_desc"))
         .addToggle((toggle) => {
           toggle
-            .setValue(this.plugin.settings.enableStatusBarInfo)
+            .setValue(this.plugin.settings.enableStatusBarInfo ?? false)
             .onChange(async (val) => {
               this.plugin.settings.enableStatusBarInfo = val;
               await this.plugin.saveSettings();
@@ -1897,7 +1897,7 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
 
       .addTextArea((textArea) => {
         textArea
-          .setValue(`${this.plugin.settings.ignorePaths.join("\n")}`)
+          .setValue(`${(this.plugin.settings.ignorePaths ?? []).join("\n")}`)
           .onChange(async (value) => {
             this.plugin.settings.ignorePaths = value
               .trim()
@@ -1999,9 +1999,9 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
           t("settings_deletetowhere_obsidian_trash")
         );
         dropdown
-          .setValue(this.plugin.settings.deleteToWhere)
-          .onChange(async (val: "system" | "obsidian") => {
-            this.plugin.settings.deleteToWhere = val;
+          .setValue(this.plugin.settings.deleteToWhere ?? "system")
+          .onChange(async (val) => {
+            this.plugin.settings.deleteToWhere = val as "system" | "obsidian";
             await this.plugin.saveSettings();
           });
       });
@@ -2044,7 +2044,7 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
         dropdown.addOption("info", "info");
         dropdown.addOption("debug", "debug");
         dropdown
-          .setValue(this.plugin.settings.currLogLevel)
+          .setValue(this.plugin.settings.currLogLevel ?? "info")
           .onChange(async (val: string) => {
             this.plugin.settings.currLogLevel = val;
             log.setLevel(val as any);

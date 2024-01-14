@@ -14,7 +14,7 @@ export const exportQrCodeUri = async (
   currentVaultName: string,
   pluginVersion: string
 ) => {
-  const settings2 = cloneDeep(settings);
+  const settings2: Partial<RemotelySavePluginSettings> = cloneDeep(settings);
   delete settings2.dropbox;
   delete settings2.onedrive;
   delete settings2.vaultRandomID;

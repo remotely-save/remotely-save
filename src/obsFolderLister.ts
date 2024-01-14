@@ -53,9 +53,9 @@ export const listFilesInObsFolder = async (
   const CHUNK_SIZE = 10;
   const contents: ObsConfigDirFileType[] = [];
   while (q.length > 0) {
-    const itemsToFetch = [];
+    const itemsToFetch: string[] = [];
     while (q.length > 0) {
-      itemsToFetch.push(q.pop());
+      itemsToFetch.push(q.pop()!);
     }
 
     const itemsToFetchChunks = chunk(itemsToFetch, CHUNK_SIZE);
@@ -63,8 +63,11 @@ export const listFilesInObsFolder = async (
       const r = singleChunk.map(async (x) => {
         const statRes = await statFix(vault, x);
 
+        if (statRes === undefined || statRes === null) {
+          throw Error("something goes wrong while listing hidden folder");
+        }
         const isFolder = statRes.type === "folder";
-        let children: ListedFiles = undefined;
+        let children: ListedFiles | undefined = undefined;
         if (isFolder) {
           children = await vault.adapter.list(x);
         }

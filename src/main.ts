@@ -133,18 +133,18 @@ const getIconSvg = () => {
 };
 
 export default class RemotelySavePlugin extends Plugin {
-  settings: RemotelySavePluginSettings;
-  db: InternalDBs;
-  syncStatus: SyncStatusType;
-  statusBarElement: HTMLSpanElement;
-  oauth2Info: OAuth2Info;
-  currLogLevel: string;
+  settings!: RemotelySavePluginSettings;
+  db!: InternalDBs;
+  syncStatus!: SyncStatusType;
+  statusBarElement!: HTMLSpanElement;
+  oauth2Info!: OAuth2Info;
+  currLogLevel!: string;
   currSyncMsg?: string;
   syncRibbon?: HTMLElement;
   autoRunIntervalID?: number;
   syncOnSaveIntervalID?: number;
-  i18n: I18n;
-  vaultRandomID: string;
+  i18n!: I18n;
+  vaultRandomID!: string;
   debugServerTemp?: string;
 
   async syncRun(triggerSource: SyncTriggerSourceType = "manual") {
@@ -175,7 +175,7 @@ export default class RemotelySavePlugin extends Plugin {
 
     let originLabel = `${this.manifest.name}`;
     if (this.syncRibbon !== undefined) {
-      originLabel = this.syncRibbon.getAttribute("aria-label");
+      originLabel = this.syncRibbon.getAttribute("aria-label") as string;
     }
 
     try {
@@ -286,7 +286,8 @@ export default class RemotelySavePlugin extends Plugin {
         this.db,
         this.vaultRandomID
       );
-      let localConfigDirContents: ObsConfigDirFileType[] = undefined;
+      let localConfigDirContents: ObsConfigDirFileType[] | undefined =
+        undefined;
       if (this.settings.syncConfigDir) {
         localConfigDirContents = await listFilesInObsFolder(
           this.app.vault.configDir,
@@ -312,11 +313,11 @@ export default class RemotelySavePlugin extends Plugin {
         client.serviceType,
         triggerSource,
         this.app.vault,
-        this.settings.syncConfigDir,
+        this.settings.syncConfigDir ?? false,
         this.app.vault.configDir,
-        this.settings.syncUnderscoreItems,
-        this.settings.skipSizeLargerThan,
-        this.settings.ignorePaths,
+        this.settings.syncUnderscoreItems ?? false,
+        this.settings.skipSizeLargerThan ?? -1,
+        this.settings.ignorePaths ?? [],
         this.settings.password
       );
       log.info(plan.mixedStates); // for debugging
@@ -350,7 +351,7 @@ export default class RemotelySavePlugin extends Plugin {
             new SizesConflictModal(
               self.app,
               self,
-              this.settings.skipSizeLargerThan,
+              this.settings.skipSizeLargerThan ?? -1,
               ss,
               this.settings.password !== ""
             ).open();
@@ -397,7 +398,7 @@ export default class RemotelySavePlugin extends Plugin {
           this.manifest.id
         }-${Date.now()}: finish sync, triggerSource=${triggerSource}`
       );
-    } catch (error) {
+    } catch (error: any) {
       const msg = t("syncrun_abort", {
         manifestID: this.manifest.id,
         theDate: `${Date.now()}`,
@@ -412,7 +413,7 @@ export default class RemotelySavePlugin extends Plugin {
           getNotice(e.message, 10 * 1000);
         }
       } else {
-        getNotice(error.message, 10 * 1000);
+        getNotice(error?.message ?? "error while sync", 10 * 1000);
       }
       this.syncStatus = "idle";
       if (this.syncRibbon !== undefined) {
@@ -445,7 +446,7 @@ export default class RemotelySavePlugin extends Plugin {
     await this.checkIfPresetRulesFollowed();
 
     // lang should be load early, but after settings
-    this.i18n = new I18n(this.settings.lang, async (lang: LangTypeAndAuto) => {
+    this.i18n = new I18n(this.settings.lang!, async (lang: LangTypeAndAuto) => {
       this.settings.lang = lang;
       await this.saveSettings();
     });
@@ -475,8 +476,11 @@ export default class RemotelySavePlugin extends Plugin {
         vaultBasePath,
         vaultRandomIDFromOldConfigFile
       );
-    } catch (err) {
-      new Notice(err.message, 10 * 1000);
+    } catch (err: any) {
+      new Notice(
+        err?.message ?? "error of prepareDBAndVaultRandomID",
+        10 * 1000
+      );
       throw err;
     }
 
@@ -566,14 +570,18 @@ export default class RemotelySavePlugin extends Plugin {
     this.registerObsidianProtocolHandler(
       COMMAND_CALLBACK_DROPBOX,
       async (inputParams) => {
-        if (inputParams.code !== undefined) {
+        if (
+          inputParams.code !== undefined &&
+          this.oauth2Info?.verifier !== undefined
+        ) {
           if (this.oauth2Info.helperModal !== undefined) {
-            this.oauth2Info.helperModal.contentEl.empty();
+            const k = this.oauth2Info.helperModal.contentEl;
+            k.empty();
 
             t("protocol_dropbox_connecting")
               .split("\n")
               .forEach((val) => {
-                this.oauth2Info.helperModal.contentEl.createEl("p", {
+                k.createEl("p", {
                   text: val,
                 });
               });
@@ -596,7 +604,7 @@ export default class RemotelySavePlugin extends Plugin {
           const self = this;
           setConfigBySuccessfullAuthInplaceDropbox(
             this.settings.dropbox,
-            authRes,
+            authRes!,
             () => self.saveSettings()
           );
 
@@ -655,14 +663,18 @@ export default class RemotelySavePlugin extends Plugin {
     this.registerObsidianProtocolHandler(
       COMMAND_CALLBACK_ONEDRIVE,
       async (inputParams) => {
-        if (inputParams.code !== undefined) {
+        if (
+          inputParams.code !== undefined &&
+          this.oauth2Info?.verifier !== undefined
+        ) {
           if (this.oauth2Info.helperModal !== undefined) {
-            this.oauth2Info.helperModal.contentEl.empty();
+            const k = this.oauth2Info.helperModal.contentEl;
+            k.empty();
 
             t("protocol_onedrive_connecting")
               .split("\n")
               .forEach((val) => {
-                this.oauth2Info.helperModal.contentEl.createEl("p", {
+                k.createEl("p", {
                   text: val,
                 });
               });
@@ -824,7 +836,13 @@ export default class RemotelySavePlugin extends Plugin {
     this.syncRibbon = undefined;
     if (this.oauth2Info !== undefined) {
       this.oauth2Info.helperModal = undefined;
-      this.oauth2Info = undefined;
+      this.oauth2Info = {
+        verifier: "",
+        helperModal: undefined,
+        authDiv: undefined,
+        revokeDiv: undefined,
+        revokeAuthSetting: undefined,
+      };
     }
   }
 
@@ -932,7 +950,7 @@ export default class RemotelySavePlugin extends Plugin {
     let dropboxExpired = false;
     if (
       this.settings.dropbox.refreshToken !== "" &&
-      current >= this.settings.dropbox.credentialsShouldBeDeletedAtTime
+      current >= this.settings!.dropbox!.credentialsShouldBeDeletedAtTime!
     ) {
       dropboxExpired = true;
       this.settings.dropbox = cloneDeep(DEFAULT_DROPBOX_CONFIG);
@@ -942,7 +960,7 @@ export default class RemotelySavePlugin extends Plugin {
     let onedriveExpired = false;
     if (
       this.settings.onedrive.refreshToken !== "" &&
-      current >= this.settings.onedrive.credentialsShouldBeDeletedAtTime
+      current >= this.settings!.onedrive!.credentialsShouldBeDeletedAtTime!
     ) {
       onedriveExpired = true;
       this.settings.onedrive = cloneDeep(DEFAULT_ONEDRIVE_CONFIG);
@@ -1078,11 +1096,11 @@ export default class RemotelySavePlugin extends Plugin {
             // );
             if (
               currentTime - lastModified <
-              this.settings.syncOnSaveAfterMilliseconds
+              this.settings!.syncOnSaveAfterMilliseconds!
             ) {
               if (!runScheduled) {
                 const scheduleTimeFromNow =
-                  this.settings.syncOnSaveAfterMilliseconds -
+                  this.settings!.syncOnSaveAfterMilliseconds! -
                   (currentTime - lastModified);
                 log.info(
                   `schedule a run for ${scheduleTimeFromNow} milliseconds later`

@@ -436,8 +436,8 @@ export const insertRenameRecordByVault = async (
   vaultRandomID: string
 ) => {
   // log.info(fileOrFolder);
-  let k1: FileFolderHistoryRecord;
-  let k2: FileFolderHistoryRecord;
+  let k1: FileFolderHistoryRecord | undefined;
+  let k2: FileFolderHistoryRecord | undefined;
   const actionWhen = Date.now();
   if (fileOrFolder instanceof TFile) {
     k1 = {
@@ -473,8 +473,10 @@ export const insertRenameRecordByVault = async (
       // TAbstractFile does not contain these info
       // but from API_VER_STAT_FOLDER we can manually stat them by path.
       const s = await statFix(fileOrFolder.vault, fileOrFolder.path);
-      ctime = s.ctime;
-      mtime = s.mtime;
+      if (s !== undefined && s !== null) {
+        ctime = s.ctime;
+        mtime = s.mtime;
+      }
     }
     k1 = {
       key: key,
@@ -500,8 +502,8 @@ export const insertRenameRecordByVault = async (
     };
   }
   await Promise.all([
-    db.fileHistoryTbl.setItem(`${vaultRandomID}\t${k1.key}`, k1),
-    db.fileHistoryTbl.setItem(`${vaultRandomID}\t${k2.key}`, k2),
+    db.fileHistoryTbl.setItem(`${vaultRandomID}\t${k1!.key}`, k1),
+    db.fileHistoryTbl.setItem(`${vaultRandomID}\t${k2!.key}`, k2),
   ]);
 };
 

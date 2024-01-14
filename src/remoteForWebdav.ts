@@ -39,12 +39,16 @@ if (VALID_REQURL) {
       });
 
       let contentType: string | undefined =
-        r.headers["Content-Type"] ||
-        r.headers["content-type"] ||
-        options.headers["Content-Type"] ||
-        options.headers["content-type"] ||
-        options.headers["Accept"] ||
-        options.headers["accept"];
+        r.headers["Content-Type"] || r.headers["content-type"];
+      if (options.headers !== undefined) {
+        contentType =
+          contentType ||
+          options.headers["Content-Type"] ||
+          options.headers["content-type"] ||
+          options.headers["Accept"] ||
+          options.headers["accept"];
+      }
+
       if (contentType !== undefined) {
         contentType = contentType.toLowerCase();
       }
@@ -106,7 +110,7 @@ if (VALID_REQURL) {
       //   );
       // }
 
-      let r2: Response = undefined;
+      let r2: Response | undefined = undefined;
       if ([101, 103, 204, 205, 304].includes(r.status)) {
         // A null body status is a status that is 101, 103, 204, 205, or 304.
         // https://fetch.spec.whatwg.org/#statuses
@@ -193,7 +197,7 @@ const fromWebdavItemToRemoteItem = (x: FileStat, remoteBaseDir: string) => {
 export class WrappedWebdavClient {
   webdavConfig: WebdavConfig;
   remoteBaseDir: string;
-  client: WebDAVClient;
+  client!: WebDAVClient;
   vaultFolderExists: boolean;
   saveUpdatedConfigFunc: () => Promise<any>;
   constructor(
@@ -340,7 +344,7 @@ export const getRemoteMeta = async (
 export const uploadToRemote = async (
   client: WrappedWebdavClient,
   fileOrFolderPath: string,
-  vault: Vault,
+  vault: Vault | undefined,
   isRecursively: boolean = false,
   password: string = "",
   remoteEncryptedKey: string = "",
@@ -392,6 +396,11 @@ export const uploadToRemote = async (
         localContent = rawContent;
       }
     } else {
+      if (vault == undefined) {
+        throw new Error(
+          `the vault variable is not passed but we want to read ${fileOrFolderPath} for webdav`
+        );
+      }
       localContent = await vault.adapter.readBinary(fileOrFolderPath);
     }
     let remoteContent = localContent;
@@ -428,9 +437,9 @@ export const listAllFromRemote = async (client: WrappedWebdavClient) => {
     const q = new Queue([`/${client.remoteBaseDir}`]);
     const CHUNK_SIZE = 10;
     while (q.length > 0) {
-      const itemsToFetch = [];
+      const itemsToFetch: string[] = [];
       while (q.length > 0) {
-        itemsToFetch.push(q.pop());
+        itemsToFetch.push(q.pop()!);
       }
       const itemsToFetchChunks = chunk(itemsToFetch, CHUNK_SIZE);
       // log.debug(itemsToFetchChunks);

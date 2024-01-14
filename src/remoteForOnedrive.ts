@@ -31,8 +31,8 @@ const REDIRECT_URI = `obsidian://${COMMAND_CALLBACK_ONEDRIVE}`;
 
 export const DEFAULT_ONEDRIVE_CONFIG: OnedriveConfig = {
   accessToken: "",
-  clientID: process.env.DEFAULT_ONEDRIVE_CLIENT_ID,
-  authority: process.env.DEFAULT_ONEDRIVE_AUTHORITY,
+  clientID: process.env.DEFAULT_ONEDRIVE_CLIENT_ID ?? "",
+  authority: process.env.DEFAULT_ONEDRIVE_AUTHORITY ?? "",
   refreshToken: "",
   accessTokenExpiresInSeconds: 0,
   accessTokenExpiresAtTime: 0,
@@ -199,7 +199,7 @@ export const setConfigBySuccessfullAuthInplace = async (
   config.accessTokenExpiresAtTime =
     Date.now() + authRes.expires_in - 5 * 60 * 1000;
   config.accessTokenExpiresInSeconds = authRes.expires_in;
-  config.refreshToken = authRes.refresh_token;
+  config.refreshToken = authRes.refresh_token!;
 
   // manually set it expired after 80 days;
   config.credentialsShouldBeDeletedAtTime =
@@ -256,7 +256,9 @@ const getNormPath = (fileOrFolderPath: string, remoteBaseDir: string) => {
 };
 
 const constructFromDriveItemToRemoteItemError = (x: DriveItem) => {
-  return `parentPath="${x.parentReference.path}", selfName="${x.name}"`;
+  return `parentPath="${
+    x.parentReference?.path ?? "(no parentReference or path)"
+  }", selfName="${x.name}"`;
 };
 
 const fromDriveItemToRemoteItem = (
@@ -281,6 +283,14 @@ const fromDriveItemToRemoteItem = (
   // another possibile prefix
   const FOURTH_COMMON_PREFIX_RAW = `/drive/items/`;
 
+  if (
+    x.parentReference === undefined ||
+    x.parentReference === null ||
+    x.parentReference.path === undefined ||
+    x.parentReference.path === null
+  ) {
+    throw Error("x.parentReference.path is undefinded or null");
+  }
   const fullPathOriginal = `${x.parentReference.path}/${x.name}`;
   const matchFirstPrefixRes = fullPathOriginal.match(FIRST_COMMON_PREFIX_REGEX);
   const matchSecondPrefixRes = fullPathOriginal.match(
@@ -309,6 +319,11 @@ const fromDriveItemToRemoteItem = (
     // it's something like
     // /drive/items/<some_id>!<another_id>:/${remoteBaseDir}/<subfolder>
     // with uri encoded!
+    if (x.name === undefined || x.name === null) {
+      throw Error(
+        `OneDrive item no name variable while matching ${FOURTH_COMMON_PREFIX_RAW}`
+      );
+    }
     const parPath = decodeURIComponent(x.parentReference.path);
     key = parPath.substring(parPath.indexOf(":") + 1);
     if (key.startsWith(`/${remoteBaseDir}/`)) {
@@ -337,8 +352,8 @@ const fromDriveItemToRemoteItem = (
   }
   return {
     key: key,
-    lastModified: Date.parse(x.fileSystemInfo.lastModifiedDateTime),
-    size: isFolder ? 0 : x.size,
+    lastModified: Date.parse(x!.fileSystemInfo!.lastModifiedDateTime!),
+    size: isFolder ? 0 : x.size!,
     remoteType: "onedrive",
     etag: x.cTag || "", // do NOT use x.eTag because it changes if meta changes
   };
@@ -381,7 +396,7 @@ class MyAuthProvider implements AuthenticationProvider {
       }
       const r2 = r as AccessCodeResponseSuccessfulType;
       this.onedriveConfig.accessToken = r2.access_token;
-      this.onedriveConfig.refreshToken = r2.refresh_token;
+      this.onedriveConfig.refreshToken = r2.refresh_token!;
       this.onedriveConfig.accessTokenExpiresInSeconds = r2.expires_in;
       this.onedriveConfig.accessTokenExpiresAtTime =
         currentTs + r2.expires_in * 1000 - 60 * 2 * 1000;
@@ -680,7 +695,7 @@ export const getRemoteMeta = async (
 export const uploadToRemote = async (
   client: WrappedOnedriveClient,
   fileOrFolderPath: string,
-  vault: Vault,
+  vault: Vault | undefined,
   isRecursively: boolean = false,
   password: string = "",
   remoteEncryptedKey: string = "",
@@ -784,6 +799,11 @@ export const uploadToRemote = async (
         localContent = rawContent;
       }
     } else {
+      if (vault === undefined) {
+        throw new Error(
+          `the vault variable is not passed but we want to read ${fileOrFolderPath} for OneDrive`
+        );
+      }
       localContent = await vault.adapter.readBinary(fileOrFolderPath);
     }
     let remoteContent = localContent;
@@ -842,7 +862,7 @@ export const uploadToRemote = async (
         `${uploadFile}:/createUploadSession`,
         k
       );
-      const uploadUrl = s.uploadUrl;
+      const uploadUrl = s.uploadUrl!;
       log.debug("uploadSession = ");
       log.debug(s);
 

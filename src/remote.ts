@@ -43,10 +43,10 @@ export class RemoteClient {
           "remember to provide vault name and callback while init webdav client"
         );
       }
-      const remoteBaseDir = webdavConfig.remoteBaseDir || vaultName;
+      const remoteBaseDir = webdavConfig!.remoteBaseDir || vaultName;
       this.webdavConfig = webdavConfig;
       this.webdavClient = webdav.getWebdavClient(
-        this.webdavConfig,
+        this.webdavConfig!,
         remoteBaseDir,
         saveUpdatedConfigFunc
       );
@@ -56,10 +56,10 @@ export class RemoteClient {
           "remember to provide vault name and callback while init dropbox client"
         );
       }
-      const remoteBaseDir = dropboxConfig.remoteBaseDir || vaultName;
+      const remoteBaseDir = dropboxConfig!.remoteBaseDir || vaultName;
       this.dropboxConfig = dropboxConfig;
       this.dropboxClient = dropbox.getDropboxClient(
-        this.dropboxConfig,
+        this.dropboxConfig!,
         remoteBaseDir,
         saveUpdatedConfigFunc
       );
@@ -69,10 +69,10 @@ export class RemoteClient {
           "remember to provide vault name and callback while init onedrive client"
         );
       }
-      const remoteBaseDir = onedriveConfig.remoteBaseDir || vaultName;
+      const remoteBaseDir = onedriveConfig!.remoteBaseDir || vaultName;
       this.onedriveConfig = onedriveConfig;
       this.onedriveClient = onedrive.getOnedriveClient(
-        this.onedriveConfig,
+        this.onedriveConfig!,
         remoteBaseDir,
         saveUpdatedConfigFunc
       );
@@ -84,17 +84,17 @@ export class RemoteClient {
   getRemoteMeta = async (fileOrFolderPath: string) => {
     if (this.serviceType === "s3") {
       return await s3.getRemoteMeta(
-        s3.getS3Client(this.s3Config),
-        this.s3Config,
+        s3.getS3Client(this.s3Config!),
+        this.s3Config!,
         fileOrFolderPath
       );
     } else if (this.serviceType === "webdav") {
-      return await webdav.getRemoteMeta(this.webdavClient, fileOrFolderPath);
+      return await webdav.getRemoteMeta(this.webdavClient!, fileOrFolderPath);
     } else if (this.serviceType === "dropbox") {
-      return await dropbox.getRemoteMeta(this.dropboxClient, fileOrFolderPath);
+      return await dropbox.getRemoteMeta(this.dropboxClient!, fileOrFolderPath);
     } else if (this.serviceType === "onedrive") {
       return await onedrive.getRemoteMeta(
-        this.onedriveClient,
+        this.onedriveClient!,
         fileOrFolderPath
       );
     } else {
@@ -104,7 +104,7 @@ export class RemoteClient {
 
   uploadToRemote = async (
     fileOrFolderPath: string,
-    vault: Vault,
+    vault: Vault | undefined,
     isRecursively: boolean = false,
     password: string = "",
     remoteEncryptedKey: string = "",
@@ -114,8 +114,8 @@ export class RemoteClient {
   ) => {
     if (this.serviceType === "s3") {
       return await s3.uploadToRemote(
-        s3.getS3Client(this.s3Config),
-        this.s3Config,
+        s3.getS3Client(this.s3Config!),
+        this.s3Config!,
         fileOrFolderPath,
         vault,
         isRecursively,
@@ -126,7 +126,7 @@ export class RemoteClient {
       );
     } else if (this.serviceType === "webdav") {
       return await webdav.uploadToRemote(
-        this.webdavClient,
+        this.webdavClient!,
         fileOrFolderPath,
         vault,
         isRecursively,
@@ -137,7 +137,7 @@ export class RemoteClient {
       );
     } else if (this.serviceType === "dropbox") {
       return await dropbox.uploadToRemote(
-        this.dropboxClient,
+        this.dropboxClient!,
         fileOrFolderPath,
         vault,
         isRecursively,
@@ -149,7 +149,7 @@ export class RemoteClient {
       );
     } else if (this.serviceType === "onedrive") {
       return await onedrive.uploadToRemote(
-        this.onedriveClient,
+        this.onedriveClient!,
         fileOrFolderPath,
         vault,
         isRecursively,
@@ -167,15 +167,15 @@ export class RemoteClient {
   listAllFromRemote = async () => {
     if (this.serviceType === "s3") {
       return await s3.listAllFromRemote(
-        s3.getS3Client(this.s3Config),
-        this.s3Config
+        s3.getS3Client(this.s3Config!),
+        this.s3Config!
       );
     } else if (this.serviceType === "webdav") {
-      return await webdav.listAllFromRemote(this.webdavClient);
+      return await webdav.listAllFromRemote(this.webdavClient!);
     } else if (this.serviceType === "dropbox") {
-      return await dropbox.listAllFromRemote(this.dropboxClient);
+      return await dropbox.listAllFromRemote(this.dropboxClient!);
     } else if (this.serviceType === "onedrive") {
-      return await onedrive.listAllFromRemote(this.onedriveClient);
+      return await onedrive.listAllFromRemote(this.onedriveClient!);
     } else {
       throw Error(`not supported service type ${this.serviceType}`);
     }
@@ -191,8 +191,8 @@ export class RemoteClient {
   ) => {
     if (this.serviceType === "s3") {
       return await s3.downloadFromRemote(
-        s3.getS3Client(this.s3Config),
-        this.s3Config,
+        s3.getS3Client(this.s3Config!),
+        this.s3Config!,
         fileOrFolderPath,
         vault,
         mtime,
@@ -202,7 +202,7 @@ export class RemoteClient {
       );
     } else if (this.serviceType === "webdav") {
       return await webdav.downloadFromRemote(
-        this.webdavClient,
+        this.webdavClient!,
         fileOrFolderPath,
         vault,
         mtime,
@@ -212,7 +212,7 @@ export class RemoteClient {
       );
     } else if (this.serviceType === "dropbox") {
       return await dropbox.downloadFromRemote(
-        this.dropboxClient,
+        this.dropboxClient!,
         fileOrFolderPath,
         vault,
         mtime,
@@ -222,7 +222,7 @@ export class RemoteClient {
       );
     } else if (this.serviceType === "onedrive") {
       return await onedrive.downloadFromRemote(
-        this.onedriveClient,
+        this.onedriveClient!,
         fileOrFolderPath,
         vault,
         mtime,
@@ -242,29 +242,29 @@ export class RemoteClient {
   ) => {
     if (this.serviceType === "s3") {
       return await s3.deleteFromRemote(
-        s3.getS3Client(this.s3Config),
-        this.s3Config,
+        s3.getS3Client(this.s3Config!),
+        this.s3Config!,
         fileOrFolderPath,
         password,
         remoteEncryptedKey
       );
     } else if (this.serviceType === "webdav") {
       return await webdav.deleteFromRemote(
-        this.webdavClient,
+        this.webdavClient!,
         fileOrFolderPath,
         password,
         remoteEncryptedKey
       );
     } else if (this.serviceType === "dropbox") {
       return await dropbox.deleteFromRemote(
-        this.dropboxClient,
+        this.dropboxClient!,
         fileOrFolderPath,
         password,
         remoteEncryptedKey
       );
     } else if (this.serviceType === "onedrive") {
       return await onedrive.deleteFromRemote(
-        this.onedriveClient,
+        this.onedriveClient!,
         fileOrFolderPath,
         password,
         remoteEncryptedKey
@@ -277,17 +277,17 @@ export class RemoteClient {
   checkConnectivity = async (callbackFunc?: any) => {
     if (this.serviceType === "s3") {
       return await s3.checkConnectivity(
-        s3.getS3Client(this.s3Config),
-        this.s3Config,
+        s3.getS3Client(this.s3Config!),
+        this.s3Config!,
         callbackFunc
       );
     } else if (this.serviceType === "webdav") {
-      return await webdav.checkConnectivity(this.webdavClient, callbackFunc);
+      return await webdav.checkConnectivity(this.webdavClient!, callbackFunc);
     } else if (this.serviceType === "dropbox") {
-      return await dropbox.checkConnectivity(this.dropboxClient, callbackFunc);
+      return await dropbox.checkConnectivity(this.dropboxClient!, callbackFunc);
     } else if (this.serviceType === "onedrive") {
       return await onedrive.checkConnectivity(
-        this.onedriveClient,
+        this.onedriveClient!,
         callbackFunc
       );
     } else {
@@ -297,9 +297,9 @@ export class RemoteClient {
 
   getUser = async () => {
     if (this.serviceType === "dropbox") {
-      return await dropbox.getUserDisplayName(this.dropboxClient);
+      return await dropbox.getUserDisplayName(this.dropboxClient!);
     } else if (this.serviceType === "onedrive") {
-      return await onedrive.getUserDisplayName(this.onedriveClient);
+      return await onedrive.getUserDisplayName(this.onedriveClient!);
     } else {
       throw Error(`not supported service type ${this.serviceType}`);
     }
@@ -307,7 +307,7 @@ export class RemoteClient {
 
   revokeAuth = async () => {
     if (this.serviceType === "dropbox") {
-      return await dropbox.revokeAuth(this.dropboxClient);
+      return await dropbox.revokeAuth(this.dropboxClient!);
     } else {
       throw Error(`not supported service type ${this.serviceType}`);
     }

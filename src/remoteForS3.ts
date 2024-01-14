@@ -55,7 +55,7 @@ import PQueue from "p-queue";
  * But this uses Obsidian requestUrl instead.
  */
 class ObsHttpHandler extends FetchHttpHandler {
-  requestTimeoutInMs: number;
+  requestTimeoutInMs: number | undefined;
   constructor(options?: FetchHttpHandlerOptions) {
     super(options);
     this.requestTimeoutInMs =
@@ -95,7 +95,7 @@ class ObsHttpHandler extends FetchHttpHandler {
       transformedHeaders[keyLower] = request.headers[key];
     }
 
-    let contentType: string = undefined;
+    let contentType: string | undefined = undefined;
     if (transformedHeaders["content-type"] !== undefined) {
       contentType = transformedHeaders["content-type"];
     }
@@ -226,17 +226,17 @@ const fromS3ObjectToRemoteItem = (
   mtimeRecords: Record<string, number>,
   ctimeRecords: Record<string, number>
 ) => {
-  let mtime = x.LastModified.valueOf();
-  if (x.Key in mtimeRecords) {
-    const m2 = mtimeRecords[x.Key];
+  let mtime = x.LastModified!.valueOf();
+  if (x.Key! in mtimeRecords) {
+    const m2 = mtimeRecords[x.Key!];
     if (m2 !== 0) {
       mtime = m2;
     }
   }
   const r: RemoteItem = {
-    key: getLocalNoPrefixPath(x.Key, remotePrefix),
+    key: getLocalNoPrefixPath(x.Key!, remotePrefix),
     lastModified: mtime,
-    size: x.Size,
+    size: x.Size!,
     remoteType: "s3",
     etag: x.ETag,
   };
@@ -249,7 +249,7 @@ const fromS3HeadObjectToRemoteItem = (
   remotePrefix: string,
   useAccurateMTime: boolean
 ) => {
-  let mtime = x.LastModified.valueOf();
+  let mtime = x.LastModified!.valueOf();
   if (useAccurateMTime && x.Metadata !== undefined) {
     const m2 = Math.round(
       parseFloat(x.Metadata.mtime || x.Metadata.MTime || "0")
@@ -317,6 +317,7 @@ export const getRemoteMeta = async (
   fileOrFolderPathWithRemotePrefix: string
 ) => {
   if (
+    s3Config.remotePrefix !== undefined &&
     s3Config.remotePrefix !== "" &&
     !fileOrFolderPathWithRemotePrefix.startsWith(s3Config.remotePrefix)
   ) {
@@ -332,8 +333,8 @@ export const getRemoteMeta = async (
   return fromS3HeadObjectToRemoteItem(
     fileOrFolderPathWithRemotePrefix,
     res,
-    s3Config.remotePrefix,
-    s3Config.useAccurateMTime
+    s3Config.remotePrefix ?? "",
+    s3Config.useAccurateMTime ?? false
   );
 };
 
@@ -341,7 +342,7 @@ export const uploadToRemote = async (
   s3Client: S3Client,
   s3Config: S3Config,
   fileOrFolderPath: string,
-  vault: Vault,
+  vault: Vault | undefined,
   isRecursively: boolean = false,
   password: string = "",
   remoteEncryptedKey: string = "",
@@ -354,7 +355,7 @@ export const uploadToRemote = async (
   if (password !== "") {
     uploadFile = remoteEncryptedKey;
   }
-  uploadFile = getRemoteWithPrefixPath(uploadFile, s3Config.remotePrefix);
+  uploadFile = getRemoteWithPrefixPath(uploadFile, s3Config.remotePrefix ?? "");
   const isFolder = fileOrFolderPath.endsWith("/");
 
   if (isFolder && isRecursively) {
@@ -407,8 +408,13 @@ export const uploadToRemote = async (
       mtime = rawContentMTime;
       ctime = rawContentCTime;
     } else {
+      if (vault === undefined) {
+        throw new Error(
+          `the vault variable is not passed but we want to read ${fileOrFolderPath} for S3`
+        );
+      }
       localContent = await vault.adapter.readBinary(fileOrFolderPath);
-      const s = await vault?.adapter?.stat(fileOrFolderPath);
+      const s = await vault.adapter.stat(fileOrFolderPath);
       if (s !== undefined && s !== null) {
         mtime = s.mtime;
         ctime = s.ctime;
@@ -500,12 +506,12 @@ const listFromRemoteRaw = async (
           if (rspHead.Metadata === undefined) {
             // pass
           } else {
-            mtimeRecords[content.Key] = Math.round(
+            mtimeRecords[content.Key!] = Math.round(
               parseFloat(
                 rspHead.Metadata.mtime || rspHead.Metadata.MTime || "0"
               )
             );
-            ctimeRecords[content.Key] = Math.round(
+            ctimeRecords[content.Key!] = Math.round(
               parseFloat(
                 rspHead.Metadata.ctime || rspHead.Metadata.CTime || "0"
               )
@@ -515,7 +521,7 @@ const listFromRemoteRaw = async (
       }
     }
 
-    isTruncated = rsp.IsTruncated;
+    isTruncated = rsp.IsTruncated ?? false;
     confCmd.ContinuationToken = rsp.NextContinuationToken;
     if (
       isTruncated &&
@@ -536,7 +542,7 @@ const listFromRemoteRaw = async (
     Contents: contents.map((x) =>
       fromS3ObjectToRemoteItem(
         x,
-        s3Config.remotePrefix,
+        s3Config.remotePrefix ?? "",
         mtimeRecords,
         ctimeRecords
       )
@@ -559,8 +565,11 @@ export const listAllFromRemote = async (
  * @returns Promise<ArrayBuffer>
  */
 const getObjectBodyToArrayBuffer = async (
-  b: Readable | ReadableStream | Blob
+  b: Readable | ReadableStream | Blob | undefined
 ) => {
+  if (b === undefined) {
+    throw Error(`ObjectBody is undefined and don't know how to deal with it`);
+  }
   if (b instanceof Readable) {
     return (await new Promise((resolve, reject) => {
       const chunks: Uint8Array[] = [];
@@ -583,6 +592,7 @@ const downloadFromRemoteRaw = async (
   fileOrFolderPathWithRemotePrefix: string
 ) => {
   if (
+    s3Config.remotePrefix !== undefined &&
     s3Config.remotePrefix !== "" &&
     !fileOrFolderPathWithRemotePrefix.startsWith(s3Config.remotePrefix)
   ) {
@@ -626,7 +636,10 @@ export const downloadFromRemote = async (
     if (password !== "") {
       downloadFile = remoteEncryptedKey;
     }
-    downloadFile = getRemoteWithPrefixPath(downloadFile, s3Config.remotePrefix);
+    downloadFile = getRemoteWithPrefixPath(
+      downloadFile,
+      s3Config.remotePrefix ?? ""
+    );
     const remoteContent = await downloadFromRemoteRaw(
       s3Client,
       s3Config,
@@ -668,7 +681,7 @@ export const deleteFromRemote = async (
   }
   remoteFileName = getRemoteWithPrefixPath(
     remoteFileName,
-    s3Config.remotePrefix
+    s3Config.remotePrefix ?? ""
   );
   await s3Client.send(
     new DeleteObjectCommand({
@@ -734,7 +747,7 @@ export const checkConnectivity = async (
       return false;
     }
     return results.$metadata.httpStatusCode === 200;
-  } catch (err) {
+  } catch (err: any) {
     log.debug(err);
     if (callbackFunc !== undefined) {
       if (s3Config.s3Endpoint.contains(s3Config.s3BucketName)) {
