@@ -273,14 +273,20 @@ const fromDriveItemToRemoteItem = (
   // e.g.: /Livefolders/应用/remotely-save/${remoteBaseDir}
   const SECOND_COMMON_PREFIX_REGEX = /^\/Livefolders\/[^\/]+\/remotely-save\//g;
 
+  // another report, why???
+  // /drive/root:/something/app/remotely-save/${remoteBaseDir}
+  const THIRD_COMMON_PREFIX_REGEX =
+    /^\/drive\/root:\/[^\/]+\/app\/remotely-save\//g;
+
   // another possibile prefix
-  const THIRD_COMMON_PREFIX_RAW = `/drive/items/`;
+  const FOURTH_COMMON_PREFIX_RAW = `/drive/items/`;
 
   const fullPathOriginal = `${x.parentReference.path}/${x.name}`;
   const matchFirstPrefixRes = fullPathOriginal.match(FIRST_COMMON_PREFIX_REGEX);
   const matchSecondPrefixRes = fullPathOriginal.match(
     SECOND_COMMON_PREFIX_REGEX
   );
+  const matchThirdPrefixRes = fullPathOriginal.match(THIRD_COMMON_PREFIX_REGEX);
   if (
     matchFirstPrefixRes !== null &&
     fullPathOriginal.startsWith(`${matchFirstPrefixRes[0]}${remoteBaseDir}`)
@@ -293,7 +299,13 @@ const fromDriveItemToRemoteItem = (
   ) {
     const foundPrefix = `${matchSecondPrefixRes[0]}${remoteBaseDir}`;
     key = fullPathOriginal.substring(foundPrefix.length + 1);
-  } else if (x.parentReference.path.startsWith(THIRD_COMMON_PREFIX_RAW)) {
+  } else if (
+    matchThirdPrefixRes !== null &&
+    fullPathOriginal.startsWith(`${matchThirdPrefixRes[0]}${remoteBaseDir}`)
+  ) {
+    const foundPrefix = `${matchThirdPrefixRes[0]}${remoteBaseDir}`;
+    key = fullPathOriginal.substring(foundPrefix.length + 1);
+  } else if (x.parentReference.path.startsWith(FOURTH_COMMON_PREFIX_RAW)) {
     // it's something like
     // /drive/items/<some_id>!<another_id>:/${remoteBaseDir}/<subfolder>
     // with uri encoded!
