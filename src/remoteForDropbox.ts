@@ -542,8 +542,8 @@ export const uploadToRemote = async (
 
   let mtime = 0;
   let ctime = 0;
-  const s = await vault.adapter.stat(fileOrFolderPath);
-  if (s !== null) {
+  const s = await vault?.adapter?.stat(fileOrFolderPath);
+  if (s !== undefined && s !== null) {
     mtime = Math.round(s.mtime / 1000.0) * 1000;
     ctime = Math.round(s.ctime / 1000.0) * 1000;
   }

@@ -366,8 +366,8 @@ export const uploadToRemote = async (
     // folder
     let mtime = 0;
     let ctime = 0;
-    const s = await vault.adapter.stat(fileOrFolderPath);
-    if (s !== null) {
+    const s = await vault?.adapter?.stat(fileOrFolderPath);
+    if (s !== undefined && s !== null) {
       mtime = s.mtime;
       ctime = s.ctime;
     }
@@ -408,8 +408,8 @@ export const uploadToRemote = async (
       ctime = rawContentCTime;
     } else {
       localContent = await vault.adapter.readBinary(fileOrFolderPath);
-      const s = await vault.adapter.stat(fileOrFolderPath);
-      if (s !== null) {
+      const s = await vault?.adapter?.stat(fileOrFolderPath);
+      if (s !== undefined && s !== null) {
         mtime = s.mtime;
         ctime = s.ctime;
       }
