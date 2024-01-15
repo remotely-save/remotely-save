@@ -756,7 +756,7 @@ export default class RemotelySavePlugin extends Plugin {
     if (!Platform.isMobileApp && this.settings.enableStatusBarInfo === true) {
       const statusBarItem = this.addStatusBarItem();
       this.statusBarElement = statusBarItem.createEl("span");
-      this.statusBarElement.setAttribute("aria-label-position", "top");
+      this.statusBarElement.setAttribute("data-tooltip-position", "top");
 
       this.updateLastSuccessSyncMsg(
         await getLastSuccessSyncByVault(this.db, this.vaultRandomID)
