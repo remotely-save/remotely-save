@@ -19,6 +19,15 @@ import type {
   // ResponseDataDetailed,
 } from "webdav";
 
+/**
+ * https://stackoverflow.com/questions/32850898/how-to-check-if-a-string-has-any-non-iso-8859-1-characters-with-javascript
+ * @param str
+ * @returns true if all are iso 8859 1 chars
+ */
+function onlyAscii(str: string) {
+  return !/[^\u0000-\u00ff]/g.test(str);
+}
+
 // @ts-ignore
 import { getPatcher } from "webdav/dist/web/index.js";
 if (VALID_REQURL) {
@@ -53,9 +62,24 @@ if (VALID_REQURL) {
         contentType = contentType.toLowerCase();
       }
       const rspHeaders = { ...r.headers };
+      console.log("rspHeaders");
+      console.log(rspHeaders);
       for (let key in rspHeaders) {
         if (rspHeaders.hasOwnProperty(key)) {
-          if (key === "content-disposition" || key === "Content-Disposition") {
+          // avoid the error:
+          // Failed to read the 'headers' property from 'ResponseInit': String contains non ISO-8859-1 code point.
+          // const possibleNonAscii = [
+          //   "Content-Disposition",
+          //   "X-Accel-Redirect",
+          //   "X-Outfilename",
+          //   "X-Sendfile"
+          // ];
+          // for (const p of possibleNonAscii) {
+          //   if (key === p || key === p.toLowerCase()) {
+          //     rspHeaders[key] = encodeURIComponent(rspHeaders[key]);
+          //   }
+          // }
+          if (!onlyAscii(rspHeaders[key])) {
             rspHeaders[key] = encodeURIComponent(rspHeaders[key]);
           }
         }
