@@ -43,7 +43,6 @@ import {
 import { messyConfigToNormal } from "./configPersist";
 import type { TransItemType } from "./i18n";
 import { checkHasSpecialCharForDir } from "./misc";
-import { applyWebdavPresetRulesInplace } from "./presetRules";
 
 import {
   applyLogWriterInplace,
@@ -1462,15 +1461,15 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
           .setValue(this.plugin.settings.webdav.address)
           .onChange(async (value) => {
             this.plugin.settings.webdav.address = value.trim();
+            // deprecate auto on 20240116, force to manual_1
             if (
+              this.plugin.settings.webdav.depth === "auto" ||
               this.plugin.settings.webdav.depth === "auto_1" ||
-              this.plugin.settings.webdav.depth === "auto_infinity"
+              this.plugin.settings.webdav.depth === "auto_infinity" ||
+              this.plugin.settings.webdav.depth === "auto_unknown"
             ) {
-              this.plugin.settings.webdav.depth = "auto_unknown";
+              this.plugin.settings.webdav.depth = "manual_1";
             }
-
-            // TODO: any more elegant way?
-            applyWebdavPresetRulesInplace(this.plugin.settings.webdav);
 
             // normally saved
             await this.plugin.saveSettings();
@@ -1487,11 +1486,14 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
           .setValue(this.plugin.settings.webdav.username)
           .onChange(async (value) => {
             this.plugin.settings.webdav.username = value.trim();
+            // deprecate auto on 20240116, force to manual_1
             if (
+              this.plugin.settings.webdav.depth === "auto" ||
               this.plugin.settings.webdav.depth === "auto_1" ||
-              this.plugin.settings.webdav.depth === "auto_infinity"
+              this.plugin.settings.webdav.depth === "auto_infinity" ||
+              this.plugin.settings.webdav.depth === "auto_unknown"
             ) {
-              this.plugin.settings.webdav.depth = "auto_unknown";
+              this.plugin.settings.webdav.depth = "manual_1";
             }
             await this.plugin.saveSettings();
           });
@@ -1507,11 +1509,14 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
           .setValue(this.plugin.settings.webdav.password)
           .onChange(async (value) => {
             this.plugin.settings.webdav.password = value.trim();
+            // deprecate auto on 20240116, force to manual_1
             if (
+              this.plugin.settings.webdav.depth === "auto" ||
               this.plugin.settings.webdav.depth === "auto_1" ||
-              this.plugin.settings.webdav.depth === "auto_infinity"
+              this.plugin.settings.webdav.depth === "auto_infinity" ||
+              this.plugin.settings.webdav.depth === "auto_unknown"
             ) {
-              this.plugin.settings.webdav.depth = "auto_unknown";
+              this.plugin.settings.webdav.depth = "manual_1";
             }
             await this.plugin.saveSettings();
           });
@@ -1544,41 +1549,23 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
       .setName(t("settings_webdav_depth"))
       .setDesc(t("settings_webdav_depth_desc"))
       .addDropdown((dropdown) => {
-        dropdown.addOption("auto", t("settings_webdav_depth_auto"));
         dropdown.addOption("manual_1", t("settings_webdav_depth_1"));
         dropdown.addOption("manual_infinity", t("settings_webdav_depth_inf"));
 
-        let initVal: WebdavDepthType = "auto";
-        const autoOptions: Set<WebdavDepthType> = new Set([
-          "auto_unknown",
-          "auto_1",
-          "auto_infinity",
-        ]);
-        if (autoOptions.has(this.plugin.settings.webdav.depth as any)) {
-          initVal = "auto";
-        } else {
-          initVal = this.plugin.settings.webdav.depth || "auto";
-        }
+        dropdown
+          .setValue(this.plugin.settings.webdav.depth || "manual_1")
+          .onChange(async (val) => {
+            if (val === "manual_1") {
+              this.plugin.settings.webdav.depth = "manual_1";
+              this.plugin.settings.webdav.manualRecursive = true;
+            } else if (val === "manual_infinity") {
+              this.plugin.settings.webdav.depth = "manual_infinity";
+              this.plugin.settings.webdav.manualRecursive = false;
+            }
 
-        type DepthOption = "auto" | "manual_1" | "manual_infinity";
-        dropdown.setValue(initVal).onChange(async (val) => {
-          if (val === "auto") {
-            this.plugin.settings.webdav.depth = "auto_unknown";
-            this.plugin.settings.webdav.manualRecursive = false;
-          } else if (val === "manual_1") {
-            this.plugin.settings.webdav.depth = "manual_1";
-            this.plugin.settings.webdav.manualRecursive = true;
-          } else if (val === "manual_infinity") {
-            this.plugin.settings.webdav.depth = "manual_infinity";
-            this.plugin.settings.webdav.manualRecursive = false;
-          }
-
-          // TODO: any more elegant way?
-          applyWebdavPresetRulesInplace(this.plugin.settings.webdav);
-
-          // normally save
-          await this.plugin.saveSettings();
-        });
+            // normally save
+            await this.plugin.saveSettings();
+          });
       });
 
     let newWebdavRemoteBaseDir =

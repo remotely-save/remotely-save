@@ -48,10 +48,10 @@ export interface DropboxConfig {
 
 export type WebdavAuthType = "digest" | "basic";
 export type WebdavDepthType =
-  | "auto"
-  | "auto_unknown"
-  | "auto_1"
-  | "auto_infinity"
+  | "auto" // deprecated on 20240116
+  | "auto_unknown" // deprecated on 20240116
+  | "auto_1" // deprecated on 20240116
+  | "auto_infinity" // deprecated on 20240116
   | "manual_1"
   | "manual_infinity";
 
@@ -60,9 +60,14 @@ export interface WebdavConfig {
   username: string;
   password: string;
   authType: WebdavAuthType;
-  manualRecursive: boolean; // deprecated in 0.3.6, use depth
+
   depth?: WebdavDepthType;
   remoteBaseDir?: string;
+
+  /**
+   * @deprecated
+   */
+  manualRecursive: boolean; // deprecated in 0.3.6, use depth
 }
 
 export interface OnedriveConfig {

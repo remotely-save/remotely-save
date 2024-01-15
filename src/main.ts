@@ -66,7 +66,6 @@ import type { LangType, LangTypeAndAuto, TransItemType } from "./i18n";
 
 import { DeletionOnRemote, MetadataOnRemote } from "./metadataOnRemote";
 import { SyncAlgoV2Modal } from "./syncAlgoV2Notice";
-import { applyPresetRulesInplace } from "./presetRules";
 
 import { applyLogWriterInplace, log } from "./moreOnLog";
 import AggregateError from "aggregate-error";
@@ -443,7 +442,6 @@ export default class RemotelySavePlugin extends Plugin {
     this.currSyncMsg = "";
 
     await this.loadSettings();
-    await this.checkIfPresetRulesFollowed();
 
     // lang should be load early, but after settings
     this.i18n = new I18n(this.settings.lang!, async (lang: LangTypeAndAuto) => {
@@ -868,10 +866,18 @@ export default class RemotelySavePlugin extends Plugin {
       this.settings.onedrive.remoteBaseDir = "";
     }
     if (this.settings.webdav.manualRecursive === undefined) {
-      this.settings.webdav.manualRecursive = false;
+      this.settings.webdav.manualRecursive = true;
     }
-    if (this.settings.webdav.depth === undefined) {
-      this.settings.webdav.depth = "auto_unknown";
+    if (
+      this.settings.webdav.depth === undefined ||
+      this.settings.webdav.depth === "auto" ||
+      this.settings.webdav.depth === "auto_1" ||
+      this.settings.webdav.depth === "auto_infinity" ||
+      this.settings.webdav.depth === "auto_unknown"
+    ) {
+      // auto is deprecated as of 20240116
+      this.settings.webdav.depth = "manual_1";
+      this.settings.webdav.manualRecursive = true;
     }
     if (this.settings.webdav.remoteBaseDir === undefined) {
       this.settings.webdav.remoteBaseDir = "";
@@ -908,13 +914,6 @@ export default class RemotelySavePlugin extends Plugin {
     }
 
     await this.saveSettings();
-  }
-
-  async checkIfPresetRulesFollowed() {
-    const res = applyPresetRulesInplace(this.settings);
-    if (res.changed) {
-      await this.saveSettings();
-    }
   }
 
   async saveSettings() {
