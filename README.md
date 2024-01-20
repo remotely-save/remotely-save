@@ -64,7 +64,7 @@ Additionally, the plugin author may occasionally visit Obsidian official forum a
 - Tutorials / Examples:
   - [Cloudflare R2](./docs/remote_services/s3_cloudflare_r2/README.md)
   - [BackBlaze B2](./docs/remote_services/s3_backblaze_b2/README.md)
-  - [腾讯云 COS Tencent Cloud COS](./docs/remote_services/s3_tencent_cloud_cos/README.md)
+  - [腾讯云 COS](./docs/remote_services/s3_tencent_cloud_cos/README.zh-cn.md) | [Tencent Cloud COS](./docs/remote_services/s3_tencent_cloud_cos/README.md)
   - [MinIO](./docs/remote_services/s3_minio/README.md)
 - Prepare your S3 (-compatible) service information: [endpoint, region](https://docs.aws.amazon.com/general/latest/gr/s3.html), [access key id, secret access key](https://docs.aws.amazon.com/sdk-for-javascript/v3/developer-guide/getting-your-credentials.html), bucket name. The bucket should be empty and solely for syncing a vault.
 - If you are using AWS S3, create [policy and user](./docs/remote_services/s3_general/s3_user_policy.md).
@@ -96,8 +96,8 @@ Additionally, the plugin author may occasionally visit Obsidian official forum a
   - [ownCloud](./docs/remote_services/webdav_owncloud/README.md)
   - [InfiniCloud](./docs/remote_services/webdav_infinicloud_teracloud/README.md)
   - [Synology webdav server](./docs/remote_services/webdav_synology_webdav_server/README.md) | [群晖 webdav server](./docs/remote_services/webdav_synology_webdav_server/README.zh-cn.md)
-  - [AList](./docs/remote_services/webdav_alist/README.md)
-  - [坚果云 JianGuoYun/NutStore](./docs/remote_services/webdav_jianguoyun/README.md)
+  - [AList（中文）](./docs/remote_services/webdav_alist/README.zh-cn.md) | [AList (English)](./docs/remote_services/webdav_alist/README.md)
+  - [坚果云](./docs/remote_services/webdav_jianguoyun/README.zh-cn.md) | [JianGuoYun/NutStore](./docs/remote_services/webdav_jianguoyun/README.md)
 - Very old version of Obsidian needs [configuring CORS](./docs/remote_services/webdav_general/webav_cors.md).
 - Your data would be synced to a `${vaultName}` sub folder on your webdav server.
 - Password-based end-to-end encryption is also supported. But please be aware that **the vault name itself is not encrypted**.
