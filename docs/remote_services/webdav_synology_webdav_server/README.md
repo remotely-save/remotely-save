@@ -38,11 +38,11 @@ Synology DSM 7 is used in this tutorial.
 
 6. In Remotely Save settings, you should input your address as:
 
-   `http(s)://<your synology ip or domain>/<shared folder>/<sub folders>`
+   `http(s)://<your synology ip or domain>:<port>/<shared folder>/<sub folders>`
 
    For example, in the tutorial, the proper url should be:
 
-   `http://<ip>/share2/哈哈哈/sub folder`
+   `http://<ip>:5000/share2/哈哈哈/sub folder`
 
    Username and password should be the user you configured before with read / write permissions to `share2`.
 

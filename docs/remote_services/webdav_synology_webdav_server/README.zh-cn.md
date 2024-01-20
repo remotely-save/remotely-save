@@ -39,11 +39,11 @@
 
 6. 在 Remotely Save 设置页，你的地址应如下格式输入：
 
-   `http(s)://<your synology ip or domain>/<shared folder>/<sub folders>`
+   `http(s)://<your synology ip or domain>:<port>/<shared folder>/<sub folders>`
 
    比如说，本教程里，正确的地址类似于：
 
-   `http://<ip>/share2/哈哈哈/sub folder`
+   `http://<ip>:5000/share2/哈哈哈/sub folder`
 
    用户名和密码是你之前配置了允许读写 `share2` 的那个账号。
 
