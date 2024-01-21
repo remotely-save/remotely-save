@@ -45,6 +45,7 @@ if (VALID_REQURL) {
         method: options.method,
         body: options.data as string | ArrayBuffer,
         headers: transformedHeaders,
+        throw: false,
       });
 
       let contentType: string | undefined =
@@ -237,29 +238,30 @@ export class WrappedWebdavClient {
 
   init = async () => {
     // init client if not inited
+    if (this.client !== undefined) {
+      return;
+    }
     const headers = {
       "Cache-Control": "no-cache",
     };
-    if (this.client === undefined) {
-      if (
-        this.webdavConfig.username !== "" &&
-        this.webdavConfig.password !== ""
-      ) {
-        this.client = createClient(this.webdavConfig.address, {
-          username: this.webdavConfig.username,
-          password: this.webdavConfig.password,
-          headers: headers,
-          authType:
-            this.webdavConfig.authType === "digest"
-              ? AuthType.Digest
-              : AuthType.Password,
-        });
-      } else {
-        log.info("no password");
-        this.client = createClient(this.webdavConfig.address, {
-          headers: headers,
-        });
-      }
+    if (
+      this.webdavConfig.username !== "" &&
+      this.webdavConfig.password !== ""
+    ) {
+      this.client = createClient(this.webdavConfig.address, {
+        username: this.webdavConfig.username,
+        password: this.webdavConfig.password,
+        headers: headers,
+        authType:
+          this.webdavConfig.authType === "digest"
+            ? AuthType.Digest
+            : AuthType.Password,
+      });
+    } else {
+      log.info("no password");
+      this.client = createClient(this.webdavConfig.address, {
+        headers: headers,
+      });
     }
 
     // check vault folder
@@ -581,7 +583,7 @@ export const checkConnectivity = async (
   }
   try {
     await client.init();
-    const results = await getRemoteMeta(client, `/${client.remoteBaseDir}`);
+    const results = await getRemoteMeta(client, `/${client.remoteBaseDir}/`);
     if (results === undefined) {
       const err = "results is undefined";
       log.error(err);
