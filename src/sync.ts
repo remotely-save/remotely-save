@@ -1427,34 +1427,6 @@ export const doActualSync = async (
   log.debug(`finish syncing extra data firstly`);
 
   log.debug(`concurrency === ${concurrency}`);
-  if (concurrency === 1) {
-    // run everything in sequence
-    // good old way
-    for (let i = 0; i < sortedKeys.length; ++i) {
-      const key = sortedKeys[i];
-      const val = mixedStates[key];
-
-      log.debug(`start syncing "${key}" with plan ${JSON.stringify(val)}`);
-
-      if (callbackSyncProcess !== undefined) {
-        await callbackSyncProcess(i, totalCount, key, val.decision);
-      }
-
-      await dispatchOperationToActual(
-        key,
-        vaultRandomID,
-        val,
-        client,
-        db,
-        vault,
-        localDeleteFunc,
-        password
-      );
-      log.debug(`finished ${key}`);
-    }
-
-    return; // shortcut return, avoid too many nests below
-  }
 
   const { folderCreationOps, deletionOps, uploadDownloads, realTotalCount } =
     splitThreeSteps(syncPlan, sortedKeys);
