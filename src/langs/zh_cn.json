@@ -39,7 +39,6 @@
   "command_drynrun": "开始同步（空跑模式）（start sync (dry run only)）",
   "command_exportsyncplans_json": "导出同步计划为 json 格式（export sync plans in json format）",
   "command_exportlogsindb": "从数据库导出终端日志（export logs saved in db）",
-
   "statusbar_time_years": "{{time}} 年前",
   "statusbar_time_months": "{{time}} 月前",
   "statusbar_time_weeks": "{{time}} 周前",
@@ -51,7 +50,6 @@
   "statusbar_lastsync_label": "上一次同步于：{{date}}",
   "statusbar_lastsync_never": "没触发过同步",
   "statusbar_lastsync_never_label": "没触发过同步",
-
   "modal_password_title": "稍等一下，请阅读下文：",
   "modal_password_shortdesc": "如果密码不是空的，那么文件会在上传之前，在本地先用此密码加密。\n如果密码是空的，那么文件会被非加密地上传。",
   "modal_password_attn1": "注意 1/5：库（Vault）名字是不会加密的！本插件会在一些远程存储里创建一个和库名字有着同名的文件夹。",
@@ -134,7 +132,6 @@
   "settings_skiplargefiles": "跳过大文件",
   "settings_skiplargefiles_desc": "跳过大于某一个阈值的文件。这里 1 MB = 10^6 bytes。",
   "settings_skiplargefiles_notset": "（不设置）",
-
   "settings_ignorepaths": "忽略的文件或文件夹的正则表达式",
   "settings_ignorepaths_desc": "忽略的文件或文件夹的正则表达式。每行一条。路径是相对于库（Vault）根目录的，没有前置 / 符号。",
   "settings_enablestatusbar_info": "在状态栏显示上一次成功的同步",
@@ -144,7 +141,6 @@
   "settings_resetstatusbar_time_desc": "重设上一次成功同步的时间记录。",
   "settings_resetstatusbar_button": "重设",
   "settings_resetstatusbar_notice": "重设完毕！",
-
   "settings_checkonnectivity": "检查可否连接",
   "settings_checkonnectivity_desc": "检查可否连接。",
   "settings_checkonnectivity_button": "检查",
@@ -177,6 +173,8 @@
   "settings_s3_accuratemtime_desc": "读取（已上传的）准确的文件修改时间，有助于同步算法更加准确和稳定。但是它也会导致额外的 api 请求、时间、金钱花费。",
   "settings_s3_urlstyle": "S3 URL style",
   "settings_s3_urlstyle_desc": "是否对 S3 对象强制使用 path style URL（例如使用 https://s3.amazonaws.com/*/ 而不是 https://*.s3.amazonaws.com/）。",
+  "settings_s3_reverse_proxy_url": "S3 反向代理地址",
+  "settings_s3_reverse_proxy_url_desc": "S3 反向代理地址。（如果没有设置反向代理请留空）",
   "settings_s3_connect_succ": "很好！可以访问到对应存储桶。",
   "settings_s3_connect_fail": "无法访问到对应存储桶。",
   "settings_dropbox": "Dropbox 设置",
@@ -286,6 +284,5 @@
   "syncalgov2_texts": "欢迎使用 Remotely Save!\n从版本 0.3.0 开始，它带来了新的同步算法，但是，除了您的笔记之外，它还需要上传额外的带有元信息的文件 _remotely-save-metadata-on-remote.{json,bin} 到您的云服务目的地上。\n从而，比如说，通过读取这些信息，另一台设备可以知道什么文件或文件夹在第一台设备上被删除了。\n如果您同意此策略，请点击按钮 \"同意\"，然后开始享用此插件！且特别要注意：使用插件之前，请首先备份好您的库（Vault）！\n如果您不同意此策略，您应该停止使用此版本和之后版本的 Remotely Save。您可以考虑手动安装旧版 0.2.14，它使用旧的同步算法，并不上传额外元信息文件。点击 \"不同意\" 之后，插件会自动停止运行（unload），然后您需要 Obsidian 设置里手动停用（disable）此插件。",
   "syncalgov2_button_agree": "同意",
   "syncalgov2_button_disagree": "不同意",
-
   "official_notice_2024_first_party": "插件 Remotely-Save 回来了，更新了一大堆功能！🎉🎉🎉请自行使用，或参阅更新文档： https://github.com/remotely-save/remotely-save/releases 。"
 }
