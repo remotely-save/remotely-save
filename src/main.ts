@@ -1112,8 +1112,8 @@ export default class RemotelySavePlugin extends Plugin {
                   this.settings!.syncOnSaveAfterMilliseconds! -
                   (currentTime - lastModified);
                 SheduleSaveOnSync(scheduleTimeFromNow);
-              } else if (needToRunAgain && this.syncStatus === "idle") {
-                SheduleSaveOnSync(0); // run sync on save without delay
+              } else if (needToRunAgain && !runScheduled && this.syncStatus === "idle") {
+                SheduleSaveOnSync(this.settings!.syncOnSaveAfterMilliseconds!);
                 needToRunAgain = false;
               } else {
                 needToRunAgain = true;
