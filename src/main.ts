@@ -1081,6 +1081,19 @@ export default class RemotelySavePlugin extends Plugin {
       this.settings.syncOnSaveAfterMilliseconds > 0
     ) {
       let runScheduled = false;
+      let needToRunAgain = false;
+
+      const SheduleSaveOnSync = (scheduleTimeFromNow: number) => {
+        log.info(
+          `schedule a run for ${scheduleTimeFromNow} milliseconds later`,
+        );
+        runScheduled = true;
+        setTimeout(() => {
+          this.syncRun("auto_sync_on_save");
+          runScheduled = false;
+        }, scheduleTimeFromNow);
+      };
+
       this.app.workspace.onLayoutReady(() => {
         const intervalID = window.setInterval(() => {
           const currentFile = this.app.workspace.getActiveFile();
@@ -1091,29 +1104,24 @@ export default class RemotelySavePlugin extends Plugin {
             // then schedule a run for syncOnSaveAfterMilliseconds after it was modified
             const lastModified = currentFile.stat.mtime;
             const currentTime = Date.now();
-            // log.debug(
-            //   `Checking if file was modified within last ${
-            //     this.settings.syncOnSaveAfterMilliseconds / 1000
-            //   } seconds, last modified: ${
-            //     (currentTime - lastModified) / 1000
-            //   } seconds ago`
-            // );
             if (
               currentTime - lastModified <
               this.settings!.syncOnSaveAfterMilliseconds!
             ) {
-              if (!runScheduled) {
+              if (
+                !needToRunAgain &&
+                !runScheduled &&
+                this.syncStatus === "idle"
+              ) {
                 const scheduleTimeFromNow =
                   this.settings!.syncOnSaveAfterMilliseconds! -
                   (currentTime - lastModified);
-                log.info(
-                  `schedule a run for ${scheduleTimeFromNow} milliseconds later`
-                );
-                runScheduled = true;
-                setTimeout(() => {
-                  this.syncRun("auto_sync_on_save");
-                  runScheduled = false;
-                }, scheduleTimeFromNow);
+                SheduleSaveOnSync(scheduleTimeFromNow);
+              } else if (needToRunAgain && !runScheduled && this.syncStatus === "idle") {
+                SheduleSaveOnSync(this.settings!.syncOnSaveAfterMilliseconds!);
+                needToRunAgain = false;
+              } else {
+                needToRunAgain = true;
               }
             }
           }
