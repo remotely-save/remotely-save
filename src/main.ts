@@ -1078,9 +1078,9 @@ export default class RemotelySavePlugin extends Plugin {
       let runScheduled = false;
       let needToRunAgain = false;
 
-      const SheduleSaveOnSync = (scheduleTimeFromNow: number) => {
+      const scheduleSyncOnSave = (scheduleTimeFromNow: number) => {
         log.info(
-          `schedule a run for ${scheduleTimeFromNow} milliseconds later`,
+          `schedule a run for ${scheduleTimeFromNow} milliseconds later`
         );
         runScheduled = true;
         setTimeout(() => {
@@ -1111,9 +1111,13 @@ export default class RemotelySavePlugin extends Plugin {
                 const scheduleTimeFromNow =
                   this.settings!.syncOnSaveAfterMilliseconds! -
                   (currentTime - lastModified);
-                SheduleSaveOnSync(scheduleTimeFromNow);
-              } else if (needToRunAgain && !runScheduled && this.syncStatus === "idle") {
-                SheduleSaveOnSync(this.settings!.syncOnSaveAfterMilliseconds!);
+                scheduleSyncOnSave(scheduleTimeFromNow);
+              } else if (
+                needToRunAgain &&
+                !runScheduled &&
+                this.syncStatus === "idle"
+              ) {
+                scheduleSyncOnSave(this.settings!.syncOnSaveAfterMilliseconds!);
                 needToRunAgain = false;
               } else {
                 needToRunAgain = true;
