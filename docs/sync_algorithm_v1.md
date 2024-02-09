@@ -1,3 +1,5 @@
+English | [中文](/docs/sync_algorithm_v1.zh-cn.md)
+
 # Sync Algorithm
 
 ## Sources

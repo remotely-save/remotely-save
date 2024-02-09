@@ -1,3 +1,5 @@
+English | [中文](/docs/remote_services/s3_cloudflare_r2/README.zh-cn.md)
+
 # Cloudflare R2
 
 ## Links

@@ -1,3 +1,5 @@
+English | [中文](/docs/remote_services/webdav_general/webav_cors.zh-cn.md)
+
 If you are using Obsidian desktop >= 0.13.25 or iOS >= 1.1.1, you can skip this CORS part.
 
 If you are using Obsidian desktop < 0.13.25 or iOS < 1.1.1 or any Android version:

@@ -1,3 +1,5 @@
+English | [中文](/docs/import_export_some_settings.zh-cn.md)
+
 ## Bonus: Import And Export Not-Oauth2 Plugin Settings By QR Code
 
 It's often verbose / inconvenient to input not-oauth2 credentials on mobile. (On different desktop computers, it's trivial to copy and paste `data.json` across different devices.)

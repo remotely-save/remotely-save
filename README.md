@@ -1,3 +1,5 @@
+English | [中文](/README.zh-cn.md)
+
 # Remotely Save
 
 This is yet another unofficial sync plugin for Obsidian. If you like it or find it useful, please consider give it a [star ![GitHub Repo stars](https://img.shields.io/github/stars/fyears/remotely-save?style=social)](https://github.com/fyears/remotely-save) on Github.

@@ -1,3 +1,5 @@
+English | [中文](/docs/code_design.zh-cn.md)
+
 # Code Design
 
 ## Code Organization

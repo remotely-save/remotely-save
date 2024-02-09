@@ -1,3 +1,5 @@
+English | [中文](/docs/sync_ignoring_large_files.zh-cn.md)
+
 # Sync Ignoring Large Files
 
 Initially, the plugin does not ignore large files.

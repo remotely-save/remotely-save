@@ -1,3 +1,5 @@
+English | [中文](/docs/browser_env_cors.zh-cn.md)
+
 # Limitations From The Browser Environment: CORS Issue
 
 The plugin is developed for the browser environment. The "fake" browser behind the scenes also follows the CORS policy.

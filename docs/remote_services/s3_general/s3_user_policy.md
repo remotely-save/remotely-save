@@ -1,3 +1,5 @@
+English | [中文](/docs/remote_services/s3_general/s3_user_policy.zh-cn.md)
+
 # AWS S3 Bucket: How to configure user's policy
 
 ## Attention

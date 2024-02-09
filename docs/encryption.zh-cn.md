@@ -1,13 +1,16 @@
-English | [中文](/docs/encryption.zh-cn.md)
+---
+说明：GitHub Copilot 翻译
+---
+[English](/docs/encryption.md) | 中文
 
 # Encryption
 
-If a password is set, the files are encrypted before being sent to the cloud.
+如果设置了密码，文件在发送到云端之前会进行加密。
 
-The encryption algorithm is delibrately designed to be aligned with openssl format.
+加密算法的设计与openssl格式保持一致。
 
-1. The encryption algorithm is implemented using web-crypto.
-2. The file content is encrypted using openssl format. Assuming a file named `sometext.txt`, a password `somepassword`, then the encryption is equivalent to the following command:
+1. 加密算法使用web-crypto实现。
+2. 文件内容使用openssl格式进行加密。假设有一个名为`sometext.txt`的文件，密码为`somepassword`，则加密等同于以下命令：
 
    ```bash
    # file content encryption (ignoring file path encryption)
@@ -17,8 +20,8 @@ The encryption algorithm is delibrately designed to be aligned with openssl form
    openssl enc -d -p -aes-256-cbc -pbkdf2 -iter 20000 -pass pass:somepassword -in ./sometext.txt.enc -out ./sometext.txt
    ```
 
-3. The file/directory path strings, are encrypted using openssl in binary mode and then `base64url without padding` is applied.
-   Assuming the file path is `a-folder-文件夹/a-file-文件.md`, then the following commands are equivilent:
+3. 文件/目录路径字符串使用openssl以二进制模式进行加密，然后应用`不带填充的base64url`。
+    假设文件路径为`a-folder-文件夹/a-file-文件.md`，则以下命令是等效的：
 
    ```bash
    # prepare the functions
@@ -33,4 +36,4 @@ The encryption algorithm is delibrately designed to be aligned with openssl form
    echo -n 'U2FsdGVkX19tNkdFL5rZeHxbe7FL-Pp5mkZJkDNFJWFT6lldZlfa57j0C_cKn0I3PZ9YDvOkyoKqfF6lbn0_yg' | base64url::decode | openssl enc -d -aes-256-cbc -pbkdf2 -iter 20000 -pass pass:mylongpassword
    ```
 
-4. The directory is considered as special "0-byte" object on remote s3. So this meta infomation may be easily guessed if some third party can access the remote bucket.
+4. 目录在远程S3上被视为特殊的“0字节”对象。因此，如果某些第三方可以访问远程存储桶，这些元数据信息可能很容易被猜测到。

@@ -1,3 +1,5 @@
+English | [中文](/docs/how_to_debug/export_sync_plans.zh-cn.md)
+
 # Export Sync Plans
 
 ## What's this?

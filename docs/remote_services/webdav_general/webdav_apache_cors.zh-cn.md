@@ -1,12 +1,15 @@
-English | [中文](/docs/remote_services/webdav_general/webdav_apache_cors.zh-cn.md)
+---
+说明：GitHub Copilot 翻译
+---
+[English](/docs/remote_services/webdav_general/webdav_apache_cors.md) | 中文
 
-# How To Configure Apache CORS Rules for Webdav
+# 如何配置Apache的Webdav CORS规则
 
-This method is [contributed by community](https://github.com/remotely-save/remotely-save/pull/31).
+该方法由社区贡献（https://github.com/remotely-save/remotely-save/pull/31）。
 
-You should evaluate the risk by yourself before trying this method.
+在尝试此方法之前，请自行评估风险。
 
-**You are strongly advised to backup your original Apache configuration files before making any changes.**
+**强烈建议在进行任何更改之前备份您的原始Apache配置文件。**
 
 ```apacheconf
 <IfModule mod_headers.c>

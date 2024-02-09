@@ -1,3 +1,5 @@
+English | [中文](/docs/how_to_debug/check_console_output.zh-cn.md)
+
 # Check Console Output
 
 If you are using Obsidian on desktop or Android, you can check the Obsidian console.

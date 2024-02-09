@@ -1,3 +1,5 @@
+English | [中文](/docs/remote_services/s3_minio/README.zh-cn.md)
+
 # MinIO
 
 ## Links

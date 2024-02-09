@@ -1,3 +1,5 @@
+English | [中文](/docs/sync_algorithm_v3.zh-cn.md)
+
 # Sync Algorithm V3
 
 Drafted on 20240117.

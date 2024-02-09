@@ -1,3 +1,5 @@
+English | [中文](/docs/minimal_intrusive_design.zh-cn.md)
+
 # Minimal Intrusive Design
 
 Before version 0.3.0, the plugin did not upload additional meta data to the remote.

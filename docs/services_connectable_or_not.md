@@ -1,3 +1,5 @@
+English | [中文](/docs/services_connectable_or_not.zh-cn.md)
+
 # services connectability
 
 Here is an overview of the connectability ("connectable" or "not connectable" or "in the plan" or "never") to some services by this plugin.

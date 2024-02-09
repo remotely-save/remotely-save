@@ -1,3 +1,5 @@
+English | [中文](/docs/browser_env_no_nodejs.zh-cn.md)
+
 # Limitations From The Browser Environment: No Node.js
 
 To support the mobile Obsidian, the plugin is limited to be developed for the browser environment, instead of the Node.js environment.

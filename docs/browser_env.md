@@ -1,3 +1,5 @@
+English | [中文](/docs/browser_env.zh-cn.md)
+
 # Limitations From The Browser Environment
 
 Obsidian desktop is developed by using [Electron](https://www.electronjs.org/). And Obsidian mobile is developed by using [Capacitor](https://capacitorjs.com/)

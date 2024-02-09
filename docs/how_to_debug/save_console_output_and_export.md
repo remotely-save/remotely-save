@@ -1,3 +1,5 @@
+English | [中文](/docs/how_to_debug/save_console_output_and_export.zh-cn.md)
+
 # Save Console Output And Read Them Later
 
 ## Disable Auto Sync Firstly

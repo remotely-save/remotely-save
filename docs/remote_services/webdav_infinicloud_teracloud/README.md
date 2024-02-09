@@ -1,3 +1,5 @@
+English | [中文](/docs/remote_services/webdav_infinicloud_teracloud/README.zh-cn.md)
+
 # InfiniCLOUD (formally TeraCLOUD) Webdav
 
 ## Link

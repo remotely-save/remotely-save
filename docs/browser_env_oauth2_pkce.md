@@ -1,3 +1,5 @@
+English | [中文](/docs/browser_env_oauth2_pkce.zh-cn.md)
+
 # Limitations From The Browser Environment: OAuth2 PKCE
 
 If the cloud service uses OAuth flow, it needs to support PKCE, because the plugin is released to the public, and no real secrets can be statically kept in the client.
