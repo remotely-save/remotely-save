@@ -1161,8 +1161,8 @@ export default class RemotelySavePlugin extends Plugin {
     let lastSyncMsg = t("statusbar_lastsync_never");
     let lastSyncLabelMsg = t("statusbar_lastsync_never_label");
 
-    if(lastSuccessSyncMillis !== undefined && lastSuccessSyncMillis === -1) {
-      lastSyncMsg = t("statusbar_syncing")
+    if (lastSuccessSyncMillis !== undefined && lastSuccessSyncMillis === -1) {
+      lastSyncMsg = t("statusbar_syncing");
     }
 
     if (lastSuccessSyncMillis !== undefined && lastSuccessSyncMillis > 0) {
@@ -1191,10 +1191,10 @@ export default class RemotelySavePlugin extends Plugin {
         timeText = t("statusbar_time_hours", { time: hours });
       } else if (minutes > 0) {
         timeText = t("statusbar_time_minutes", { time: minutes });
-      } else if(seconds > 30) {
+      } else if (seconds > 30) {
         timeText = t("statusbar_time_lessminute");
       } else {
-        timeText = t("statusbar_now")
+        timeText = t("statusbar_now");
       }
 
       let dateText = new Date(lastSuccessSyncMillis).toLocaleTimeString(
