@@ -203,6 +203,10 @@ export default class RemotelySavePlugin extends Plugin {
         }
       }
 
+      // change status to "syncing..." on statusbar
+      if (this.statusBarElement !== undefined) {
+        this.updateLastSuccessSyncMsg(-1);
+      }
       //log.info(`huh ${this.settings.password}`)
       if (this.settings.currLogLevel === "info") {
         getNotice(
@@ -332,6 +336,7 @@ export default class RemotelySavePlugin extends Plugin {
           getNotice(t("syncrun_step7"));
         }
         this.syncStatus = "syncing";
+
         await doActualSync(
           client,
           this.db,
@@ -1156,6 +1161,10 @@ export default class RemotelySavePlugin extends Plugin {
     let lastSyncMsg = t("statusbar_lastsync_never");
     let lastSyncLabelMsg = t("statusbar_lastsync_never_label");
 
+    if (lastSuccessSyncMillis !== undefined && lastSuccessSyncMillis === -1) {
+      lastSyncMsg = t("statusbar_syncing");
+    }
+
     if (lastSuccessSyncMillis !== undefined && lastSuccessSyncMillis > 0) {
       const deltaTime = Date.now() - lastSuccessSyncMillis;
 
@@ -1166,6 +1175,8 @@ export default class RemotelySavePlugin extends Plugin {
       const days = Math.floor(deltaTime / 86400000);
       const hours = Math.floor(deltaTime / 3600000);
       const minutes = Math.floor(deltaTime / 60000);
+      const seconds = Math.floor(deltaTime / 1000);
+
       let timeText = "";
 
       if (years > 0) {
@@ -1180,8 +1191,10 @@ export default class RemotelySavePlugin extends Plugin {
         timeText = t("statusbar_time_hours", { time: hours });
       } else if (minutes > 0) {
         timeText = t("statusbar_time_minutes", { time: minutes });
-      } else {
+      } else if (seconds > 30) {
         timeText = t("statusbar_time_lessminute");
+      } else {
+        timeText = t("statusbar_now");
       }
 
       let dateText = new Date(lastSuccessSyncMillis).toLocaleTimeString(
@@ -1194,7 +1207,7 @@ export default class RemotelySavePlugin extends Plugin {
         }
       );
 
-      lastSyncMsg = t("statusbar_lastsync", { time: timeText });
+      lastSyncMsg = timeText;
       lastSyncLabelMsg = t("statusbar_lastsync_label", { date: dateText });
     }
 
