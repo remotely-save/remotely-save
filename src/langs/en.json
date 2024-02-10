@@ -39,7 +39,6 @@
   "command_drynrun": "start sync (dry run only)",
   "command_exportsyncplans_json": "export sync plans in json format",
   "command_exportlogsindb": "export logs saved in db",
-
   "statusbar_time_years": "{{time}} years",
   "statusbar_time_months": "{{time}} months",
   "statusbar_time_weeks": "{{time}} weeks",
@@ -51,7 +50,6 @@
   "statusbar_lastsync_label": "Last successful Sync on {{date}}",
   "statusbar_lastsync_never": "Never Synced",
   "statusbar_lastsync_never_label": "Never Synced before",
-
   "modal_password_title": "Hold on and PLEASE READ ON...",
   "modal_password_shortdesc": "If the field is not empty, files would be encrypted locally before being uploaded.\nIf the field is empty, then files would be uploaded without encryption.",
   "modal_password_attn1": "Attention 1/5: The vault name is NOT encrypted. The plugin creates a folder with the vault name on some remote services.",
@@ -134,7 +132,6 @@
   "settings_skiplargefiles": "Skip Large Files",
   "settings_skiplargefiles_desc": "Skip files with sizes larger than the threshold. Here 1 MB = 10^6 bytes.",
   "settings_skiplargefiles_notset": "(not set)",
-
   "settings_ignorepaths": "Regex Of Paths To Ignore",
   "settings_ignorepaths_desc": "Regex of paths of folders or files to ignore. One regex per line. The path is relative to the vault root without leading slash.",
   "settings_enablestatusbar_info": "Show Last Successful Sync In Status Bar",
@@ -144,7 +141,6 @@
   "settings_resetstatusbar_time_desc": "Reset last successful sync time.",
   "settings_resetstatusbar_button": "Reset",
   "settings_resetstatusbar_notice": "Reset done!",
-
   "settings_checkonnectivity": "Check Connectivity",
   "settings_checkonnectivity_desc": "Check connectivity.",
   "settings_checkonnectivity_button": "Check",
@@ -177,6 +173,8 @@
   "settings_s3_accuratemtime_desc": "Read the uploaded accurate last modified time for better sync algorithm. But it causes extra api requests / time / money to the S3 endpoint.",
   "settings_s3_urlstyle": "S3 URL style",
   "settings_s3_urlstyle_desc": "Whether to force path-style URLs for S3 objects (e.g., https://s3.amazonaws.com/*/ instead of https://*.s3.amazonaws.com/).",
+  "settings_s3_reverse_proxy_url": "S3 Reverse Proxy Url",
+  "settings_s3_reverse_proxy_url_desc": "S3 Reverse Proxy Url.(Leave blank if you don't have a reverse proxy)",
   "settings_s3_connect_succ": "Great! The bucket can be accessed.",
   "settings_s3_connect_fail": "The S3 bucket cannot be reached.",
   "settings_dropbox": "Remote For Dropbox",
@@ -286,6 +284,5 @@
   "syncalgov2_texts": "Welcome to use Remotely Save!\nFrom version 0.3.0, a new algorithm has been developed, but it needs uploading extra meta data files _remotely-save-metadata-on-remote.{json,bin} to YOUR configured cloud destinations, besides your notes.\nSo that, for example, the second device can know that what files/folders have been deleted on the first device by reading those files.\nIf you agree, plase click the button \"Agree\", and enjoy the plugin! AND PLEASE REMEMBER TO BACKUP YOUR VAULT FIRSTLY!\nIf you do not agree, you should stop using the current and later versions of Remotely Save. You could consider manually install the old version 0.2.14 which uses old algorithm and does not upload any extra meta data files. By clicking the \"Do Not Agree\" button, the plugin will unload itself, and you need to manually disable it in Obsidian settings.",
   "syncalgov2_button_agree": "Agree",
   "syncalgov2_button_disagree": "Do Not Agree",
-
   "official_notice_2024_first_party": "Plugin Remotely-Save is back to the party and get a HUGE update!🎉🎉🎉 Try it yourself or see the release note on https://github.com/remotely-save/remotely-save/releases."
 }

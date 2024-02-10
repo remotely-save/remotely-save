@@ -39,7 +39,6 @@
   "command_drynrun": "開始同步（空跑模式）（start sync (dry run only)）",
   "command_exportsyncplans_json": "匯出同步計劃為 json 格式（export sync plans in json format）",
   "command_exportlogsindb": "從資料庫匯出終端日誌（export logs saved in db）",
-
   "statusbar_time_years": "{{time}} 年前",
   "statusbar_time_months": "{{time}} 月前",
   "statusbar_time_weeks": "{{time}} 周前",
@@ -51,7 +50,6 @@
   "statusbar_lastsync_label": "上一次同步於：{{date}}",
   "statusbar_lastsync_never": "沒觸發過同步",
   "statusbar_lastsync_never_label": "沒觸發過同步",
-
   "modal_password_title": "稍等一下，請閱讀下文：",
   "modal_password_shortdesc": "如果密碼不是空的，那麼檔案會在上傳之前，在本地先用此密碼加密。\n如果密碼是空的，那麼檔案會被非加密地上傳。",
   "modal_password_attn1": "注意 1/5：儲存庫（Vault）名字是不會加密的！本外掛會在一些遠端儲存裡建立一個和庫名字有著同名的資料夾。",
@@ -134,7 +132,6 @@
   "settings_skiplargefiles": "跳過大檔案",
   "settings_skiplargefiles_desc": "跳過大於某一個閾值的檔案。這裡 1 MB = 10^6 bytes。",
   "settings_skiplargefiles_notset": "（不設定）",
-
   "settings_ignorepaths": "忽略的檔案或資料夾的正則表示式",
   "settings_ignorepaths_desc": "忽略的檔案或資料夾的正則表示式。每行一條。路徑是相對於庫（Vault）根目錄的，沒有前置 / 符號。",
   "settings_enablestatusbar_info": "在狀態列顯示上一次成功的同步",
@@ -144,7 +141,6 @@
   "settings_resetstatusbar_time_desc": "重設上一次成功同步的時間記錄。",
   "settings_resetstatusbar_button": "重設",
   "settings_resetstatusbar_notice": "重設完畢！",
-
   "settings_checkonnectivity": "檢查可否連線",
   "settings_checkonnectivity_desc": "檢查可否連線。",
   "settings_checkonnectivity_button": "檢查",
@@ -177,6 +173,8 @@
   "settings_s3_accuratemtime_desc": "讀取（已上傳的）準確的檔案修改時間，有助於同步演算法更加準確和穩定。但是它也會導致額外的 api 請求、時間、金錢花費。",
   "settings_s3_urlstyle": "S3 URL style",
   "settings_s3_urlstyle_desc": "是否對 S3 物件強制使用 path style URL（例如使用 https://s3.amazonaws.com/*/ 而不是 https://*.s3.amazonaws.com/）。",
+  "settings_s3_reverse_proxy_url": "S3 反向代理地址",
+  "settings_s3_reverse_proxy_url_desc": "S3 反向代理地址。（如果沒有設置反向代理請留空）",
   "settings_s3_connect_succ": "很好！可以訪問到對應儲存桶。",
   "settings_s3_connect_fail": "無法訪問到對應儲存桶。",
   "settings_dropbox": "Dropbox 設定",

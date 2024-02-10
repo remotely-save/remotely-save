@@ -56,10 +56,12 @@ import PQueue from "p-queue";
  */
 class ObsHttpHandler extends FetchHttpHandler {
   requestTimeoutInMs: number | undefined;
-  constructor(options?: FetchHttpHandlerOptions) {
+  s3Config: S3Config | undefined;
+  constructor(options?: FetchHttpHandlerOptions, s3Config?: S3Config) {
     super(options);
     this.requestTimeoutInMs =
       options === undefined ? undefined : options.requestTimeout;
+    this.s3Config = s3Config;
   }
   async handle(
     request: HttpRequest,
@@ -80,9 +82,11 @@ class ObsHttpHandler extends FetchHttpHandler {
     }
 
     const { port, method } = request;
-    const url = `${request.protocol}//${request.hostname}${
-      port ? `:${port}` : ""
-    }${path}`;
+    let url = `${request.protocol}//${request.hostname}${port ? `:${port}` : ""
+      }${path}`;
+    if (this.s3Config && this.s3Config.reverseProxyUrl && this.s3Config.reverseProxyUrl !== "") {
+      url = url.replace(this.s3Config.s3Endpoint, this.s3Config.reverseProxyUrl);
+    }
     const body =
       method === "GET" || method === "HEAD" ? undefined : request.body;
 
@@ -167,6 +171,7 @@ export const DEFAULT_S3_CONFIG: S3Config = {
   forcePathStyle: false,
   remotePrefix: "",
   useAccurateMTime: false, // it causes money, disable by default
+  reverseProxyUrl: "",
 };
 
 export type S3ObjectType = _Object;
@@ -274,8 +279,9 @@ export const getS3Client = (s3Config: S3Config) => {
   }
 
   let s3Client: S3Client;
+  if ((VALID_REQURL && s3Config.bypassCorsLocally) || (s3Config.reverseProxyUrl && s3Config.reverseProxyUrl !== "")) {
+    console.log("reverseProxyUrl", s3Config.reverseProxyUrl);
 
-  if (VALID_REQURL && s3Config.bypassCorsLocally) {
     s3Client = new S3Client({
       region: s3Config.s3Region,
       endpoint: endpoint,
@@ -284,7 +290,7 @@ export const getS3Client = (s3Config: S3Config) => {
         accessKeyId: s3Config.s3AccessKeyID,
         secretAccessKey: s3Config.s3SecretAccessKey,
       },
-      requestHandler: new ObsHttpHandler(),
+      requestHandler: new ObsHttpHandler(undefined, s3Config),
     });
   } else {
     s3Client = new S3Client({
