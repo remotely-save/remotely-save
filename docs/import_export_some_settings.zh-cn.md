@@ -1,6 +1,6 @@
----
+<!---
 说明：GitHub Copilot 翻译
----
+--->
 [English](/docs/import_export_some_settings.md) | 中文
 
 ## 奖励：通过二维码导入和导出非OAuth2插件设置

@@ -1,6 +1,6 @@
----
+<!---
 说明：GitHub Copilot 翻译
----
+--->
 [English](/docs/remote_services/webdav_general/webav_cors.md) | 中文
 
 如果您使用的是 Obsidian 桌面版 >= 0.13.25 或 iOS >= 1.1.1，则可以跳过 CORS 部分。

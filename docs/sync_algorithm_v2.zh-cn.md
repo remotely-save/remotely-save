@@ -1,6 +1,6 @@
----
+<!---
 说明：GitHub Copilot 翻译
----
+--->
 [English](/docs/sync_algorithm_v2.md) | 中文
 
 # 同步算法 V2

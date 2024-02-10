@@ -1,6 +1,6 @@
----
+<!---
 说明：GitHub Copilot 翻译
----
+--->
 [English](/docs/how_to_debug/save_console_output_and_export.md) | 中文
 
 # 保存控制台输出并以后读取

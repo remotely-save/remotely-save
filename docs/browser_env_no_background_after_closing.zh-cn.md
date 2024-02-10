@@ -1,6 +1,6 @@
----
+<!---
 说明：GitHub Copilot 翻译
----
+--->
 [English](/docs/browser_env_no_background_after_closing.md) | 中文
 
 # 浏览器环境的限制：Obsidian关闭后无法后台运行

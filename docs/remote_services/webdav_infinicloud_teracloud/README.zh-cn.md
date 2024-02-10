@@ -1,6 +1,6 @@
----
+<!---
 说明：GitHub Copilot 翻译
----
+--->
 [English](/docs/remote_services/webdav_infinicloud_teracloud/README.md) | 中文
 
 # InfiniCLOUD（前身为TeraCLOUD）Webdav

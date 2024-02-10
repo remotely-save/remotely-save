@@ -1,6 +1,6 @@
----
+<!---
 说明：GitHub Copilot 翻译
----
+--->
 [English](/docs/how_to_debug/README.md) | 中文
 
 # 如何调试

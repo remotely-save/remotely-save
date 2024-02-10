@@ -1,6 +1,6 @@
----
+<!---
 说明：GitHub Copilot 翻译
----
+--->
 [English](/docs/remote_services/s3_general/s3_cors_configure.md) | 中文
 
 # 如何配置S3 CORS规则

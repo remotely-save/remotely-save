@@ -1,6 +1,6 @@
----
+<!---
 说明：GitHub Copilot 翻译
----
+--->
 [English](/docs/how_to_debug/check_console_output.md)  | 中文
 
 # 检查控制台输出

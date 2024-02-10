@@ -1,6 +1,6 @@
----
+<!---
 说明：GitHub Copilot 翻译
----
+--->
 [English](/docs/remote_services/webdav_general/webdav_apache_cors.md) | 中文
 
 # 如何配置Apache的Webdav CORS规则

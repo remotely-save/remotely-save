@@ -1,6 +1,6 @@
----
+<!---
 说明：GitHub Copilot 翻译
----
+--->
 [English](/docs/browser_env_no_nodejs.md) | 中文
 
 # 浏览器环境的限制：无法使用 Node.js

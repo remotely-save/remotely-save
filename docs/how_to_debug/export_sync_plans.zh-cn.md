@@ -1,6 +1,6 @@
----
+<!---
 说明：GitHub Copilot 翻译
----
+--->
 [English](/docs/how_to_debug/export_sync_plans.md) | 中文
 
 # 导出同步计划

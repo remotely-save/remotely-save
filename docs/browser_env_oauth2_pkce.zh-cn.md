@@ -1,6 +1,6 @@
----
+<!---
 说明：GitHub Copilot 翻译
----
+--->
 [English](/docs/browser_env_oauth2_pkce.md) | 中文
 
 # 来自浏览器环境的限制：OAuth2 PKCE

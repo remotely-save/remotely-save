@@ -1,6 +1,6 @@
----
+<!---
 说明：GitHub Copilot 翻译
----
+--->
 [English](/docs/minimal_intrusive_design.md) | 中文
 
 # 最小侵入式设计

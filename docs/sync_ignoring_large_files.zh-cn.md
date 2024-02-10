@@ -1,6 +1,6 @@
----
+<!---
 说明：GitHub Copilot 翻译
----
+--->
 [English](/docs/sync_ignoring_large_files.md) | 中文
 
 # 同步忽略大文件

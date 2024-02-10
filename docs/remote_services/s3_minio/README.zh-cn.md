@@ -1,6 +1,6 @@
----
+<!---
 说明：GitHub Copilot 翻译
----
+--->
 [English](/docs/remote_services/s3_minio/README.md) | 中文
 
 # MinIO

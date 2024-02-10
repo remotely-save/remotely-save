@@ -1,6 +1,6 @@
----
+<!---
 说明：GitHub Copilot 翻译
----
+--->
 [English](/docs/remote_services/s3_general/s3_user_policy.md) | 中文
 
 # AWS S3 Bucket: 如何配置用户策略

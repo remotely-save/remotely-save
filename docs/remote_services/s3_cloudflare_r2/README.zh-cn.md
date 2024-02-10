@@ -1,6 +1,6 @@
----
+<!---
 说明：GitHub Copilot 翻译
----
+--->
 [English](/docs/remote_services/s3_cloudflare_r2/README.md) | 中文
 
 # Cloudflare R2

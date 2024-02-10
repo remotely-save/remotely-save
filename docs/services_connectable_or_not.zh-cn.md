@@ -1,6 +1,6 @@
----
+<!---
 说明：GitHub Copilot 翻译
----
+--->
 [English](/docs/services_connectable_or_not.md) | 中文
 
 # 服务的连接性
