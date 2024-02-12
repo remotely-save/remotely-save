@@ -32,7 +32,8 @@ Using the principle of least privilege is crucial for security when allowing a t
             "Sid": "ObsidianBucket",
             "Effect": "Allow",
             "Action": [
-                "s3:HeadBucket"
+                "s3:HeadBucket",
+                "s3:ListBucket"
             ],
             "Resource": "arn:aws:s3:::my-bucket"
         },
