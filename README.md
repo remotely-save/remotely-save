@@ -75,6 +75,7 @@ Additionally, the plugin author may occasionally visit Obsidian official forum a
 - If you want to enable end-to-end encryption, also set a password in settings. If you do not specify a password, the files and folders are synced in plain, original content to the cloud.
 - Click the new "circle arrow" icon on the ribbon (the left sidebar), **every time** you want to sync your vault between local and remote. (Or, you could configure auto sync in the settings panel (See next chapter).) While syncing, the icon becomes "two half-circle arrows". Besides clicking the icon on the sidebar ribbon, you can also activate the corresponding command in the command palette.
 - **Be patient while syncing.** Especially in the first-time sync.
+- If you want to sync the files across multiple devices, **your vault name should be the same** while using default settings.
 
 ### Dropbox
 
@@ -82,6 +83,7 @@ Additionally, the plugin author may occasionally visit Obsidian official forum a
 - After the authorization, the plugin can read your name and email (which cannot be unselected on Dropbox api), and read and write files in your Dropbox's `/Apps/remotely-save` folder.
 - If you decide to authorize this plugin to connect to Dropbox, please go to plugin's settings, and choose Dropbox then follow the instructions. [More with screenshot is here](./docs/dropbox_review_material/README.md).
 - Password-based end-to-end encryption is also supported. But please be aware that **the vault name itself is not encrypted**.
+- If you want to sync the files across multiple devices, **your vault name should be the same** while using default settings.
 
 ### OneDrive for personal
 
@@ -90,6 +92,7 @@ Additionally, the plugin author may occasionally visit Obsidian official forum a
 - After the authorization, the plugin can read your name and email, and read and write files in your OneDrive's `/Apps/remotely-save` folder.
 - If you decide to authorize this plugin to connect to OneDrive, please go to plugin's settings, and choose OneDrive then follow the instructions.
 - Password-based end-to-end encryption is also supported. But please be aware that **the vault name itself is not encrypted**.
+- If you want to sync the files across multiple devices, **your vault name should be the same** while using default settings.
 
 ### webdav
 
@@ -102,6 +105,7 @@ Additionally, the plugin author may occasionally visit Obsidian official forum a
 - Very old version of Obsidian needs [configuring CORS](./docs/remote_services/webdav_general/webav_cors.md).
 - Your data would be synced to a `${vaultName}` sub folder on your webdav server.
 - Password-based end-to-end encryption is also supported. But please be aware that **the vault name itself is not encrypted**.
+- If you want to sync the files across multiple devices, **your vault name should be the same** while using default settings.
 
 ## Scheduled Auto Sync
 
