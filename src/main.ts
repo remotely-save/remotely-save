@@ -11,6 +11,7 @@ import {
   TFolder,
   requestUrl,
   requireApiVersion,
+  Events,
 } from "obsidian";
 import cloneDeep from "lodash/cloneDeep";
 import { createElement, RotateCcw, RefreshCcw, FileText } from "lucide";
@@ -145,6 +146,7 @@ export default class RemotelySavePlugin extends Plugin {
   i18n!: I18n;
   vaultRandomID!: string;
   debugServerTemp?: string;
+  syncEvent?: Events;
 
   async syncRun(triggerSource: SyncTriggerSourceType = "manual") {
     const t = (x: TransItemType, vars?: any) => {
@@ -397,6 +399,7 @@ export default class RemotelySavePlugin extends Plugin {
         this.updateLastSuccessSyncMsg(lastSuccessSyncMillis);
       }
 
+      this.syncEvent?.trigger("SYNC_DONE");
       log.info(
         `${
           this.manifest.id
@@ -445,6 +448,8 @@ export default class RemotelySavePlugin extends Plugin {
     }; // init
 
     this.currSyncMsg = "";
+
+    this.syncEvent = new Events();
 
     await this.loadSettings();
 
@@ -1094,44 +1099,53 @@ export default class RemotelySavePlugin extends Plugin {
         }, scheduleTimeFromNow);
       };
 
-      this.app.workspace.onLayoutReady(() => {
-        const intervalID = window.setInterval(() => {
-          const currentFile = this.app.workspace.getActiveFile();
+      const checkCurrFileModified = async (caller: "SYNC" | "FILE_CHANGES") => {
+        const currentFile = this.app.workspace.getActiveFile();
 
-          if (currentFile) {
-            // get the last modified time of the current file
-            // if it has been modified within the last syncOnSaveAfterMilliseconds
-            // then schedule a run for syncOnSaveAfterMilliseconds after it was modified
-            const lastModified = currentFile.stat.mtime;
-            const currentTime = Date.now();
-            if (
-              currentTime - lastModified <
-              this.settings!.syncOnSaveAfterMilliseconds!
-            ) {
-              if (
-                !needToRunAgain &&
-                !runScheduled &&
-                this.syncStatus === "idle"
-              ) {
-                const scheduleTimeFromNow =
-                  this.settings!.syncOnSaveAfterMilliseconds! -
-                  (currentTime - lastModified);
-                scheduleSyncOnSave(scheduleTimeFromNow);
-              } else if (
-                needToRunAgain &&
-                !runScheduled &&
-                this.syncStatus === "idle"
-              ) {
-                scheduleSyncOnSave(this.settings!.syncOnSaveAfterMilliseconds!);
-                needToRunAgain = false;
-              } else {
-                needToRunAgain = true;
-              }
+        if (currentFile) {
+          // get the last modified time of the current file
+          // if it has motified after lastSuccessSync
+          // then schedule a run for syncOnSaveAfterMilliseconds after it was modified
+          const lastModified = currentFile.stat.mtime;
+          const lastSuccessSyncMillis = await getLastSuccessSyncByVault(
+            this.db,
+            this.vaultRandomID
+          );
+          if (
+            this.syncStatus === "idle" &&
+            lastModified > lastSuccessSyncMillis &&
+            !runScheduled
+          ) {
+            scheduleSyncOnSave(this.settings!.syncOnSaveAfterMilliseconds!);
+          } else if (
+            this.syncStatus === "idle" &&
+            needToRunAgain &&
+            !runScheduled
+          ) {
+            scheduleSyncOnSave(this.settings!.syncOnSaveAfterMilliseconds!);
+            needToRunAgain = false;
+          } else {
+            if (caller === "FILE_CHANGES") {
+              needToRunAgain = true;
             }
           }
-        }, this.settings.syncOnSaveAfterMilliseconds);
-        this.syncOnSaveIntervalID = intervalID;
-        this.registerInterval(intervalID);
+        }
+      };
+
+      this.app.workspace.onLayoutReady(() => {
+        // listen to sync done
+        this.registerEvent(
+          this.syncEvent?.on("SYNC_DONE", () => {
+            checkCurrFileModified("SYNC");
+          })!
+        );
+
+        // listen to current file save changes
+        this.registerEvent(
+          this.app.vault.on("modify", () => {
+            checkCurrFileModified("FILE_CHANGES");
+          })
+        );
       });
     }
   }
