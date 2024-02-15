@@ -1104,7 +1104,7 @@ export default class RemotelySavePlugin extends Plugin {
 
         if (currentFile) {
           // get the last modified time of the current file
-          // if it has motified after lastSuccessSync
+          // if it has modified after lastSuccessSync
           // then schedule a run for syncOnSaveAfterMilliseconds after it was modified
           const lastModified = currentFile.stat.mtime;
           const lastSuccessSyncMillis = await getLastSuccessSyncByVault(
