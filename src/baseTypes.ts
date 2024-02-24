@@ -94,16 +94,21 @@ export interface RemotelySavePluginSettings {
   autoRunEveryMilliseconds?: number;
   initRunAfterMilliseconds?: number;
   syncOnSaveAfterMilliseconds?: number;
-  agreeToUploadExtraMetadata?: boolean;
+
   concurrency?: number;
   syncConfigDir?: boolean;
   syncUnderscoreItems?: boolean;
   lang?: LangTypeAndAuto;
-
+  agreeToUseSyncV3?: boolean;
   skipSizeLargerThan?: number;
   ignorePaths?: string[];
   enableStatusBarInfo?: boolean;
   deleteToWhere?: "system" | "obsidian";
+
+  /**
+   * @deprecated
+   */
+  agreeToUploadExtraMetadata?: boolean;
 
   /**
    * @deprecated
@@ -130,32 +135,6 @@ export interface UriParams {
 
 // 80 days
 export const OAUTH2_FORCE_EXPIRE_MILLISECONDS = 1000 * 60 * 60 * 24 * 80;
-
-type DecisionTypeForFile =
-  | "skipUploading" // special, mtimeLocal === mtimeRemote
-  | "uploadLocalDelHistToRemote" // "delLocalIfExists && delRemoteIfExists && cleanLocalDelHist && uploadLocalDelHistToRemote"
-  | "keepRemoteDelHist" // "delLocalIfExists && delRemoteIfExists && cleanLocalDelHist && keepRemoteDelHist"
-  | "uploadLocalToRemote" // "skipLocal && uploadLocalToRemote && cleanLocalDelHist && cleanRemoteDelHist"
-  | "downloadRemoteToLocal"; // "downloadRemoteToLocal && skipRemote && cleanLocalDelHist && cleanRemoteDelHist"
-
-type DecisionTypeForFileSize =
-  | "skipUploadingTooLarge"
-  | "skipDownloadingTooLarge"
-  | "skipUsingLocalDelTooLarge"
-  | "skipUsingRemoteDelTooLarge"
-  | "errorLocalTooLargeConflictRemote"
-  | "errorRemoteTooLargeConflictLocal";
-
-type DecisionTypeForFolder =
-  | "createFolder"
-  | "uploadLocalDelHistToRemoteFolder"
-  | "keepRemoteDelHistFolder"
-  | "skipFolder";
-
-export type DecisionType =
-  | DecisionTypeForFile
-  | DecisionTypeForFileSize
-  | DecisionTypeForFolder;
 
 export type EmptyFolderCleanType = "skip" | "clean_both";
 
@@ -233,7 +212,7 @@ export interface FileOrFolderMixedState {
   sizeRemoteEnc?: number;
   changeRemoteMtimeUsingMapping?: boolean;
   changeLocalMtimeUsingMapping?: boolean;
-  decision?: DecisionType;
+  decision?: string; // old DecisionType is deleted, fallback to string
   decisionBranch?: number;
   syncDone?: "done";
   remoteEncryptedKey?: string;

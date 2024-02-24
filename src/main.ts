@@ -15,7 +15,6 @@ import {
 import cloneDeep from "lodash/cloneDeep";
 import { createElement, RotateCcw, RefreshCcw, FileText } from "lucide";
 import type {
-  FileOrFolderMixedState,
   RemotelySavePluginSettings,
   SyncTriggerSourceType,
 } from "./baseTypes";
@@ -29,10 +28,7 @@ import {
 } from "./baseTypes";
 import { importQrCodeUri } from "./importExport";
 import {
-  insertDeleteRecordByVault,
-  insertRenameRecordByVault,
   insertSyncPlanRecordByVault,
-  loadFileHistoryTableByVault,
   prepareDBs,
   InternalDBs,
   clearExpiredSyncPlanRecords,
@@ -57,15 +53,15 @@ import {
 import { DEFAULT_S3_CONFIG } from "./remoteForS3";
 import { DEFAULT_WEBDAV_CONFIG } from "./remoteForWebdav";
 import { RemotelySaveSettingTab } from "./settings";
-import { fetchMetadataFile, parseRemoteItems, SyncStatusType } from "./sync";
+import { parseRemoteItems, SyncStatusType } from "./sync";
 import { doActualSync, getSyncPlan, isPasswordOk } from "./sync";
 import { messyConfigToNormal, normalConfigToMessy } from "./configPersist";
-import { ObsConfigDirFileType, listFilesInObsFolder } from "./obsFolderLister";
+import { getLocalEntityList } from "./local";
 import { I18n } from "./i18n";
 import type { LangType, LangTypeAndAuto, TransItemType } from "./i18n";
 
 import { DeletionOnRemote, MetadataOnRemote } from "./metadataOnRemote";
-import { SyncAlgoV2Modal } from "./syncAlgoV2Notice";
+import { SyncAlgoV3Modal } from "./syncAlgoV3Notice";
 
 import { applyLogWriterInplace, log } from "./moreOnLog";
 import AggregateError from "aggregate-error";
@@ -271,12 +267,6 @@ export default class RemotelySavePlugin extends Plugin {
         client.serviceType,
         this.settings.password
       );
-      const origMetadataOnRemote = await fetchMetadataFile(
-        metadataFile,
-        client,
-        this.app.vault,
-        this.settings.password
-      );
 
       if (this.settings.currLogLevel === "info") {
         // pass
@@ -285,10 +275,6 @@ export default class RemotelySavePlugin extends Plugin {
       }
       this.syncStatus = "getting_local_meta";
       const local = this.app.vault.getAllLoadedFiles();
-      const localHistory = await loadFileHistoryTableByVault(
-        this.db,
-        this.vaultRandomID
-      );
       let localConfigDirContents: ObsConfigDirFileType[] | undefined =
         undefined;
       if (this.settings.syncConfigDir) {
@@ -345,21 +331,12 @@ export default class RemotelySavePlugin extends Plugin {
           plan,
           sortedKeys,
           metadataFile,
-          origMetadataOnRemote,
           sizesGoWrong,
           deletions,
           (key: string) => self.trash(key),
           this.settings.password,
           this.settings.concurrency,
-          (ss: FileOrFolderMixedState[]) => {
-            new SizesConflictModal(
-              self.app,
-              self,
-              this.settings.skipSizeLargerThan ?? -1,
-              ss,
-              this.settings.password !== ""
-            ).open();
-          },
+
           (i: number, totalCount: number, pathName: string, decision: string) =>
             self.setCurrSyncMsg(i, totalCount, pathName, decision)
         );
@@ -495,52 +472,6 @@ export default class RemotelySavePlugin extends Plugin {
     this.enableAutoClearSyncPlanHist();
 
     this.syncStatus = "idle";
-
-    this.registerEvent(
-      this.app.vault.on("delete", async (fileOrFolder) => {
-        await insertDeleteRecordByVault(
-          this.db,
-          fileOrFolder,
-          this.vaultRandomID
-        );
-      })
-    );
-
-    this.registerEvent(
-      this.app.vault.on("rename", async (fileOrFolder, oldPath) => {
-        await insertRenameRecordByVault(
-          this.db,
-          fileOrFolder,
-          oldPath,
-          this.vaultRandomID
-        );
-      })
-    );
-
-    function getMethods(obj: any) {
-      var result = [];
-      for (var id in obj) {
-        try {
-          if (typeof obj[id] == "function") {
-            result.push(id + ": " + obj[id].toString());
-          }
-        } catch (err) {
-          result.push(id + ": inaccessible");
-        }
-      }
-      return result.join("\n");
-    }
-    this.registerEvent(
-      this.app.vault.on("raw" as any, async (fileOrFolder) => {
-        // special track on .obsidian folder
-        const name = `${fileOrFolder}`;
-        if (name.startsWith(this.app.vault.configDir)) {
-          if (!(await this.app.vault.adapter.exists(name))) {
-            await insertDeleteRecordByVault(this.db, name, this.vaultRandomID);
-          }
-        }
-      })
-    );
 
     this.registerObsidianProtocolHandler(COMMAND_URI, async (inputParams) => {
       const parsed = importQrCodeUri(inputParams, this.app.vault.getName());
@@ -814,9 +745,9 @@ export default class RemotelySavePlugin extends Plugin {
     //   log.info("click", evt);
     // });
 
-    if (!this.settings.agreeToUploadExtraMetadata) {
-      const syncAlgoV2Modal = new SyncAlgoV2Modal(this.app, this);
-      syncAlgoV2Modal.open();
+    if (!this.settings.agreeToUseSyncV3) {
+      const syncAlgoV3Modal = new SyncAlgoV3Modal(this.app, this);
+      syncAlgoV3Modal.open();
     } else {
       this.enableAutoSyncIfSet();
       this.enableInitSyncIfSet();
@@ -829,9 +760,6 @@ export default class RemotelySavePlugin extends Plugin {
       this.vaultRandomID,
       this.manifest.version
     );
-    if (compareVersion(REMOTELY_SAVE_VERSION_2024PREPARE, oldVersion) >= 0) {
-      new Notice(t("official_notice_2024_first_party"), 10 * 1000);
-    }
   }
 
   async onunload() {
@@ -916,6 +844,10 @@ export default class RemotelySavePlugin extends Plugin {
 
     if (requireApiVersion(API_VER_ENSURE_REQURL_OK)) {
       this.settings.s3.bypassCorsLocally = true; // deprecated as of 20240113
+    }
+
+    if (this.settings.agreeToUseSyncV3 === undefined) {
+      this.settings.agreeToUseSyncV3 = false;
     }
 
     await this.saveSettings();
