@@ -26,7 +26,7 @@ import {
   clearAllSyncMetaMapping,
   clearAllSyncPlanRecords,
   destroyDBs,
-  upsertLastSuccessSyncByVault,
+  upsertLastSuccessSyncTimeByVault,
 } from "./localdb";
 import type RemotelySavePlugin from "./main"; // unavoidable
 import { RemoteClient } from "./remote";
@@ -1866,7 +1866,7 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
           button.setButtonText(t("settings_resetstatusbar_button"));
           button.onClick(async () => {
             // reset last sync time
-            await upsertLastSuccessSyncByVault(
+            await upsertLastSuccessSyncTimeByVault(
               this.plugin.db,
               this.plugin.vaultRandomID,
               -1

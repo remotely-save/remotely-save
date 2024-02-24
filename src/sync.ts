@@ -39,6 +39,18 @@ import {
   upsertPrevSyncRecordByVault,
 } from "./localdb";
 
+export type SyncStatusType =
+  | "idle"
+  | "preparing"
+  | "getting_remote_files_list"
+  | "getting_local_meta"
+  | "getting_local_prev_sync"
+  | "checking_password"
+  | "generating_plan"
+  | "syncing"
+  | "cleaning"
+  | "finish";
+
 export interface PasswordCheckType {
   ok: boolean;
   reason:
@@ -286,7 +298,9 @@ const encryptLocalEntityInplace = async (
   return local;
 };
 
-const ensembleMixedEnties = async (
+export type SyncPlanType = Record<string, MixedEntity>;
+
+export const ensembleMixedEnties = async (
   localEntityList: Entity[],
   prevSyncEntityList: Entity[],
   remoteEntityList: Entity[],
@@ -296,8 +310,8 @@ const ensembleMixedEnties = async (
   syncUnderscoreItems: boolean,
   ignorePaths: string[],
   password: string
-): Promise<Record<string, MixedEntity>> => {
-  const finalMappings: Record<string, MixedEntity> = {};
+): Promise<SyncPlanType> => {
+  const finalMappings: SyncPlanType = {};
 
   // remote has to be first
   for (const remote of remoteEntityList) {
@@ -863,7 +877,7 @@ const dispatchOperationToActualV3 = async (
   }
 };
 
-export const doActualSyncV3 = async (
+export const doActualSync = async (
   mixedEntityMappings: Record<string, MixedEntity>,
   client: RemoteClient,
   vaultRandomID: string,

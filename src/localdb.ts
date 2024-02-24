@@ -329,16 +329,18 @@ export const clearAllSyncMetaMapping = async (db: InternalDBs) => {
 export const insertSyncPlanRecordByVault = async (
   db: InternalDBs,
   syncPlan: SyncPlanType,
-  vaultRandomID: string
+  vaultRandomID: string,
+  remoteType: SUPPORTED_SERVICES_TYPE
 ) => {
+  const now = Date.now();
   const record = {
-    ts: syncPlan.ts,
-    tsFmt: syncPlan.tsFmt,
+    ts: now,
+    tsFmt: unixTimeToStr(now),
     vaultRandomID: vaultRandomID,
-    remoteType: syncPlan.remoteType,
+    remoteType: remoteType,
     syncPlan: JSON.stringify(syncPlan /* directly stringify */, null, 2),
   } as SyncPlanRecord;
-  await db.syncPlansTbl.setItem(`${vaultRandomID}\t${syncPlan.ts}`, record);
+  await db.syncPlansTbl.setItem(`${vaultRandomID}\t${now}`, record);
 };
 
 export const clearAllSyncPlanRecords = async (db: InternalDBs) => {
@@ -406,6 +408,23 @@ export const clearExpiredSyncPlanRecords = async (db: InternalDBs) => {
   await Promise.all(ps);
 };
 
+export const getAllPrevSyncRecordsByVault = async (
+  db: InternalDBs,
+  vaultRandomID: string
+) => {
+  const keys = await db.prevSyncRecordsTbl.keys();
+  const res: Entity[] = [];
+  for (const key of keys) {
+    if (key.startsWith(`${vaultRandomID}\t`)) {
+      const val: Entity | null = await db.prevSyncRecordsTbl.getItem(key);
+      if (val !== null) {
+        res.push(val);
+      }
+    }
+  }
+  return res;
+};
+
 export const upsertPrevSyncRecordByVault = async (
   db: InternalDBs,
   vaultRandomID: string,
@@ -442,7 +461,7 @@ export const clearAllLoggerOutputRecords = async (db: InternalDBs) => {
   log.debug(`successfully clearAllLoggerOutputRecords`);
 };
 
-export const upsertLastSuccessSyncByVault = async (
+export const upsertLastSuccessSyncTimeByVault = async (
   db: InternalDBs,
   vaultRandomID: string,
   millis: number
@@ -453,7 +472,7 @@ export const upsertLastSuccessSyncByVault = async (
   );
 };
 
-export const getLastSuccessSyncByVault = async (
+export const getLastSuccessSyncTimeByVault = async (
   db: InternalDBs,
   vaultRandomID: string
 ) => {

@@ -104,6 +104,8 @@ export interface RemotelySavePluginSettings {
   ignorePaths?: string[];
   enableStatusBarInfo?: boolean;
   deleteToWhere?: "system" | "obsidian";
+  conflictAction?: ConflictActionType;
+  howToCleanEmptyFolder?: EmptyFolderCleanType;
 
   /**
    * @deprecated

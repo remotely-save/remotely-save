@@ -7,8 +7,6 @@ import {
   setIcon,
   FileSystemAdapter,
   Platform,
-  TFile,
-  TFolder,
   requestUrl,
   requireApiVersion,
 } from "obsidian";
@@ -23,7 +21,6 @@ import {
   COMMAND_CALLBACK_ONEDRIVE,
   COMMAND_CALLBACK_DROPBOX,
   COMMAND_URI,
-  REMOTELY_SAVE_VERSION_2024PREPARE,
   API_VER_ENSURE_REQURL_OK,
 } from "./baseTypes";
 import { importQrCodeUri } from "./importExport";
@@ -32,10 +29,11 @@ import {
   prepareDBs,
   InternalDBs,
   clearExpiredSyncPlanRecords,
-  upsertLastSuccessSyncByVault,
-  getLastSuccessSyncByVault,
   upsertPluginVersionByVault,
   clearAllLoggerOutputRecords,
+  upsertLastSuccessSyncTimeByVault,
+  getLastSuccessSyncTimeByVault,
+  getAllPrevSyncRecordsByVault,
 } from "./localdb";
 import { RemoteClient } from "./remote";
 import {
@@ -53,20 +51,22 @@ import {
 import { DEFAULT_S3_CONFIG } from "./remoteForS3";
 import { DEFAULT_WEBDAV_CONFIG } from "./remoteForWebdav";
 import { RemotelySaveSettingTab } from "./settings";
-import { parseRemoteItems, SyncStatusType } from "./sync";
-import { doActualSync, getSyncPlan, isPasswordOk } from "./sync";
+import {
+  doActualSync,
+  ensembleMixedEnties,
+  getSyncPlanInplace,
+  isPasswordOk,
+  SyncStatusType,
+} from "./sync";
 import { messyConfigToNormal, normalConfigToMessy } from "./configPersist";
 import { getLocalEntityList } from "./local";
 import { I18n } from "./i18n";
 import type { LangType, LangTypeAndAuto, TransItemType } from "./i18n";
-
-import { DeletionOnRemote, MetadataOnRemote } from "./metadataOnRemote";
 import { SyncAlgoV3Modal } from "./syncAlgoV3Notice";
 
 import { applyLogWriterInplace, log } from "./moreOnLog";
 import AggregateError from "aggregate-error";
 import { exportVaultSyncPlansToFiles } from "./debugMode";
-import { SizesConflictModal } from "./syncSizesConflictNotice";
 import { compareVersion } from "./misc";
 
 const DEFAULT_SETTINGS: RemotelySavePluginSettings = {
@@ -91,6 +91,9 @@ const DEFAULT_SETTINGS: RemotelySavePluginSettings = {
   ignorePaths: [],
   enableStatusBarInfo: true,
   deleteToWhere: "system",
+  agreeToUseSyncV3: false,
+  conflictAction: "keep_newer",
+  howToCleanEmptyFolder: "skip",
 };
 
 interface OAuth2Info {
@@ -259,33 +262,26 @@ export default class RemotelySavePlugin extends Plugin {
       } else {
         getNotice(t("syncrun_step4"));
       }
-      this.syncStatus = "getting_remote_extra_meta";
-      const { remoteStates, metadataFile } = await parseRemoteItems(
-        remoteEntityList,
-        this.db,
-        this.vaultRandomID,
-        client.serviceType,
-        this.settings.password
+      this.syncStatus = "getting_local_meta";
+      const localEntityList = await getLocalEntityList(
+        this.app.vault,
+        this.settings.syncConfigDir ?? false,
+        this.app.vault.configDir,
+        this.manifest.id
       );
+      // log.info(localEntityList);
 
       if (this.settings.currLogLevel === "info") {
         // pass
       } else {
         getNotice(t("syncrun_step5"));
       }
-      this.syncStatus = "getting_local_meta";
-      const local = this.app.vault.getAllLoadedFiles();
-      let localConfigDirContents: ObsConfigDirFileType[] | undefined =
-        undefined;
-      if (this.settings.syncConfigDir) {
-        localConfigDirContents = await listFilesInObsFolder(
-          this.app.vault.configDir,
-          this.app.vault,
-          this.manifest.id
-        );
-      }
-      // log.info(local);
-      // log.info(localHistory);
+      this.syncStatus = "getting_local_prev_sync";
+      const prevSyncEntityList = await getAllPrevSyncRecordsByVault(
+        this.db,
+        this.vaultRandomID
+      );
+      // log.info(prevSyncEntityList);
 
       if (this.settings.currLogLevel === "info") {
         // pass
@@ -293,24 +289,29 @@ export default class RemotelySavePlugin extends Plugin {
         getNotice(t("syncrun_step6"));
       }
       this.syncStatus = "generating_plan";
-      const { plan, sortedKeys, deletions, sizesGoWrong } = await getSyncPlan(
-        remoteStates,
-        local,
-        localConfigDirContents,
-        origMetadataOnRemote.deletions,
-        localHistory,
-        client.serviceType,
-        triggerSource,
-        this.app.vault,
+      let mixedEntityMappings = await ensembleMixedEnties(
+        localEntityList,
+        prevSyncEntityList,
+        remoteEntityList,
         this.settings.syncConfigDir ?? false,
         this.app.vault.configDir,
         this.settings.syncUnderscoreItems ?? false,
-        this.settings.skipSizeLargerThan ?? -1,
         this.settings.ignorePaths ?? [],
         this.settings.password
       );
-      log.info(plan.mixedStates); // for debugging
-      await insertSyncPlanRecordByVault(this.db, plan, this.vaultRandomID);
+      mixedEntityMappings = await getSyncPlanInplace(
+        mixedEntityMappings,
+        this.settings.howToCleanEmptyFolder ?? "skip",
+        this.settings.skipSizeLargerThan ?? -1,
+        this.settings.conflictAction ?? "keep_newer"
+      );
+      log.info(mixedEntityMappings); // for debugging
+      await insertSyncPlanRecordByVault(
+        this.db,
+        mixedEntityMappings,
+        this.vaultRandomID,
+        client.serviceType
+      );
 
       // The operations above are almost read only and kind of safe.
       // The operations below begins to write or delete (!!!) something.
@@ -322,23 +323,27 @@ export default class RemotelySavePlugin extends Plugin {
           getNotice(t("syncrun_step7"));
         }
         this.syncStatus = "syncing";
-
         await doActualSync(
+          mixedEntityMappings,
           client,
-          this.db,
           this.vaultRandomID,
           this.app.vault,
-          plan,
-          sortedKeys,
-          metadataFile,
-          sizesGoWrong,
-          deletions,
-          (key: string) => self.trash(key),
           this.settings.password,
-          this.settings.concurrency,
-
-          (i: number, totalCount: number, pathName: string, decision: string) =>
-            self.setCurrSyncMsg(i, totalCount, pathName, decision)
+          this.settings.concurrency ?? 5,
+          (key: string) => self.trash(key),
+          (
+            realCounter: number,
+            realTotalCount: number,
+            pathName: string,
+            decision: string
+          ) =>
+            self.setCurrSyncMsg(
+              realCounter,
+              realTotalCount,
+              pathName,
+              decision
+            ),
+          this.db
         );
       } else {
         this.syncStatus = "syncing";
@@ -359,7 +364,7 @@ export default class RemotelySavePlugin extends Plugin {
       this.syncStatus = "idle";
 
       const lastSuccessSyncMillis = Date.now();
-      await upsertLastSuccessSyncByVault(
+      await upsertLastSuccessSyncTimeByVault(
         this.db,
         this.vaultRandomID,
         lastSuccessSyncMillis
@@ -695,13 +700,13 @@ export default class RemotelySavePlugin extends Plugin {
       this.statusBarElement.setAttribute("data-tooltip-position", "top");
 
       this.updateLastSuccessSyncMsg(
-        await getLastSuccessSyncByVault(this.db, this.vaultRandomID)
+        await getLastSuccessSyncTimeByVault(this.db, this.vaultRandomID)
       );
       // update statusbar text every 30 seconds
       this.registerInterval(
         window.setInterval(async () => {
           this.updateLastSuccessSyncMsg(
-            await getLastSuccessSyncByVault(this.db, this.vaultRandomID)
+            await getLastSuccessSyncTimeByVault(this.db, this.vaultRandomID)
           );
         }, 1000 * 30)
       );
@@ -848,6 +853,12 @@ export default class RemotelySavePlugin extends Plugin {
 
     if (this.settings.agreeToUseSyncV3 === undefined) {
       this.settings.agreeToUseSyncV3 = false;
+    }
+    if (this.settings.conflictAction === undefined) {
+      this.settings.conflictAction = "keep_newer";
+    }
+    if (this.settings.howToCleanEmptyFolder === undefined) {
+      this.settings.howToCleanEmptyFolder = "skip";
     }
 
     await this.saveSettings();

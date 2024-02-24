@@ -4,7 +4,7 @@ import type { Entity, MixedEntity } from "./baseTypes";
 import { Queue } from "@fyears/tsqueue";
 import chunk from "lodash/chunk";
 import flatten from "lodash/flatten";
-import { statFix, isFolderToSkip } from "./misc";
+import { statFix, isSpecialFolderNameToSkip } from "./misc";
 
 const isPluginDirItself = (x: string, pluginId: string) => {
   return (
@@ -96,7 +96,9 @@ export const listFilesInObsFolder = async (
         const isInsideSelfPlugin = isPluginDirItself(iter.itself.key, pluginId);
         if (iter.children !== undefined) {
           for (const iter2 of iter.children.folders) {
-            if (isFolderToSkip(iter2, ["workspace", "workspace.json"])) {
+            if (
+              isSpecialFolderNameToSkip(iter2, ["workspace", "workspace.json"])
+            ) {
               continue;
             }
             if (isInsideSelfPlugin && !isLikelyPluginSubFiles(iter2)) {
@@ -106,7 +108,9 @@ export const listFilesInObsFolder = async (
             q.push(iter2);
           }
           for (const iter2 of iter.children.files) {
-            if (isFolderToSkip(iter2, ["workspace", "workspace.json"])) {
+            if (
+              isSpecialFolderNameToSkip(iter2, ["workspace", "workspace.json"])
+            ) {
               continue;
             }
             if (isInsideSelfPlugin && !isLikelyPluginSubFiles(iter2)) {
