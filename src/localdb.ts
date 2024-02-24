@@ -412,7 +412,9 @@ export const getAllPrevSyncRecordsByVault = async (
   db: InternalDBs,
   vaultRandomID: string
 ) => {
+  // log.debug('inside getAllPrevSyncRecordsByVault')
   const keys = await db.prevSyncRecordsTbl.keys();
+  // log.debug(`inside getAllPrevSyncRecordsByVault, keys=${keys}`)
   const res: Entity[] = [];
   for (const key of keys) {
     if (key.startsWith(`${vaultRandomID}\t`)) {
@@ -431,7 +433,7 @@ export const upsertPrevSyncRecordByVault = async (
   prevSync: Entity
 ) => {
   await db.prevSyncRecordsTbl.setItem(
-    `${vaultRandomID}-${prevSync.key}`,
+    `${vaultRandomID}\t${prevSync.key}`,
     prevSync
   );
 };
@@ -441,7 +443,7 @@ export const clearPrevSyncRecordByVault = async (
   vaultRandomID: string,
   key: string
 ) => {
-  await db.prevSyncRecordsTbl.removeItem(`${vaultRandomID}-${key}`);
+  await db.prevSyncRecordsTbl.removeItem(`${vaultRandomID}\t${key}`);
 };
 
 export const clearAllPrevSyncRecordByVault = async (

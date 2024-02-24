@@ -226,7 +226,9 @@ const fromS3ObjectToEntity = (
   mtimeRecords: Record<string, number>,
   ctimeRecords: Record<string, number>
 ) => {
-  const mtimeSvr = x.LastModified!.valueOf();
+  // log.debug(`fromS3ObjectToEntity: ${x.Key!}, ${JSON.stringify(x,null,2)}`);
+  // S3 officially only supports seconds precision!!!!!
+  const mtimeSvr = Math.floor(x.LastModified!.valueOf() / 1000.0) * 1000;
   let mtimeCli = mtimeSvr;
   if (x.Key! in mtimeRecords) {
     const m2 = mtimeRecords[x.Key!];
@@ -250,12 +252,13 @@ const fromS3ObjectToEntity = (
 const fromS3HeadObjectToEntity = (
   fileOrFolderPathWithRemotePrefix: string,
   x: HeadObjectCommandOutput,
-  remotePrefix: string,
-  useAccurateMTime: boolean
+  remotePrefix: string
 ) => {
-  const mtimeSvr = x.LastModified!.valueOf();
+  // log.debug(`fromS3HeadObjectToEntity: ${fileOrFolderPathWithRemotePrefix}: ${JSON.stringify(x,null,2)}`);
+  // S3 officially only supports seconds precision!!!!!
+  const mtimeSvr = Math.floor(x.LastModified!.valueOf() / 1000.0) * 1000;
   let mtimeCli = mtimeSvr;
-  if (useAccurateMTime && x.Metadata !== undefined) {
+  if (x.Metadata !== undefined) {
     const m2 = Math.round(
       parseFloat(x.Metadata.mtime || x.Metadata.MTime || "0")
     );
@@ -338,8 +341,7 @@ export const getRemoteMeta = async (
   return fromS3HeadObjectToEntity(
     fileOrFolderPathWithRemotePrefix,
     res,
-    s3Config.remotePrefix ?? "",
-    s3Config.useAccurateMTime ?? false
+    s3Config.remotePrefix ?? ""
   );
 };
 
@@ -356,6 +358,7 @@ export const uploadToRemote = async (
   rawContentMTime: number = 0,
   rawContentCTime: number = 0
 ) => {
+  log.debug(`uploading ${fileOrFolderPath}`);
   let uploadFile = fileOrFolderPath;
   if (password !== "") {
     uploadFile = remoteEncryptedKey;
@@ -390,7 +393,8 @@ export const uploadToRemote = async (
         },
       })
     );
-    return await getRemoteMeta(s3Client, s3Config, uploadFile);
+    const res = await getRemoteMeta(s3Client, s3Config, uploadFile);
+    return res;
   } else {
     // file
     // we ignore isRecursively parameter here
@@ -454,7 +458,11 @@ export const uploadToRemote = async (
     });
     await upload.done();
 
-    return await getRemoteMeta(s3Client, s3Config, uploadFile);
+    const res = await getRemoteMeta(s3Client, s3Config, uploadFile);
+    log.debug(
+      `uploaded ${uploadFile} with res=${JSON.stringify(res, null, 2)}`
+    );
+    return res;
   }
 };
 

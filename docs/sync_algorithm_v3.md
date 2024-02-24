@@ -43,9 +43,9 @@ Later runs, use the first, second, third sources **only**.
 
 Table modified based on synclone and rsinc. The number inside the table cell is the decision branch in the code.
 
-| local\remote    | remote unchanged   | remote modified  | remote deleted     | remote created   |
-| --------------- | ------------------ | ---------------- | ------------------ | ---------------- |
-| local unchanged | (02) do nothing    | (09) pull remote | (07) delete local  | (??) conflict    |
-| local modified  | (10) push local    | (12) conflict    | (08) push local    | (??) conflict    |
-| local deleted   | (04) delete remote | (05) pull        | (01) clean history | (03) pull remote |
-| local created   | (??) conflict      | (??) conflict    | (06) push local    | (11) conflict    |
+| local\remote    | remote unchanged   | remote modified           | remote deleted     | remote created            |
+| --------------- | ------------------ | ------------------------- | ------------------ | ------------------------- |
+| local unchanged | (02/21) do nothing | (09) pull remote          | (07) delete local  | (??) conflict             |
+| local modified  | (10) push local    | (16/17/18/19/20) conflict | (08) push local    | (??) conflict             |
+| local deleted   | (04) delete remote | (05) pull                 | (01) clean history | (03) pull remote          |
+| local created   | (??) conflict      | (??) conflict             | (06) push local    | (11/12/13/14/15) conflict |

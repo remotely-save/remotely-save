@@ -19,10 +19,10 @@ export const getLocalEntityList = async (
       // ignore
       continue;
     } else if (entry instanceof TFile) {
-      let mtimeLocal: number | undefined = Math.max(
-        entry.stat.mtime ?? 0,
-        entry.stat.ctime
-      );
+      let mtimeLocal: number | undefined = entry.stat.mtime;
+      if (mtimeLocal <= 0) {
+        mtimeLocal = entry.stat.ctime;
+      }
       if (mtimeLocal === 0) {
         mtimeLocal = undefined;
       }

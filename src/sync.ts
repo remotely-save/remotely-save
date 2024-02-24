@@ -274,9 +274,15 @@ const encryptLocalEntityInplace = async (
   remoteKeyEnc: string | undefined
 ) => {
   if (password == undefined || password === "") {
+    local.sizeEnc = local.size!; // if no enc, the remote file has the same size
+    local.keyEnc = local.key;
     return local;
   }
+
+  // below is for having password
+
   if (local.size === local.sizeEnc) {
+    // size not transformed yet, we need to compute sizeEnc
     local.sizeEnc = getSizeFromOrigToEnc(local.size);
   }
   if (local.key === local.keyEnc) {
@@ -438,11 +444,14 @@ export const getSyncPlanInplace = async (
     const mixedEntry = mixedEntityMappings[key];
     const { local, prevSync, remote } = mixedEntry;
 
+    // log.debug(`getSyncPlanInplace: key=${key}`)
+
     if (key.endsWith("/")) {
       // folder
       // folder doesn't worry about mtime and size, only check their existences
       if (keptFolder.has(key)) {
         // parent should also be kept
+        // log.debug(`${key} in keptFolder`)
         keptFolder.add(getParentFolder(key));
         // should fill the missing part
         if (local !== undefined && remote !== undefined) {
@@ -494,7 +503,7 @@ export const getSyncPlanInplace = async (
           // Look for past files of A or B.
 
           const localEqualPrevSync =
-            prevSync?.mtimeSvr === local.mtimeCli &&
+            prevSync?.mtimeCli === local.mtimeCli &&
             prevSync?.sizeEnc === local.sizeEnc;
           const remoteEqualPrevSync =
             (prevSync?.mtimeSvr === remote.mtimeCli ||
@@ -595,12 +604,12 @@ export const getSyncPlanInplace = async (
               }
             }
           } else {
-            // Both compare true -- This is VERY odd and should not happen
-            throw Error(
-              `should not reach branch -2 while getting sync plan: ${JSON.stringify(
-                mixedEntry
-              )}`
-            );
+            // Both compare true.
+            // This is likely because of the mtimeCli and mtimeSvr tricks.
+            // The result should be equal!!!
+            mixedEntry.decisionBranch = 21;
+            mixedEntry.decision = "equal";
+            keptFolder.add(getParentFolder(key));
           }
         }
       } else if (local === undefined && remote !== undefined) {
@@ -657,7 +666,8 @@ export const getSyncPlanInplace = async (
             );
           }
         } else if (
-          prevSync.mtimeSvr === local.mtimeCli &&
+          (prevSync.mtimeSvr === local.mtimeCli ||
+            prevSync.mtimeCli === local.mtimeCli) &&
           prevSync.sizeEnc === local.sizeEnc
         ) {
           // if A is in the previous list and UNMODIFIED, A has been deleted by B
@@ -707,9 +717,10 @@ export const getSyncPlanInplace = async (
 const splitThreeStepsOnEntityMappings = (
   mixedEntityMappings: Record<string, MixedEntity>
 ) => {
-  const folderCreationOps: MixedEntity[][] = [];
-  const deletionOps: MixedEntity[][] = [];
-  const uploadDownloads: MixedEntity[][] = [];
+  type StepArrayType = MixedEntity[] | undefined | null;
+  const folderCreationOps: StepArrayType[] = [];
+  const deletionOps: StepArrayType[] = [];
+  const uploadDownloads: StepArrayType[] = [];
 
   // from long(deep) to short(shadow)
   const sortedKeys = Object.keys(mixedEntityMappings).sort(
@@ -736,10 +747,11 @@ const splitThreeStepsOnEntityMappings = (
       log.debug(`splitting folder: key=${key},val=${JSON.stringify(val)}`);
       const level = atWhichLevel(key);
       log.debug(`atWhichLevel: ${level}`);
-      if (folderCreationOps[level - 1] === undefined) {
+      const k = folderCreationOps[level - 1];
+      if (k === undefined || k === null) {
         folderCreationOps[level - 1] = [val];
       } else {
-        folderCreationOps[level - 1].push(val);
+        k.push(val);
       }
       realTotalCount += 1;
     } else if (
@@ -749,10 +761,11 @@ const splitThreeStepsOnEntityMappings = (
       val.decision === "folder_to_be_deleted"
     ) {
       const level = atWhichLevel(key);
-      if (deletionOps[level - 1] === undefined) {
+      const k = deletionOps[level - 1];
+      if (k === undefined || k === null) {
         deletionOps[level - 1] = [val];
       } else {
-        deletionOps[level - 1].push(val);
+        k.push(val);
       }
       realTotalCount += 1;
     } else if (
@@ -767,10 +780,14 @@ const splitThreeStepsOnEntityMappings = (
       val.decision === "conflict_modified_keep_remote" ||
       val.decision === "conflict_modified_keep_both"
     ) {
-      if (uploadDownloads.length === 0) {
+      if (
+        uploadDownloads.length === 0 ||
+        uploadDownloads[0] === undefined ||
+        uploadDownloads[0] === null
+      ) {
         uploadDownloads[0] = [val];
       } else {
-        uploadDownloads[0].push(val); // only one level needed here
+        uploadDownloads[0].push(val); // only one level is needed here
       }
       realTotalCount += 1;
     } else {
@@ -801,6 +818,13 @@ const dispatchOperationToActualV3 = async (
   localDeleteFunc: any,
   password: string
 ) => {
+  log.debug(
+    `inside dispatchOperationToActualV3, key=${key}, r=${JSON.stringify(
+      r,
+      null,
+      2
+    )}`
+  );
   if (r.decision === "only_history") {
     clearPrevSyncRecordByVault(db, vaultRandomID, key);
   } else if (
@@ -852,10 +876,12 @@ const dispatchOperationToActualV3 = async (
     );
     await upsertPrevSyncRecordByVault(db, vaultRandomID, r.remote!);
   } else if (r.decision === "deleted_local") {
-    await localDeleteFunc(r.key);
+    // local is deleted, we need to delete remote now
+    await client.deleteFromRemote(r.key, password, r.remote!.keyEnc);
     await clearPrevSyncRecordByVault(db, vaultRandomID, r.key);
   } else if (r.decision === "deleted_remote") {
-    await client.deleteFromRemote(r.key, password, r.remote!.keyEnc);
+    // remote is deleted, we need to delete local now
+    await localDeleteFunc(r.key);
     await clearPrevSyncRecordByVault(db, vaultRandomID, r.key);
   } else if (
     r.decision === "conflict_created_keep_both" ||
@@ -902,7 +928,7 @@ export const doActualSync = async (
 
   const nested = [folderCreationOps, deletionOps, uploadDownloads];
   const logTexts = [
-    `1. create all folders from shadowest to deepest, also check undefined decision`,
+    `1. create all folders from shadowest to deepest`,
     `2. delete files and folders from deepest to shadowest`,
     `3. upload or download files in parallel, with the desired concurrency=${concurrency}`,
   ];
@@ -912,9 +938,14 @@ export const doActualSync = async (
     log.debug(logTexts[i]);
 
     const operations = nested[i];
+    log.debug(`curr operations=${JSON.stringify(operations, null, 2)}`);
 
     for (let j = 0; j < operations.length; ++j) {
       const singleLevelOps = operations[j];
+      log.debug(`singleLevelOps=${singleLevelOps}`);
+      if (singleLevelOps === undefined || singleLevelOps === null) {
+        continue;
+      }
 
       const queue = new PQueue({ concurrency: concurrency, autoStart: true });
       const potentialErrors: Error[] = [];
