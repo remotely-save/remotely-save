@@ -28,7 +28,7 @@ import * as path from "path";
 import AggregateError from "aggregate-error";
 import {
   DEFAULT_CONTENT_TYPE,
-  RemoteItem,
+  Entity,
   S3Config,
   VALID_REQURL,
 } from "./baseTypes";
@@ -220,51 +220,56 @@ const getLocalNoPrefixPath = (
   return fileOrFolderPathWithRemotePrefix.slice(`${remotePrefix}`.length);
 };
 
-const fromS3ObjectToRemoteItem = (
+const fromS3ObjectToEntity = (
   x: S3ObjectType,
   remotePrefix: string,
   mtimeRecords: Record<string, number>,
   ctimeRecords: Record<string, number>
 ) => {
-  let mtime = x.LastModified!.valueOf();
+  const mtimeSvr = x.LastModified!.valueOf();
+  let mtimeCli = mtimeSvr;
   if (x.Key! in mtimeRecords) {
     const m2 = mtimeRecords[x.Key!];
     if (m2 !== 0) {
-      mtime = m2;
+      mtimeCli = m2;
     }
   }
-  const r: RemoteItem = {
-    key: getLocalNoPrefixPath(x.Key!, remotePrefix),
-    lastModified: mtime,
+  const key = getLocalNoPrefixPath(x.Key!, remotePrefix);
+  const r: Entity = {
+    key: key,
+    keyEnc: key,
+    mtimeSvr: mtimeSvr,
+    mtimeCli: mtimeCli,
     size: x.Size!,
-    remoteType: "s3",
+    sizeEnc: x.Size!,
     etag: x.ETag,
   };
   return r;
 };
 
-const fromS3HeadObjectToRemoteItem = (
+const fromS3HeadObjectToEntity = (
   fileOrFolderPathWithRemotePrefix: string,
   x: HeadObjectCommandOutput,
   remotePrefix: string,
   useAccurateMTime: boolean
 ) => {
-  let mtime = x.LastModified!.valueOf();
+  const mtimeSvr = x.LastModified!.valueOf();
+  let mtimeCli = mtimeSvr;
   if (useAccurateMTime && x.Metadata !== undefined) {
     const m2 = Math.round(
       parseFloat(x.Metadata.mtime || x.Metadata.MTime || "0")
     );
     if (m2 !== 0) {
-      mtime = m2;
+      mtimeCli = m2;
     }
   }
   return {
     key: getLocalNoPrefixPath(fileOrFolderPathWithRemotePrefix, remotePrefix),
-    lastModified: mtime,
+    mtimeSvr: mtimeSvr,
+    mtimeCli: mtimeCli,
     size: x.ContentLength,
-    remoteType: "s3",
     etag: x.ETag,
-  } as RemoteItem;
+  } as Entity;
 };
 
 export const getS3Client = (s3Config: S3Config) => {
@@ -330,7 +335,7 @@ export const getRemoteMeta = async (
     })
   );
 
-  return fromS3HeadObjectToRemoteItem(
+  return fromS3HeadObjectToEntity(
     fileOrFolderPathWithRemotePrefix,
     res,
     s3Config.remotePrefix ?? "",
@@ -538,16 +543,14 @@ const listFromRemoteRaw = async (
   // ensemble fake rsp
   // in the end, we need to transform the response list
   // back to the local contents-alike list
-  return {
-    Contents: contents.map((x) =>
-      fromS3ObjectToRemoteItem(
-        x,
-        s3Config.remotePrefix ?? "",
-        mtimeRecords,
-        ctimeRecords
-      )
-    ),
-  };
+  return contents.map((x) =>
+    fromS3ObjectToEntity(
+      x,
+      s3Config.remotePrefix ?? "",
+      mtimeRecords,
+      ctimeRecords
+    )
+  );
 };
 
 export const listAllFromRemote = async (
@@ -692,7 +695,7 @@ export const deleteFromRemote = async (
 
   if (fileOrFolderPath.endsWith("/") && password === "") {
     const x = await listFromRemoteRaw(s3Client, s3Config, remoteFileName);
-    x.Contents.forEach(async (element) => {
+    x.forEach(async (element) => {
       await s3Client.send(
         new DeleteObjectCommand({
           Bucket: s3Config.s3BucketName,

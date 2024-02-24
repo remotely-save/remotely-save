@@ -6,7 +6,7 @@ An absolutely better sync algorithm. Better for tracking deletions and better fo
 
 ## Huge Thanks
 
-Basically a combination of algorithm v2 + [synclone](https://github.com/Jwink3101/syncrclone) + [rsinc](https://github.com/ConorWilliams/rsinc) + (some of rclone [bisync](https://rclone.org/bisync/)). All of the later three are released under MIT License so no worries about the licenses.
+Basically a combination of algorithm v2 + [synclone](https://github.com/Jwink3101/syncrclone/blob/master/docs/algorithm.md) + [rsinc](https://github.com/ConorWilliams/rsinc) + (some of rclone [bisync](https://rclone.org/bisync/)). All of the later three are released under MIT License so no worries about the licenses.
 
 ## Features
 
@@ -27,12 +27,25 @@ Nice to have
 
 ## Description
 
-We have _five_ input sources: local all files, remote all files, _local previous succeeded sync history_, local deletions, remote deletions.
+We have _five_ input sources:
 
-Init run, consuming local deletions and remote deletions :
+1. local all files
+2. remote all files
+3. _local previous succeeded sync history_
+4. local deletions
+5. remote deletions.
+
+Init run, consuming remote deletions :
 
 TBD
 
 Later runs, use the first, second, third sources **only**.
 
-TBD
+Table modified based on synclone and rsinc. The number inside the table cell is the decision branch in the code.
+
+| local\remote    | remote unchanged   | remote modified  | remote deleted     | remote created   |
+| --------------- | ------------------ | ---------------- | ------------------ | ---------------- |
+| local unchanged | (02) do nothing    | (09) pull remote | (07) delete local  | (??) conflict    |
+| local modified  | (10) push local    | (12) conflict    | (08) push local    | (??) conflict    |
+| local deleted   | (04) delete remote | (05) pull        | (01) clean history | (03) pull remote |
+| local created   | (??) conflict      | (??) conflict    | (06) push local    | (11) conflict    |

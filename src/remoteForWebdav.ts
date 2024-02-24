@@ -5,7 +5,7 @@ import { Queue } from "@fyears/tsqueue";
 import chunk from "lodash/chunk";
 import flatten from "lodash/flatten";
 import { getReasonPhrase } from "http-status-codes";
-import { RemoteItem, VALID_REQURL, WebdavConfig } from "./baseTypes";
+import { Entity, VALID_REQURL, WebdavConfig } from "./baseTypes";
 import { decryptArrayBuffer, encryptArrayBuffer } from "./encrypt";
 import { bufferToArrayBuffer, getPathFolder, mkdirpInVault } from "./misc";
 
@@ -205,18 +205,21 @@ const getNormPath = (fileOrFolderPath: string, remoteBaseDir: string) => {
   return fileOrFolderPath.slice(`/${remoteBaseDir}/`.length);
 };
 
-const fromWebdavItemToRemoteItem = (x: FileStat, remoteBaseDir: string) => {
+const fromWebdavItemToEntity = (x: FileStat, remoteBaseDir: string) => {
   let key = getNormPath(x.filename, remoteBaseDir);
   if (x.type === "directory" && !key.endsWith("/")) {
     key = `${key}/`;
   }
+  const mtimeSvr = Date.parse(x.lastmod).valueOf();
   return {
     key: key,
-    lastModified: Date.parse(x.lastmod).valueOf(),
+    keyEnc: key,
+    mtimeSvr: mtimeSvr,
+    mtimeCli: mtimeSvr, // no universal way to set mtime in webdav
     size: x.size,
-    remoteType: "webdav",
-    etag: x.etag || undefined,
-  } as RemoteItem;
+    sizeEnc: x.size,
+    etag: x.etag,
+  } as Entity;
 };
 
 export class WrappedWebdavClient {
@@ -327,7 +330,7 @@ export const getRemoteMeta = async (
     details: false,
   })) as FileStat;
   log.debug(`getRemoteMeta res=${JSON.stringify(res)}`);
-  return fromWebdavItemToRemoteItem(res, client.remoteBaseDir);
+  return fromWebdavItemToEntity(res, client.remoteBaseDir);
 };
 
 export const uploadToRemote = async (
@@ -359,7 +362,7 @@ export const uploadToRemote = async (
     if (password === "") {
       // if not encrypted, mkdir a remote folder
       await client.client.createDirectory(uploadFile, {
-        recursive: false, // the sync algo should guarantee no need to recursive
+        recursive: true,
       });
       const res = await getRemoteMeta(client, uploadFile);
       return res;
@@ -400,7 +403,7 @@ export const uploadToRemote = async (
     // // we need to create folders before uploading
     // const dir = getPathFolder(uploadFile);
     // if (dir !== "/" && dir !== "") {
-    //   await client.client.createDirectory(dir, { recursive: false });
+    //   await client.client.createDirectory(dir, { recursive: true });
     // }
     await client.client.putFileContents(uploadFile, remoteContent, {
       overwrite: true,
@@ -472,11 +475,7 @@ export const listAllFromRemote = async (client: WrappedWebdavClient) => {
       }
     )) as FileStat[];
   }
-  return {
-    Contents: contents.map((x) =>
-      fromWebdavItemToRemoteItem(x, client.remoteBaseDir)
-    ),
-  };
+  return contents.map((x) => fromWebdavItemToEntity(x, client.remoteBaseDir));
 };
 
 const downloadFromRemoteRaw = async (

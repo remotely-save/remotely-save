@@ -5,7 +5,7 @@ import { Vault } from "obsidian";
 import * as path from "path";
 import {
   DropboxConfig,
-  RemoteItem,
+  Entity,
   COMMAND_CALLBACK_DROPBOX,
   OAUTH2_FORCE_EXPIRE_MILLISECONDS,
 } from "./baseTypes";
@@ -69,13 +69,13 @@ const getNormPath = (fileOrFolderPath: string, remoteBaseDir: string) => {
   return fileOrFolderPath.slice(`/${remoteBaseDir}/`.length);
 };
 
-const fromDropboxItemToRemoteItem = (
+const fromDropboxItemToEntity = (
   x:
     | files.FileMetadataReference
     | files.FolderMetadataReference
     | files.DeletedMetadataReference,
   remoteBaseDir: string
-): RemoteItem => {
+): Entity => {
   let key = getNormPath(x.path_display!, remoteBaseDir);
   if (x[".tag"] === "folder" && !key.endsWith("/")) {
     key = `${key}/`;
@@ -84,91 +84,28 @@ const fromDropboxItemToRemoteItem = (
   if (x[".tag"] === "folder") {
     return {
       key: key,
-      lastModified: undefined,
+      keyEnc: key,
       size: 0,
-      remoteType: "dropbox",
+      sizeEnc: 0,
       etag: `${x.id}\t`,
-    } as RemoteItem;
+    } as Entity;
   } else if (x[".tag"] === "file") {
-    let mtime = Date.parse(x.client_modified).valueOf();
-    if (mtime === 0) {
-      mtime = Date.parse(x.server_modified).valueOf();
-    }
+    const mtimeCli = Date.parse(x.client_modified).valueOf();
+    const mtimeSvr = Date.parse(x.server_modified).valueOf();
     return {
       key: key,
-      lastModified: mtime,
+      keyEnc: key,
+      mtimeCli: mtimeCli,
+      mtimeSvr: mtimeSvr,
       size: x.size,
-      remoteType: "dropbox",
+      sizeEnc: x.size,
+      hash: x.content_hash,
       etag: `${x.id}\t${x.content_hash}`,
-    } as RemoteItem;
+    } as Entity;
   } else {
     // x[".tag"] === "deleted"
     throw Error("do not support deleted tag");
   }
-};
-
-/**
- * Dropbox api doesn't return mtime for folders.
- * This is a try to assign mtime by using files in folder.
- * @param allFilesFolders
- * @returns
- */
-const fixLastModifiedTimeInplace = (allFilesFolders: RemoteItem[]) => {
-  if (allFilesFolders.length === 0) {
-    return;
-  }
-
-  // sort by longer to shorter
-  allFilesFolders.sort((a, b) => b.key.length - a.key.length);
-
-  // a "map" from dir to mtime
-  let potentialMTime = {} as Record<string, number>;
-
-  // first sort pass, from buttom to up
-  for (const item of allFilesFolders) {
-    if (item.key.endsWith("/")) {
-      // itself is a folder, and initially doesn't have mtime
-      if (item.lastModified === undefined && item.key in potentialMTime) {
-        // previously we gathered all sub info of this folder
-        item.lastModified = potentialMTime[item.key];
-      }
-    }
-    const parent = `${path.posix.dirname(item.key)}/`;
-    if (item.lastModified !== undefined) {
-      if (parent in potentialMTime) {
-        potentialMTime[parent] = Math.max(
-          potentialMTime[parent],
-          item.lastModified
-        );
-      } else {
-        potentialMTime[parent] = item.lastModified;
-      }
-    }
-  }
-
-  // second pass, from up to buttom.
-  // fill mtime by parent folder or Date.Now() if still not available.
-  // this is only possible if no any sub-folder-files recursively.
-  // we do not sort the array again, just iterate over it by reverse
-  // using good old for loop.
-  for (let i = allFilesFolders.length - 1; i >= 0; --i) {
-    const item = allFilesFolders[i];
-    if (!item.key.endsWith("/")) {
-      continue; // skip files
-    }
-    if (item.lastModified !== undefined) {
-      continue; // don't need to deal with it
-    }
-    const parent = `${path.posix.dirname(item.key)}/`;
-    if (parent in potentialMTime) {
-      item.lastModified = potentialMTime[parent];
-    } else {
-      item.lastModified = Date.now().valueOf();
-      potentialMTime[item.key] = item.lastModified;
-    }
-  }
-
-  return allFilesFolders;
 };
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -498,7 +435,7 @@ export const getRemoteMeta = async (
   //     size: 0,
   //     remoteType: "dropbox",
   //     etag: undefined,
-  //   } as RemoteItem;
+  //   } as Entity;
   // }
 
   const rsp = await retryReq(() =>
@@ -512,7 +449,7 @@ export const getRemoteMeta = async (
   if (rsp.status !== 200) {
     throw Error(JSON.stringify(rsp));
   }
-  return fromDropboxItemToRemoteItem(rsp.result, client.remoteBaseDir);
+  return fromDropboxItemToEntity(rsp.result, client.remoteBaseDir);
 };
 
 export const uploadToRemote = async (
@@ -670,7 +607,7 @@ export const listAllFromRemote = async (client: WrappedDropboxClient) => {
   const unifiedContents = contents
     .filter((x) => x[".tag"] !== "deleted")
     .filter((x) => x.path_display !== `/${client.remoteBaseDir}`)
-    .map((x) => fromDropboxItemToRemoteItem(x, client.remoteBaseDir));
+    .map((x) => fromDropboxItemToEntity(x, client.remoteBaseDir));
 
   while (res.result.has_more) {
     res = await client.dropbox.filesListFolderContinue({
@@ -684,15 +621,11 @@ export const listAllFromRemote = async (client: WrappedDropboxClient) => {
     const unifiedContents2 = contents2
       .filter((x) => x[".tag"] !== "deleted")
       .filter((x) => x.path_display !== `/${client.remoteBaseDir}`)
-      .map((x) => fromDropboxItemToRemoteItem(x, client.remoteBaseDir));
+      .map((x) => fromDropboxItemToEntity(x, client.remoteBaseDir));
     unifiedContents.push(...unifiedContents2);
   }
 
-  fixLastModifiedTimeInplace(unifiedContents);
-
-  return {
-    Contents: unifiedContents,
-  };
+  return unifiedContents;
 };
 
 const downloadFromRemoteRaw = async (

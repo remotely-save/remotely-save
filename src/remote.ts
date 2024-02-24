@@ -1,5 +1,6 @@
 import { Vault } from "obsidian";
 import type {
+  Entity,
   DropboxConfig,
   OnedriveConfig,
   S3Config,
@@ -164,7 +165,7 @@ export class RemoteClient {
     }
   };
 
-  listAllFromRemote = async () => {
+  listAllFromRemote = async (): Promise<Entity[]> => {
     if (this.serviceType === "s3") {
       return await s3.listAllFromRemote(
         s3.getS3Client(this.s3Config!),

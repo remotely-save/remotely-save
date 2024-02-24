@@ -116,14 +116,6 @@ export interface RemotelySavePluginSettings {
   logToDB?: boolean;
 }
 
-export interface RemoteItem {
-  key: string;
-  lastModified?: number;
-  size: number;
-  remoteType: SUPPORTED_SERVICES_TYPE;
-  etag?: string;
-}
-
 export const COMMAND_URI = "remotely-save";
 export const COMMAND_CALLBACK = "remotely-save-cb";
 export const COMMAND_CALLBACK_ONEDRIVE = "remotely-save-cb-onedrive";
@@ -165,6 +157,68 @@ export type DecisionType =
   | DecisionTypeForFileSize
   | DecisionTypeForFolder;
 
+export type EmptyFolderCleanType = "skip" | "clean_both";
+
+export type ConflictActionType = "keep_newer" | "keep_larger" | "rename_both";
+
+export type DecisionTypeForMixedEntity =
+  | "only_history"
+  | "equal"
+  | "modified_local"
+  | "modified_remote"
+  | "created_local"
+  | "created_remote"
+  | "deleted_local"
+  | "deleted_remote"
+  | "conflict_created_keep_local"
+  | "conflict_created_keep_remote"
+  | "conflict_created_keep_both"
+  | "conflict_modified_keep_local"
+  | "conflict_modified_keep_remote"
+  | "conflict_modified_keep_both"
+  | "folder_existed_both"
+  | "folder_existed_local"
+  | "folder_existed_remote"
+  | "folder_to_be_created"
+  | "folder_to_skip"
+  | "folder_to_be_deleted";
+
+/**
+ * uniform representation
+ * everything should be flat and primitive, so that we can copy.
+ */
+export interface Entity {
+  key: string;
+  keyEnc: string;
+  mtimeCli?: number;
+  mtimeCliFmt?: string;
+  mtimeSvr?: number;
+  mtimeSvrFmt?: string;
+  prevSyncTime?: number;
+  prevSyncTimeFmt?: string;
+  size?: number; // might be unknown or to be filled
+  sizeEnc: number;
+  hash?: string;
+  etag?: string;
+}
+
+/**
+ * A replacement of FileOrFolderMixedState
+ */
+export interface MixedEntity {
+  key: string;
+  local?: Entity;
+  prevSync?: Entity;
+  remote?: Entity;
+
+  decisionBranch?: number;
+  decision?: DecisionTypeForMixedEntity;
+  conflictAction?: ConflictActionType;
+}
+
+/**
+ * @deprecated
+ */
 export interface FileOrFolderMixedState {
   key: string;
   existLocal?: boolean;

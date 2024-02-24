@@ -240,8 +240,8 @@ export default class RemotelySavePlugin extends Plugin {
         this.app.vault.getName(),
         () => self.saveSettings()
       );
-      const remoteRsp = await client.listAllFromRemote();
-      // log.debug(remoteRsp);
+      const remoteEntityList = await client.listAllFromRemote();
+      // log.debug(remoteEntityList);
 
       if (this.settings.currLogLevel === "info") {
         // pass
@@ -250,7 +250,7 @@ export default class RemotelySavePlugin extends Plugin {
       }
       this.syncStatus = "checking_password";
       const passwordCheckResult = await isPasswordOk(
-        remoteRsp.Contents,
+        remoteEntityList,
         this.settings.password
       );
       if (!passwordCheckResult.ok) {
@@ -265,7 +265,7 @@ export default class RemotelySavePlugin extends Plugin {
       }
       this.syncStatus = "getting_remote_extra_meta";
       const { remoteStates, metadataFile } = await parseRemoteItems(
-        remoteRsp.Contents,
+        remoteEntityList,
         this.db,
         this.vaultRandomID,
         client.serviceType,

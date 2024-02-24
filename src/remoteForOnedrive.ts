@@ -14,7 +14,7 @@ import {
   DEFAULT_CONTENT_TYPE,
   OAUTH2_FORCE_EXPIRE_MILLISECONDS,
   OnedriveConfig,
-  RemoteItem,
+  Entity,
 } from "./baseTypes";
 import { decryptArrayBuffer, encryptArrayBuffer } from "./encrypt";
 import {
@@ -255,16 +255,13 @@ const getNormPath = (fileOrFolderPath: string, remoteBaseDir: string) => {
   return fileOrFolderPath.slice(`${prefix}/`.length);
 };
 
-const constructFromDriveItemToRemoteItemError = (x: DriveItem) => {
+const constructFromDriveItemToEntityError = (x: DriveItem) => {
   return `parentPath="${
     x.parentReference?.path ?? "(no parentReference or path)"
   }", selfName="${x.name}"`;
 };
 
-const fromDriveItemToRemoteItem = (
-  x: DriveItem,
-  remoteBaseDir: string
-): RemoteItem => {
+const fromDriveItemToEntity = (x: DriveItem, remoteBaseDir: string): Entity => {
   let key = "";
 
   // possible prefix:
@@ -333,14 +330,14 @@ const fromDriveItemToRemoteItem = (
       key = x.name;
     } else {
       throw Error(
-        `we meet file/folder and do not know how to deal with it:\n${constructFromDriveItemToRemoteItemError(
+        `we meet file/folder and do not know how to deal with it:\n${constructFromDriveItemToEntityError(
           x
         )}`
       );
     }
   } else {
     throw Error(
-      `we meet file/folder and do not know how to deal with it:\n${constructFromDriveItemToRemoteItemError(
+      `we meet file/folder and do not know how to deal with it:\n${constructFromDriveItemToEntityError(
         x
       )}`
     );
@@ -350,11 +347,17 @@ const fromDriveItemToRemoteItem = (
   if (isFolder) {
     key = `${key}/`;
   }
+
+  const mtimeSvr = Date.parse(x?.fileSystemInfo!.lastModifiedDateTime!);
+  const mtimeCli = Date.parse(x?.fileSystemInfo!.lastModifiedDateTime!);
   return {
     key: key,
-    lastModified: Date.parse(x!.fileSystemInfo!.lastModifiedDateTime!),
+    keyEnc: key,
+    mtimeSvr: mtimeSvr,
+    mtimeCli: mtimeCli,
     size: isFolder ? 0 : x.size!,
-    remoteType: "onedrive",
+    sizeEnc: isFolder ? 0 : x.size!,
+    // hash: ?? // TODO
     etag: x.cTag || "", // do NOT use x.eTag because it changes if meta changes
   };
 };
@@ -666,14 +669,12 @@ export const listAllFromRemote = async (client: WrappedOnedriveClient) => {
     await client.saveUpdatedConfigFunc();
   }
 
-  // unify everything to RemoteItem
+  // unify everything to Entity
   const unifiedContents = driveItems
-    .map((x) => fromDriveItemToRemoteItem(x, client.remoteBaseDir))
+    .map((x) => fromDriveItemToEntity(x, client.remoteBaseDir))
     .filter((x) => x.key !== "/");
 
-  return {
-    Contents: unifiedContents,
-  };
+  return unifiedContents;
 };
 
 export const getRemoteMeta = async (
@@ -687,7 +688,7 @@ export const getRemoteMeta = async (
   );
   // log.info(rsp);
   const driveItem = rsp as DriveItem;
-  const res = fromDriveItemToRemoteItem(driveItem, client.remoteBaseDir);
+  const res = fromDriveItemToEntity(driveItem, client.remoteBaseDir);
   // log.info(res);
   return res;
 };
