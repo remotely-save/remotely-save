@@ -1080,7 +1080,7 @@ export default class RemotelySavePlugin extends Plugin {
   }
 
   async saveAgreeToUseNewSyncAlgorithm() {
-    this.settings.agreeToUploadExtraMetadata = true;
+    this.settings.agreeToUseSyncV3 = true;
     await this.saveSettings();
   }
 
