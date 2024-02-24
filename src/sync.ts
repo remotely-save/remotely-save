@@ -442,6 +442,8 @@ export const getSyncPlanInplace = async (
       // folder
       // folder doesn't worry about mtime and size, only check their existences
       if (keptFolder.has(key)) {
+        // parent should also be kept
+        keptFolder.add(getParentFolder(key));
         // should fill the missing part
         if (local !== undefined && remote !== undefined) {
           mixedEntry.decisionBranch = 101;
@@ -731,7 +733,9 @@ const splitThreeStepsOnEntityMappings = (
       val.decision === "folder_existed_remote" ||
       val.decision === "folder_to_be_created"
     ) {
+      log.debug(`splitting folder: key=${key},val=${JSON.stringify(val)}`);
       const level = atWhichLevel(key);
+      log.debug(`atWhichLevel: ${level}`);
       if (folderCreationOps[level - 1] === undefined) {
         folderCreationOps[level - 1] = [val];
       } else {
@@ -891,6 +895,11 @@ export const doActualSync = async (
   log.debug(`concurrency === ${concurrency}`);
   const { folderCreationOps, deletionOps, uploadDownloads, realTotalCount } =
     splitThreeStepsOnEntityMappings(mixedEntityMappings);
+  log.debug(`folderCreationOps: ${JSON.stringify(folderCreationOps)}`);
+  log.debug(`deletionOps: ${JSON.stringify(deletionOps)}`);
+  log.debug(`uploadDownloads: ${JSON.stringify(uploadDownloads)}`);
+  log.debug(`realTotalCount: ${JSON.stringify(realTotalCount)}`);
+
   const nested = [folderCreationOps, deletionOps, uploadDownloads];
   const logTexts = [
     `1. create all folders from shadowest to deepest, also check undefined decision`,

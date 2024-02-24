@@ -76,17 +76,16 @@ export const getFolderLevels = (x: string, addEndingSlash: boolean = false) => {
 
 export const mkdirpInVault = async (thePath: string, vault: Vault) => {
   // log.info(thePath);
-
-  // as of 2020219,
-  // Obsidian can create the folder recursively
-  // but the path should not end with '/'
-  if (thePath === "/" || thePath === "") {
-    return;
+  const foldersToBuild = getFolderLevels(thePath);
+  // log.info(foldersToBuild);
+  for (const folder of foldersToBuild) {
+    const r = await vault.adapter.exists(folder);
+    // log.info(r);
+    if (!r) {
+      log.info(`mkdir ${folder}`);
+      await vault.adapter.mkdir(folder);
+    }
   }
-  let thePathNoEnding = thePath.endsWith("/")
-    ? thePath.slice(0, thePath.length - 1)
-    : thePath;
-  await vault.adapter.mkdir(thePathNoEnding);
 };
 
 /**

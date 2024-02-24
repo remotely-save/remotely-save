@@ -50,6 +50,8 @@ export const getLocalEntityList = async (
     } else {
       throw Error(`unexpected ${entry}`);
     }
+
+    local.push(r);
   }
 
   if (syncConfigDir) {
