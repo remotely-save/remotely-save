@@ -3,14 +3,17 @@ import type RemotelySavePlugin from "./main"; // unavoidable
 import type { TransItemType } from "./i18n";
 
 import { log } from "./moreOnLog";
+import { stringToFragment } from "./misc";
 
 export class SyncAlgoV3Modal extends Modal {
   agree: boolean;
+  manualBackup: boolean;
   readonly plugin: RemotelySavePlugin;
   constructor(app: App, plugin: RemotelySavePlugin) {
     super(app);
     this.plugin = plugin;
     this.agree = false;
+    this.manualBackup = false;
   }
   onOpen() {
     let { contentEl } = this;
@@ -27,24 +30,58 @@ export class SyncAlgoV3Modal extends Modal {
       .split("\n")
       .forEach((val) => {
         ul.createEl("li", {
-          text: val,
+          text: stringToFragment(val),
         });
       });
 
-    new Setting(contentEl)
-      .addButton((button) => {
-        button.setButtonText(t("syncalgov3_button_agree"));
-        button.onClick(async () => {
-          this.agree = true;
-          this.close();
-        });
-      })
-      .addButton((button) => {
-        button.setButtonText(t("syncalgov3_button_disagree"));
-        button.onClick(() => {
-          this.close();
-        });
+    // code modified partially from BART released under MIT License
+    contentEl.createDiv("modal-button-container", (buttonContainerEl) => {
+      let agreeBtn: HTMLButtonElement | undefined = undefined;
+      buttonContainerEl.createEl(
+        "label",
+        {
+          cls: "mod-checkbox",
+        },
+        (labelEl) => {
+          const checkboxEl = labelEl.createEl("input", {
+            attr: { tabindex: -1 },
+            type: "checkbox",
+          });
+          checkboxEl.checked = this.manualBackup;
+          checkboxEl.addEventListener("click", () => {
+            this.manualBackup = checkboxEl.checked;
+            if (agreeBtn !== undefined) {
+              if (checkboxEl.checked) {
+                agreeBtn.removeAttribute("disabled");
+              } else {
+                agreeBtn.setAttr("disabled", true);
+              }
+            }
+          });
+          labelEl.appendText(t("syncalgov3_checkbox_manual_backup"));
+        }
+      );
+
+      agreeBtn = buttonContainerEl.createEl("button", {
+        attr: { type: "button" },
+        cls: "mod-cta",
+        text: t("syncalgov3_button_agree"),
       });
+      agreeBtn.setAttr("disabled", true);
+      agreeBtn.addEventListener("click", () => {
+        this.agree = true;
+        this.close();
+      });
+
+      buttonContainerEl
+        .createEl("button", {
+          attr: { type: "submit" },
+          text: t("syncalgov3_button_disagree"),
+        })
+        .addEventListener("click", () => {
+          this.close();
+        });
+    });
   }
 
   onClose() {

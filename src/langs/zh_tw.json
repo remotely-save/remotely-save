@@ -292,8 +292,9 @@
   "settings_resetcache_desc": "（出於除錯原因）重設本地快取和資料庫。您需要在重設之後重新載入此外掛。本重設不會刪除 s3，密碼……等設定。",
   "settings_resetcache_button": "重設",
   "settings_resetcache_notice": "本地同步快取和資料庫已被刪除。請手動重新載入此外掛。",
-  "syncalgov3_title": "Remotely Save 的同步演算法重大最佳化",
-  "syncalgov3_texts": "歡迎使用 Remotely Save!\n從這個版本 0.3.0 開始，它帶來了新的同步演算法\n如果您同意使用，請點選按鈕 \"同意\"，然後開始享用此外掛！且特別要注意：使用外掛之前，請首先備份好您的庫（Vault）！\n如果您不同意此策略，您應該停止使用此版本和之後版本的 Remotely Save。點選 \"不同意\" 之後，外掛會自動停止執行（unload），然後您需要 Obsidian 設定裡手動停用（disable）此外掛。",
+  "syncalgov3_title": "Remotely Save 的同步演算法有重大更新",
+  "syncalgov3_texts": "歡迎使用 Remotely Save！\n從這個版本開始，外掛更新了同步演算法：更穩健的刪除同步、引入衝突處理、避免上傳元資料…… 敬請期待更多更新！詳細介紹請參閱 <a href='https://github.com/remotely-save/remotely-save/tree/master/docs/sync_algorithm/v3/intro.md'>文件網站</a>。\n如果您同意使用新版本和演算法，請勾選“我將會手動備份我的庫（Vault）”，然後點選“同意”按鈕，開始使用外掛吧！\n如果您不同意，請點選“不同意”按鈕，外掛將自動停止執行（unload），然後您需要 Obsidian 設定裡手動停用（disable）此外掛。",
+  "syncalgov3_checkbox_manual_backup": "我將會手動備份我的庫（Vault）",
   "syncalgov3_button_agree": "同意",
   "syncalgov3_button_disagree": "不同意"
 }

@@ -293,7 +293,8 @@
   "settings_resetcache_button": "Reset",
   "settings_resetcache_notice": "Local internal cache/databases deleted. Please manually reload the plugin.",
   "syncalgov3_title": "Remotely Save has HUGE update on sync algorithm",
-  "syncalgov3_texts": "Welcome to use Remotely Save!\nFrom this version, a new algorithm has been developed. If you agree, plase click the button \"Agree\", and enjoy the plugin! AND PLEASE REMEMBER TO BACKUP YOUR VAULT FIRSTLY!\nIf you do not agree, you should stop using the current and later versions of Remotely Save. By clicking the \"Do Not Agree\" button, the plugin will unload itself, and you need to manually disable it in Obsidian settings.",
+  "syncalgov3_texts": "Welcome to use Remotely Save!\nFrom this version, a new algorithm has been developed: More robust deletion sync, basic conflict handling, no more meta data uploaded... Stay tune for more! A full introduction is in the <a href='https://github.com/remotely-save/remotely-save/tree/master/docs/sync_algorithm/v3/intro.md'>doc website</a>.\nIf you agree to use thew new version and algorithm, plase check \"I WILL BACKUP MY VAULT MANUALLY FIRSTLY.\" then click the \"Agree\" button, and enjoy the plugin!\nIf you do not agree, please click the \"Do Not Agree\" button, the plugin will unload itself, and you need to manually disable it in Obsidian settings.",
+  "syncalgov3_checkbox_manual_backup": "I WILL BACKUP MY VAULT MANUALLY FIRSTLY.",
   "syncalgov3_button_agree": "Agree",
   "syncalgov3_button_disagree": "Do Not Agree"
 }

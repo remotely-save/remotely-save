@@ -493,3 +493,15 @@ export const compareVersion = (x: string | null, y: string | null) => {
   }
   return -1;
 };
+
+/**
+ * https://stackoverflow.com/questions/19929641/how-to-append-an-html-string-to-a-documentfragment
+ * To introduce some advanced html fragments.
+ * @param string
+ * @returns
+ */
+export const stringToFragment = (string: string) => {
+  const wrapper = document.createElement("template");
+  wrapper.innerHTML = string;
+  return wrapper.content;
+};

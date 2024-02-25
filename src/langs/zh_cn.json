@@ -292,8 +292,9 @@
   "settings_resetcache_desc": "（出于调试原因）重设本地缓存和数据库。您需要在重设之后重新载入此插件。本重设不会删除 s3，密码……等设定。",
   "settings_resetcache_button": "重设",
   "settings_resetcache_notice": "本地同步缓存和数据库已被删除。请手动重新载入此插件。",
-  "syncalgov3_title": "Remotely Save 的同步算法重大优化",
-  "syncalgov3_texts": "欢迎使用 Remotely Save!\n从这个版本 0.3.0 开始，它带来了新的同步算法\n如果您同意使用，请点击按钮 \"同意\"，然后开始享用此插件！且特别要注意：使用插件之前，请首先备份好您的库（Vault）！\n如果您不同意此策略，您应该停止使用此版本和之后版本的 Remotely Save。点击 \"不同意\" 之后，插件会自动停止运行（unload），然后您需要 Obsidian 设置里手动停用（disable）此插件。",
+  "syncalgov3_title": "Remotely Save 的同步算法有重大更新",
+  "syncalgov3_texts": "欢迎使用 Remotely Save！\n从这个版本开始，插件更新了同步算法：更稳健的删除同步、引入冲突处理、避免上传元数据…… 敬请期待更多更新！详细介绍请参阅 <a href='https://github.com/remotely-save/remotely-save/tree/master/docs/sync_algorithm/v3/intro.md'>文档网站</a>。\n如果您同意使用新版本和算法，请勾选“我将会手动备份我的库（Vault）”，然后点击“同意”按钮，开始使用插件吧！\n如果您不同意，请点击“不同意”按钮，插件将自动停止运行（unload），然后您需要 Obsidian 设置里手动停用（disable）此插件。",
+  "syncalgov3_checkbox_manual_backup": "我将会手动备份我的库（Vault）",
   "syncalgov3_button_agree": "同意",
   "syncalgov3_button_disagree": "不同意"
 }
