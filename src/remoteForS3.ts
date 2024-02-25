@@ -30,6 +30,7 @@ import {
   DEFAULT_CONTENT_TYPE,
   Entity,
   S3Config,
+  UploadedType,
   VALID_REQURL,
 } from "./baseTypes";
 import { decryptArrayBuffer, encryptArrayBuffer } from "./encrypt";
@@ -365,7 +366,7 @@ export const uploadToRemote = async (
   rawContent: string | ArrayBuffer = "",
   rawContentMTime: number = 0,
   rawContentCTime: number = 0
-) => {
+): Promise<UploadedType> => {
   log.debug(`uploading ${fileOrFolderPath}`);
   let uploadFile = fileOrFolderPath;
   if (password !== "") {
@@ -408,7 +409,10 @@ export const uploadToRemote = async (
       })
     );
     const res = await getRemoteMeta(s3Client, s3Config, uploadFile);
-    return res;
+    return {
+      entity: res,
+      mtimeCli: mtime,
+    };
   } else {
     // file
     // we ignore isRecursively parameter here
@@ -476,7 +480,10 @@ export const uploadToRemote = async (
     // log.debug(
     //   `uploaded ${uploadFile} with res=${JSON.stringify(res, null, 2)}`
     // );
-    return res;
+    return {
+      entity: res,
+      mtimeCli: mtime,
+    };
   }
 };
 

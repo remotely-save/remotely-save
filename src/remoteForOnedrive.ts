@@ -15,6 +15,7 @@ import {
   OAUTH2_FORCE_EXPIRE_MILLISECONDS,
   OnedriveConfig,
   Entity,
+  UploadedType,
 } from "./baseTypes";
 import { decryptArrayBuffer, encryptArrayBuffer } from "./encrypt";
 import {
@@ -701,7 +702,7 @@ export const uploadToRemote = async (
   foldersCreatedBefore: Set<string> | undefined = undefined,
   uploadRaw: boolean = false,
   rawContent: string | ArrayBuffer = ""
-) => {
+): Promise<UploadedType> => {
   await client.init();
 
   let uploadFile = fileOrFolderPath;
@@ -759,7 +760,10 @@ export const uploadToRemote = async (
         await client.patchJson(uploadFile, k);
       }
       const res = await getRemoteMeta(client, uploadFile);
-      return res;
+      return {
+        entity: res,
+        mtimeCli: mtime,
+      };
     } else {
       // if encrypted,
       // upload a fake, random-size file
@@ -790,7 +794,10 @@ export const uploadToRemote = async (
       }
       // log.info(uploadResult)
       const res = await getRemoteMeta(client, uploadFile);
-      return res;
+      return {
+        entity: res,
+        mtimeCli: mtime,
+      };
     }
   } else {
     // file
@@ -889,7 +896,10 @@ export const uploadToRemote = async (
     }
 
     const res = await getRemoteMeta(client, uploadFile);
-    return res;
+    return {
+      entity: res,
+      mtimeCli: mtime,
+    };
   }
 };
 

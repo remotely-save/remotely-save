@@ -8,6 +8,7 @@ import {
   Entity,
   COMMAND_CALLBACK_DROPBOX,
   OAUTH2_FORCE_EXPIRE_MILLISECONDS,
+  UploadedType,
 } from "./baseTypes";
 import { decryptArrayBuffer, encryptArrayBuffer } from "./encrypt";
 import {
@@ -460,7 +461,7 @@ export const uploadToRemote = async (
   rawContent: string | ArrayBuffer = "",
   rawContentMTime: number = 0,
   rawContentCTime: number = 0
-) => {
+): Promise<UploadedType> => {
   await client.init();
 
   let uploadFile = fileOrFolderPath;
@@ -526,7 +527,10 @@ export const uploadToRemote = async (
         }
       }
       const res = await getRemoteMeta(client, uploadFile);
-      return res;
+      return {
+        entity: res,
+        mtimeCli: mtime,
+      };
     } else {
       // if encrypted, upload a fake file with the encrypted file name
       await retryReq(
@@ -538,7 +542,10 @@ export const uploadToRemote = async (
           }),
         fileOrFolderPath
       );
-      return await getRemoteMeta(client, uploadFile);
+      return {
+        entity: await getRemoteMeta(client, uploadFile),
+        mtimeCli: mtime,
+      };
     }
   } else {
     // file
@@ -587,7 +594,10 @@ export const uploadToRemote = async (
         foldersCreatedBefore?.add(dir);
       }
     }
-    return await getRemoteMeta(client, uploadFile);
+    return {
+      entity: await getRemoteMeta(client, uploadFile),
+      mtimeCli: mtime,
+    };
   }
 };
 

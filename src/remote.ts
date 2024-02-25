@@ -6,6 +6,7 @@ import type {
   S3Config,
   SUPPORTED_SERVICES_TYPE,
   WebdavConfig,
+  UploadedType,
 } from "./baseTypes";
 import * as dropbox from "./remoteForDropbox";
 import * as onedrive from "./remoteForOnedrive";
@@ -112,7 +113,7 @@ export class RemoteClient {
     foldersCreatedBefore: Set<string> | undefined = undefined,
     uploadRaw: boolean = false,
     rawContent: string | ArrayBuffer = ""
-  ) => {
+  ): Promise<UploadedType> => {
     if (this.serviceType === "s3") {
       return await s3.uploadToRemote(
         s3.getS3Client(this.s3Config!),

@@ -5,7 +5,7 @@ import { Queue } from "@fyears/tsqueue";
 import chunk from "lodash/chunk";
 import flatten from "lodash/flatten";
 import { getReasonPhrase } from "http-status-codes";
-import { Entity, VALID_REQURL, WebdavConfig } from "./baseTypes";
+import { Entity, UploadedType, VALID_REQURL, WebdavConfig } from "./baseTypes";
 import { decryptArrayBuffer, encryptArrayBuffer } from "./encrypt";
 import { bufferToArrayBuffer, getPathFolder, mkdirpInVault } from "./misc";
 
@@ -340,7 +340,7 @@ export const uploadToRemote = async (
   remoteEncryptedKey: string = "",
   uploadRaw: boolean = false,
   rawContent: string | ArrayBuffer = ""
-) => {
+): Promise<UploadedType> => {
   await client.init();
   let uploadFile = fileOrFolderPath;
   if (password !== "") {
@@ -368,7 +368,9 @@ export const uploadToRemote = async (
         recursive: true,
       });
       const res = await getRemoteMeta(client, uploadFile);
-      return res;
+      return {
+        entity: res,
+      };
     } else {
       // if encrypted, upload a fake file with the encrypted file name
       await client.client.putFileContents(uploadFile, "", {
@@ -378,12 +380,15 @@ export const uploadToRemote = async (
         },
       });
 
-      return await getRemoteMeta(client, uploadFile);
+      return {
+        entity: await getRemoteMeta(client, uploadFile),
+      };
     }
   } else {
     // file
     // we ignore isRecursively parameter here
-    let localContent = undefined;
+    let localContent: ArrayBuffer | undefined = undefined;
+    let mtimeCli: number | undefined = undefined;
     if (uploadRaw) {
       if (typeof rawContent === "string") {
         localContent = new TextEncoder().encode(rawContent).buffer;
@@ -397,6 +402,7 @@ export const uploadToRemote = async (
         );
       }
       localContent = await vault.adapter.readBinary(fileOrFolderPath);
+      mtimeCli = (await vault.adapter.stat(fileOrFolderPath))?.mtime;
     }
     let remoteContent = localContent;
     if (password !== "") {
@@ -415,7 +421,10 @@ export const uploadToRemote = async (
       },
     });
 
-    return await getRemoteMeta(client, uploadFile);
+    return {
+      entity: await getRemoteMeta(client, uploadFile),
+      mtimeCli: mtimeCli,
+    };
   }
 };
 

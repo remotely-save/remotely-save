@@ -249,6 +249,24 @@ const decryptRemoteEntityInplace = async (remote: Entity, password: string) => {
   return remote;
 };
 
+const fullfillMTimeOfRemoteEntityInplace = (
+  remote: Entity,
+  mtimeCli?: number
+) => {
+  if (
+    mtimeCli !== undefined &&
+    mtimeCli > 0 &&
+    (remote.mtimeCli === undefined ||
+      remote.mtimeCli <= 0 ||
+      (remote.mtimeSvr !== undefined &&
+        remote.mtimeSvr > 0 &&
+        remote.mtimeCli >= remote.mtimeSvr))
+  ) {
+    remote.mtimeCli = mtimeCli;
+  }
+  return remote;
+};
+
 /**
  * Directly throw error here.
  * We can only defer the checking now, because before decryption we don't know whether it's a file or folder.
@@ -312,7 +330,7 @@ const encryptLocalEntityInplace = async (
     // but local.key should always have value
     local.sizeEnc = getSizeFromOrigToEnc(local.size);
   }
-  
+
   if (local.keyEnc === undefined || local.keyEnc === "") {
     if (
       remoteKeyEnc !== undefined &&
@@ -895,15 +913,16 @@ const dispatchOperationToActualV3 = async (
       // if it's empty folder, or it's encrypted file/folder, it continues to be uploaded.
     } else {
       // log.debug(`before upload in sync, r=${JSON.stringify(r, null, 2)}`);
-      const remoteObjMeta = await client.uploadToRemote(
+      const { entity, mtimeCli } = await client.uploadToRemote(
         r.key,
         vault,
         false,
         password,
         r.local!.keyEnc
       );
-      await decryptRemoteEntityInplace(remoteObjMeta, password);
-      await upsertPrevSyncRecordByVault(db, vaultRandomID, remoteObjMeta);
+      await decryptRemoteEntityInplace(entity, password);
+      await fullfillMTimeOfRemoteEntityInplace(entity, mtimeCli);
+      await upsertPrevSyncRecordByVault(db, vaultRandomID, entity);
     }
   } else if (
     r.decision === "modified_remote" ||
@@ -936,7 +955,7 @@ const dispatchOperationToActualV3 = async (
     throw Error(`${r.decision} not implemented yet: ${JSON.stringify(r)}`);
   } else if (r.decision === "folder_to_be_created") {
     await mkdirpInVault(r.key, vault);
-    const remoteObjMeta = await client.uploadToRemote(
+    const { entity, mtimeCli } = await client.uploadToRemote(
       r.key,
       vault,
       false,
@@ -944,8 +963,9 @@ const dispatchOperationToActualV3 = async (
       r.local!.keyEnc
     );
     // we need to decrypt the key!!!
-    await decryptRemoteEntityInplace(remoteObjMeta, password);
-    await upsertPrevSyncRecordByVault(db, vaultRandomID, remoteObjMeta);
+    await decryptRemoteEntityInplace(entity, password);
+    await fullfillMTimeOfRemoteEntityInplace(entity, mtimeCli);
+    await upsertPrevSyncRecordByVault(db, vaultRandomID, entity);
   } else if (r.decision === "folder_to_be_deleted") {
     await localDeleteFunc(r.key);
     await client.deleteFromRemote(r.key, password, r.remote!.keyEnc);

@@ -185,6 +185,11 @@ export interface Entity {
   etag?: string;
 }
 
+export interface UploadedType {
+  entity: Entity;
+  mtimeCli?: number;
+}
+
 /**
  * A replacement of FileOrFolderMixedState
  */
