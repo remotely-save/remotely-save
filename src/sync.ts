@@ -75,7 +75,7 @@ export const isPasswordOk = async (
       reason: "empty_remote",
     };
   }
-  const santyCheckKey = remote[0].key;
+  const santyCheckKey = remote[0].keyRaw;
   if (santyCheckKey.startsWith(MAGIC_ENCRYPTED_PREFIX_BASE32)) {
     // this is encrypted using old base32!
     // try to decrypt it using the provided password.
@@ -161,6 +161,9 @@ const isSkipItemByName = (
   configDir: string,
   ignorePaths: string[]
 ) => {
+  if (key === undefined) {
+    throw Error(`isSkipItemByName meets undefinded key!`);
+  }
   if (ignorePaths !== undefined && ignorePaths.length > 0) {
     for (const r of ignorePaths) {
       if (XRegExp(r, "A").test(key)) {
@@ -218,17 +221,25 @@ const copyEntityAndFixTimeFormat = (src: Entity) => {
  */
 const decryptRemoteEntityInplace = async (remote: Entity, password: string) => {
   if (password == undefined || password === "") {
-    remote.key = remote.keyEnc;
-    remote.size = remote.sizeEnc;
+    remote.key = remote.keyRaw;
+    remote.keyEnc = remote.keyRaw;
+    remote.size = remote.sizeRaw;
+    remote.sizeEnc = remote.sizeRaw;
     return remote;
   }
 
-  if (remote.keyEnc.startsWith(MAGIC_ENCRYPTED_PREFIX_BASE32)) {
+  if (remote.keyRaw.startsWith(MAGIC_ENCRYPTED_PREFIX_BASE32)) {
+    remote.keyEnc = remote.keyRaw;
     remote.key = await decryptBase32ToString(remote.keyEnc, password);
-  } else if (remote.keyEnc.startsWith(MAGIC_ENCRYPTED_PREFIX_BASE64URL)) {
+    remote.sizeEnc = remote.sizeRaw;
+  } else if (remote.keyRaw.startsWith(MAGIC_ENCRYPTED_PREFIX_BASE64URL)) {
+    remote.keyEnc = remote.keyRaw;
     remote.key = await decryptBase64urlToString(remote.keyEnc, password);
+    remote.sizeEnc = remote.sizeRaw;
   } else {
-    throw Error(`unexpected key to decrypt=${remote.keyEnc}`);
+    throw Error(
+      `unexpected key to decrypt: ${JSON.stringify(remote, null, 2)}`
+    );
   }
 
   // TODO
@@ -245,7 +256,7 @@ const decryptRemoteEntityInplace = async (remote: Entity, password: string) => {
  */
 const ensureMTimeOfRemoteEntityValid = (remote: Entity) => {
   if (
-    !remote.key.endsWith("/") &&
+    !remote.key!.endsWith("/") &&
     remote.mtimeCli === undefined &&
     remote.mtimeSvr === undefined
   ) {
@@ -273,19 +284,36 @@ const encryptLocalEntityInplace = async (
   password: string,
   remoteKeyEnc: string | undefined
 ) => {
-  if (password == undefined || password === "") {
-    local.sizeEnc = local.size!; // if no enc, the remote file has the same size
-    local.keyEnc = local.key;
+  // log.debug(
+  //   `encryptLocalEntityInplace: local=${JSON.stringify(
+  //     local,
+  //     null,
+  //     2
+  //   )}, password=${
+  //     password === undefined || password === "" ? "[empty]" : "[not empty]"
+  //   }, remoteKeyEnc=${remoteKeyEnc}`
+  // );
+
+  if (local.key === undefined) {
+    // local.key should always have value
+    throw Error(`local ${local.keyRaw} is abnormal without key`);
+  }
+
+  if (password === undefined || password === "") {
+    local.sizeEnc = local.sizeRaw; // if no enc, the remote file has the same size
+    local.keyEnc = local.keyRaw;
     return local;
   }
 
   // below is for having password
-
-  if (local.size === local.sizeEnc) {
-    // size not transformed yet, we need to compute sizeEnc
+  if (local.sizeEnc === undefined && local.size !== undefined) {
+    // it's not filled yet, we fill it
+    // local.size is possibly undefined if it's "prevSync" Entity
+    // but local.key should always have value
     local.sizeEnc = getSizeFromOrigToEnc(local.size);
   }
-  if (local.key === local.keyEnc) {
+  
+  if (local.keyEnc === undefined || local.keyEnc === "") {
     if (
       remoteKeyEnc !== undefined &&
       remoteKeyEnc !== "" &&
@@ -328,7 +356,7 @@ export const ensembleMixedEnties = async (
       )
     );
 
-    const key = remoteCopied.key;
+    const key = remoteCopied.key!;
     if (
       isSkipItemByName(
         key,
@@ -347,37 +375,47 @@ export const ensembleMixedEnties = async (
     };
   }
 
-  for (const prevSync of prevSyncEntityList) {
-    const key = prevSync.key;
-    if (
-      isSkipItemByName(
-        key,
-        syncConfigDir,
-        syncUnderscoreItems,
-        configDir,
-        ignorePaths
-      )
-    ) {
-      continue;
-    }
+  if (Object.keys(finalMappings).length === 0 || localEntityList.length === 0) {
+    // Special checking:
+    // if one side is totally empty,
+    // usually that's a hard rest.
+    // So we need to ignore everything of prevSyncEntityList to avoid deletions!
+    // TODO: acutally erase everything of prevSyncEntityList?
+    // TODO: local should also go through a isSkipItemByName checking beforehand
+  } else {
+    // normally go through the prevSyncEntityList
+    for (const prevSync of prevSyncEntityList) {
+      const key = prevSync.key!;
+      if (
+        isSkipItemByName(
+          key,
+          syncConfigDir,
+          syncUnderscoreItems,
+          configDir,
+          ignorePaths
+        )
+      ) {
+        continue;
+      }
 
-    if (finalMappings.hasOwnProperty(key)) {
-      const prevSyncCopied = await encryptLocalEntityInplace(
-        copyEntityAndFixTimeFormat(prevSync),
-        password,
-        finalMappings[key].remote?.keyEnc
-      );
-      finalMappings[key].prevSync = prevSyncCopied;
-    } else {
-      const prevSyncCopied = await encryptLocalEntityInplace(
-        copyEntityAndFixTimeFormat(prevSync),
-        password,
-        undefined
-      );
-      finalMappings[key] = {
-        key: key,
-        prevSync: prevSyncCopied,
-      };
+      if (finalMappings.hasOwnProperty(key)) {
+        const prevSyncCopied = await encryptLocalEntityInplace(
+          copyEntityAndFixTimeFormat(prevSync),
+          password,
+          finalMappings[key].remote?.keyEnc
+        );
+        finalMappings[key].prevSync = prevSyncCopied;
+      } else {
+        const prevSyncCopied = await encryptLocalEntityInplace(
+          copyEntityAndFixTimeFormat(prevSync),
+          password,
+          undefined
+        );
+        finalMappings[key] = {
+          key: key,
+          prevSync: prevSyncCopied,
+        };
+      }
     }
   }
 
@@ -385,7 +423,7 @@ export const ensembleMixedEnties = async (
   // because we want to get keyEnc based on the remote
   // (we don't consume prevSync here because it gains no benefit)
   for (const local of localEntityList) {
-    const key = local.key;
+    const key = local.key!;
     if (
       isSkipItemByName(
         key,
@@ -514,7 +552,7 @@ export const getSyncPlanInplace = async (
             // If only one compares true (no prev also means it compares False), the other is modified. Backup and sync.
             if (
               skipSizeLargerThan <= 0 ||
-              remote.sizeEnc <= skipSizeLargerThan
+              remote.sizeEnc! <= skipSizeLargerThan
             ) {
               mixedEntry.decisionBranch = 9;
               mixedEntry.decision = "modified_remote";
@@ -530,7 +568,7 @@ export const getSyncPlanInplace = async (
             // If only one compares true (no prev also means it compares False), the other is modified. Backup and sync.
             if (
               skipSizeLargerThan <= 0 ||
-              local.sizeEnc <= skipSizeLargerThan
+              local.sizeEnc! <= skipSizeLargerThan
             ) {
               mixedEntry.decisionBranch = 10;
               mixedEntry.decision = "modified_local";
@@ -559,7 +597,7 @@ export const getSyncPlanInplace = async (
                   keptFolder.add(getParentFolder(key));
                 }
               } else if (conflictAction === "keep_larger") {
-                if (local.sizeEnc >= remote.sizeEnc) {
+                if (local.sizeEnc! >= remote.sizeEnc!) {
                   mixedEntry.decisionBranch = 13;
                   mixedEntry.decision = "conflict_created_keep_local";
                   keptFolder.add(getParentFolder(key));
@@ -588,7 +626,7 @@ export const getSyncPlanInplace = async (
                   keptFolder.add(getParentFolder(key));
                 }
               } else if (conflictAction === "keep_larger") {
-                if (local.sizeEnc >= remote.sizeEnc) {
+                if (local.sizeEnc! >= remote.sizeEnc!) {
                   mixedEntry.decisionBranch = 18;
                   mixedEntry.decision = "conflict_modified_keep_local";
                   keptFolder.add(getParentFolder(key));
@@ -616,7 +654,10 @@ export const getSyncPlanInplace = async (
         // A is missing
         if (prevSync === undefined) {
           // if B is not in the previous list, B is new
-          if (skipSizeLargerThan <= 0 || remote.sizeEnc <= skipSizeLargerThan) {
+          if (
+            skipSizeLargerThan <= 0 ||
+            remote.sizeEnc! <= skipSizeLargerThan
+          ) {
             mixedEntry.decisionBranch = 3;
             mixedEntry.decision = "created_remote";
             keptFolder.add(getParentFolder(key));
@@ -637,7 +678,10 @@ export const getSyncPlanInplace = async (
           mixedEntry.decision = "deleted_local";
         } else {
           // if B is in the previous list and MODIFIED, B has been deleted by A but modified by B
-          if (skipSizeLargerThan <= 0 || remote.sizeEnc <= skipSizeLargerThan) {
+          if (
+            skipSizeLargerThan <= 0 ||
+            remote.sizeEnc! <= skipSizeLargerThan
+          ) {
             mixedEntry.decisionBranch = 5;
             mixedEntry.decision = "modified_remote";
             keptFolder.add(getParentFolder(key));
@@ -654,7 +698,7 @@ export const getSyncPlanInplace = async (
 
         if (prevSync === undefined) {
           // if A is not in the previous list, A is new
-          if (skipSizeLargerThan <= 0 || local.sizeEnc <= skipSizeLargerThan) {
+          if (skipSizeLargerThan <= 0 || local.sizeEnc! <= skipSizeLargerThan) {
             mixedEntry.decisionBranch = 6;
             mixedEntry.decision = "created_local";
             keptFolder.add(getParentFolder(key));
@@ -675,7 +719,7 @@ export const getSyncPlanInplace = async (
           mixedEntry.decision = "deleted_remote";
         } else {
           // if A is in the previous list and MODIFIED, A has been deleted by B but modified by A
-          if (skipSizeLargerThan <= 0 || local.sizeEnc <= skipSizeLargerThan) {
+          if (skipSizeLargerThan <= 0 || local.sizeEnc! <= skipSizeLargerThan) {
             mixedEntry.decisionBranch = 8;
             mixedEntry.decision = "modified_local";
             keptFolder.add(getParentFolder(key));
@@ -744,9 +788,9 @@ const splitThreeStepsOnEntityMappings = (
       val.decision === "folder_existed_remote" ||
       val.decision === "folder_to_be_created"
     ) {
-      log.debug(`splitting folder: key=${key},val=${JSON.stringify(val)}`);
+      // log.debug(`splitting folder: key=${key},val=${JSON.stringify(val)}`);
       const level = atWhichLevel(key);
-      log.debug(`atWhichLevel: ${level}`);
+      // log.debug(`atWhichLevel: ${level}`);
       const k = folderCreationOps[level - 1];
       if (k === undefined || k === null) {
         folderCreationOps[level - 1] = [val];
@@ -818,13 +862,13 @@ const dispatchOperationToActualV3 = async (
   localDeleteFunc: any,
   password: string
 ) => {
-  log.debug(
-    `inside dispatchOperationToActualV3, key=${key}, r=${JSON.stringify(
-      r,
-      null,
-      2
-    )}`
-  );
+  // log.debug(
+  //   `inside dispatchOperationToActualV3, key=${key}, r=${JSON.stringify(
+  //     r,
+  //     null,
+  //     2
+  //   )}`
+  // );
   if (r.decision === "only_history") {
     clearPrevSyncRecordByVault(db, vaultRandomID, key);
   } else if (
@@ -850,6 +894,7 @@ const dispatchOperationToActualV3 = async (
       // special treatment for OneDrive: do nothing, skip empty file without encryption
       // if it's empty folder, or it's encrypted file/folder, it continues to be uploaded.
     } else {
+      // log.debug(`before upload in sync, r=${JSON.stringify(r, null, 2)}`);
       const remoteObjMeta = await client.uploadToRemote(
         r.key,
         vault,
@@ -857,6 +902,7 @@ const dispatchOperationToActualV3 = async (
         password,
         r.local!.keyEnc
       );
+      await decryptRemoteEntityInplace(remoteObjMeta, password);
       await upsertPrevSyncRecordByVault(db, vaultRandomID, remoteObjMeta);
     }
   } else if (
@@ -897,6 +943,8 @@ const dispatchOperationToActualV3 = async (
       password,
       r.local!.keyEnc
     );
+    // we need to decrypt the key!!!
+    await decryptRemoteEntityInplace(remoteObjMeta, password);
     await upsertPrevSyncRecordByVault(db, vaultRandomID, remoteObjMeta);
   } else if (r.decision === "folder_to_be_deleted") {
     await localDeleteFunc(r.key);
@@ -921,10 +969,10 @@ export const doActualSync = async (
   log.debug(`concurrency === ${concurrency}`);
   const { folderCreationOps, deletionOps, uploadDownloads, realTotalCount } =
     splitThreeStepsOnEntityMappings(mixedEntityMappings);
-  log.debug(`folderCreationOps: ${JSON.stringify(folderCreationOps)}`);
-  log.debug(`deletionOps: ${JSON.stringify(deletionOps)}`);
-  log.debug(`uploadDownloads: ${JSON.stringify(uploadDownloads)}`);
-  log.debug(`realTotalCount: ${JSON.stringify(realTotalCount)}`);
+  // log.debug(`folderCreationOps: ${JSON.stringify(folderCreationOps)}`);
+  // log.debug(`deletionOps: ${JSON.stringify(deletionOps)}`);
+  // log.debug(`uploadDownloads: ${JSON.stringify(uploadDownloads)}`);
+  // log.debug(`realTotalCount: ${JSON.stringify(realTotalCount)}`);
 
   const nested = [folderCreationOps, deletionOps, uploadDownloads];
   const logTexts = [
@@ -938,11 +986,11 @@ export const doActualSync = async (
     log.debug(logTexts[i]);
 
     const operations = nested[i];
-    log.debug(`curr operations=${JSON.stringify(operations, null, 2)}`);
+    // log.debug(`curr operations=${JSON.stringify(operations, null, 2)}`);
 
     for (let j = 0; j < operations.length; ++j) {
       const singleLevelOps = operations[j];
-      log.debug(`singleLevelOps=${singleLevelOps}`);
+      log.debug(`singleLevelOps=${JSON.stringify(singleLevelOps, null, 2)}`);
       if (singleLevelOps === undefined || singleLevelOps === null) {
         continue;
       }

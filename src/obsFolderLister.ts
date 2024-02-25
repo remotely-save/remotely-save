@@ -79,12 +79,12 @@ export const listFilesInObsFolder = async (
 
         return {
           itself: {
-            key: isFolder ? `${x}/` : x,
-            keyEnc: isFolder ? `${x}/` : x,
+            key: isFolder ? `${x}/` : x, // local always unencrypted
+            keyRaw: isFolder ? `${x}/` : x,
             mtimeCli: statRes.mtime,
             mtimeSvr: statRes.mtime,
-            size: statRes.size,
-            sizeEnc: statRes.size,
+            size: statRes.size, // local always unencrypted
+            sizeRaw: statRes.size,
           },
           children: children,
         };

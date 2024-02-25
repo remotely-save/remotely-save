@@ -212,12 +212,10 @@ const fromWebdavItemToEntity = (x: FileStat, remoteBaseDir: string) => {
   }
   const mtimeSvr = Date.parse(x.lastmod).valueOf();
   return {
-    key: key,
-    keyEnc: key,
+    keyRaw: key,
     mtimeSvr: mtimeSvr,
     mtimeCli: mtimeSvr, // no universal way to set mtime in webdav
-    size: x.size,
-    sizeEnc: x.size,
+    sizeRaw: x.size,
     etag: x.etag,
   } as Entity;
 };
@@ -346,6 +344,11 @@ export const uploadToRemote = async (
   await client.init();
   let uploadFile = fileOrFolderPath;
   if (password !== "") {
+    if (remoteEncryptedKey === undefined || remoteEncryptedKey === "") {
+      throw Error(
+        `uploadToRemote(webdav) you have password but remoteEncryptedKey is empty!`
+      );
+    }
     uploadFile = remoteEncryptedKey;
   }
   uploadFile = getWebdavPath(uploadFile, client.remoteBaseDir);

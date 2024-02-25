@@ -351,12 +351,10 @@ const fromDriveItemToEntity = (x: DriveItem, remoteBaseDir: string): Entity => {
   const mtimeSvr = Date.parse(x?.fileSystemInfo!.lastModifiedDateTime!);
   const mtimeCli = Date.parse(x?.fileSystemInfo!.lastModifiedDateTime!);
   return {
-    key: key,
-    keyEnc: key,
+    keyRaw: key,
     mtimeSvr: mtimeSvr,
     mtimeCli: mtimeCli,
-    size: isFolder ? 0 : x.size!,
-    sizeEnc: isFolder ? 0 : x.size!,
+    sizeRaw: isFolder ? 0 : x.size!,
     // hash: ?? // TODO
     etag: x.cTag || "", // do NOT use x.eTag because it changes if meta changes
   };
@@ -708,6 +706,11 @@ export const uploadToRemote = async (
 
   let uploadFile = fileOrFolderPath;
   if (password !== "") {
+    if (remoteEncryptedKey === undefined || remoteEncryptedKey === "") {
+      throw Error(
+        `uploadToRemote(onedrive) you have password but remoteEncryptedKey is empty!`
+      );
+    }
     uploadFile = remoteEncryptedKey;
   }
   uploadFile = getOnedrivePath(uploadFile, client.remoteBaseDir);

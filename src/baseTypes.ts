@@ -169,8 +169,9 @@ export type DecisionTypeForMixedEntity =
  * everything should be flat and primitive, so that we can copy.
  */
 export interface Entity {
-  key: string;
-  keyEnc: string;
+  key?: string;
+  keyEnc?: string;
+  keyRaw: string;
   mtimeCli?: number;
   mtimeCliFmt?: string;
   mtimeSvr?: number;
@@ -178,7 +179,8 @@ export interface Entity {
   prevSyncTime?: number;
   prevSyncTimeFmt?: string;
   size?: number; // might be unknown or to be filled
-  sizeEnc: number;
+  sizeEnc?: number;
+  sizeRaw: number;
   hash?: string;
   etag?: string;
 }

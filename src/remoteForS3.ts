@@ -238,12 +238,10 @@ const fromS3ObjectToEntity = (
   }
   const key = getLocalNoPrefixPath(x.Key!, remotePrefix);
   const r: Entity = {
-    key: key,
-    keyEnc: key,
+    keyRaw: key,
     mtimeSvr: mtimeSvr,
     mtimeCli: mtimeCli,
-    size: x.Size!,
-    sizeEnc: x.Size!,
+    sizeRaw: x.Size!,
     etag: x.ETag,
   };
   return r;
@@ -266,11 +264,21 @@ const fromS3HeadObjectToEntity = (
       mtimeCli = m2;
     }
   }
+  // log.debug(
+  //   `fromS3HeadObjectToEntity, fileOrFolderPathWithRemotePrefix=${fileOrFolderPathWithRemotePrefix}, remotePrefix=${remotePrefix}, x=${JSON.stringify(
+  //     x
+  //   )} `
+  // );
+  const key = getLocalNoPrefixPath(
+    fileOrFolderPathWithRemotePrefix,
+    remotePrefix
+  );
+  // log.debug(`fromS3HeadObjectToEntity, key=${key} after removing prefix`);
   return {
-    key: getLocalNoPrefixPath(fileOrFolderPathWithRemotePrefix, remotePrefix),
+    keyRaw: key,
     mtimeSvr: mtimeSvr,
     mtimeCli: mtimeCli,
-    size: x.ContentLength,
+    sizeRaw: x.ContentLength,
     etag: x.ETag,
   } as Entity;
 };
@@ -361,9 +369,15 @@ export const uploadToRemote = async (
   log.debug(`uploading ${fileOrFolderPath}`);
   let uploadFile = fileOrFolderPath;
   if (password !== "") {
+    if (remoteEncryptedKey === undefined || remoteEncryptedKey === "") {
+      throw Error(
+        `uploadToRemote(s3) you have password but remoteEncryptedKey is empty!`
+      );
+    }
     uploadFile = remoteEncryptedKey;
   }
   uploadFile = getRemoteWithPrefixPath(uploadFile, s3Config.remotePrefix ?? "");
+  // log.debug(`actual uploadFile=${uploadFile}`);
   const isFolder = fileOrFolderPath.endsWith("/");
 
   if (isFolder && isRecursively) {
@@ -459,9 +473,9 @@ export const uploadToRemote = async (
     await upload.done();
 
     const res = await getRemoteMeta(s3Client, s3Config, uploadFile);
-    log.debug(
-      `uploaded ${uploadFile} with res=${JSON.stringify(res, null, 2)}`
-    );
+    // log.debug(
+    //   `uploaded ${uploadFile} with res=${JSON.stringify(res, null, 2)}`
+    // );
     return res;
   }
 };

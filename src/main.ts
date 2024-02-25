@@ -240,6 +240,7 @@ export default class RemotelySavePlugin extends Plugin {
         () => self.saveSettings()
       );
       const remoteEntityList = await client.listAllFromRemote();
+      log.debug("remoteEntityList:");
       log.debug(remoteEntityList);
 
       if (this.settings.currLogLevel === "info") {
@@ -269,6 +270,7 @@ export default class RemotelySavePlugin extends Plugin {
         this.app.vault.configDir,
         this.manifest.id
       );
+      log.debug("localEntityList:");
       log.debug(localEntityList);
 
       if (this.settings.currLogLevel === "info") {
@@ -281,6 +283,7 @@ export default class RemotelySavePlugin extends Plugin {
         this.db,
         this.vaultRandomID
       );
+      log.debug("prevSyncEntityList:");
       log.debug(prevSyncEntityList);
 
       if (this.settings.currLogLevel === "info") {
@@ -305,6 +308,7 @@ export default class RemotelySavePlugin extends Plugin {
         this.settings.skipSizeLargerThan ?? -1,
         this.settings.conflictAction ?? "keep_newer"
       );
+      log.info(`mixedEntityMappings:`);
       log.info(mixedEntityMappings); // for debugging
       await insertSyncPlanRecordByVault(
         this.db,

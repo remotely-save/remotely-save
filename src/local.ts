@@ -32,20 +32,20 @@ export const getLocalEntityList = async (
         );
       }
       r = {
-        key: entry.path,
-        keyEnc: entry.path,
+        key: entry.path, // local always unencrypted
+        keyRaw: entry.path,
         mtimeCli: mtimeLocal,
         mtimeSvr: mtimeLocal,
-        size: entry.stat.size,
-        sizeEnc: entry.stat.size,
+        size: entry.stat.size, // local always unencrypted
+        sizeRaw: entry.stat.size,
       };
     } else if (entry instanceof TFolder) {
       key = `${entry.path}/`;
       r = {
         key: key,
-        keyEnc: key,
+        keyRaw: key,
         size: 0,
-        sizeEnc: 0,
+        sizeRaw: 0,
       };
     } else {
       throw Error(`unexpected ${entry}`);

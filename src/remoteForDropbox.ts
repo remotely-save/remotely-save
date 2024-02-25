@@ -83,22 +83,18 @@ const fromDropboxItemToEntity = (
 
   if (x[".tag"] === "folder") {
     return {
-      key: key,
-      keyEnc: key,
-      size: 0,
-      sizeEnc: 0,
+      keyRaw: key,
+      sizeRaw: 0,
       etag: `${x.id}\t`,
     } as Entity;
   } else if (x[".tag"] === "file") {
     const mtimeCli = Date.parse(x.client_modified).valueOf();
     const mtimeSvr = Date.parse(x.server_modified).valueOf();
     return {
-      key: key,
-      keyEnc: key,
+      keyRaw: key,
       mtimeCli: mtimeCli,
       mtimeSvr: mtimeSvr,
-      size: x.size,
-      sizeEnc: x.size,
+      sizeRaw: x.size,
       hash: x.content_hash,
       etag: `${x.id}\t${x.content_hash}`,
     } as Entity;
@@ -469,6 +465,11 @@ export const uploadToRemote = async (
 
   let uploadFile = fileOrFolderPath;
   if (password !== "") {
+    if (remoteEncryptedKey === undefined || remoteEncryptedKey === "") {
+      throw Error(
+        `uploadToRemote(dropbox) you have password but remoteEncryptedKey is empty!`
+      );
+    }
     uploadFile = remoteEncryptedKey;
   }
   uploadFile = getDropboxPath(uploadFile, client.remoteBaseDir);
