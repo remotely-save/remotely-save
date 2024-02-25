@@ -25,7 +25,7 @@ import {
 import { exportVaultSyncPlansToFiles } from "./debugMode";
 import { exportQrCodeUri } from "./importExport";
 import {
-  clearAllSyncMetaMapping,
+  clearAllPrevSyncRecordByVault,
   clearAllSyncPlanRecords,
   destroyDBs,
   upsertLastSuccessSyncTimeByVault,
@@ -2166,13 +2166,16 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
       });
 
     new Setting(debugDiv)
-      .setName(t("settings_delsyncmap"))
-      .setDesc(t("settings_delsyncmap_desc"))
+      .setName(t("settings_delprevsync"))
+      .setDesc(t("settings_delprevsync_desc"))
       .addButton(async (button) => {
-        button.setButtonText(t("settings_delsyncmap_button"));
+        button.setButtonText(t("settings_delprevsync_button"));
         button.onClick(async () => {
-          await clearAllSyncMetaMapping(this.plugin.db);
-          new Notice(t("settings_delsyncmap_notice"));
+          await clearAllPrevSyncRecordByVault(
+            this.plugin.db,
+            this.plugin.vaultRandomID
+          );
+          new Notice(t("settings_delprevsync_notice"));
         });
       });
 

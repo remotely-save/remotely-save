@@ -80,22 +80,32 @@ export interface InternalDBs {
  * @returns
  */
 const fromSyncMappingsToPrevSyncRecords = (
-  syncMappings: SyncMetaMappingRecord[]
+  oldSyncMappings: SyncMetaMappingRecord[]
 ): Entity[] => {
-  return [];
-};
+  const res: Entity[] = [];
+  for (const oldMapping of oldSyncMappings) {
+    const newEntity: Entity = {
+      key: oldMapping.localKey,
+      keyEnc: oldMapping.remoteKey,
+      keyRaw:
+        oldMapping.remoteKey !== undefined && oldMapping.remoteKey !== ""
+          ? oldMapping.remoteKey
+          : oldMapping.localKey,
+      mtimeCli: oldMapping.localMtime,
+      mtimeSvr: oldMapping.remoteMtime,
+      size: oldMapping.localSize,
+      sizeEnc: oldMapping.remoteSize,
+      sizeRaw:
+        oldMapping.remoteKey !== undefined && oldMapping.remoteKey !== ""
+          ? oldMapping.remoteSize
+          : oldMapping.localSize,
+      etag: oldMapping.remoteExtraKey,
+    };
 
-/**
- * TODO
- * @param db
- * @param vaultRandomID
- * @param prevSyncRecord
- */
-const setPrevSyncRecordByVault = async (
-  db: InternalDBs,
-  vaultRandomID: string,
-  prevSyncRecord: Entity
-) => {};
+    res.push(newEntity);
+  }
+  return res;
+};
 
 /**
  *
@@ -115,12 +125,14 @@ const migrateDBsFrom20220326To20240220 = async (
   const syncMappings = await getAllSyncMetaMappingByVault(db, vaultRandomID);
   const prevSyncRecords = fromSyncMappingsToPrevSyncRecords(syncMappings);
   for (const prevSyncRecord of prevSyncRecords) {
-    await setPrevSyncRecordByVault(db, vaultRandomID, prevSyncRecord);
+    await upsertPrevSyncRecordByVault(db, vaultRandomID, prevSyncRecord);
   }
 
-  // clear not used data
-  await clearFileHistoryOfEverythingByVault(db, vaultRandomID);
-  await clearAllSyncMetaMappingByVault(db, vaultRandomID);
+  // // clear not used data
+  // // as of 20240220, we don't call them,
+  // // for the opportunity for users to downgrade
+  // await clearFileHistoryOfEverythingByVault(db, vaultRandomID);
+  // await clearAllSyncMetaMappingByVault(db, vaultRandomID);
 
   await db.versionTbl.setItem(`${vaultRandomID}\tversion`, newVer);
   log.debug(`finish upgrading internal db from ${oldVer} to ${newVer}`);
@@ -320,10 +332,6 @@ export const clearAllSyncMetaMappingByVault = async (
       await db.syncMappingTbl.removeItem(key);
     }
   }
-};
-
-export const clearAllSyncMetaMapping = async (db: InternalDBs) => {
-  await db.syncMappingTbl.clear();
 };
 
 export const insertSyncPlanRecordByVault = async (
