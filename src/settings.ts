@@ -13,7 +13,9 @@ import { createElement, Eye, EyeOff } from "lucide";
 import {
   API_VER_ENSURE_REQURL_OK,
   API_VER_REQURL,
+  ConflictActionType,
   DEFAULT_DEBUG_FOLDER,
+  EmptyFolderCleanType,
   SUPPORTED_SERVICES_TYPE,
   SUPPORTED_SERVICES_TYPE_WITH_REMOTE_BASE_DIR,
   VALID_REQURL,
@@ -1989,6 +1991,44 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
           .setValue(this.plugin.settings.deleteToWhere ?? "system")
           .onChange(async (val) => {
             this.plugin.settings.deleteToWhere = val as "system" | "obsidian";
+            await this.plugin.saveSettings();
+          });
+      });
+
+    new Setting(advDiv)
+      .setName(t("settings_conflictaction"))
+      .setDesc(t("settings_conflictaction_desc"))
+      .addDropdown((dropdown) => {
+        dropdown.addOption(
+          "keep_newer",
+          t("settings_conflictaction_keep_newer")
+        );
+        dropdown.addOption(
+          "keep_larger",
+          t("settings_conflictaction_keep_larger")
+        );
+        dropdown
+          .setValue(this.plugin.settings.conflictAction ?? "keep_newer")
+          .onChange(async (val) => {
+            this.plugin.settings.conflictAction = val as ConflictActionType;
+            await this.plugin.saveSettings();
+          });
+      });
+
+    new Setting(advDiv)
+      .setName(t("settings_cleanemptyfolder"))
+      .setDesc(t("settings_cleanemptyfolder_desc"))
+      .addDropdown((dropdown) => {
+        dropdown.addOption("skip", t("settings_cleanemptyfolder_skip"));
+        dropdown.addOption(
+          "clean_both",
+          t("settings_cleanemptyfolder_clean_both")
+        );
+        dropdown
+          .setValue(this.plugin.settings.howToCleanEmptyFolder ?? "skip")
+          .onChange(async (val) => {
+            this.plugin.settings.howToCleanEmptyFolder =
+              val as EmptyFolderCleanType;
             await this.plugin.saveSettings();
           });
       });
