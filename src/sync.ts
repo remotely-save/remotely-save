@@ -491,6 +491,8 @@ export const ensembleMixedEnties = async (
     }
   }
 
+  console.debug("in the end of ensembleMixedEnties, finalMappings is:");
+  console.debug(finalMappings);
   return finalMappings;
 };
 
