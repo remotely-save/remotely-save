@@ -18,6 +18,7 @@ import {
   EmptyFolderCleanType,
   SUPPORTED_SERVICES_TYPE,
   SUPPORTED_SERVICES_TYPE_WITH_REMOTE_BASE_DIR,
+  SyncDirectionType,
   VALID_REQURL,
   WebdavAuthType,
   WebdavDepthType,
@@ -1987,6 +1988,31 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
           .setValue(`${this.plugin.settings.protectModifyPercentage ?? 50}`)
           .onChange(async (val) => {
             this.plugin.settings.protectModifyPercentage = parseInt(val);
+            await this.plugin.saveSettings();
+          });
+      });
+
+    new Setting(advDiv)
+      .setName(t("setting_syncdirection"))
+      .setDesc(t("setting_syncdirection_desc"))
+      .addDropdown((dropdown) => {
+        dropdown.addOption(
+          "bidirectional",
+          t("setting_syncdirection_bidirectional_desc")
+        );
+        dropdown.addOption(
+          "incremental_push_only",
+          t("setting_syncdirection_incremental_push_only_desc")
+        );
+        dropdown.addOption(
+          "incremental_pull_only",
+          t("setting_syncdirection_incremental_pull_only_desc")
+        );
+
+        dropdown
+          .setValue(this.plugin.settings.syncDirection ?? "bidirectional")
+          .onChange(async (val) => {
+            this.plugin.settings.syncDirection = val as SyncDirectionType;
             await this.plugin.saveSettings();
           });
       });

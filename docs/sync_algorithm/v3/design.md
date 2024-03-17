@@ -37,15 +37,35 @@ We have _five_ input sources:
 
 Init run, consuming remote deletions :
 
-TBD
+Change history data into _local previous succeeded sync history_.
 
 Later runs, use the first, second, third sources **only**.
 
-Table modified based on synclone and rsinc. The number inside the table cell is the decision branch in the code.
+Bidirectional table is modified based on synclone and rsinc. Incremental push / pull only tables is further modified based on the bidirectional table. The number inside the table cell is the decision branch in the code.
+
+Bidirectional:
 
 | local\remote    | remote unchanged   | remote modified           | remote deleted     | remote created            |
 | --------------- | ------------------ | ------------------------- | ------------------ | ------------------------- |
-| local unchanged | (02/21) do nothing | (09) pull remote          | (07) delete local  | (??) conflict             |
-| local modified  | (10) push local    | (16/17/18/19/20) conflict | (08) push local    | (??) conflict             |
-| local deleted   | (04) delete remote | (05) pull                 | (01) clean history | (03) pull remote          |
-| local created   | (??) conflict      | (??) conflict             | (06) push local    | (11/12/13/14/15) conflict |
+| local unchanged | (02/21) do nothing | (09) pull                 | (07) delete local  | (??) conflict             |
+| local modified  | (10) push          | (16/17/18/19/20) conflict | (08) push          | (??) conflict             |
+| local deleted   | (04) delete remote | (05) pull                 | (01) clean history | (03) pull                 |
+| local created   | (??) conflict      | (??) conflict             | (06) push          | (11/12/13/14/15) conflict |
+
+Incremental push only:
+
+| local\remote    | remote unchanged             | remote modified              | remote deleted         | remote created               |
+| --------------- | ---------------------------- | ---------------------------- | ---------------------- | ---------------------------- |
+| local unchanged | (02/21) do nothing           | **(26) conflict push**       | **(32) conflict push** | (??) conflict                |
+| local modified  | (10) push                    | **(25) conflict push**       | (08) push              | (??) conflict                |
+| local deleted   | **(29) conflict do nothing** | **(30) conflict do nothing** | (01) clean history     | **(28) conflict do nothing** |
+| local created   | (??) conflict                | (??) conflict                | (06) push              | **(23) conflict push**       |
+
+Incremental pull only:
+
+| local\remote    | remote unchanged       | remote modified        | remote deleted               | remote created         |
+| --------------- | ---------------------- | ---------------------- | ---------------------------- | ---------------------- |
+| local unchanged | (02/21) do nothing     | (09) pull              | **(33) conflict do nothing** | (??) conflict          |
+| local modified  | **(27) conflict pull** | **(24) conflict pull** | **(34) conflict do nothing** | (??) conflict          |
+| local deleted   | **(35) conflict pull** | (05) pull              | (01) clean history           | (03) pull              |
+| local created   | (??) conflict          | (??) conflict          | **(31) conflict do nothing** | **(22) conflict pull** |

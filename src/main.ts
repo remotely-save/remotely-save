@@ -94,6 +94,7 @@ const DEFAULT_SETTINGS: RemotelySavePluginSettings = {
   conflictAction: "keep_newer",
   howToCleanEmptyFolder: "skip",
   protectModifyPercentage: 50,
+  syncDirection: "bidirectional",
 };
 
 interface OAuth2Info {
@@ -309,7 +310,8 @@ export default class RemotelySavePlugin extends Plugin {
         mixedEntityMappings,
         this.settings.howToCleanEmptyFolder ?? "skip",
         this.settings.skipSizeLargerThan ?? -1,
-        this.settings.conflictAction ?? "keep_newer"
+        this.settings.conflictAction ?? "keep_newer",
+        this.settings.syncDirection ?? "bidirectional"
       );
       console.info(`mixedEntityMappings:`);
       console.info(mixedEntityMappings); // for debugging
@@ -887,6 +889,9 @@ export default class RemotelySavePlugin extends Plugin {
     }
     if (this.settings.protectModifyPercentage === undefined) {
       this.settings.protectModifyPercentage = 50;
+    }
+    if (this.settings.syncDirection === undefined) {
+      this.settings.syncDirection = "bidirectional";
     }
 
     await this.saveSettings();

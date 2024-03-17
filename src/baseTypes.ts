@@ -83,6 +83,11 @@ export interface OnedriveConfig {
   remoteBaseDir?: string;
 }
 
+export type SyncDirectionType =
+  | "bidirectional"
+  | "incremental_pull_only"
+  | "incremental_push_only";
+
 export interface RemotelySavePluginSettings {
   s3: S3Config;
   webdav: WebdavConfig;
@@ -108,6 +113,7 @@ export interface RemotelySavePluginSettings {
   howToCleanEmptyFolder?: EmptyFolderCleanType;
 
   protectModifyPercentage?: number;
+  syncDirection?: SyncDirectionType;
 
   /**
    * @deprecated
@@ -147,21 +153,22 @@ export type ConflictActionType = "keep_newer" | "keep_larger" | "rename_both";
 export type DecisionTypeForMixedEntity =
   | "only_history"
   | "equal"
-  | "modified_local"
-  | "modified_remote"
-  | "created_local"
-  | "created_remote"
-  | "deleted_local"
-  | "deleted_remote"
-  | "conflict_created_keep_local"
-  | "conflict_created_keep_remote"
-  | "conflict_created_keep_both"
-  | "conflict_modified_keep_local"
-  | "conflict_modified_keep_remote"
-  | "conflict_modified_keep_both"
-  | "folder_existed_both"
-  | "folder_existed_local"
-  | "folder_existed_remote"
+  | "local_is_modified_then_push"
+  | "remote_is_modified_then_pull"
+  | "local_is_created_then_push"
+  | "remote_is_created_then_pull"
+  | "local_is_deleted_thus_also_delete_remote"
+  | "remote_is_deleted_thus_also_delete_local"
+  | "conflict_created_then_keep_local"
+  | "conflict_created_then_keep_remote"
+  | "conflict_created_then_keep_both"
+  | "conflict_created_then_do_nothing"
+  | "conflict_modified_then_keep_local"
+  | "conflict_modified_then_keep_remote"
+  | "conflict_modified_then_keep_both"
+  | "folder_existed_both_then_do_nothing"
+  | "folder_existed_local_then_also_create_remote"
+  | "folder_existed_remote_then_also_create_local"
   | "folder_to_be_created"
   | "folder_to_skip"
   | "folder_to_be_deleted";

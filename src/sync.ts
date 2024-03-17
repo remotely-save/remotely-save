@@ -5,6 +5,7 @@ import type {
   EmptyFolderCleanType,
   Entity,
   MixedEntity,
+  SyncDirectionType,
 } from "./baseTypes";
 import { isInsideObsFolder } from "./obsFolderLister";
 import {
@@ -479,13 +480,14 @@ export const ensembleMixedEnties = async (
 /**
  * Heavy lifting.
  * Basically follow the sync algorithm of https://github.com/Jwink3101/syncrclone
- * @param mixedEntityMappings
+ * Also deal with syncDirection which makes it more complicated
  */
 export const getSyncPlanInplace = async (
   mixedEntityMappings: Record<string, MixedEntity>,
   howToCleanEmptyFolder: EmptyFolderCleanType,
   skipSizeLargerThan: number,
-  conflictAction: ConflictActionType
+  conflictAction: ConflictActionType,
+  syncDirection: SyncDirectionType
 ) => {
   // from long(deep) to short(shadow)
   const sortedKeys = Object.keys(mixedEntityMappings).sort(
@@ -511,14 +513,27 @@ export const getSyncPlanInplace = async (
         // should fill the missing part
         if (local !== undefined && remote !== undefined) {
           mixedEntry.decisionBranch = 101;
-          mixedEntry.decision = "folder_existed_both";
+          mixedEntry.decision = "folder_existed_both_then_do_nothing";
         } else if (local !== undefined && remote === undefined) {
-          mixedEntry.decisionBranch = 102;
-          mixedEntry.decision = "folder_existed_local";
+          if (syncDirection === "incremental_pull_only") {
+            mixedEntry.decisionBranch = 107;
+            mixedEntry.decision = "folder_to_skip";
+          } else {
+            mixedEntry.decisionBranch = 102;
+            mixedEntry.decision =
+              "folder_existed_local_then_also_create_remote";
+          }
         } else if (local === undefined && remote !== undefined) {
-          mixedEntry.decisionBranch = 103;
-          mixedEntry.decision = "folder_existed_remote";
+          if (syncDirection === "incremental_push_only") {
+            mixedEntry.decisionBranch = 108;
+            mixedEntry.decision = "folder_to_skip";
+          } else {
+            mixedEntry.decisionBranch = 103;
+            mixedEntry.decision =
+              "folder_existed_remote_then_also_create_local";
+          }
         } else {
+          // why?? how??
           mixedEntry.decisionBranch = 104;
           mixedEntry.decision = "folder_to_be_created";
         }
@@ -530,6 +545,7 @@ export const getSyncPlanInplace = async (
         } else if (howToCleanEmptyFolder === "clean_both") {
           mixedEntry.decisionBranch = 106;
           mixedEntry.decision = "folder_to_be_deleted";
+          // TODO: what to do in different sync direction?
         } else {
           throw Error(
             `do not know how to deal with empty folder ${mixedEntry.key}`
@@ -571,9 +587,15 @@ export const getSyncPlanInplace = async (
               skipSizeLargerThan <= 0 ||
               remote.sizeEnc! <= skipSizeLargerThan
             ) {
-              mixedEntry.decisionBranch = 9;
-              mixedEntry.decision = "modified_remote";
-              keptFolder.add(getParentFolder(key));
+              if (syncDirection === "incremental_push_only") {
+                mixedEntry.decisionBranch = 26;
+                mixedEntry.decision = "conflict_modified_then_keep_local";
+                keptFolder.add(getParentFolder(key));
+              } else {
+                mixedEntry.decisionBranch = 9;
+                mixedEntry.decision = "remote_is_modified_then_pull";
+                keptFolder.add(getParentFolder(key));
+              }
             } else {
               throw Error(
                 `remote is modified (branch 9) but size larger than ${skipSizeLargerThan}, don't know what to do: ${JSON.stringify(
@@ -587,9 +609,15 @@ export const getSyncPlanInplace = async (
               skipSizeLargerThan <= 0 ||
               local.sizeEnc! <= skipSizeLargerThan
             ) {
-              mixedEntry.decisionBranch = 10;
-              mixedEntry.decision = "modified_local";
-              keptFolder.add(getParentFolder(key));
+              if (syncDirection === "incremental_pull_only") {
+                mixedEntry.decisionBranch = 27;
+                mixedEntry.decision = "conflict_modified_then_keep_remote";
+                keptFolder.add(getParentFolder(key));
+              } else {
+                mixedEntry.decisionBranch = 10;
+                mixedEntry.decision = "local_is_modified_then_push";
+                keptFolder.add(getParentFolder(key));
+              }
             } else {
               throw Error(
                 `local is modified (branch 10) but size larger than ${skipSizeLargerThan}, don't know what to do: ${JSON.stringify(
@@ -598,64 +626,94 @@ export const getSyncPlanInplace = async (
               );
             }
           } else if (!localEqualPrevSync && !remoteEqualPrevSync) {
-            // If both compare False, (didn't exist means both are new. Both exist but don't compare means both are modified)
+            // If both compare False (Didn't exist means both are new. Both exist but don't compare means both are modified)
             if (prevSync === undefined) {
-              if (conflictAction === "keep_newer") {
-                if (
-                  (local.mtimeCli ?? local.mtimeSvr ?? 0) >=
-                  (remote.mtimeCli ?? remote.mtimeSvr ?? 0)
-                ) {
-                  mixedEntry.decisionBranch = 11;
-                  mixedEntry.decision = "conflict_created_keep_local";
-                  keptFolder.add(getParentFolder(key));
+              // Didn't exist means both are new
+              if (syncDirection === "bidirectional") {
+                if (conflictAction === "keep_newer") {
+                  if (
+                    (local.mtimeCli ?? local.mtimeSvr ?? 0) >=
+                    (remote.mtimeCli ?? remote.mtimeSvr ?? 0)
+                  ) {
+                    mixedEntry.decisionBranch = 11;
+                    mixedEntry.decision = "conflict_created_then_keep_local";
+                    keptFolder.add(getParentFolder(key));
+                  } else {
+                    mixedEntry.decisionBranch = 12;
+                    mixedEntry.decision = "conflict_created_then_keep_remote";
+                    keptFolder.add(getParentFolder(key));
+                  }
+                } else if (conflictAction === "keep_larger") {
+                  if (local.sizeEnc! >= remote.sizeEnc!) {
+                    mixedEntry.decisionBranch = 13;
+                    mixedEntry.decision = "conflict_created_then_keep_local";
+                    keptFolder.add(getParentFolder(key));
+                  } else {
+                    mixedEntry.decisionBranch = 14;
+                    mixedEntry.decision = "conflict_created_then_keep_remote";
+                    keptFolder.add(getParentFolder(key));
+                  }
                 } else {
-                  mixedEntry.decisionBranch = 12;
-                  mixedEntry.decision = "conflict_created_keep_remote";
+                  mixedEntry.decisionBranch = 15;
+                  mixedEntry.decision = "conflict_created_then_keep_both";
                   keptFolder.add(getParentFolder(key));
                 }
-              } else if (conflictAction === "keep_larger") {
-                if (local.sizeEnc! >= remote.sizeEnc!) {
-                  mixedEntry.decisionBranch = 13;
-                  mixedEntry.decision = "conflict_created_keep_local";
-                  keptFolder.add(getParentFolder(key));
-                } else {
-                  mixedEntry.decisionBranch = 14;
-                  mixedEntry.decision = "conflict_created_keep_remote";
-                  keptFolder.add(getParentFolder(key));
-                }
-              } else {
-                mixedEntry.decisionBranch = 15;
-                mixedEntry.decision = "conflict_created_keep_both";
+              } else if (syncDirection === "incremental_pull_only") {
+                mixedEntry.decisionBranch = 22;
+                mixedEntry.decision = "conflict_created_then_keep_remote";
                 keptFolder.add(getParentFolder(key));
+              } else if (syncDirection === "incremental_push_only") {
+                mixedEntry.decisionBranch = 23;
+                mixedEntry.decision = "conflict_created_then_keep_local";
+                keptFolder.add(getParentFolder(key));
+              } else {
+                throw Error(
+                  `no idea how to deal with syncDirection=${syncDirection} while conflict created`
+                );
               }
             } else {
-              if (conflictAction === "keep_newer") {
-                if (
-                  (local.mtimeCli ?? local.mtimeSvr ?? 0) >=
-                  (remote.mtimeCli ?? remote.mtimeSvr ?? 0)
-                ) {
-                  mixedEntry.decisionBranch = 16;
-                  mixedEntry.decision = "conflict_modified_keep_local";
-                  keptFolder.add(getParentFolder(key));
+              // Both exist but don't compare means both are modified
+              if (syncDirection === "bidirectional") {
+                if (conflictAction === "keep_newer") {
+                  if (
+                    (local.mtimeCli ?? local.mtimeSvr ?? 0) >=
+                    (remote.mtimeCli ?? remote.mtimeSvr ?? 0)
+                  ) {
+                    mixedEntry.decisionBranch = 16;
+                    mixedEntry.decision = "conflict_modified_then_keep_local";
+                    keptFolder.add(getParentFolder(key));
+                  } else {
+                    mixedEntry.decisionBranch = 17;
+                    mixedEntry.decision = "conflict_modified_then_keep_remote";
+                    keptFolder.add(getParentFolder(key));
+                  }
+                } else if (conflictAction === "keep_larger") {
+                  if (local.sizeEnc! >= remote.sizeEnc!) {
+                    mixedEntry.decisionBranch = 18;
+                    mixedEntry.decision = "conflict_modified_then_keep_local";
+                    keptFolder.add(getParentFolder(key));
+                  } else {
+                    mixedEntry.decisionBranch = 19;
+                    mixedEntry.decision = "conflict_modified_then_keep_remote";
+                    keptFolder.add(getParentFolder(key));
+                  }
                 } else {
-                  mixedEntry.decisionBranch = 17;
-                  mixedEntry.decision = "conflict_modified_keep_remote";
+                  mixedEntry.decisionBranch = 20;
+                  mixedEntry.decision = "conflict_modified_then_keep_both";
                   keptFolder.add(getParentFolder(key));
                 }
-              } else if (conflictAction === "keep_larger") {
-                if (local.sizeEnc! >= remote.sizeEnc!) {
-                  mixedEntry.decisionBranch = 18;
-                  mixedEntry.decision = "conflict_modified_keep_local";
-                  keptFolder.add(getParentFolder(key));
-                } else {
-                  mixedEntry.decisionBranch = 19;
-                  mixedEntry.decision = "conflict_modified_keep_remote";
-                  keptFolder.add(getParentFolder(key));
-                }
-              } else {
-                mixedEntry.decisionBranch = 20;
-                mixedEntry.decision = "conflict_modified_keep_both";
+              } else if (syncDirection === "incremental_pull_only") {
+                mixedEntry.decisionBranch = 24;
+                mixedEntry.decision = "conflict_modified_then_keep_remote";
                 keptFolder.add(getParentFolder(key));
+              } else if (syncDirection === "incremental_push_only") {
+                mixedEntry.decisionBranch = 25;
+                mixedEntry.decision = "conflict_modified_then_keep_local";
+                keptFolder.add(getParentFolder(key));
+              } else {
+                throw Error(
+                  `no idea how to deal with syncDirection=${syncDirection} while conflict modified`
+                );
               }
             }
           } else {
@@ -675,9 +733,15 @@ export const getSyncPlanInplace = async (
             skipSizeLargerThan <= 0 ||
             remote.sizeEnc! <= skipSizeLargerThan
           ) {
-            mixedEntry.decisionBranch = 3;
-            mixedEntry.decision = "created_remote";
-            keptFolder.add(getParentFolder(key));
+            if (syncDirection === "incremental_push_only") {
+              mixedEntry.decisionBranch = 28;
+              mixedEntry.decision = "conflict_created_then_do_nothing";
+              keptFolder.add(getParentFolder(key));
+            } else {
+              mixedEntry.decisionBranch = 3;
+              mixedEntry.decision = "remote_is_created_then_pull";
+              keptFolder.add(getParentFolder(key));
+            }
           } else {
             throw Error(
               `remote is created (branch 3) but size larger than ${skipSizeLargerThan}, don't know what to do: ${JSON.stringify(
@@ -691,17 +755,33 @@ export const getSyncPlanInplace = async (
           prevSync.sizeEnc === remote.sizeEnc
         ) {
           // if B is in the previous list and UNMODIFIED, B has been deleted by A
-          mixedEntry.decisionBranch = 4;
-          mixedEntry.decision = "deleted_local";
+          if (syncDirection === "incremental_push_only") {
+            mixedEntry.decisionBranch = 29;
+            mixedEntry.decision = "conflict_created_then_do_nothing";
+            keptFolder.add(getParentFolder(key));
+          } else if (syncDirection === "incremental_pull_only") {
+            mixedEntry.decisionBranch = 35;
+            mixedEntry.decision = "conflict_created_then_keep_remote";
+            keptFolder.add(getParentFolder(key));
+          } else {
+            mixedEntry.decisionBranch = 4;
+            mixedEntry.decision = "local_is_deleted_thus_also_delete_remote";
+          }
         } else {
           // if B is in the previous list and MODIFIED, B has been deleted by A but modified by B
           if (
             skipSizeLargerThan <= 0 ||
             remote.sizeEnc! <= skipSizeLargerThan
           ) {
-            mixedEntry.decisionBranch = 5;
-            mixedEntry.decision = "modified_remote";
-            keptFolder.add(getParentFolder(key));
+            if (syncDirection === "incremental_push_only") {
+              mixedEntry.decisionBranch = 30;
+              mixedEntry.decision = "conflict_created_then_do_nothing";
+              keptFolder.add(getParentFolder(key));
+            } else {
+              mixedEntry.decisionBranch = 5;
+              mixedEntry.decision = "remote_is_modified_then_pull";
+              keptFolder.add(getParentFolder(key));
+            }
           } else {
             throw Error(
               `remote is modified (branch 5) but size larger than ${skipSizeLargerThan}, don't know what to do: ${JSON.stringify(
@@ -716,9 +796,15 @@ export const getSyncPlanInplace = async (
         if (prevSync === undefined) {
           // if A is not in the previous list, A is new
           if (skipSizeLargerThan <= 0 || local.sizeEnc! <= skipSizeLargerThan) {
-            mixedEntry.decisionBranch = 6;
-            mixedEntry.decision = "created_local";
-            keptFolder.add(getParentFolder(key));
+            if (syncDirection === "incremental_pull_only") {
+              mixedEntry.decisionBranch = 31;
+              mixedEntry.decision = "conflict_created_then_do_nothing";
+              keptFolder.add(getParentFolder(key));
+            } else {
+              mixedEntry.decisionBranch = 6;
+              mixedEntry.decision = "local_is_created_then_push";
+              keptFolder.add(getParentFolder(key));
+            }
           } else {
             throw Error(
               `local is created (branch 6) but size larger than ${skipSizeLargerThan}, don't know what to do: ${JSON.stringify(
@@ -732,14 +818,28 @@ export const getSyncPlanInplace = async (
           prevSync.sizeEnc === local.sizeEnc
         ) {
           // if A is in the previous list and UNMODIFIED, A has been deleted by B
-          mixedEntry.decisionBranch = 7;
-          mixedEntry.decision = "deleted_remote";
+          if (syncDirection === "incremental_push_only") {
+            mixedEntry.decisionBranch = 32;
+            mixedEntry.decision = "conflict_created_then_keep_local";
+          } else if (syncDirection === "incremental_pull_only") {
+            mixedEntry.decisionBranch = 33;
+            mixedEntry.decision = "conflict_created_then_do_nothing";
+          } else {
+            mixedEntry.decisionBranch = 7;
+            mixedEntry.decision = "remote_is_deleted_thus_also_delete_local";
+          }
         } else {
           // if A is in the previous list and MODIFIED, A has been deleted by B but modified by A
           if (skipSizeLargerThan <= 0 || local.sizeEnc! <= skipSizeLargerThan) {
-            mixedEntry.decisionBranch = 8;
-            mixedEntry.decision = "modified_local";
-            keptFolder.add(getParentFolder(key));
+            if (syncDirection === "incremental_pull_only") {
+              mixedEntry.decisionBranch = 34;
+              mixedEntry.decision = "conflict_created_then_do_nothing";
+              keptFolder.add(getParentFolder(key));
+            } else {
+              mixedEntry.decisionBranch = 8;
+              mixedEntry.decision = "local_is_modified_then_push";
+              keptFolder.add(getParentFolder(key));
+            }
           } else {
             throw Error(
               `local is modified (branch 8) but size larger than ${skipSizeLargerThan}, don't know what to do: ${JSON.stringify(
@@ -802,13 +902,14 @@ const splitThreeStepsOnEntityMappings = (
 
     if (
       val.decision === "equal" ||
-      val.decision === "folder_existed_both" ||
+      val.decision === "conflict_created_then_do_nothing" ||
+      val.decision === "folder_existed_both_then_do_nothing" ||
       val.decision === "folder_to_skip"
     ) {
       // pass
     } else if (
-      val.decision === "folder_existed_local" ||
-      val.decision === "folder_existed_remote" ||
+      val.decision === "folder_existed_local_then_also_create_remote" ||
+      val.decision === "folder_existed_remote_then_also_create_local" ||
       val.decision === "folder_to_be_created"
     ) {
       // console.debug(`splitting folder: key=${key},val=${JSON.stringify(val)}`);
@@ -823,8 +924,8 @@ const splitThreeStepsOnEntityMappings = (
       realTotalCount += 1;
     } else if (
       val.decision === "only_history" ||
-      val.decision === "deleted_local" ||
-      val.decision === "deleted_remote" ||
+      val.decision === "local_is_deleted_thus_also_delete_remote" ||
+      val.decision === "remote_is_deleted_thus_also_delete_local" ||
       val.decision === "folder_to_be_deleted"
     ) {
       const level = atWhichLevel(key);
@@ -840,16 +941,16 @@ const splitThreeStepsOnEntityMappings = (
         realModifyDeleteCount += 1;
       }
     } else if (
-      val.decision === "modified_local" ||
-      val.decision === "modified_remote" ||
-      val.decision === "created_local" ||
-      val.decision === "created_remote" ||
-      val.decision === "conflict_created_keep_local" ||
-      val.decision === "conflict_created_keep_remote" ||
-      val.decision === "conflict_created_keep_both" ||
-      val.decision === "conflict_modified_keep_local" ||
-      val.decision === "conflict_modified_keep_remote" ||
-      val.decision === "conflict_modified_keep_both"
+      val.decision === "local_is_modified_then_push" ||
+      val.decision === "remote_is_modified_then_pull" ||
+      val.decision === "local_is_created_then_push" ||
+      val.decision === "remote_is_created_then_pull" ||
+      val.decision === "conflict_created_then_keep_local" ||
+      val.decision === "conflict_created_then_keep_remote" ||
+      val.decision === "conflict_created_then_keep_both" ||
+      val.decision === "conflict_modified_then_keep_local" ||
+      val.decision === "conflict_modified_then_keep_remote" ||
+      val.decision === "conflict_modified_then_keep_both"
     ) {
       if (
         uploadDownloads.length === 0 ||
@@ -910,16 +1011,17 @@ const dispatchOperationToActualV3 = async (
     clearPrevSyncRecordByVaultAndProfile(db, vaultRandomID, profileID, key);
   } else if (
     r.decision === "equal" ||
+    r.decision === "conflict_created_then_do_nothing" ||
     r.decision === "folder_to_skip" ||
-    r.decision === "folder_existed_both"
+    r.decision === "folder_existed_both_then_do_nothing"
   ) {
     // pass
   } else if (
-    r.decision === "modified_local" ||
-    r.decision === "created_local" ||
-    r.decision === "folder_existed_local" ||
-    r.decision === "conflict_created_keep_local" ||
-    r.decision === "conflict_modified_keep_local"
+    r.decision === "local_is_modified_then_push" ||
+    r.decision === "local_is_created_then_push" ||
+    r.decision === "folder_existed_local_then_also_create_remote" ||
+    r.decision === "conflict_created_then_keep_local" ||
+    r.decision === "conflict_modified_then_keep_local"
   ) {
     if (
       client.serviceType === "onedrive" &&
@@ -949,11 +1051,11 @@ const dispatchOperationToActualV3 = async (
       );
     }
   } else if (
-    r.decision === "modified_remote" ||
-    r.decision === "created_remote" ||
-    r.decision === "conflict_created_keep_remote" ||
-    r.decision === "conflict_modified_keep_remote" ||
-    r.decision === "folder_existed_remote"
+    r.decision === "remote_is_modified_then_pull" ||
+    r.decision === "remote_is_created_then_pull" ||
+    r.decision === "conflict_created_then_keep_remote" ||
+    r.decision === "conflict_modified_then_keep_remote" ||
+    r.decision === "folder_existed_remote_then_also_create_local"
   ) {
     await mkdirpInVault(r.key, vault);
     await client.downloadFromRemote(
@@ -969,7 +1071,7 @@ const dispatchOperationToActualV3 = async (
       profileID,
       r.remote!
     );
-  } else if (r.decision === "deleted_local") {
+  } else if (r.decision === "local_is_deleted_thus_also_delete_remote") {
     // local is deleted, we need to delete remote now
     await client.deleteFromRemote(r.key, password, r.remote!.keyEnc);
     await clearPrevSyncRecordByVaultAndProfile(
@@ -978,7 +1080,7 @@ const dispatchOperationToActualV3 = async (
       profileID,
       r.key
     );
-  } else if (r.decision === "deleted_remote") {
+  } else if (r.decision === "remote_is_deleted_thus_also_delete_local") {
     // remote is deleted, we need to delete local now
     await localDeleteFunc(r.key);
     await clearPrevSyncRecordByVaultAndProfile(
@@ -988,8 +1090,8 @@ const dispatchOperationToActualV3 = async (
       r.key
     );
   } else if (
-    r.decision === "conflict_created_keep_both" ||
-    r.decision === "conflict_modified_keep_both"
+    r.decision === "conflict_created_then_keep_both" ||
+    r.decision === "conflict_modified_then_keep_both"
   ) {
     throw Error(`${r.decision} not implemented yet: ${JSON.stringify(r)}`);
   } else if (r.decision === "folder_to_be_created") {
