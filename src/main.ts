@@ -304,7 +304,8 @@ export default class RemotelySavePlugin extends Plugin {
         this.app.vault.configDir,
         this.settings.syncUnderscoreItems ?? false,
         this.settings.ignorePaths ?? [],
-        this.settings.password
+        this.settings.password,
+        this.settings.serviceType
       );
       mixedEntityMappings = await getSyncPlanInplace(
         mixedEntityMappings,
