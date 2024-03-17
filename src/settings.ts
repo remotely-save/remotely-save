@@ -2076,6 +2076,30 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
       });
 
     new Setting(debugDiv)
+      .setName(t("settings_obfuscatesettingfile"))
+      .setDesc(t("settings_obfuscatesettingfile_desc"))
+      .addDropdown(async (dropdown) => {
+        dropdown
+          .addOption("enable", t("enable"))
+          .addOption("disable", t("disable"));
+
+        dropdown
+          .setValue(
+            `${
+              this.plugin.settings.obfuscateSettingFile ? "enable" : "disable"
+            }`
+          )
+          .onChange(async (val) => {
+            if (val === "enable") {
+              this.plugin.settings.obfuscateSettingFile = true;
+            } else {
+              this.plugin.settings.obfuscateSettingFile = false;
+            }
+            await this.plugin.saveSettings();
+          });
+      });
+
+    new Setting(debugDiv)
       .setName(t("settings_viewconsolelog"))
       .setDesc(stringToFragment(t("settings_viewconsolelog_desc")));
 

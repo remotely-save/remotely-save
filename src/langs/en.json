@@ -277,6 +277,8 @@
   "settings_outputsettingsconsole_desc": "The settings save on disk in encoded. Click this to see the decoded settings in console.",
   "settings_outputsettingsconsole_button": "Output",
   "settings_outputsettingsconsole_notice": "Finished outputing in console.",
+  "settings_obfuscatesettingfile": "Obfuscate The Setting File Or Not",
+  "settings_obfuscatesettingfile_desc": "The setting file (data.json) has some sensitive information. It's strongly recommended to obfuscate it to avoid unexpected read and modification. If you are sure to view and edit it manually, you can disable the obfuscation.",
   "settings_viewconsolelog": "View Console Log",
   "settings_viewconsolelog_desc": "On desktop, please press \"ctrl+shift+i\" or \"cmd+shift+i\" to view the log. On mobile, please install the third-party plugin <a href='https://obsidian.md/plugins?search=Logstravaganza'>Logstravaganza</a> to export the console log to a note.",
   "settings_syncplans": "Export Sync Plans",

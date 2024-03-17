@@ -115,6 +115,8 @@ export interface RemotelySavePluginSettings {
   protectModifyPercentage?: number;
   syncDirection?: SyncDirectionType;
 
+  obfuscateSettingFile?: boolean;
+
   /**
    * @deprecated
    */

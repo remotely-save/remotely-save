@@ -95,6 +95,7 @@ const DEFAULT_SETTINGS: RemotelySavePluginSettings = {
   howToCleanEmptyFolder: "skip",
   protectModifyPercentage: 50,
   syncDirection: "bidirectional",
+  obfuscateSettingFile: true,
 };
 
 interface OAuth2Info {
@@ -895,11 +896,19 @@ export default class RemotelySavePlugin extends Plugin {
       this.settings.syncDirection = "bidirectional";
     }
 
+    if (this.settings.obfuscateSettingFile === undefined) {
+      this.settings.obfuscateSettingFile = true;
+    }
+
     await this.saveSettings();
   }
 
   async saveSettings() {
-    await this.saveData(normalConfigToMessy(this.settings));
+    if (this.settings.obfuscateSettingFile) {
+      await this.saveData(normalConfigToMessy(this.settings));
+    } else {
+      await this.saveData(this.settings);
+    }
   }
 
   /**

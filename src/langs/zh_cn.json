@@ -277,6 +277,8 @@
   "settings_outputsettingsconsole_desc": "硬盘上的设置文件是编码过的，点击这里从而解码并输出到终端。",
   "settings_outputsettingsconsole_button": "输出",
   "settings_outputsettingsconsole_notice": "已输出到终端",
+  "settings_obfuscatesettingfile": "是否混淆保存设置文件",
+  "settings_obfuscatesettingfile_desc": "设置文件（data.json）含有敏感信息。强烈建议混淆后保存它，从而避免出乎意料的读取和修改。如果您确认要手动查看和修改它，可以关闭混淆保存。",
   "settings_viewconsolelog": "查看终端输出",
   "settings_viewconsolelog_desc": "电脑上，输入“ctrl+shift+i”或“cmd+shift+i”来查看终端输出。手机上，安装第三方插件 <a href='https://obsidian.md/plugins?search=Logstravaganza'>Logstravaganza</a> 来导出终端输出到一篇笔记上。",
   "settings_syncplans": "导出同步计划",
