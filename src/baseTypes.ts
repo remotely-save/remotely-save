@@ -117,6 +117,8 @@ export interface RemotelySavePluginSettings {
 
   obfuscateSettingFile?: boolean;
 
+  enableMobileStatusBar?: boolean;
+
   /**
    * @deprecated
    */

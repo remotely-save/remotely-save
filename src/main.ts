@@ -66,7 +66,7 @@ import { SyncAlgoV3Modal } from "./syncAlgoV3Notice";
 
 import AggregateError from "aggregate-error";
 import { exportVaultSyncPlansToFiles } from "./debugMode";
-import { compareVersion } from "./misc";
+import { changeMobileStatusBar, compareVersion } from "./misc";
 
 const DEFAULT_SETTINGS: RemotelySavePluginSettings = {
   s3: DEFAULT_S3_CONFIG,
@@ -96,6 +96,7 @@ const DEFAULT_SETTINGS: RemotelySavePluginSettings = {
   protectModifyPercentage: 50,
   syncDirection: "bidirectional",
   obfuscateSettingFile: true,
+  enableMobileStatusBar: false,
 };
 
 interface OAuth2Info {
@@ -722,8 +723,14 @@ export default class RemotelySavePlugin extends Plugin {
       async () => this.syncRun("manual")
     );
 
-    // Create Status Bar Item (not supported on mobile)
-    if (!Platform.isMobileApp && this.settings.enableStatusBarInfo === true) {
+    this.enableMobileStatusBarIfSet();
+
+    // Create Status Bar Item
+    if (
+      (!Platform.isMobile ||
+        (Platform.isMobile && this.settings.enableMobileStatusBar)) &&
+      this.settings.enableStatusBarInfo === true
+    ) {
       const statusBarItem = this.addStatusBarItem();
       this.statusBarElement = statusBarItem.createEl("span");
       this.statusBarElement.setAttribute("data-tooltip-position", "top");
@@ -898,6 +905,10 @@ export default class RemotelySavePlugin extends Plugin {
 
     if (this.settings.obfuscateSettingFile === undefined) {
       this.settings.obfuscateSettingFile = true;
+    }
+
+    if (this.settings.enableMobileStatusBar === undefined) {
+      this.settings.enableMobileStatusBar = false;
     }
 
     await this.saveSettings();
@@ -1132,6 +1143,12 @@ export default class RemotelySavePlugin extends Plugin {
         this.syncOnSaveIntervalID = intervalID;
         this.registerInterval(intervalID);
       });
+    }
+  }
+
+  enableMobileStatusBarIfSet() {
+    if (Platform.isMobile && this.settings.enableMobileStatusBar) {
+      changeMobileStatusBar("enable");
     }
   }
 

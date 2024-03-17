@@ -503,3 +503,23 @@ export const stringToFragment = (string: string) => {
   wrapper.innerHTML = string;
   return wrapper.content;
 };
+
+/**
+ * https://forum.obsidian.md/t/css-to-show-status-bar-on-mobile-devices/77185
+ * @param op
+ */
+export const changeMobileStatusBar = (op: "enable" | "disable") => {
+  if (op === "enable") {
+    (
+      document.querySelector(
+        ".is-mobile .app-container .status-bar"
+      ) as HTMLElement
+    ).style.setProperty("display", "flex");
+  } else {
+    (
+      document.querySelector(
+        ".is-mobile .app-container .status-bar"
+      ) as HTMLElement
+    ).style.setProperty("display", "none");
+  }
+};

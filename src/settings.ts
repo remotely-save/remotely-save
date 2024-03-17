@@ -45,7 +45,11 @@ import {
 } from "./remoteForOnedrive";
 import { messyConfigToNormal } from "./configPersist";
 import type { TransItemType } from "./i18n";
-import { checkHasSpecialCharForDir, stringToFragment } from "./misc";
+import {
+  changeMobileStatusBar,
+  checkHasSpecialCharForDir,
+  stringToFragment,
+} from "./misc";
 import { simpleTransRemotePrefix } from "./remoteForS3";
 
 class PasswordModal extends Modal {
@@ -2016,6 +2020,36 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
             await this.plugin.saveSettings();
           });
       });
+
+    if (Platform.isMobile) {
+      new Setting(advDiv)
+        .setName(t("settings_enablemobilestatusbar"))
+        .setDesc(t("settings_enablemobilestatusbar_desc"))
+        .addDropdown(async (dropdown) => {
+          dropdown
+            .addOption("enable", t("enable"))
+            .addOption("disable", t("disable"));
+
+          dropdown
+            .setValue(
+              `${
+                this.plugin.settings.enableMobileStatusBar
+                  ? "enable"
+                  : "disable"
+              }`
+            )
+            .onChange(async (val) => {
+              if (val === "enable") {
+                this.plugin.settings.enableMobileStatusBar = true;
+                changeMobileStatusBar("enable");
+              } else {
+                this.plugin.settings.enableMobileStatusBar = false;
+                changeMobileStatusBar("disable");
+              }
+              await this.plugin.saveSettings();
+            });
+        });
+    }
 
     //////////////////////////////////////////////////
     // below for import and export functions
