@@ -33,7 +33,7 @@ import {
   clearAllLoggerOutputRecords,
   upsertLastSuccessSyncTimeByVault,
   getLastSuccessSyncTimeByVault,
-  getAllPrevSyncRecordsByVault,
+  getAllPrevSyncRecordsByVaultAndProfile,
 } from "./localdb";
 import { RemoteClient } from "./remote";
 import {
@@ -148,6 +148,8 @@ export default class RemotelySavePlugin extends Plugin {
     const t = (x: TransItemType, vars?: any) => {
       return this.i18n.t(x, vars);
     };
+
+    const profileID = this.getCurrProfileID();
 
     const getNotice = (x: string, timeout?: number) => {
       // only show notices in manual mode
@@ -278,9 +280,10 @@ export default class RemotelySavePlugin extends Plugin {
         getNotice(t("syncrun_step5"));
       }
       this.syncStatus = "getting_local_prev_sync";
-      const prevSyncEntityList = await getAllPrevSyncRecordsByVault(
+      const prevSyncEntityList = await getAllPrevSyncRecordsByVaultAndProfile(
         this.db,
-        this.vaultRandomID
+        this.vaultRandomID,
+        profileID
       );
       console.debug("prevSyncEntityList:");
       console.debug(prevSyncEntityList);
@@ -330,6 +333,7 @@ export default class RemotelySavePlugin extends Plugin {
           mixedEntityMappings,
           client,
           this.vaultRandomID,
+          profileID,
           this.app.vault,
           this.settings.password,
           this.settings.concurrency ?? 5,
@@ -433,6 +437,9 @@ export default class RemotelySavePlugin extends Plugin {
 
     await this.loadSettings();
 
+    // MUST after loadSettings and before prepareDB
+    const profileID: string = this.getCurrProfileID();
+
     // lang should be load early, but after settings
     this.i18n = new I18n(this.settings.lang!, async (lang: LangTypeAndAuto) => {
       this.settings.lang = lang;
@@ -458,7 +465,8 @@ export default class RemotelySavePlugin extends Plugin {
     try {
       await this.prepareDBAndVaultRandomID(
         vaultBasePath,
-        vaultRandomIDFromOldConfigFile
+        vaultRandomIDFromOldConfigFile,
+        profileID
       );
     } catch (err: any) {
       new Notice(
@@ -866,6 +874,17 @@ export default class RemotelySavePlugin extends Plugin {
     await this.saveData(normalConfigToMessy(this.settings));
   }
 
+  /**
+   * After 202403 the data should be of profile based.
+   */
+  getCurrProfileID() {
+    if (this.settings.serviceType !== undefined) {
+      return `${this.settings.serviceType}-default-1`;
+    } else {
+      throw Error("unknown serviceType in the setting!");
+    }
+  }
+
   async checkIfOauthExpires() {
     let needSave: boolean = false;
     const current = Date.now();
@@ -975,11 +994,13 @@ export default class RemotelySavePlugin extends Plugin {
 
   async prepareDBAndVaultRandomID(
     vaultBasePath: string,
-    vaultRandomIDFromOldConfigFile: string
+    vaultRandomIDFromOldConfigFile: string,
+    profileID: string
   ) {
     const { db, vaultRandomID } = await prepareDBs(
       vaultBasePath,
-      vaultRandomIDFromOldConfigFile
+      vaultRandomIDFromOldConfigFile,
+      profileID
     );
     this.db = db;
     this.vaultRandomID = vaultRandomID;

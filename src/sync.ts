@@ -34,8 +34,8 @@ import { Vault } from "obsidian";
 import AggregateError from "aggregate-error";
 import {
   InternalDBs,
-  clearPrevSyncRecordByVault,
-  upsertPrevSyncRecordByVault,
+  clearPrevSyncRecordByVaultAndProfile,
+  upsertPrevSyncRecordByVaultAndProfile,
 } from "./localdb";
 
 export type SyncStatusType =
@@ -872,6 +872,7 @@ const splitThreeStepsOnEntityMappings = (
 const dispatchOperationToActualV3 = async (
   key: string,
   vaultRandomID: string,
+  profileID: string,
   r: MixedEntity,
   client: RemoteClient,
   db: InternalDBs,
@@ -887,7 +888,7 @@ const dispatchOperationToActualV3 = async (
   //   )}`
   // );
   if (r.decision === "only_history") {
-    clearPrevSyncRecordByVault(db, vaultRandomID, key);
+    clearPrevSyncRecordByVaultAndProfile(db, vaultRandomID, profileID, key);
   } else if (
     r.decision === "equal" ||
     r.decision === "folder_to_skip" ||
@@ -921,7 +922,12 @@ const dispatchOperationToActualV3 = async (
       );
       await decryptRemoteEntityInplace(entity, password);
       await fullfillMTimeOfRemoteEntityInplace(entity, mtimeCli);
-      await upsertPrevSyncRecordByVault(db, vaultRandomID, entity);
+      await upsertPrevSyncRecordByVaultAndProfile(
+        db,
+        vaultRandomID,
+        profileID,
+        entity
+      );
     }
   } else if (
     r.decision === "modified_remote" ||
@@ -938,15 +944,30 @@ const dispatchOperationToActualV3 = async (
       password,
       r.remote!.keyEnc
     );
-    await upsertPrevSyncRecordByVault(db, vaultRandomID, r.remote!);
+    await upsertPrevSyncRecordByVaultAndProfile(
+      db,
+      vaultRandomID,
+      profileID,
+      r.remote!
+    );
   } else if (r.decision === "deleted_local") {
     // local is deleted, we need to delete remote now
     await client.deleteFromRemote(r.key, password, r.remote!.keyEnc);
-    await clearPrevSyncRecordByVault(db, vaultRandomID, r.key);
+    await clearPrevSyncRecordByVaultAndProfile(
+      db,
+      vaultRandomID,
+      profileID,
+      r.key
+    );
   } else if (r.decision === "deleted_remote") {
     // remote is deleted, we need to delete local now
     await localDeleteFunc(r.key);
-    await clearPrevSyncRecordByVault(db, vaultRandomID, r.key);
+    await clearPrevSyncRecordByVaultAndProfile(
+      db,
+      vaultRandomID,
+      profileID,
+      r.key
+    );
   } else if (
     r.decision === "conflict_created_keep_both" ||
     r.decision === "conflict_modified_keep_both"
@@ -964,11 +985,21 @@ const dispatchOperationToActualV3 = async (
     // we need to decrypt the key!!!
     await decryptRemoteEntityInplace(entity, password);
     await fullfillMTimeOfRemoteEntityInplace(entity, mtimeCli);
-    await upsertPrevSyncRecordByVault(db, vaultRandomID, entity);
+    await upsertPrevSyncRecordByVaultAndProfile(
+      db,
+      vaultRandomID,
+      profileID,
+      entity
+    );
   } else if (r.decision === "folder_to_be_deleted") {
     await localDeleteFunc(r.key);
     await client.deleteFromRemote(r.key, password, r.remote!.keyEnc);
-    await clearPrevSyncRecordByVault(db, vaultRandomID, r.key);
+    await clearPrevSyncRecordByVaultAndProfile(
+      db,
+      vaultRandomID,
+      profileID,
+      r.key
+    );
   } else {
     throw Error(`don't know how to dispatch decision: ${JSON.stringify(r)}`);
   }
@@ -978,6 +1009,7 @@ export const doActualSync = async (
   mixedEntityMappings: Record<string, MixedEntity>,
   client: RemoteClient,
   vaultRandomID: string,
+  profileID: string,
   vault: Vault,
   password: string,
   concurrency: number,
@@ -1043,6 +1075,7 @@ export const doActualSync = async (
           await dispatchOperationToActualV3(
             key,
             vaultRandomID,
+            profileID,
             val,
             client,
             db,

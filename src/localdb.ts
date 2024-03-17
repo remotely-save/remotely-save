@@ -113,7 +113,8 @@ const fromSyncMappingsToPrevSyncRecords = (
  */
 const migrateDBsFrom20220326To20240220 = async (
   db: InternalDBs,
-  vaultRandomID: string
+  vaultRandomID: string,
+  profileID: string
 ) => {
   const oldVer = 20220326;
   const newVer = 20240220;
@@ -123,7 +124,12 @@ const migrateDBsFrom20220326To20240220 = async (
   const syncMappings = await getAllSyncMetaMappingByVault(db, vaultRandomID);
   const prevSyncRecords = fromSyncMappingsToPrevSyncRecords(syncMappings);
   for (const prevSyncRecord of prevSyncRecords) {
-    await upsertPrevSyncRecordByVault(db, vaultRandomID, prevSyncRecord);
+    await upsertPrevSyncRecordByVaultAndProfile(
+      db,
+      vaultRandomID,
+      profileID,
+      prevSyncRecord
+    );
   }
 
   // // clear not used data
@@ -140,7 +146,8 @@ const migrateDBs = async (
   db: InternalDBs,
   oldVer: number,
   newVer: number,
-  vaultRandomID: string
+  vaultRandomID: string,
+  profileID: string
 ) => {
   if (oldVer === newVer) {
     return;
@@ -155,7 +162,7 @@ const migrateDBs = async (
   }
 
   if (oldVer === 20220326 && newVer === 20240220) {
-    return await migrateDBsFrom20220326To20240220(db, vaultRandomID);
+    return await migrateDBsFrom20220326To20240220(db, vaultRandomID, profileID);
   }
 
   if (newVer < oldVer) {
@@ -169,7 +176,8 @@ const migrateDBs = async (
 
 export const prepareDBs = async (
   vaultBasePath: string,
-  vaultRandomIDFromOldConfigFile: string
+  vaultRandomIDFromOldConfigFile: string,
+  profileID: string
 ) => {
   const db = {
     versionTbl: localforage.createInstance({
@@ -259,7 +267,8 @@ export const prepareDBs = async (
       db,
       originalVersion,
       DEFAULT_DB_VERSION_NUMBER,
-      vaultRandomID
+      vaultRandomID,
+      profileID
     );
   }
 
@@ -414,16 +423,17 @@ export const clearExpiredSyncPlanRecords = async (db: InternalDBs) => {
   await Promise.all(ps);
 };
 
-export const getAllPrevSyncRecordsByVault = async (
+export const getAllPrevSyncRecordsByVaultAndProfile = async (
   db: InternalDBs,
-  vaultRandomID: string
+  vaultRandomID: string,
+  profileID: string
 ) => {
-  // console.debug('inside getAllPrevSyncRecordsByVault')
+  // console.debug('inside getAllPrevSyncRecordsByVaultAndProfile')
   const keys = await db.prevSyncRecordsTbl.keys();
-  // console.debug(`inside getAllPrevSyncRecordsByVault, keys=${keys}`)
+  // console.debug(`inside getAllPrevSyncRecordsByVaultAndProfile, keys=${keys}`)
   const res: Entity[] = [];
   for (const key of keys) {
-    if (key.startsWith(`${vaultRandomID}\t`)) {
+    if (key.startsWith(`${vaultRandomID}\t${profileID}\t`)) {
       const val: Entity | null = await db.prevSyncRecordsTbl.getItem(key);
       if (val !== null) {
         res.push(val);
@@ -433,23 +443,27 @@ export const getAllPrevSyncRecordsByVault = async (
   return res;
 };
 
-export const upsertPrevSyncRecordByVault = async (
+export const upsertPrevSyncRecordByVaultAndProfile = async (
   db: InternalDBs,
   vaultRandomID: string,
+  profileID: string,
   prevSync: Entity
 ) => {
   await db.prevSyncRecordsTbl.setItem(
-    `${vaultRandomID}\t${prevSync.key}`,
+    `${vaultRandomID}\t${profileID}\t${prevSync.key}`,
     prevSync
   );
 };
 
-export const clearPrevSyncRecordByVault = async (
+export const clearPrevSyncRecordByVaultAndProfile = async (
   db: InternalDBs,
   vaultRandomID: string,
+  profileID: string,
   key: string
 ) => {
-  await db.prevSyncRecordsTbl.removeItem(`${vaultRandomID}\t${key}`);
+  await db.prevSyncRecordsTbl.removeItem(
+    `${vaultRandomID}\t${profileID}\t${key}`
+  );
 };
 
 export const clearAllPrevSyncRecordByVault = async (
