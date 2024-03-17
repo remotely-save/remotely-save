@@ -671,7 +671,7 @@ export const listAllFromRemote = async (client: WrappedOnedriveClient) => {
   // unify everything to Entity
   const unifiedContents = driveItems
     .map((x) => fromDriveItemToEntity(x, client.remoteBaseDir))
-    .filter((x) => x.key !== "/");
+    .filter((x) => x.keyRaw !== "/");
 
   return unifiedContents;
 };
