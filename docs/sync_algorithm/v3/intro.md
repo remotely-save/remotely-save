@@ -9,4 +9,4 @@
 - [x] migration: old data auto transfer to new db (hopefully)
 - [ ] partial sync: force push
 - [ ] partial sync: force pull
-- [ ] sync protection: warning based on the threshold
+- [x] sync protection: warning based on the threshold

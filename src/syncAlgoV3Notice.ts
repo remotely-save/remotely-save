@@ -7,12 +7,14 @@ import { stringToFragment } from "./misc";
 export class SyncAlgoV3Modal extends Modal {
   agree: boolean;
   manualBackup: boolean;
+  requireUpdateAllDev: boolean;
   readonly plugin: RemotelySavePlugin;
   constructor(app: App, plugin: RemotelySavePlugin) {
     super(app);
     this.plugin = plugin;
     this.agree = false;
     this.manualBackup = false;
+    this.requireUpdateAllDev = false;
   }
   onOpen() {
     let { contentEl } = this;
@@ -36,6 +38,7 @@ export class SyncAlgoV3Modal extends Modal {
     // code modified partially from BART released under MIT License
     contentEl.createDiv("modal-button-container", (buttonContainerEl) => {
       let agreeBtn: HTMLButtonElement | undefined = undefined;
+
       buttonContainerEl.createEl(
         "label",
         {
@@ -50,7 +53,7 @@ export class SyncAlgoV3Modal extends Modal {
           checkboxEl.addEventListener("click", () => {
             this.manualBackup = checkboxEl.checked;
             if (agreeBtn !== undefined) {
-              if (checkboxEl.checked) {
+              if (this.manualBackup && this.requireUpdateAllDev) {
                 agreeBtn.removeAttribute("disabled");
               } else {
                 agreeBtn.setAttr("disabled", true);
@@ -58,6 +61,31 @@ export class SyncAlgoV3Modal extends Modal {
             }
           });
           labelEl.appendText(t("syncalgov3_checkbox_manual_backup"));
+        }
+      );
+
+      buttonContainerEl.createEl(
+        "label",
+        {
+          cls: "mod-checkbox",
+        },
+        (labelEl) => {
+          const checkboxEl = labelEl.createEl("input", {
+            attr: { tabindex: -1 },
+            type: "checkbox",
+          });
+          checkboxEl.checked = this.requireUpdateAllDev;
+          checkboxEl.addEventListener("click", () => {
+            this.requireUpdateAllDev = checkboxEl.checked;
+            if (agreeBtn !== undefined) {
+              if (this.manualBackup && this.requireUpdateAllDev) {
+                agreeBtn.removeAttribute("disabled");
+              } else {
+                agreeBtn.setAttr("disabled", true);
+              }
+            }
+          });
+          labelEl.appendText(t("syncalgov3_checkbox_requiremultidevupdate"));
         }
       );
 

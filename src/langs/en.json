@@ -293,9 +293,10 @@
   "settings_resetcache_desc": "Reset local internal caches/databases (for debugging purposes). You would want to reload the plugin after resetting this. This option will not empty the {s3, password...} settings.",
   "settings_resetcache_button": "Reset",
   "settings_resetcache_notice": "Local internal cache/databases deleted. Please manually reload the plugin.",
-  "syncalgov3_title": "Remotely Save has HUGE update on sync algorithm",
-  "syncalgov3_texts": "Welcome to use Remotely Save!\nFrom this version, a new algorithm has been developed: More robust deletion sync, basic conflict handling, no more meta data uploaded... Stay tune for more! A full introduction is in the <a href='https://github.com/remotely-save/remotely-save/tree/master/docs/sync_algorithm/v3/intro.md'>doc website</a>.\nIf you agree to use thew new version and algorithm, plase check \"I WILL BACKUP MY VAULT MANUALLY FIRSTLY.\" then click the \"Agree\" button, and enjoy the plugin!\nIf you do not agree, please click the \"Do Not Agree\" button, the plugin will unload itself, and you need to manually disable it in Obsidian settings.",
-  "syncalgov3_checkbox_manual_backup": "I WILL BACKUP MY VAULT MANUALLY FIRSTLY.",
+  "syncalgov3_title": "Remotely Save has a HUGE update on the sync algorithm",
+  "syncalgov3_texts": "Welcome to use Remotely Save!\nFrom this version, a new algorithm has been developed: More robust deletion sync, minimal conflict handling, no meta data uploaded any more, deletion / modification protection... Stay tune for more! A full introduction is in the <a href='https://github.com/remotely-save/remotely-save/tree/master/docs/sync_algorithm/v3/intro.md'>doc website</a>.\nIf you agree to use this, please read and check two checkboxes then click the \"Agree\" button, and enjoy the plugin!\nIf you do not agree, please click the \"Do Not Agree\" button, the plugin will unload itself.\nAlso, please consider <a href='https://github.com/remotely-save/remotely-save'>visit the GitHub repo and star ⭐ it</a>! Or even <a href='https://github.com/remotely-save/donation'>buy me a coffee</a>. Your support is very important to me! Thanks!",
+  "syncalgov3_checkbox_manual_backup": "I will backup my vault manually firstly.",
+  "syncalgov3_checkbox_requiremultidevupdate": "I understand I need to update the plugin ACROSS ALL DEVICES to make them work properly.",
   "syncalgov3_button_agree": "Agree",
   "syncalgov3_button_disagree": "Do Not Agree"
 }
