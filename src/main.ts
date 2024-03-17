@@ -93,6 +93,7 @@ const DEFAULT_SETTINGS: RemotelySavePluginSettings = {
   agreeToUseSyncV3: false,
   conflictAction: "keep_newer",
   howToCleanEmptyFolder: "skip",
+  protectModifyPercentage: 50,
 };
 
 interface OAuth2Info {
@@ -338,6 +339,24 @@ export default class RemotelySavePlugin extends Plugin {
           this.settings.password,
           this.settings.concurrency ?? 5,
           (key: string) => self.trash(key),
+          this.settings.protectModifyPercentage ?? 50,
+          (
+            protectModifyPercentage: number,
+            realModifyDeleteCount: number,
+            allFilesCount: number
+          ) => {
+            const percent = (
+              (100 * realModifyDeleteCount) /
+              allFilesCount
+            ).toFixed(1);
+            const res = t("syncrun_abort_protectmodifypercentage", {
+              protectModifyPercentage,
+              realModifyDeleteCount,
+              allFilesCount,
+              percent,
+            });
+            return res;
+          },
           (
             realCounter: number,
             realTotalCount: number,
@@ -865,6 +884,9 @@ export default class RemotelySavePlugin extends Plugin {
     }
     if (this.settings.howToCleanEmptyFolder === undefined) {
       this.settings.howToCleanEmptyFolder = "skip";
+    }
+    if (this.settings.protectModifyPercentage === undefined) {
+      this.settings.protectModifyPercentage = 50;
     }
 
     await this.saveSettings();

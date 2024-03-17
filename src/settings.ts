@@ -1968,6 +1968,29 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
           });
       });
 
+    new Setting(advDiv)
+      .setName(t("settings_protectmodifypercentage"))
+      .setDesc(t("settings_protectmodifypercentage_desc"))
+      .addDropdown((dropdown) => {
+        for (const i of Array.from({ length: 11 }, (x, i) => i * 10)) {
+          let desc = `${i}`;
+          if (i === 0) {
+            desc = t("settings_protectmodifypercentage_000_desc");
+          } else if (i === 50) {
+            desc = t("settings_protectmodifypercentage_050_desc");
+          } else if (i === 100) {
+            desc = t("settings_protectmodifypercentage_100_desc");
+          }
+          dropdown.addOption(`${i}`, desc);
+        }
+        dropdown
+          .setValue(`${this.plugin.settings.protectModifyPercentage ?? 50}`)
+          .onChange(async (val) => {
+            this.plugin.settings.protectModifyPercentage = parseInt(val);
+            await this.plugin.saveSettings();
+          });
+      });
+
     //////////////////////////////////////////////////
     // below for import and export functions
     //////////////////////////////////////////////////

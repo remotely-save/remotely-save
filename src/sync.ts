@@ -788,11 +788,17 @@ const splitThreeStepsOnEntityMappings = (
     (k1, k2) => k2.length - k1.length
   );
 
-  let realTotalCount = 0;
+  let allFilesCount = 0; // how many files in entities
+  let realModifyDeleteCount = 0; // how many files to be modified / deleted
+  let realTotalCount = 0; // how many files to be delt with
 
   for (let i = 0; i < sortedKeys.length; ++i) {
     const key = sortedKeys[i];
     const val = mixedEntityMappings[key];
+
+    if (!key.endsWith("/")) {
+      allFilesCount += 1;
+    }
 
     if (
       val.decision === "equal" ||
@@ -829,6 +835,10 @@ const splitThreeStepsOnEntityMappings = (
         k.push(val);
       }
       realTotalCount += 1;
+
+      if (val.decision.startsWith("deleted")) {
+        realModifyDeleteCount += 1;
+      }
     } else if (
       val.decision === "modified_local" ||
       val.decision === "modified_remote" ||
@@ -851,6 +861,13 @@ const splitThreeStepsOnEntityMappings = (
         uploadDownloads[0].push(val); // only one level is needed here
       }
       realTotalCount += 1;
+
+      if (
+        val.decision.startsWith("modified") ||
+        val.decision.startsWith("conflict")
+      ) {
+        realModifyDeleteCount += 1;
+      }
     } else {
       throw Error(`unknown decision ${val.decision} for ${key}`);
     }
@@ -865,6 +882,8 @@ const splitThreeStepsOnEntityMappings = (
     folderCreationOps: folderCreationOps,
     deletionOps: deletionOps,
     uploadDownloads: uploadDownloads,
+    allFilesCount: allFilesCount,
+    realModifyDeleteCount: realModifyDeleteCount,
     realTotalCount: realTotalCount,
   };
 };
@@ -1014,16 +1033,47 @@ export const doActualSync = async (
   password: string,
   concurrency: number,
   localDeleteFunc: any,
+  protectModifyPercentage: number,
+  getProtectModifyPercentageErrorStrFunc: any,
   callbackSyncProcess: any,
   db: InternalDBs
 ) => {
   console.debug(`concurrency === ${concurrency}`);
-  const { folderCreationOps, deletionOps, uploadDownloads, realTotalCount } =
-    splitThreeStepsOnEntityMappings(mixedEntityMappings);
+  const {
+    folderCreationOps,
+    deletionOps,
+    uploadDownloads,
+    allFilesCount,
+    realModifyDeleteCount,
+    realTotalCount,
+  } = splitThreeStepsOnEntityMappings(mixedEntityMappings);
   // console.debug(`folderCreationOps: ${JSON.stringify(folderCreationOps)}`);
   // console.debug(`deletionOps: ${JSON.stringify(deletionOps)}`);
   // console.debug(`uploadDownloads: ${JSON.stringify(uploadDownloads)}`);
-  // console.debug(`realTotalCount: ${JSON.stringify(realTotalCount)}`);
+  console.debug(`allFilesCount: ${allFilesCount}`);
+  console.debug(`realModifyDeleteCount: ${realModifyDeleteCount}`);
+  console.debug(`realTotalCount: ${realTotalCount}`);
+
+  console.debug(`protectModifyPercentage: ${protectModifyPercentage}`);
+
+  if (
+    protectModifyPercentage >= 0 &&
+    realModifyDeleteCount >= 0 &&
+    allFilesCount > 0
+  ) {
+    if (
+      realModifyDeleteCount * 100 >=
+      allFilesCount * protectModifyPercentage
+    ) {
+      const errorStr: string = getProtectModifyPercentageErrorStrFunc(
+        protectModifyPercentage,
+        realModifyDeleteCount,
+        allFilesCount
+      );
+
+      throw Error(errorStr);
+    }
+  }
 
   const nested = [folderCreationOps, deletionOps, uploadDownloads];
   const logTexts = [

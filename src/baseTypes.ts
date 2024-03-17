@@ -107,6 +107,8 @@ export interface RemotelySavePluginSettings {
   conflictAction?: ConflictActionType;
   howToCleanEmptyFolder?: EmptyFolderCleanType;
 
+  protectModifyPercentage?: number;
+
   /**
    * @deprecated
    */
