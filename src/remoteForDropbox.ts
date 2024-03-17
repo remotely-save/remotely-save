@@ -5,9 +5,10 @@ import { Vault } from "obsidian";
 import * as path from "path";
 import {
   DropboxConfig,
-  RemoteItem,
+  Entity,
   COMMAND_CALLBACK_DROPBOX,
   OAUTH2_FORCE_EXPIRE_MILLISECONDS,
+  UploadedType,
 } from "./baseTypes";
 import { decryptArrayBuffer, encryptArrayBuffer } from "./encrypt";
 import {
@@ -19,8 +20,6 @@ import {
 } from "./misc";
 
 export { Dropbox } from "dropbox";
-
-import { log } from "./moreOnLog";
 
 export const DEFAULT_DROPBOX_CONFIG: DropboxConfig = {
   accessToken: "",
@@ -42,7 +41,7 @@ export const getDropboxPath = (
     // special
     key = `/${remoteBaseDir}`;
   } else if (fileOrFolderPath.startsWith("/")) {
-    log.warn(
+    console.warn(
       `why the path ${fileOrFolderPath} starts with '/'? but we just go on.`
     );
     key = `/${remoteBaseDir}${fileOrFolderPath}`;
@@ -69,13 +68,13 @@ const getNormPath = (fileOrFolderPath: string, remoteBaseDir: string) => {
   return fileOrFolderPath.slice(`/${remoteBaseDir}/`.length);
 };
 
-const fromDropboxItemToRemoteItem = (
+const fromDropboxItemToEntity = (
   x:
     | files.FileMetadataReference
     | files.FolderMetadataReference
     | files.DeletedMetadataReference,
   remoteBaseDir: string
-): RemoteItem => {
+): Entity => {
   let key = getNormPath(x.path_display!, remoteBaseDir);
   if (x[".tag"] === "folder" && !key.endsWith("/")) {
     key = `${key}/`;
@@ -83,92 +82,25 @@ const fromDropboxItemToRemoteItem = (
 
   if (x[".tag"] === "folder") {
     return {
-      key: key,
-      lastModified: undefined,
-      size: 0,
-      remoteType: "dropbox",
+      keyRaw: key,
+      sizeRaw: 0,
       etag: `${x.id}\t`,
-    } as RemoteItem;
+    } as Entity;
   } else if (x[".tag"] === "file") {
-    let mtime = Date.parse(x.client_modified).valueOf();
-    if (mtime === 0) {
-      mtime = Date.parse(x.server_modified).valueOf();
-    }
+    const mtimeCli = Date.parse(x.client_modified).valueOf();
+    const mtimeSvr = Date.parse(x.server_modified).valueOf();
     return {
-      key: key,
-      lastModified: mtime,
-      size: x.size,
-      remoteType: "dropbox",
+      keyRaw: key,
+      mtimeCli: mtimeCli,
+      mtimeSvr: mtimeSvr,
+      sizeRaw: x.size,
+      hash: x.content_hash,
       etag: `${x.id}\t${x.content_hash}`,
-    } as RemoteItem;
+    } as Entity;
   } else {
     // x[".tag"] === "deleted"
     throw Error("do not support deleted tag");
   }
-};
-
-/**
- * Dropbox api doesn't return mtime for folders.
- * This is a try to assign mtime by using files in folder.
- * @param allFilesFolders
- * @returns
- */
-const fixLastModifiedTimeInplace = (allFilesFolders: RemoteItem[]) => {
-  if (allFilesFolders.length === 0) {
-    return;
-  }
-
-  // sort by longer to shorter
-  allFilesFolders.sort((a, b) => b.key.length - a.key.length);
-
-  // a "map" from dir to mtime
-  let potentialMTime = {} as Record<string, number>;
-
-  // first sort pass, from buttom to up
-  for (const item of allFilesFolders) {
-    if (item.key.endsWith("/")) {
-      // itself is a folder, and initially doesn't have mtime
-      if (item.lastModified === undefined && item.key in potentialMTime) {
-        // previously we gathered all sub info of this folder
-        item.lastModified = potentialMTime[item.key];
-      }
-    }
-    const parent = `${path.posix.dirname(item.key)}/`;
-    if (item.lastModified !== undefined) {
-      if (parent in potentialMTime) {
-        potentialMTime[parent] = Math.max(
-          potentialMTime[parent],
-          item.lastModified
-        );
-      } else {
-        potentialMTime[parent] = item.lastModified;
-      }
-    }
-  }
-
-  // second pass, from up to buttom.
-  // fill mtime by parent folder or Date.Now() if still not available.
-  // this is only possible if no any sub-folder-files recursively.
-  // we do not sort the array again, just iterate over it by reverse
-  // using good old for loop.
-  for (let i = allFilesFolders.length - 1; i >= 0; --i) {
-    const item = allFilesFolders[i];
-    if (!item.key.endsWith("/")) {
-      continue; // skip files
-    }
-    if (item.lastModified !== undefined) {
-      continue; // don't need to deal with it
-    }
-    const parent = `${path.posix.dirname(item.key)}/`;
-    if (parent in potentialMTime) {
-      item.lastModified = potentialMTime[parent];
-    } else {
-      item.lastModified = Date.now().valueOf();
-      potentialMTime[item.key] = item.lastModified;
-    }
-  }
-
-  return allFilesFolders;
 };
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -235,7 +167,7 @@ export const sendAuthReq = async (
     const resp2 = (await resp1.json()) as DropboxSuccessAuthRes;
     return resp2;
   } catch (e) {
-    log.error(e);
+    console.error(e);
     if (errorCallBack !== undefined) {
       await errorCallBack(e);
     }
@@ -247,7 +179,7 @@ export const sendRefreshTokenReq = async (
   refreshToken: string
 ) => {
   try {
-    log.info("start auto getting refreshed Dropbox access token.");
+    console.info("start auto getting refreshed Dropbox access token.");
     const resp1 = await fetch("https://api.dropboxapi.com/oauth2/token", {
       method: "POST",
       body: new URLSearchParams({
@@ -257,10 +189,10 @@ export const sendRefreshTokenReq = async (
       }),
     });
     const resp2 = (await resp1.json()) as DropboxSuccessAuthRes;
-    log.info("finish auto getting refreshed Dropbox access token.");
+    console.info("finish auto getting refreshed Dropbox access token.");
     return resp2;
   } catch (e) {
-    log.error(e);
+    console.error(e);
     throw e;
   }
 };
@@ -270,7 +202,7 @@ export const setConfigBySuccessfullAuthInplace = async (
   authRes: DropboxSuccessAuthRes,
   saveUpdatedConfigFunc: () => Promise<any> | undefined
 ) => {
-  log.info("start updating local info of Dropbox token");
+  console.info("start updating local info of Dropbox token");
 
   config.accessToken = authRes.access_token;
   config.accessTokenExpiresInSeconds = parseInt(authRes.expires_in);
@@ -290,7 +222,7 @@ export const setConfigBySuccessfullAuthInplace = async (
     await saveUpdatedConfigFunc();
   }
 
-  log.info("finish updating local info of Dropbox token");
+  console.info("finish updating local info of Dropbox token");
 };
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -311,7 +243,7 @@ async function retryReq<T>(
   for (let idx = 0; idx < waitSeconds.length; ++idx) {
     try {
       if (idx !== 0) {
-        log.warn(
+        console.warn(
           `${extraHint === "" ? "" : extraHint + ": "}The ${
             idx + 1
           }-th try starts at time ${Date.now()}`
@@ -348,7 +280,7 @@ async function retryReq<T>(
       const fallbackSec = waitSeconds[idx];
       const secMin = Math.max(svrSec, fallbackSec);
       const secMax = Math.max(secMin * 1.8, 2);
-      log.warn(
+      console.warn(
         `${
           extraHint === "" ? "" : extraHint + ": "
         }We have "429 too many requests" error of ${
@@ -421,9 +353,9 @@ export class WrappedDropboxClient {
     }
 
     // check vault folder
-    // log.info(`checking remote has folder /${this.remoteBaseDir}`);
+    // console.info(`checking remote has folder /${this.remoteBaseDir}`);
     if (this.vaultFolderExists) {
-      // log.info(`already checked, /${this.remoteBaseDir} exist before`)
+      // console.info(`already checked, /${this.remoteBaseDir} exist before`)
     } else {
       const res = await this.dropbox.filesListFolder({
         path: "",
@@ -436,7 +368,7 @@ export class WrappedDropboxClient {
         }
       }
       if (!this.vaultFolderExists) {
-        log.info(`remote does not have folder /${this.remoteBaseDir}`);
+        console.info(`remote does not have folder /${this.remoteBaseDir}`);
 
         if (hasEmojiInText(`/${this.remoteBaseDir}`)) {
           throw new Error(
@@ -447,10 +379,10 @@ export class WrappedDropboxClient {
         await this.dropbox.filesCreateFolderV2({
           path: `/${this.remoteBaseDir}`,
         });
-        log.info(`remote folder /${this.remoteBaseDir} created`);
+        console.info(`remote folder /${this.remoteBaseDir} created`);
         this.vaultFolderExists = true;
       } else {
-        // log.info(`remote folder /${this.remoteBaseDir} exists`);
+        // console.info(`remote folder /${this.remoteBaseDir} exists`);
       }
     }
 
@@ -498,7 +430,7 @@ export const getRemoteMeta = async (
   //     size: 0,
   //     remoteType: "dropbox",
   //     etag: undefined,
-  //   } as RemoteItem;
+  //   } as Entity;
   // }
 
   const rsp = await retryReq(() =>
@@ -512,7 +444,7 @@ export const getRemoteMeta = async (
   if (rsp.status !== 200) {
     throw Error(JSON.stringify(rsp));
   }
-  return fromDropboxItemToRemoteItem(rsp.result, client.remoteBaseDir);
+  return fromDropboxItemToEntity(rsp.result, client.remoteBaseDir);
 };
 
 export const uploadToRemote = async (
@@ -527,11 +459,16 @@ export const uploadToRemote = async (
   rawContent: string | ArrayBuffer = "",
   rawContentMTime: number = 0,
   rawContentCTime: number = 0
-) => {
+): Promise<UploadedType> => {
   await client.init();
 
   let uploadFile = fileOrFolderPath;
   if (password !== "") {
+    if (remoteEncryptedKey === undefined || remoteEncryptedKey === "") {
+      throw Error(
+        `uploadToRemote(dropbox) you have password but remoteEncryptedKey is empty!`
+      );
+    }
     uploadFile = remoteEncryptedKey;
   }
   uploadFile = getDropboxPath(uploadFile, client.remoteBaseDir);
@@ -588,7 +525,10 @@ export const uploadToRemote = async (
         }
       }
       const res = await getRemoteMeta(client, uploadFile);
-      return res;
+      return {
+        entity: res,
+        mtimeCli: mtime,
+      };
     } else {
       // if encrypted, upload a fake file with the encrypted file name
       await retryReq(
@@ -600,7 +540,10 @@ export const uploadToRemote = async (
           }),
         fileOrFolderPath
       );
-      return await getRemoteMeta(client, uploadFile);
+      return {
+        entity: await getRemoteMeta(client, uploadFile),
+        mtimeCli: mtime,
+      };
     }
   } else {
     // file
@@ -649,7 +592,10 @@ export const uploadToRemote = async (
         foldersCreatedBefore?.add(dir);
       }
     }
-    return await getRemoteMeta(client, uploadFile);
+    return {
+      entity: await getRemoteMeta(client, uploadFile),
+      mtimeCli: mtime,
+    };
   }
 };
 
@@ -664,13 +610,13 @@ export const listAllFromRemote = async (client: WrappedDropboxClient) => {
   if (res.status !== 200) {
     throw Error(JSON.stringify(res));
   }
-  // log.info(res);
+  // console.info(res);
 
   const contents = res.result.entries;
   const unifiedContents = contents
     .filter((x) => x[".tag"] !== "deleted")
     .filter((x) => x.path_display !== `/${client.remoteBaseDir}`)
-    .map((x) => fromDropboxItemToRemoteItem(x, client.remoteBaseDir));
+    .map((x) => fromDropboxItemToEntity(x, client.remoteBaseDir));
 
   while (res.result.has_more) {
     res = await client.dropbox.filesListFolderContinue({
@@ -684,15 +630,11 @@ export const listAllFromRemote = async (client: WrappedDropboxClient) => {
     const unifiedContents2 = contents2
       .filter((x) => x[".tag"] !== "deleted")
       .filter((x) => x.path_display !== `/${client.remoteBaseDir}`)
-      .map((x) => fromDropboxItemToRemoteItem(x, client.remoteBaseDir));
+      .map((x) => fromDropboxItemToEntity(x, client.remoteBaseDir));
     unifiedContents.push(...unifiedContents2);
   }
 
-  fixLastModifiedTimeInplace(unifiedContents);
-
-  return {
-    Contents: unifiedContents,
-  };
+  return unifiedContents;
 };
 
 const downloadFromRemoteRaw = async (
@@ -792,8 +734,8 @@ export const deleteFromRemote = async (
       fileOrFolderPath
     );
   } catch (err) {
-    log.error("some error while deleting");
-    log.error(err);
+    console.error("some error while deleting");
+    console.error(err);
   }
 };
 
@@ -809,7 +751,7 @@ export const checkConnectivity = async (
     }
     return true;
   } catch (err) {
-    log.debug(err);
+    console.debug(err);
     if (callbackFunc !== undefined) {
       callbackFunc(err);
     }

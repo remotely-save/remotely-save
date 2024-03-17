@@ -13,9 +13,12 @@ import { createElement, Eye, EyeOff } from "lucide";
 import {
   API_VER_ENSURE_REQURL_OK,
   API_VER_REQURL,
+  ConflictActionType,
   DEFAULT_DEBUG_FOLDER,
+  EmptyFolderCleanType,
   SUPPORTED_SERVICES_TYPE,
   SUPPORTED_SERVICES_TYPE_WITH_REMOTE_BASE_DIR,
+  SyncDirectionType,
   VALID_REQURL,
   WebdavAuthType,
   WebdavDepthType,
@@ -23,10 +26,10 @@ import {
 import { exportVaultSyncPlansToFiles } from "./debugMode";
 import { exportQrCodeUri } from "./importExport";
 import {
-  clearAllSyncMetaMapping,
+  clearAllPrevSyncRecordByVault,
   clearAllSyncPlanRecords,
   destroyDBs,
-  upsertLastSuccessSyncByVault,
+  upsertLastSuccessSyncTimeByVault,
 } from "./localdb";
 import type RemotelySavePlugin from "./main"; // unavoidable
 import { RemoteClient } from "./remote";
@@ -42,13 +45,7 @@ import {
 } from "./remoteForOnedrive";
 import { messyConfigToNormal } from "./configPersist";
 import type { TransItemType } from "./i18n";
-import { checkHasSpecialCharForDir } from "./misc";
-
-import {
-  applyLogWriterInplace,
-  log,
-  restoreLogWritterInplace,
-} from "./moreOnLog";
+import { checkHasSpecialCharForDir, stringToFragment } from "./misc";
 import { simpleTransRemotePrefix } from "./remoteForS3";
 
 class PasswordModal extends Modal {
@@ -450,7 +447,7 @@ class DropboxAuthModal extends Modal {
               );
               this.close();
             } catch (err) {
-              log.error(err);
+              console.error(err);
               new Notice(t("modal_dropboxauth_maualinput_conn_fail"));
             }
           });
@@ -586,7 +583,7 @@ export class OnedriveRevokeAuthModal extends Modal {
             new Notice(t("modal_onedriverevokeauth_clean_notice"));
             this.close();
           } catch (err) {
-            log.error(err);
+            console.error(err);
             new Notice(t("modal_onedriverevokeauth_clean_fail"));
           }
         });
@@ -705,65 +702,6 @@ class ExportSettingsQrCodeModal extends Modal {
         el.src = imgUri;
       }
     );
-  }
-
-  onClose() {
-    let { contentEl } = this;
-    contentEl.empty();
-  }
-}
-
-class SetLogToHttpServerModal extends Modal {
-  plugin: RemotelySavePlugin;
-  serverAddr: string;
-  callBack: any;
-  constructor(
-    app: App,
-    plugin: RemotelySavePlugin,
-    serverAddr: string,
-    callBack: any
-  ) {
-    super(app);
-    this.plugin = plugin;
-    this.serverAddr = serverAddr;
-    this.callBack = callBack;
-  }
-
-  onOpen() {
-    let { contentEl } = this;
-
-    const t = (x: TransItemType, vars?: any) => {
-      return this.plugin.i18n.t(x, vars);
-    };
-
-    contentEl.createEl("h2", { text: t("modal_logtohttpserver_title") });
-
-    const div1 = contentEl.createDiv();
-    div1.addClass("logtohttpserver-warning");
-    t("modal_logtohttpserver_desc")
-      .split("\n")
-      .forEach((val) => {
-        div1.createEl("p", {
-          text: val,
-        });
-      });
-
-    new Setting(contentEl)
-      .addButton((button) => {
-        button.setButtonText(t("modal_logtohttpserver_secondconfirm"));
-        button.setClass("logtohttpserver-warning");
-        button.onClick(async () => {
-          this.callBack();
-          new Notice(t("modal_logtohttpserver_notice"));
-          this.close();
-        });
-      })
-      .addButton((button) => {
-        button.setButtonText(t("goback"));
-        button.onClick(() => {
-          this.close();
-        });
-      });
   }
 
   onClose() {
@@ -1151,7 +1089,7 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
             );
             new Notice(t("settings_dropbox_revoke_notice"));
           } catch (err) {
-            log.error(err);
+            console.error(err);
             new Notice(t("settings_dropbox_revoke_noticeerr"));
           }
         });
@@ -1721,7 +1659,7 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
               realVal > 0
             ) {
               const intervalID = window.setInterval(() => {
-                log.info("auto run from settings.ts");
+                console.info("auto run from settings.ts");
                 this.plugin.syncRun("auto");
               }, realVal);
               this.plugin.autoRunIntervalID = intervalID;
@@ -1793,7 +1731,7 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
                   // then schedule a run for syncOnSaveAfterMilliseconds after it was modified
                   const lastModified = currentFile.stat.mtime;
                   const currentTime = Date.now();
-                  // log.debug(
+                  // console.debug(
                   //   `Checking if file was modified within last ${
                   //     this.plugin.settings.syncOnSaveAfterMilliseconds / 1000
                   //   } seconds, last modified: ${
@@ -1808,7 +1746,7 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
                       const scheduleTimeFromNow =
                         this.plugin.settings.syncOnSaveAfterMilliseconds! -
                         (currentTime - lastModified);
-                      log.info(
+                      console.info(
                         `schedule a run for ${scheduleTimeFromNow} milliseconds later`
                       );
                       runScheduled = true;
@@ -1866,7 +1804,7 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
           button.setButtonText(t("settings_resetstatusbar_button"));
           button.onClick(async () => {
             // reset last sync time
-            await upsertLastSuccessSyncByVault(
+            await upsertLastSuccessSyncTimeByVault(
               this.plugin.db,
               this.plugin.vaultRandomID,
               -1
@@ -1993,6 +1931,92 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
           });
       });
 
+    new Setting(advDiv)
+      .setName(t("settings_conflictaction"))
+      .setDesc(t("settings_conflictaction_desc"))
+      .addDropdown((dropdown) => {
+        dropdown.addOption(
+          "keep_newer",
+          t("settings_conflictaction_keep_newer")
+        );
+        dropdown.addOption(
+          "keep_larger",
+          t("settings_conflictaction_keep_larger")
+        );
+        dropdown
+          .setValue(this.plugin.settings.conflictAction ?? "keep_newer")
+          .onChange(async (val) => {
+            this.plugin.settings.conflictAction = val as ConflictActionType;
+            await this.plugin.saveSettings();
+          });
+      });
+
+    new Setting(advDiv)
+      .setName(t("settings_cleanemptyfolder"))
+      .setDesc(t("settings_cleanemptyfolder_desc"))
+      .addDropdown((dropdown) => {
+        dropdown.addOption("skip", t("settings_cleanemptyfolder_skip"));
+        dropdown.addOption(
+          "clean_both",
+          t("settings_cleanemptyfolder_clean_both")
+        );
+        dropdown
+          .setValue(this.plugin.settings.howToCleanEmptyFolder ?? "skip")
+          .onChange(async (val) => {
+            this.plugin.settings.howToCleanEmptyFolder =
+              val as EmptyFolderCleanType;
+            await this.plugin.saveSettings();
+          });
+      });
+
+    new Setting(advDiv)
+      .setName(t("settings_protectmodifypercentage"))
+      .setDesc(t("settings_protectmodifypercentage_desc"))
+      .addDropdown((dropdown) => {
+        for (const i of Array.from({ length: 11 }, (x, i) => i * 10)) {
+          let desc = `${i}`;
+          if (i === 0) {
+            desc = t("settings_protectmodifypercentage_000_desc");
+          } else if (i === 50) {
+            desc = t("settings_protectmodifypercentage_050_desc");
+          } else if (i === 100) {
+            desc = t("settings_protectmodifypercentage_100_desc");
+          }
+          dropdown.addOption(`${i}`, desc);
+        }
+        dropdown
+          .setValue(`${this.plugin.settings.protectModifyPercentage ?? 50}`)
+          .onChange(async (val) => {
+            this.plugin.settings.protectModifyPercentage = parseInt(val);
+            await this.plugin.saveSettings();
+          });
+      });
+
+    new Setting(advDiv)
+      .setName(t("setting_syncdirection"))
+      .setDesc(t("setting_syncdirection_desc"))
+      .addDropdown((dropdown) => {
+        dropdown.addOption(
+          "bidirectional",
+          t("setting_syncdirection_bidirectional_desc")
+        );
+        dropdown.addOption(
+          "incremental_push_only",
+          t("setting_syncdirection_incremental_push_only_desc")
+        );
+        dropdown.addOption(
+          "incremental_pull_only",
+          t("setting_syncdirection_incremental_pull_only_desc")
+        );
+
+        dropdown
+          .setValue(this.plugin.settings.syncDirection ?? "bidirectional")
+          .onChange(async (val) => {
+            this.plugin.settings.syncDirection = val as SyncDirectionType;
+            await this.plugin.saveSettings();
+          });
+      });
+
     //////////////////////////////////////////////////
     // below for import and export functions
     //////////////////////////////////////////////////
@@ -2034,9 +2058,8 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
           .setValue(this.plugin.settings.currLogLevel ?? "info")
           .onChange(async (val: string) => {
             this.plugin.settings.currLogLevel = val;
-            log.setLevel(val as any);
             await this.plugin.saveSettings();
-            log.info(`the log level is changed to ${val}`);
+            console.info(`the log level is changed to ${val}`);
           });
       });
 
@@ -2047,10 +2070,14 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
         button.setButtonText(t("settings_outputsettingsconsole_button"));
         button.onClick(async () => {
           const c = messyConfigToNormal(await this.plugin.loadData());
-          log.info(c);
+          console.info(c);
           new Notice(t("settings_outputsettingsconsole_notice"));
         });
       });
+
+    new Setting(debugDiv)
+      .setName(t("settings_viewconsolelog"))
+      .setDesc(stringToFragment(t("settings_viewconsolelog_desc")));
 
     new Setting(debugDiv)
       .setName(t("settings_syncplans"))
@@ -2078,61 +2105,17 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
         });
       });
 
-    let logToHttpServer = this.plugin.debugServerTemp || "";
     new Setting(debugDiv)
-      .setName(t("settings_logtohttpserver"))
-      .setDesc(t("settings_logtohttpserver_desc"))
-      .addText(async (text) => {
-        text.setValue(logToHttpServer).onChange(async (value) => {
-          logToHttpServer = value.trim();
-        });
-      })
+      .setName(t("settings_delprevsync"))
+      .setDesc(t("settings_delprevsync_desc"))
       .addButton(async (button) => {
-        button.setButtonText(t("confirm"));
+        button.setButtonText(t("settings_delprevsync_button"));
         button.onClick(async () => {
-          if (logToHttpServer === "" || !logToHttpServer.startsWith("http")) {
-            this.plugin.debugServerTemp = "";
-            logToHttpServer = "";
-            // restoreLogWritterInplace();
-            new Notice(t("settings_logtohttpserver_reset_notice"));
-          } else {
-            new SetLogToHttpServerModal(
-              this.app,
-              this.plugin,
-              logToHttpServer,
-              () => {
-                this.plugin.debugServerTemp = logToHttpServer;
-                // applyLogWriterInplace((...msg: any[]) => {
-                //   try {
-                //     requestUrl({
-                //       url: logToHttpServer,
-                //       method: "POST",
-                //       headers: {
-                //         "Content-Type": "application/json",
-                //       },
-                //       body: JSON.stringify({
-                //         send_time: Date.now(),
-                //         log_text: msg,
-                //       }),
-                //     });
-                //   } catch (e) {
-                //     // pass
-                //   }
-                // });
-              }
-            ).open();
-          }
-        });
-      });
-
-    new Setting(debugDiv)
-      .setName(t("settings_delsyncmap"))
-      .setDesc(t("settings_delsyncmap_desc"))
-      .addButton(async (button) => {
-        button.setButtonText(t("settings_delsyncmap_button"));
-        button.onClick(async () => {
-          await clearAllSyncMetaMapping(this.plugin.db);
-          new Notice(t("settings_delsyncmap_notice"));
+          await clearAllPrevSyncRecordByVault(
+            this.plugin.db,
+            this.plugin.vaultRandomID
+          );
+          new Notice(t("settings_delprevsync_notice"));
         });
       });
 

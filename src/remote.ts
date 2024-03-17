@@ -1,17 +1,17 @@
 import { Vault } from "obsidian";
 import type {
+  Entity,
   DropboxConfig,
   OnedriveConfig,
   S3Config,
   SUPPORTED_SERVICES_TYPE,
   WebdavConfig,
+  UploadedType,
 } from "./baseTypes";
 import * as dropbox from "./remoteForDropbox";
 import * as onedrive from "./remoteForOnedrive";
 import * as s3 from "./remoteForS3";
 import * as webdav from "./remoteForWebdav";
-
-import { log } from "./moreOnLog";
 
 export class RemoteClient {
   readonly serviceType: SUPPORTED_SERVICES_TYPE;
@@ -111,7 +111,7 @@ export class RemoteClient {
     foldersCreatedBefore: Set<string> | undefined = undefined,
     uploadRaw: boolean = false,
     rawContent: string | ArrayBuffer = ""
-  ) => {
+  ): Promise<UploadedType> => {
     if (this.serviceType === "s3") {
       return await s3.uploadToRemote(
         s3.getS3Client(this.s3Config!),
@@ -164,7 +164,7 @@ export class RemoteClient {
     }
   };
 
-  listAllFromRemote = async () => {
+  listAllFromRemote = async (): Promise<Entity[]> => {
     if (this.serviceType === "s3") {
       return await s3.listAllFromRemote(
         s3.getS3Client(this.s3Config!),

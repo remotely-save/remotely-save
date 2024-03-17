@@ -28,12 +28,11 @@ This is yet another unofficial sync plugin for Obsidian. If you like it or find 
 - **[Minimal Intrusive](./docs/minimal_intrusive_design.md).**
 - **Skip Large files** and **skip paths** by custom regex conditions!
 - **Fully open source under [Apache-2.0 License](./LICENSE).**
-- **[Sync Algorithm open](./docs/sync_algorithm_v2.md) for discussion.**
+- **[Sync Algorithm open](./docs/sync_algorithm/v3/intro.md) for discussion.**
+- **[Basic Conflict Detection And Handling](./docs/sync_algorithm/v3/intro.md)** now, more to come!
 
 ## Limitations
 
-- **To support deletions sync, extra metadata will also be uploaded.** See [Minimal Intrusive](./docs/minimal_intrusive_design.md).
-- **No Conflict resolution. No content-diff-and-patch algorithm.** All files and folders are compared using their local and remote "last modified time" and those with later "last modified time" wins.
 - **Cloud services cost you money.** Always be aware of the costs and pricing. Specifically, all the operations, including but not limited to downloading, uploading, listing all files, calling any api, storage sizes, may or may not cost you money.
 - **Some limitations from the browser environment.** More technical details are [in the doc](./docs/browser_env.md).
 - **You should protect your `data.json` file.** The file contains sensitive information.

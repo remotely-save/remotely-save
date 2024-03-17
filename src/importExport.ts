@@ -7,8 +7,6 @@ import {
   RemotelySavePluginSettings,
 } from "./baseTypes";
 
-import { log } from "./moreOnLog";
-
 export const exportQrCodeUri = async (
   settings: RemotelySavePluginSettings,
   currentVaultName: string,
@@ -22,7 +20,7 @@ export const exportQrCodeUri = async (
   const vault = encodeURIComponent(currentVaultName);
   const version = encodeURIComponent(pluginVersion);
   const rawUri = `obsidian://${COMMAND_URI}?func=settings&version=${version}&vault=${vault}&data=${data}`;
-  // log.info(uri)
+  // console.info(uri)
   const imgUri = await QRCode.toDataURL(rawUri);
   return {
     rawUri,

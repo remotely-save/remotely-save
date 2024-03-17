@@ -5,8 +5,6 @@ import { base32, base64url } from "rfc4648";
 import XRegExp from "xregexp";
 import emojiRegex from "emoji-regex";
 
-import { log } from "./moreOnLog";
-
 declare global {
   interface Window {
     moment: (...data: any) => any;
@@ -30,7 +28,7 @@ export const isHiddenPath = (
   }
   const k = path.posix.normalize(item); // TODO: only unix path now
   const k2 = k.split("/"); // TODO: only unix path now
-  // log.info(k2)
+  // console.info(k2)
   for (const singlePart of k2) {
     if (singlePart === "." || singlePart === ".." || singlePart === "") {
       continue;
@@ -75,14 +73,14 @@ export const getFolderLevels = (x: string, addEndingSlash: boolean = false) => {
 };
 
 export const mkdirpInVault = async (thePath: string, vault: Vault) => {
-  // log.info(thePath);
+  // console.info(thePath);
   const foldersToBuild = getFolderLevels(thePath);
-  // log.info(foldersToBuild);
+  // console.info(foldersToBuild);
   for (const folder of foldersToBuild) {
     const r = await vault.adapter.exists(folder);
-    // log.info(r);
+    // console.info(r);
     if (!r) {
-      log.info(`mkdir ${folder}`);
+      console.info(`mkdir ${folder}`);
       await vault.adapter.mkdir(folder);
     }
   }
@@ -435,7 +433,10 @@ export const statFix = async (vault: Vault, path: string) => {
   return s;
 };
 
-export const isFolderToSkip = (x: string, more: string[] | undefined) => {
+export const isSpecialFolderNameToSkip = (
+  x: string,
+  more: string[] | undefined
+) => {
   let specialFolders = [
     ".git",
     ".github",
@@ -489,4 +490,16 @@ export const compareVersion = (x: string | null, y: string | null) => {
     return 1;
   }
   return -1;
+};
+
+/**
+ * https://stackoverflow.com/questions/19929641/how-to-append-an-html-string-to-a-documentfragment
+ * To introduce some advanced html fragments.
+ * @param string
+ * @returns
+ */
+export const stringToFragment = (string: string) => {
+  const wrapper = document.createElement("template");
+  wrapper.innerHTML = string;
+  return wrapper.content;
 };
