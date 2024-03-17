@@ -64,7 +64,6 @@ import { I18n } from "./i18n";
 import type { LangType, LangTypeAndAuto, TransItemType } from "./i18n";
 import { SyncAlgoV3Modal } from "./syncAlgoV3Notice";
 
-import { applyLogWriterInplace, log } from "./moreOnLog";
 import AggregateError from "aggregate-error";
 import { exportVaultSyncPlansToFiles } from "./debugMode";
 import { compareVersion } from "./misc";
@@ -177,7 +176,7 @@ export default class RemotelySavePlugin extends Plugin {
     }
 
     try {
-      log.info(
+      console.info(
         `${
           this.manifest.id
         }-${Date.now()}: start sync, triggerSource=${triggerSource}`
@@ -206,7 +205,7 @@ export default class RemotelySavePlugin extends Plugin {
       if (this.statusBarElement !== undefined) {
         this.updateLastSuccessSyncMsg(-1);
       }
-      //log.info(`huh ${this.settings.password}`)
+      //console.info(`huh ${this.settings.password}`)
       if (this.settings.currLogLevel === "info") {
         getNotice(
           t("syncrun_shortstep1", {
@@ -240,8 +239,8 @@ export default class RemotelySavePlugin extends Plugin {
         () => self.saveSettings()
       );
       const remoteEntityList = await client.listAllFromRemote();
-      log.debug("remoteEntityList:");
-      log.debug(remoteEntityList);
+      console.debug("remoteEntityList:");
+      console.debug(remoteEntityList);
 
       if (this.settings.currLogLevel === "info") {
         // pass
@@ -270,8 +269,8 @@ export default class RemotelySavePlugin extends Plugin {
         this.app.vault.configDir,
         this.manifest.id
       );
-      log.debug("localEntityList:");
-      log.debug(localEntityList);
+      console.debug("localEntityList:");
+      console.debug(localEntityList);
 
       if (this.settings.currLogLevel === "info") {
         // pass
@@ -283,8 +282,8 @@ export default class RemotelySavePlugin extends Plugin {
         this.db,
         this.vaultRandomID
       );
-      log.debug("prevSyncEntityList:");
-      log.debug(prevSyncEntityList);
+      console.debug("prevSyncEntityList:");
+      console.debug(prevSyncEntityList);
 
       if (this.settings.currLogLevel === "info") {
         // pass
@@ -308,8 +307,8 @@ export default class RemotelySavePlugin extends Plugin {
         this.settings.skipSizeLargerThan ?? -1,
         this.settings.conflictAction ?? "keep_newer"
       );
-      log.info(`mixedEntityMappings:`);
-      log.info(mixedEntityMappings); // for debugging
+      console.info(`mixedEntityMappings:`);
+      console.info(mixedEntityMappings); // for debugging
       await insertSyncPlanRecordByVault(
         this.db,
         mixedEntityMappings,
@@ -383,7 +382,7 @@ export default class RemotelySavePlugin extends Plugin {
         this.updateLastSuccessSyncMsg(lastSuccessSyncMillis);
       }
 
-      log.info(
+      console.info(
         `${
           this.manifest.id
         }-${Date.now()}: finish sync, triggerSource=${triggerSource}`
@@ -395,8 +394,8 @@ export default class RemotelySavePlugin extends Plugin {
         triggerSource: triggerSource,
         syncStatus: this.syncStatus,
       });
-      log.error(msg);
-      log.error(error);
+      console.error(msg);
+      console.error(error);
       getNotice(msg, 10 * 1000);
       if (error instanceof AggregateError) {
         for (const e of error.errors) {
@@ -414,7 +413,7 @@ export default class RemotelySavePlugin extends Plugin {
   }
 
   async onload() {
-    log.info(`loading plugin ${this.manifest.id}`);
+    console.info(`loading plugin ${this.manifest.id}`);
 
     const { iconSvgSyncWait, iconSvgSyncRunning, iconSvgLogs } = getIconSvg();
 
@@ -443,10 +442,6 @@ export default class RemotelySavePlugin extends Plugin {
       return this.i18n.t(x, vars);
     };
 
-    if (this.settings.currLogLevel !== undefined) {
-      log.setLevel(this.settings.currLogLevel as any);
-    }
-
     await this.checkIfOauthExpires();
 
     // MUST before prepareDB()
@@ -474,7 +469,6 @@ export default class RemotelySavePlugin extends Plugin {
     }
 
     // must AFTER preparing DB
-    this.redirectLoggingOuputBasedOnSetting();
     this.enableAutoClearOutputToDBHistIfSet();
 
     // must AFTER preparing DB
@@ -751,7 +745,7 @@ export default class RemotelySavePlugin extends Plugin {
     this.addSettingTab(new RemotelySaveSettingTab(this.app, this));
 
     // this.registerDomEvent(document, "click", (evt: MouseEvent) => {
-    //   log.info("click", evt);
+    //   console.info("click", evt);
     // });
 
     if (!this.settings.agreeToUseSyncV3) {
@@ -772,7 +766,7 @@ export default class RemotelySavePlugin extends Plugin {
   }
 
   async onunload() {
-    log.info(`unloading plugin ${this.manifest.id}`);
+    console.info(`unloading plugin ${this.manifest.id}`);
     this.syncRibbon = undefined;
     if (this.oauth2Info !== undefined) {
       this.oauth2Info.helperModal = undefined;
@@ -951,7 +945,7 @@ export default class RemotelySavePlugin extends Plugin {
         // a real string was assigned before
         vaultRandomID = this.settings.vaultRandomID;
       }
-      log.debug("vaultRandomID is no longer saved in data.json");
+      console.debug("vaultRandomID is no longer saved in data.json");
       delete this.settings.vaultRandomID;
       await this.saveSettings();
     }
@@ -1031,7 +1025,7 @@ export default class RemotelySavePlugin extends Plugin {
       let needToRunAgain = false;
 
       const scheduleSyncOnSave = (scheduleTimeFromNow: number) => {
-        log.info(
+        console.info(
           `schedule a run for ${scheduleTimeFromNow} milliseconds later`
         );
         runScheduled = true;
@@ -1193,31 +1187,6 @@ export default class RemotelySavePlugin extends Plugin {
     } catch (error) {
       // just skip
     }
-  }
-
-  redirectLoggingOuputBasedOnSetting() {
-    applyLogWriterInplace((...msg: any[]) => {
-      if (
-        this.debugServerTemp !== undefined &&
-        this.debugServerTemp.trim().startsWith("http")
-      ) {
-        try {
-          requestUrl({
-            url: this.debugServerTemp,
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              send_time: Date.now(),
-              log_text: msg,
-            }),
-          });
-        } catch (e) {
-          // pass
-        }
-      }
-    });
   }
 
   enableAutoClearOutputToDBHistIfSet() {

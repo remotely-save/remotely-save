@@ -42,7 +42,6 @@ import {
 
 export { S3Client } from "@aws-sdk/client-s3";
 
-import { log } from "./moreOnLog";
 import PQueue from "p-queue";
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -227,7 +226,7 @@ const fromS3ObjectToEntity = (
   mtimeRecords: Record<string, number>,
   ctimeRecords: Record<string, number>
 ) => {
-  // log.debug(`fromS3ObjectToEntity: ${x.Key!}, ${JSON.stringify(x,null,2)}`);
+  // console.debug(`fromS3ObjectToEntity: ${x.Key!}, ${JSON.stringify(x,null,2)}`);
   // S3 officially only supports seconds precision!!!!!
   const mtimeSvr = Math.floor(x.LastModified!.valueOf() / 1000.0) * 1000;
   let mtimeCli = mtimeSvr;
@@ -253,7 +252,7 @@ const fromS3HeadObjectToEntity = (
   x: HeadObjectCommandOutput,
   remotePrefix: string
 ) => {
-  // log.debug(`fromS3HeadObjectToEntity: ${fileOrFolderPathWithRemotePrefix}: ${JSON.stringify(x,null,2)}`);
+  // console.debug(`fromS3HeadObjectToEntity: ${fileOrFolderPathWithRemotePrefix}: ${JSON.stringify(x,null,2)}`);
   // S3 officially only supports seconds precision!!!!!
   const mtimeSvr = Math.floor(x.LastModified!.valueOf() / 1000.0) * 1000;
   let mtimeCli = mtimeSvr;
@@ -265,7 +264,7 @@ const fromS3HeadObjectToEntity = (
       mtimeCli = m2;
     }
   }
-  // log.debug(
+  // console.debug(
   //   `fromS3HeadObjectToEntity, fileOrFolderPathWithRemotePrefix=${fileOrFolderPathWithRemotePrefix}, remotePrefix=${remotePrefix}, x=${JSON.stringify(
   //     x
   //   )} `
@@ -274,7 +273,7 @@ const fromS3HeadObjectToEntity = (
     fileOrFolderPathWithRemotePrefix,
     remotePrefix
   );
-  // log.debug(`fromS3HeadObjectToEntity, key=${key} after removing prefix`);
+  // console.debug(`fromS3HeadObjectToEntity, key=${key} after removing prefix`);
   return {
     keyRaw: key,
     mtimeSvr: mtimeSvr,
@@ -367,7 +366,7 @@ export const uploadToRemote = async (
   rawContentMTime: number = 0,
   rawContentCTime: number = 0
 ): Promise<UploadedType> => {
-  log.debug(`uploading ${fileOrFolderPath}`);
+  console.debug(`uploading ${fileOrFolderPath}`);
   let uploadFile = fileOrFolderPath;
   if (password !== "") {
     if (remoteEncryptedKey === undefined || remoteEncryptedKey === "") {
@@ -378,7 +377,7 @@ export const uploadToRemote = async (
     uploadFile = remoteEncryptedKey;
   }
   uploadFile = getRemoteWithPrefixPath(uploadFile, s3Config.remotePrefix ?? "");
-  // log.debug(`actual uploadFile=${uploadFile}`);
+  // console.debug(`actual uploadFile=${uploadFile}`);
   const isFolder = fileOrFolderPath.endsWith("/");
 
   if (isFolder && isRecursively) {
@@ -472,12 +471,12 @@ export const uploadToRemote = async (
       },
     });
     upload.on("httpUploadProgress", (progress) => {
-      // log.info(progress);
+      // console.info(progress);
     });
     await upload.done();
 
     const res = await getRemoteMeta(s3Client, s3Config, uploadFile);
-    // log.debug(
+    // console.debug(
     //   `uploaded ${uploadFile} with res=${JSON.stringify(res, null, 2)}`
     // );
     return {
@@ -772,7 +771,7 @@ export const checkConnectivity = async (
       results.$metadata.httpStatusCode === undefined
     ) {
       const err = "results or $metadata or httStatusCode is undefined";
-      log.debug(err);
+      console.debug(err);
       if (callbackFunc !== undefined) {
         callbackFunc(err);
       }
@@ -780,7 +779,7 @@ export const checkConnectivity = async (
     }
     return results.$metadata.httpStatusCode === 200;
   } catch (err: any) {
-    log.debug(err);
+    console.debug(err);
     if (callbackFunc !== undefined) {
       if (s3Config.s3Endpoint.contains(s3Config.s3BucketName)) {
         const err2 = new AggregateError([

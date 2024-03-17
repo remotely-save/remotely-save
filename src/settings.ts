@@ -44,13 +44,7 @@ import {
 } from "./remoteForOnedrive";
 import { messyConfigToNormal } from "./configPersist";
 import type { TransItemType } from "./i18n";
-import { checkHasSpecialCharForDir } from "./misc";
-
-import {
-  applyLogWriterInplace,
-  log,
-  restoreLogWritterInplace,
-} from "./moreOnLog";
+import { checkHasSpecialCharForDir, stringToFragment } from "./misc";
 import { simpleTransRemotePrefix } from "./remoteForS3";
 
 class PasswordModal extends Modal {
@@ -452,7 +446,7 @@ class DropboxAuthModal extends Modal {
               );
               this.close();
             } catch (err) {
-              log.error(err);
+              console.error(err);
               new Notice(t("modal_dropboxauth_maualinput_conn_fail"));
             }
           });
@@ -588,7 +582,7 @@ export class OnedriveRevokeAuthModal extends Modal {
             new Notice(t("modal_onedriverevokeauth_clean_notice"));
             this.close();
           } catch (err) {
-            log.error(err);
+            console.error(err);
             new Notice(t("modal_onedriverevokeauth_clean_fail"));
           }
         });
@@ -707,65 +701,6 @@ class ExportSettingsQrCodeModal extends Modal {
         el.src = imgUri;
       }
     );
-  }
-
-  onClose() {
-    let { contentEl } = this;
-    contentEl.empty();
-  }
-}
-
-class SetLogToHttpServerModal extends Modal {
-  plugin: RemotelySavePlugin;
-  serverAddr: string;
-  callBack: any;
-  constructor(
-    app: App,
-    plugin: RemotelySavePlugin,
-    serverAddr: string,
-    callBack: any
-  ) {
-    super(app);
-    this.plugin = plugin;
-    this.serverAddr = serverAddr;
-    this.callBack = callBack;
-  }
-
-  onOpen() {
-    let { contentEl } = this;
-
-    const t = (x: TransItemType, vars?: any) => {
-      return this.plugin.i18n.t(x, vars);
-    };
-
-    contentEl.createEl("h2", { text: t("modal_logtohttpserver_title") });
-
-    const div1 = contentEl.createDiv();
-    div1.addClass("logtohttpserver-warning");
-    t("modal_logtohttpserver_desc")
-      .split("\n")
-      .forEach((val) => {
-        div1.createEl("p", {
-          text: val,
-        });
-      });
-
-    new Setting(contentEl)
-      .addButton((button) => {
-        button.setButtonText(t("modal_logtohttpserver_secondconfirm"));
-        button.setClass("logtohttpserver-warning");
-        button.onClick(async () => {
-          this.callBack();
-          new Notice(t("modal_logtohttpserver_notice"));
-          this.close();
-        });
-      })
-      .addButton((button) => {
-        button.setButtonText(t("goback"));
-        button.onClick(() => {
-          this.close();
-        });
-      });
   }
 
   onClose() {
@@ -1153,7 +1088,7 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
             );
             new Notice(t("settings_dropbox_revoke_notice"));
           } catch (err) {
-            log.error(err);
+            console.error(err);
             new Notice(t("settings_dropbox_revoke_noticeerr"));
           }
         });
@@ -1723,7 +1658,7 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
               realVal > 0
             ) {
               const intervalID = window.setInterval(() => {
-                log.info("auto run from settings.ts");
+                console.info("auto run from settings.ts");
                 this.plugin.syncRun("auto");
               }, realVal);
               this.plugin.autoRunIntervalID = intervalID;
@@ -1795,7 +1730,7 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
                   // then schedule a run for syncOnSaveAfterMilliseconds after it was modified
                   const lastModified = currentFile.stat.mtime;
                   const currentTime = Date.now();
-                  // log.debug(
+                  // console.debug(
                   //   `Checking if file was modified within last ${
                   //     this.plugin.settings.syncOnSaveAfterMilliseconds / 1000
                   //   } seconds, last modified: ${
@@ -1810,7 +1745,7 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
                       const scheduleTimeFromNow =
                         this.plugin.settings.syncOnSaveAfterMilliseconds! -
                         (currentTime - lastModified);
-                      log.info(
+                      console.info(
                         `schedule a run for ${scheduleTimeFromNow} milliseconds later`
                       );
                       runScheduled = true;
@@ -2074,9 +2009,8 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
           .setValue(this.plugin.settings.currLogLevel ?? "info")
           .onChange(async (val: string) => {
             this.plugin.settings.currLogLevel = val;
-            log.setLevel(val as any);
             await this.plugin.saveSettings();
-            log.info(`the log level is changed to ${val}`);
+            console.info(`the log level is changed to ${val}`);
           });
       });
 
@@ -2087,10 +2021,14 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
         button.setButtonText(t("settings_outputsettingsconsole_button"));
         button.onClick(async () => {
           const c = messyConfigToNormal(await this.plugin.loadData());
-          log.info(c);
+          console.info(c);
           new Notice(t("settings_outputsettingsconsole_notice"));
         });
       });
+
+    new Setting(debugDiv)
+      .setName(t("settings_viewconsolelog"))
+      .setDesc(stringToFragment(t("settings_viewconsolelog_desc")));
 
     new Setting(debugDiv)
       .setName(t("settings_syncplans"))
@@ -2115,53 +2053,6 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
         button.onClick(async () => {
           await clearAllSyncPlanRecords(this.plugin.db);
           new Notice(t("settings_delsyncplans_notice"));
-        });
-      });
-
-    let logToHttpServer = this.plugin.debugServerTemp || "";
-    new Setting(debugDiv)
-      .setName(t("settings_logtohttpserver"))
-      .setDesc(t("settings_logtohttpserver_desc"))
-      .addText(async (text) => {
-        text.setValue(logToHttpServer).onChange(async (value) => {
-          logToHttpServer = value.trim();
-        });
-      })
-      .addButton(async (button) => {
-        button.setButtonText(t("confirm"));
-        button.onClick(async () => {
-          if (logToHttpServer === "" || !logToHttpServer.startsWith("http")) {
-            this.plugin.debugServerTemp = "";
-            logToHttpServer = "";
-            // restoreLogWritterInplace();
-            new Notice(t("settings_logtohttpserver_reset_notice"));
-          } else {
-            new SetLogToHttpServerModal(
-              this.app,
-              this.plugin,
-              logToHttpServer,
-              () => {
-                this.plugin.debugServerTemp = logToHttpServer;
-                // applyLogWriterInplace((...msg: any[]) => {
-                //   try {
-                //     requestUrl({
-                //       url: logToHttpServer,
-                //       method: "POST",
-                //       headers: {
-                //         "Content-Type": "application/json",
-                //       },
-                //       body: JSON.stringify({
-                //         send_time: Date.now(),
-                //         log_text: msg,
-                //       }),
-                //     });
-                //   } catch (e) {
-                //     // pass
-                //   }
-                // });
-              }
-            ).open();
-          }
         });
       });
 

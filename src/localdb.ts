@@ -8,8 +8,6 @@ import type { Entity, MixedEntity, SUPPORTED_SERVICES_TYPE } from "./baseTypes";
 import type { SyncPlanType } from "./sync";
 import { statFix, toText, unixTimeToStr } from "./misc";
 
-import { log } from "./moreOnLog";
-
 const DB_VERSION_NUMBER_IN_HISTORY = [20211114, 20220108, 20220326, 20240220];
 export const DEFAULT_DB_VERSION_NUMBER: number = 20240220;
 export const DEFAULT_DB_NAME = "remotelysavedb";
@@ -119,7 +117,7 @@ const migrateDBsFrom20220326To20240220 = async (
 ) => {
   const oldVer = 20220326;
   const newVer = 20240220;
-  log.debug(`start upgrading internal db from ${oldVer} to ${newVer}`);
+  console.debug(`start upgrading internal db from ${oldVer} to ${newVer}`);
 
   // from sync mapping to prev sync
   const syncMappings = await getAllSyncMetaMappingByVault(db, vaultRandomID);
@@ -135,7 +133,7 @@ const migrateDBsFrom20220326To20240220 = async (
   // await clearAllSyncMetaMappingByVault(db, vaultRandomID);
 
   await db.versionTbl.setItem(`${vaultRandomID}\tversion`, newVer);
-  log.debug(`finish upgrading internal db from ${oldVer} to ${newVer}`);
+  console.debug(`finish upgrading internal db from ${oldVer} to ${newVer}`);
 };
 
 const migrateDBs = async (
@@ -243,7 +241,7 @@ export const prepareDBs = async (
     (await db.versionTbl.getItem(`${vaultRandomID}\tversion`)) ??
     (await db.versionTbl.getItem("version"));
   if (originalVersion === null) {
-    log.debug(
+    console.debug(
       `no internal db version, setting it to ${DEFAULT_DB_VERSION_NUMBER}`
     );
     // as of 20240220, we set the version per vault, instead of global "version"
@@ -254,7 +252,7 @@ export const prepareDBs = async (
   } else if (originalVersion === DEFAULT_DB_VERSION_NUMBER) {
     // do nothing
   } else {
-    log.debug(
+    console.debug(
       `trying to upgrade db version from ${originalVersion} to ${DEFAULT_DB_VERSION_NUMBER}`
     );
     await migrateDBs(
@@ -265,7 +263,7 @@ export const prepareDBs = async (
     );
   }
 
-  log.info("db connected");
+  console.info("db connected");
   return {
     db: db,
     vaultRandomID: vaultRandomID,
@@ -276,17 +274,17 @@ export const destroyDBs = async () => {
   // await localforage.dropInstance({
   //   name: DEFAULT_DB_NAME,
   // });
-  // log.info("db deleted");
+  // console.info("db deleted");
   const req = indexedDB.deleteDatabase(DEFAULT_DB_NAME);
   req.onsuccess = (event) => {
-    log.info("db deleted");
+    console.info("db deleted");
   };
   req.onblocked = (event) => {
-    log.warn("trying to delete db but it was blocked");
+    console.warn("trying to delete db but it was blocked");
   };
   req.onerror = (event) => {
-    log.error("tried to delete db but something goes wrong!");
-    log.error(event);
+    console.error("tried to delete db but something goes wrong!");
+    console.error(event);
   };
 };
 
@@ -420,9 +418,9 @@ export const getAllPrevSyncRecordsByVault = async (
   db: InternalDBs,
   vaultRandomID: string
 ) => {
-  // log.debug('inside getAllPrevSyncRecordsByVault')
+  // console.debug('inside getAllPrevSyncRecordsByVault')
   const keys = await db.prevSyncRecordsTbl.keys();
-  // log.debug(`inside getAllPrevSyncRecordsByVault, keys=${keys}`)
+  // console.debug(`inside getAllPrevSyncRecordsByVault, keys=${keys}`)
   const res: Entity[] = [];
   for (const key of keys) {
     if (key.startsWith(`${vaultRandomID}\t`)) {
@@ -468,7 +466,7 @@ export const clearAllPrevSyncRecordByVault = async (
 
 export const clearAllLoggerOutputRecords = async (db: InternalDBs) => {
   await db.loggerOutputTbl.clear();
-  log.debug(`successfully clearAllLoggerOutputRecords`);
+  console.debug(`successfully clearAllLoggerOutputRecords`);
 };
 
 export const upsertLastSuccessSyncTimeByVault = async (

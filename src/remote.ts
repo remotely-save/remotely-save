@@ -13,8 +13,6 @@ import * as onedrive from "./remoteForOnedrive";
 import * as s3 from "./remoteForS3";
 import * as webdav from "./remoteForWebdav";
 
-import { log } from "./moreOnLog";
-
 export class RemoteClient {
   readonly serviceType: SUPPORTED_SERVICES_TYPE;
   readonly s3Config?: S3Config;

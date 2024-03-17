@@ -2,7 +2,6 @@ import { App, Modal, Notice, PluginSettingTab, Setting } from "obsidian";
 import type RemotelySavePlugin from "./main"; // unavoidable
 import type { TransItemType } from "./i18n";
 
-import { log } from "./moreOnLog";
 import { stringToFragment } from "./misc";
 
 export class SyncAlgoV3Modal extends Modal {
@@ -88,13 +87,13 @@ export class SyncAlgoV3Modal extends Modal {
     let { contentEl } = this;
     contentEl.empty();
     if (this.agree) {
-      log.info("agree to use the new algorithm");
+      console.info("agree to use the new algorithm");
       this.plugin.saveAgreeToUseNewSyncAlgorithm();
       this.plugin.enableAutoSyncIfSet();
       this.plugin.enableInitSyncIfSet();
       this.plugin.enableSyncOnSaveIfSet();
     } else {
-      log.info("do not agree to use the new algorithm");
+      console.info("do not agree to use the new algorithm");
       this.plugin.unload();
     }
   }

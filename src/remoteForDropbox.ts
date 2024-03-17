@@ -21,8 +21,6 @@ import {
 
 export { Dropbox } from "dropbox";
 
-import { log } from "./moreOnLog";
-
 export const DEFAULT_DROPBOX_CONFIG: DropboxConfig = {
   accessToken: "",
   clientID: process.env.DEFAULT_DROPBOX_APP_KEY ?? "",
@@ -43,7 +41,7 @@ export const getDropboxPath = (
     // special
     key = `/${remoteBaseDir}`;
   } else if (fileOrFolderPath.startsWith("/")) {
-    log.warn(
+    console.warn(
       `why the path ${fileOrFolderPath} starts with '/'? but we just go on.`
     );
     key = `/${remoteBaseDir}${fileOrFolderPath}`;
@@ -169,7 +167,7 @@ export const sendAuthReq = async (
     const resp2 = (await resp1.json()) as DropboxSuccessAuthRes;
     return resp2;
   } catch (e) {
-    log.error(e);
+    console.error(e);
     if (errorCallBack !== undefined) {
       await errorCallBack(e);
     }
@@ -181,7 +179,7 @@ export const sendRefreshTokenReq = async (
   refreshToken: string
 ) => {
   try {
-    log.info("start auto getting refreshed Dropbox access token.");
+    console.info("start auto getting refreshed Dropbox access token.");
     const resp1 = await fetch("https://api.dropboxapi.com/oauth2/token", {
       method: "POST",
       body: new URLSearchParams({
@@ -191,10 +189,10 @@ export const sendRefreshTokenReq = async (
       }),
     });
     const resp2 = (await resp1.json()) as DropboxSuccessAuthRes;
-    log.info("finish auto getting refreshed Dropbox access token.");
+    console.info("finish auto getting refreshed Dropbox access token.");
     return resp2;
   } catch (e) {
-    log.error(e);
+    console.error(e);
     throw e;
   }
 };
@@ -204,7 +202,7 @@ export const setConfigBySuccessfullAuthInplace = async (
   authRes: DropboxSuccessAuthRes,
   saveUpdatedConfigFunc: () => Promise<any> | undefined
 ) => {
-  log.info("start updating local info of Dropbox token");
+  console.info("start updating local info of Dropbox token");
 
   config.accessToken = authRes.access_token;
   config.accessTokenExpiresInSeconds = parseInt(authRes.expires_in);
@@ -224,7 +222,7 @@ export const setConfigBySuccessfullAuthInplace = async (
     await saveUpdatedConfigFunc();
   }
 
-  log.info("finish updating local info of Dropbox token");
+  console.info("finish updating local info of Dropbox token");
 };
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -245,7 +243,7 @@ async function retryReq<T>(
   for (let idx = 0; idx < waitSeconds.length; ++idx) {
     try {
       if (idx !== 0) {
-        log.warn(
+        console.warn(
           `${extraHint === "" ? "" : extraHint + ": "}The ${
             idx + 1
           }-th try starts at time ${Date.now()}`
@@ -282,7 +280,7 @@ async function retryReq<T>(
       const fallbackSec = waitSeconds[idx];
       const secMin = Math.max(svrSec, fallbackSec);
       const secMax = Math.max(secMin * 1.8, 2);
-      log.warn(
+      console.warn(
         `${
           extraHint === "" ? "" : extraHint + ": "
         }We have "429 too many requests" error of ${
@@ -355,9 +353,9 @@ export class WrappedDropboxClient {
     }
 
     // check vault folder
-    // log.info(`checking remote has folder /${this.remoteBaseDir}`);
+    // console.info(`checking remote has folder /${this.remoteBaseDir}`);
     if (this.vaultFolderExists) {
-      // log.info(`already checked, /${this.remoteBaseDir} exist before`)
+      // console.info(`already checked, /${this.remoteBaseDir} exist before`)
     } else {
       const res = await this.dropbox.filesListFolder({
         path: "",
@@ -370,7 +368,7 @@ export class WrappedDropboxClient {
         }
       }
       if (!this.vaultFolderExists) {
-        log.info(`remote does not have folder /${this.remoteBaseDir}`);
+        console.info(`remote does not have folder /${this.remoteBaseDir}`);
 
         if (hasEmojiInText(`/${this.remoteBaseDir}`)) {
           throw new Error(
@@ -381,10 +379,10 @@ export class WrappedDropboxClient {
         await this.dropbox.filesCreateFolderV2({
           path: `/${this.remoteBaseDir}`,
         });
-        log.info(`remote folder /${this.remoteBaseDir} created`);
+        console.info(`remote folder /${this.remoteBaseDir} created`);
         this.vaultFolderExists = true;
       } else {
-        // log.info(`remote folder /${this.remoteBaseDir} exists`);
+        // console.info(`remote folder /${this.remoteBaseDir} exists`);
       }
     }
 
@@ -612,7 +610,7 @@ export const listAllFromRemote = async (client: WrappedDropboxClient) => {
   if (res.status !== 200) {
     throw Error(JSON.stringify(res));
   }
-  // log.info(res);
+  // console.info(res);
 
   const contents = res.result.entries;
   const unifiedContents = contents
@@ -736,8 +734,8 @@ export const deleteFromRemote = async (
       fileOrFolderPath
     );
   } catch (err) {
-    log.error("some error while deleting");
-    log.error(err);
+    console.error("some error while deleting");
+    console.error(err);
   }
 };
 
@@ -753,7 +751,7 @@ export const checkConnectivity = async (
     }
     return true;
   } catch (err) {
-    log.debug(err);
+    console.debug(err);
     if (callbackFunc !== undefined) {
       callbackFunc(err);
     }

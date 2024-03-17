@@ -31,7 +31,6 @@ import {
 import { RemoteClient } from "./remote";
 import { Vault } from "obsidian";
 
-import { log } from "./moreOnLog";
 import AggregateError from "aggregate-error";
 import {
   InternalDBs,
@@ -302,7 +301,7 @@ const encryptLocalEntityInplace = async (
   password: string,
   remoteKeyEnc: string | undefined
 ) => {
-  // log.debug(
+  // console.debug(
   //   `encryptLocalEntityInplace: local=${JSON.stringify(
   //     local,
   //     null,
@@ -500,14 +499,14 @@ export const getSyncPlanInplace = async (
     const mixedEntry = mixedEntityMappings[key];
     const { local, prevSync, remote } = mixedEntry;
 
-    // log.debug(`getSyncPlanInplace: key=${key}`)
+    // console.debug(`getSyncPlanInplace: key=${key}`)
 
     if (key.endsWith("/")) {
       // folder
       // folder doesn't worry about mtime and size, only check their existences
       if (keptFolder.has(key)) {
         // parent should also be kept
-        // log.debug(`${key} in keptFolder`)
+        // console.debug(`${key} in keptFolder`)
         keptFolder.add(getParentFolder(key));
         // should fill the missing part
         if (local !== undefined && remote !== undefined) {
@@ -806,9 +805,9 @@ const splitThreeStepsOnEntityMappings = (
       val.decision === "folder_existed_remote" ||
       val.decision === "folder_to_be_created"
     ) {
-      // log.debug(`splitting folder: key=${key},val=${JSON.stringify(val)}`);
+      // console.debug(`splitting folder: key=${key},val=${JSON.stringify(val)}`);
       const level = atWhichLevel(key);
-      // log.debug(`atWhichLevel: ${level}`);
+      // console.debug(`atWhichLevel: ${level}`);
       const k = folderCreationOps[level - 1];
       if (k === undefined || k === null) {
         folderCreationOps[level - 1] = [val];
@@ -880,7 +879,7 @@ const dispatchOperationToActualV3 = async (
   localDeleteFunc: any,
   password: string
 ) => {
-  // log.debug(
+  // console.debug(
   //   `inside dispatchOperationToActualV3, key=${key}, r=${JSON.stringify(
   //     r,
   //     null,
@@ -912,7 +911,7 @@ const dispatchOperationToActualV3 = async (
       // special treatment for OneDrive: do nothing, skip empty file without encryption
       // if it's empty folder, or it's encrypted file/folder, it continues to be uploaded.
     } else {
-      // log.debug(`before upload in sync, r=${JSON.stringify(r, null, 2)}`);
+      // console.debug(`before upload in sync, r=${JSON.stringify(r, null, 2)}`);
       const { entity, mtimeCli } = await client.uploadToRemote(
         r.key,
         vault,
@@ -986,13 +985,13 @@ export const doActualSync = async (
   callbackSyncProcess: any,
   db: InternalDBs
 ) => {
-  log.debug(`concurrency === ${concurrency}`);
+  console.debug(`concurrency === ${concurrency}`);
   const { folderCreationOps, deletionOps, uploadDownloads, realTotalCount } =
     splitThreeStepsOnEntityMappings(mixedEntityMappings);
-  // log.debug(`folderCreationOps: ${JSON.stringify(folderCreationOps)}`);
-  // log.debug(`deletionOps: ${JSON.stringify(deletionOps)}`);
-  // log.debug(`uploadDownloads: ${JSON.stringify(uploadDownloads)}`);
-  // log.debug(`realTotalCount: ${JSON.stringify(realTotalCount)}`);
+  // console.debug(`folderCreationOps: ${JSON.stringify(folderCreationOps)}`);
+  // console.debug(`deletionOps: ${JSON.stringify(deletionOps)}`);
+  // console.debug(`uploadDownloads: ${JSON.stringify(uploadDownloads)}`);
+  // console.debug(`realTotalCount: ${JSON.stringify(realTotalCount)}`);
 
   const nested = [folderCreationOps, deletionOps, uploadDownloads];
   const logTexts = [
@@ -1003,14 +1002,16 @@ export const doActualSync = async (
 
   let realCounter = 0;
   for (let i = 0; i < nested.length; ++i) {
-    log.debug(logTexts[i]);
+    console.debug(logTexts[i]);
 
     const operations = nested[i];
-    // log.debug(`curr operations=${JSON.stringify(operations, null, 2)}`);
+    // console.debug(`curr operations=${JSON.stringify(operations, null, 2)}`);
 
     for (let j = 0; j < operations.length; ++j) {
       const singleLevelOps = operations[j];
-      log.debug(`singleLevelOps=${JSON.stringify(singleLevelOps, null, 2)}`);
+      console.debug(
+        `singleLevelOps=${JSON.stringify(singleLevelOps, null, 2)}`
+      );
       if (singleLevelOps === undefined || singleLevelOps === null) {
         continue;
       }
@@ -1024,7 +1025,9 @@ export const doActualSync = async (
         const key = val.key;
 
         const fn = async () => {
-          log.debug(`start syncing "${key}" with plan ${JSON.stringify(val)}`);
+          console.debug(
+            `start syncing "${key}" with plan ${JSON.stringify(val)}`
+          );
 
           if (callbackSyncProcess !== undefined) {
             await callbackSyncProcess(
@@ -1048,7 +1051,7 @@ export const doActualSync = async (
             password
           );
 
-          log.debug(`finished ${key}`);
+          console.debug(`finished ${key}`);
         };
 
         queue.add(fn).catch((e) => {

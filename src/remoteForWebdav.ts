@@ -9,8 +9,6 @@ import { Entity, UploadedType, VALID_REQURL, WebdavConfig } from "./baseTypes";
 import { decryptArrayBuffer, encryptArrayBuffer } from "./encrypt";
 import { bufferToArrayBuffer, getPathFolder, mkdirpInVault } from "./misc";
 
-import { log } from "./moreOnLog";
-
 import type {
   FileStat,
   WebDAVClient,
@@ -85,9 +83,9 @@ if (VALID_REQURL) {
           }
         }
       }
-      // log.info(`requesting url=${options.url}`);
-      // log.info(`contentType=${contentType}`);
-      // log.info(`rspHeaders=${JSON.stringify(rspHeaders)}`)
+      // console.info(`requesting url=${options.url}`);
+      // console.info(`contentType=${contentType}`);
+      // console.info(`rspHeaders=${JSON.stringify(rspHeaders)}`)
 
       // let r2: Response = undefined;
       // if (contentType.includes("xml")) {
@@ -100,9 +98,9 @@ if (VALID_REQURL) {
       //   contentType.includes("json") ||
       //   contentType.includes("javascript")
       // ) {
-      //   log.info('inside json branch');
+      //   console.info('inside json branch');
       //   // const j = r.json;
-      //   // log.info(j);
+      //   // console.info(j);
       //   r2 = new Response(
       //     r.text,  // yea, here is the text because Response constructor expects a text
       //     {
@@ -178,7 +176,7 @@ const getWebdavPath = (fileOrFolderPath: string, remoteBaseDir: string) => {
     // special
     key = `/${remoteBaseDir}/`;
   } else if (fileOrFolderPath.startsWith("/")) {
-    log.warn(
+    console.warn(
       `why the path ${fileOrFolderPath} starts with '/'? but we just go on.`
     );
     key = `/${remoteBaseDir}${fileOrFolderPath}`;
@@ -259,7 +257,7 @@ export class WrappedWebdavClient {
             : AuthType.Password,
       });
     } else {
-      log.info("no password");
+      console.info("no password");
       this.client = createClient(this.webdavConfig.address, {
         headers: headers,
       });
@@ -271,12 +269,12 @@ export class WrappedWebdavClient {
     } else {
       const res = await this.client.exists(`/${this.remoteBaseDir}/`);
       if (res) {
-        // log.info("remote vault folder exits!");
+        // console.info("remote vault folder exits!");
         this.vaultFolderExists = true;
       } else {
-        log.info("remote vault folder not exists, creating");
+        console.info("remote vault folder not exists, creating");
         await this.client.createDirectory(`/${this.remoteBaseDir}/`);
-        log.info("remote vault folder created!");
+        console.info("remote vault folder created!");
         this.vaultFolderExists = true;
       }
     }
@@ -292,7 +290,7 @@ export class WrappedWebdavClient {
       this.webdavConfig.manualRecursive = true;
       if (this.saveUpdatedConfigFunc !== undefined) {
         await this.saveUpdatedConfigFunc();
-        log.info(
+        console.info(
           `webdav depth="auto_???" is changed to ${this.webdavConfig.depth}`
         );
       }
@@ -323,11 +321,11 @@ export const getRemoteMeta = async (
   remotePath: string
 ) => {
   await client.init();
-  log.debug(`getRemoteMeta remotePath = ${remotePath}`);
+  console.debug(`getRemoteMeta remotePath = ${remotePath}`);
   const res = (await client.client.stat(remotePath, {
     details: false,
   })) as FileStat;
-  log.debug(`getRemoteMeta res=${JSON.stringify(res)}`);
+  console.debug(`getRemoteMeta res=${JSON.stringify(res)}`);
   return fromWebdavItemToEntity(res, client.remoteBaseDir);
 };
 
@@ -376,7 +374,7 @@ export const uploadToRemote = async (
       await client.client.putFileContents(uploadFile, "", {
         overwrite: true,
         onUploadProgress: (progress: any) => {
-          // log.info(`Uploaded ${progress.loaded} bytes of ${progress.total}`);
+          // console.info(`Uploaded ${progress.loaded} bytes of ${progress.total}`);
         },
       });
 
@@ -417,7 +415,7 @@ export const uploadToRemote = async (
     await client.client.putFileContents(uploadFile, remoteContent, {
       overwrite: true,
       onUploadProgress: (progress: any) => {
-        log.info(`Uploaded ${progress.loaded} bytes of ${progress.total}`);
+        console.info(`Uploaded ${progress.loaded} bytes of ${progress.total}`);
       },
     });
 
@@ -449,7 +447,7 @@ export const listAllFromRemote = async (client: WrappedWebdavClient) => {
         itemsToFetch.push(q.pop()!);
       }
       const itemsToFetchChunks = chunk(itemsToFetch, CHUNK_SIZE);
-      // log.debug(itemsToFetchChunks);
+      // console.debug(itemsToFetchChunks);
       const subContents = [] as FileStat[];
       for (const singleChunk of itemsToFetchChunks) {
         const r = singleChunk.map((x) => {
@@ -495,7 +493,7 @@ const downloadFromRemoteRaw = async (
   remotePath: string
 ) => {
   await client.init();
-  // log.info(`getWebdavPath=${remotePath}`);
+  // console.info(`getWebdavPath=${remotePath}`);
   const buff = (await client.client.getFileContents(remotePath)) as BufferLike;
   if (buff instanceof ArrayBuffer) {
     return buff;
@@ -535,7 +533,7 @@ export const downloadFromRemote = async (
       downloadFile = remoteEncryptedKey;
     }
     downloadFile = getWebdavPath(downloadFile, client.remoteBaseDir);
-    // log.info(`downloadFile=${downloadFile}`);
+    // console.info(`downloadFile=${downloadFile}`);
     const remoteContent = await downloadFromRemoteRaw(client, downloadFile);
     let localContent = remoteContent;
     if (password !== "") {
@@ -568,10 +566,10 @@ export const deleteFromRemote = async (
   await client.init();
   try {
     await client.client.deleteFile(remoteFileName);
-    // log.info(`delete ${remoteFileName} succeeded`);
+    // console.info(`delete ${remoteFileName} succeeded`);
   } catch (err) {
-    log.error("some error while deleting");
-    log.error(err);
+    console.error("some error while deleting");
+    console.error(err);
   }
 };
 
@@ -586,7 +584,7 @@ export const checkConnectivity = async (
     )
   ) {
     const err = "Error: the url should start with http(s):// but it does not!";
-    log.error(err);
+    console.error(err);
     if (callbackFunc !== undefined) {
       callbackFunc(err);
     }
@@ -597,7 +595,7 @@ export const checkConnectivity = async (
     const results = await getRemoteMeta(client, `/${client.remoteBaseDir}/`);
     if (results === undefined) {
       const err = "results is undefined";
-      log.error(err);
+      console.error(err);
       if (callbackFunc !== undefined) {
         callbackFunc(err);
       }
@@ -605,7 +603,7 @@ export const checkConnectivity = async (
     }
     return true;
   } catch (err) {
-    log.error(err);
+    console.error(err);
     if (callbackFunc !== undefined) {
       callbackFunc(err);
     }
