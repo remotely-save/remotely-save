@@ -257,7 +257,7 @@ const fromS3HeadObjectToEntity = (
   const mtimeSvr = Math.floor(x.LastModified!.valueOf() / 1000.0) * 1000;
   let mtimeCli = mtimeSvr;
   if (x.Metadata !== undefined) {
-    const m2 = Math.round(
+    const m2 = Math.floor(
       parseFloat(x.Metadata.mtime || x.Metadata.MTime || "0")
     );
     if (m2 !== 0) {
@@ -539,12 +539,12 @@ const listFromRemoteRaw = async (
           if (rspHead.Metadata === undefined) {
             // pass
           } else {
-            mtimeRecords[content.Key!] = Math.round(
+            mtimeRecords[content.Key!] = Math.floor(
               parseFloat(
                 rspHead.Metadata.mtime || rspHead.Metadata.MTime || "0"
               )
             );
-            ctimeRecords[content.Key!] = Math.round(
+            ctimeRecords[content.Key!] = Math.floor(
               parseFloat(
                 rspHead.Metadata.ctime || rspHead.Metadata.CTime || "0"
               )

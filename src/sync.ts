@@ -5,6 +5,7 @@ import type {
   EmptyFolderCleanType,
   Entity,
   MixedEntity,
+  SUPPORTED_SERVICES_TYPE,
   SyncDirectionType,
 } from "./baseTypes";
 import { isInsideObsFolder } from "./obsFolderLister";
@@ -186,12 +187,19 @@ const isSkipItemByName = (
   );
 };
 
-const copyEntityAndFixTimeFormat = (src: Entity) => {
+const copyEntityAndFixTimeFormat = (
+  src: Entity,
+  serviceType: SUPPORTED_SERVICES_TYPE
+) => {
   const result = Object.assign({}, src);
   if (result.mtimeCli !== undefined) {
     if (result.mtimeCli === 0) {
       result.mtimeCli = undefined;
     } else {
+      if (serviceType === "s3") {
+        // round to second instead of millisecond
+        result.mtimeCli = Math.floor(result.mtimeCli / 1000.0) * 1000;
+      }
       result.mtimeCliFmt = unixTimeToStr(result.mtimeCli);
     }
   }
@@ -199,6 +207,10 @@ const copyEntityAndFixTimeFormat = (src: Entity) => {
     if (result.mtimeSvr === 0) {
       result.mtimeSvr = undefined;
     } else {
+      if (serviceType === "s3") {
+        // round to second instead of millisecond
+        result.mtimeSvr = Math.floor(result.mtimeSvr / 1000.0) * 1000;
+      }
       result.mtimeSvrFmt = unixTimeToStr(result.mtimeSvr);
     }
   }
@@ -206,6 +218,10 @@ const copyEntityAndFixTimeFormat = (src: Entity) => {
     if (result.prevSyncTime === 0) {
       result.prevSyncTime = undefined;
     } else {
+      if (serviceType === "s3") {
+        // round to second instead of millisecond
+        result.prevSyncTime = Math.floor(result.prevSyncTime / 1000.0) * 1000;
+      }
       result.prevSyncTimeFmt = unixTimeToStr(result.prevSyncTime);
     }
   }
@@ -361,7 +377,8 @@ export const ensembleMixedEnties = async (
   configDir: string,
   syncUnderscoreItems: boolean,
   ignorePaths: string[],
-  password: string
+  password: string,
+  serviceType: SUPPORTED_SERVICES_TYPE
 ): Promise<SyncPlanType> => {
   const finalMappings: SyncPlanType = {};
 
@@ -369,7 +386,7 @@ export const ensembleMixedEnties = async (
   for (const remote of remoteEntityList) {
     const remoteCopied = ensureMTimeOfRemoteEntityValid(
       await decryptRemoteEntityInplace(
-        copyEntityAndFixTimeFormat(remote),
+        copyEntityAndFixTimeFormat(remote, serviceType),
         password
       )
     );
@@ -418,14 +435,14 @@ export const ensembleMixedEnties = async (
 
       if (finalMappings.hasOwnProperty(key)) {
         const prevSyncCopied = await encryptLocalEntityInplace(
-          copyEntityAndFixTimeFormat(prevSync),
+          copyEntityAndFixTimeFormat(prevSync, serviceType),
           password,
           finalMappings[key].remote?.keyEnc
         );
         finalMappings[key].prevSync = prevSyncCopied;
       } else {
         const prevSyncCopied = await encryptLocalEntityInplace(
-          copyEntityAndFixTimeFormat(prevSync),
+          copyEntityAndFixTimeFormat(prevSync, serviceType),
           password,
           undefined
         );
@@ -456,14 +473,14 @@ export const ensembleMixedEnties = async (
 
     if (finalMappings.hasOwnProperty(key)) {
       const localCopied = await encryptLocalEntityInplace(
-        copyEntityAndFixTimeFormat(local),
+        copyEntityAndFixTimeFormat(local, serviceType),
         password,
         finalMappings[key].remote?.keyEnc
       );
       finalMappings[key].local = localCopied;
     } else {
       const localCopied = await encryptLocalEntityInplace(
-        copyEntityAndFixTimeFormat(local),
+        copyEntityAndFixTimeFormat(local, serviceType),
         password,
         undefined
       );
