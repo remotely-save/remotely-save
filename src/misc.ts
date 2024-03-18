@@ -509,17 +509,14 @@ export const stringToFragment = (string: string) => {
  * @param op
  */
 export const changeMobileStatusBar = (op: "enable" | "disable") => {
+  const bar = document.querySelector(
+    ".is-mobile .app-container .status-bar"
+  ) as HTMLElement;
   if (op === "enable") {
-    (
-      document.querySelector(
-        ".is-mobile .app-container .status-bar"
-      ) as HTMLElement
-    ).style.setProperty("display", "flex");
+    bar.style.setProperty("display", "flex");
+    bar.style.setProperty("margin-bottom", "40px");
   } else {
-    (
-      document.querySelector(
-        ".is-mobile .app-container .status-bar"
-      ) as HTMLElement
-    ).style.setProperty("display", "none");
+    bar.style.removeProperty("display");
+    bar.style.removeProperty("margin-bottom");
   }
 };
