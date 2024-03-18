@@ -92,6 +92,7 @@ Additionally, the plugin author may occasionally visit Obsidian official forum a
 - If you decide to authorize this plugin to connect to OneDrive, please go to plugin's settings, and choose OneDrive then follow the instructions.
 - Password-based end-to-end encryption is also supported. But please be aware that **the vault name itself is not encrypted**.
 - If you want to sync the files across multiple devices, **your vault name should be the same** while using default settings.
+- You might also want to checkout [faq for OneDrive](./docs/remote_services/onedrive/README.md).
 
 ### webdav
 
