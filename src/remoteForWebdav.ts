@@ -47,6 +47,11 @@ if (VALID_REQURL) {
       delete transformedHeaders["host"];
       delete transformedHeaders["content-length"];
 
+      console.debug(`before request:`);
+      console.debug(`url: ${options.url}`);
+      console.debug(`method: ${options.method}`);
+      console.debug(`headers: ${JSON.stringify(transformedHeaders, null, 2)}`);
+
       const r = await requestUrl({
         url: options.url,
         method: options.method,
@@ -67,9 +72,11 @@ if (VALID_REQURL) {
         contentType = contentType.toLowerCase();
       }
 
+      console.debug(`after request:`);
+      console.debug(`contentType: ${contentType}`);
+
       const rspHeaders = objKeyToLower({ ...r.headers });
-      console.log("rspHeaders");
-      console.log(rspHeaders);
+      console.debug(`rspHeaders: ${JSON.stringify(rspHeaders, null, 2)}`);
       for (let key in rspHeaders) {
         if (rspHeaders.hasOwnProperty(key)) {
           // avoid the error:
@@ -86,6 +93,7 @@ if (VALID_REQURL) {
           //   }
           // }
           if (!onlyAscii(rspHeaders[key])) {
+            console.debug(`rspHeaders[key] needs encode: ${key}`);
             rspHeaders[key] = encodeURIComponent(rspHeaders[key]);
           }
         }
@@ -141,19 +149,21 @@ if (VALID_REQURL) {
       // }
 
       let r2: Response | undefined = undefined;
+      const statusText = getReasonPhrase(r.status);
+      console.debug(`statusText: ${statusText}`);
       if ([101, 103, 204, 205, 304].includes(r.status)) {
         // A null body status is a status that is 101, 103, 204, 205, or 304.
         // https://fetch.spec.whatwg.org/#statuses
         // fix this: Failed to construct 'Response': Response with null body status cannot have body
         r2 = new Response(null, {
           status: r.status,
-          statusText: getReasonPhrase(r.status),
+          statusText: statusText,
           headers: rspHeaders,
         });
       } else {
         r2 = new Response(r.arrayBuffer, {
           status: r.status,
-          statusText: getReasonPhrase(r.status),
+          statusText: statusText,
           headers: rspHeaders,
         });
       }
