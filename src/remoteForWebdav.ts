@@ -26,17 +26,26 @@ function onlyAscii(str: string) {
   return !/[^\u0000-\u00ff]/g.test(str);
 }
 
+/**
+ * https://stackoverflow.com/questions/12539574/
+ * @param obj
+ * @returns
+ */
+function objKeyToLower(obj: Record<string, string>) {
+  return Object.fromEntries(
+    Object.entries(obj).map(([k, v]) => [k.toLowerCase(), v])
+  );
+}
+
 // @ts-ignore
 import { getPatcher } from "webdav/dist/web/index.js";
 if (VALID_REQURL) {
   getPatcher().patch(
     "request",
     async (options: RequestOptionsWithState): Promise<Response> => {
-      const transformedHeaders = { ...options.headers };
+      const transformedHeaders = objKeyToLower({ ...options.headers });
       delete transformedHeaders["host"];
-      delete transformedHeaders["Host"];
       delete transformedHeaders["content-length"];
-      delete transformedHeaders["Content-Length"];
 
       const r = await requestUrl({
         url: options.url,
@@ -51,16 +60,14 @@ if (VALID_REQURL) {
       if (options.headers !== undefined) {
         contentType =
           contentType ||
-          options.headers["Content-Type"] ||
-          options.headers["content-type"] ||
-          options.headers["Accept"] ||
-          options.headers["accept"];
+          transformedHeaders["content-type"] ||
+          transformedHeaders["accept"];
       }
-
       if (contentType !== undefined) {
         contentType = contentType.toLowerCase();
       }
-      const rspHeaders = { ...r.headers };
+
+      const rspHeaders = objKeyToLower({ ...r.headers });
       console.log("rspHeaders");
       console.log(rspHeaders);
       for (let key in rspHeaders) {
