@@ -1,5 +1,5 @@
 import { Buffer } from "buffer";
-import { Vault, requestUrl } from "obsidian";
+import { Platform, Vault, requestUrl } from "obsidian";
 
 import { Queue } from "@fyears/tsqueue";
 import chunk from "lodash/chunk";
@@ -47,34 +47,47 @@ if (VALID_REQURL) {
       delete transformedHeaders["host"];
       delete transformedHeaders["content-length"];
 
+      const reqContentType =
+        transformedHeaders["accept"] ?? transformedHeaders["content-type"];
+
       console.debug(`before request:`);
       console.debug(`url: ${options.url}`);
       console.debug(`method: ${options.method}`);
       console.debug(`headers: ${JSON.stringify(transformedHeaders, null, 2)}`);
+      console.debug(`reqContentType: ${reqContentType}`);
 
-      const r = await requestUrl({
+      let r = await requestUrl({
         url: options.url,
         method: options.method,
         body: options.data as string | ArrayBuffer,
         headers: transformedHeaders,
+        contentType: reqContentType,
         throw: false,
       });
 
-      let contentType: string | undefined =
-        r.headers["Content-Type"] || r.headers["content-type"];
-      if (options.headers !== undefined) {
-        contentType =
-          contentType ||
-          transformedHeaders["content-type"] ||
-          transformedHeaders["accept"];
-      }
-      if (contentType !== undefined) {
-        contentType = contentType.toLowerCase();
+      if (
+        r.status === 401 &&
+        Platform.isIosApp &&
+        !options.url.endsWith("/") &&
+        !options.url.endsWith(".md") &&
+        options.method.toUpperCase() === "PROPFIND"
+      ) {
+        // don't ask me why,
+        // some webdav servers have some mysterious behaviours,
+        // if a folder doesn't exist without slash, the servers return 401 instead of 404
+        // here is a dirty hack that works
+        console.debug(`so we have 401, try appending request url with slash`);
+        r = await requestUrl({
+          url: `${options.url}/`,
+          method: options.method,
+          body: options.data as string | ArrayBuffer,
+          headers: transformedHeaders,
+          contentType: reqContentType,
+          throw: false,
+        });
       }
 
       console.debug(`after request:`);
-      console.debug(`contentType: ${contentType}`);
-
       const rspHeaders = objKeyToLower({ ...r.headers });
       console.debug(`rspHeaders: ${JSON.stringify(rspHeaders, null, 2)}`);
       for (let key in rspHeaders) {
@@ -98,55 +111,6 @@ if (VALID_REQURL) {
           }
         }
       }
-      // console.info(`requesting url=${options.url}`);
-      // console.info(`contentType=${contentType}`);
-      // console.info(`rspHeaders=${JSON.stringify(rspHeaders)}`)
-
-      // let r2: Response = undefined;
-      // if (contentType.includes("xml")) {
-      //   r2 = new Response(r.text, {
-      //     status: r.status,
-      //     statusText: getReasonPhrase(r.status),
-      //     headers: rspHeaders,
-      //   });
-      // } else if (
-      //   contentType.includes("json") ||
-      //   contentType.includes("javascript")
-      // ) {
-      //   console.info('inside json branch');
-      //   // const j = r.json;
-      //   // console.info(j);
-      //   r2 = new Response(
-      //     r.text,  // yea, here is the text because Response constructor expects a text
-      //     {
-      //     status: r.status,
-      //     statusText: getReasonPhrase(r.status),
-      //     headers: rspHeaders,
-      //   });
-      // } else if (contentType.includes("text")) {
-      //   // avoid text/json,
-      //   // so we split this out from the above xml or json branch
-      //   r2 = new Response(r.text, {
-      //     status: r.status,
-      //     statusText: getReasonPhrase(r.status),
-      //     headers: rspHeaders,
-      //   });
-      // } else if (
-      //   contentType.includes("octet-stream") ||
-      //   contentType.includes("binary") ||
-      //   contentType.includes("buffer")
-      // ) {
-      //   // application/octet-stream
-      //   r2 = new Response(r.arrayBuffer, {
-      //     status: r.status,
-      //     statusText: getReasonPhrase(r.status),
-      //     headers: rspHeaders,
-      //   });
-      // } else {
-      //   throw Error(
-      //     `do not know how to deal with requested content type = ${contentType}`
-      //   );
-      // }
 
       let r2: Response | undefined = undefined;
       const statusText = getReasonPhrase(r.status);
