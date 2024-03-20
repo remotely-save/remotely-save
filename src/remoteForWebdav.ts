@@ -139,6 +139,7 @@ if (VALID_REQURL) {
 
 // @ts-ignore
 import { AuthType, BufferLike, createClient } from "webdav/dist/web/index.js";
+import cloneDeep from "lodash/cloneDeep";
 export type { WebDAVClient } from "webdav";
 
 export const DEFAULT_WEBDAV_CONFIG = {
@@ -210,7 +211,8 @@ export class WrappedWebdavClient {
     remoteBaseDir: string,
     saveUpdatedConfigFunc: () => Promise<any>
   ) {
-    this.webdavConfig = webdavConfig;
+    this.webdavConfig = cloneDeep(webdavConfig);
+    this.webdavConfig.address = encodeURI(this.webdavConfig.address);
     this.remoteBaseDir = remoteBaseDir;
     this.vaultFolderExists = false;
     this.saveUpdatedConfigFunc = saveUpdatedConfigFunc;
