@@ -33,7 +33,6 @@ import {
   UploadedType,
   VALID_REQURL,
 } from "./baseTypes";
-import { decryptArrayBuffer, encryptArrayBuffer } from "./encrypt";
 import {
   arrayBufferToBuffer,
   bufferToArrayBuffer,
@@ -43,6 +42,7 @@ import {
 export { S3Client } from "@aws-sdk/client-s3";
 
 import PQueue from "p-queue";
+import { Cipher } from "./encryptUnified";
 
 ////////////////////////////////////////////////////////////////////////////////
 // special handler using Obsidian requestUrl
@@ -358,8 +358,8 @@ export const uploadToRemote = async (
   s3Config: S3Config,
   fileOrFolderPath: string,
   vault: Vault | undefined,
-  isRecursively: boolean = false,
-  password: string = "",
+  isRecursively: boolean,
+  cipher: Cipher,
   remoteEncryptedKey: string = "",
   uploadRaw: boolean = false,
   rawContent: string | ArrayBuffer = "",
@@ -368,7 +368,7 @@ export const uploadToRemote = async (
 ): Promise<UploadedType> => {
   console.debug(`uploading ${fileOrFolderPath}`);
   let uploadFile = fileOrFolderPath;
-  if (password !== "") {
+  if (!cipher.isPasswordEmpty()) {
     if (remoteEncryptedKey === undefined || remoteEncryptedKey === "") {
       throw Error(
         `uploadToRemote(s3) you have password but remoteEncryptedKey is empty!`
@@ -416,7 +416,7 @@ export const uploadToRemote = async (
     // file
     // we ignore isRecursively parameter here
     let contentType = DEFAULT_CONTENT_TYPE;
-    if (password === "") {
+    if (cipher.isPasswordEmpty()) {
       contentType =
         mime.contentType(
           mime.lookup(fileOrFolderPath) || DEFAULT_CONTENT_TYPE
@@ -447,8 +447,8 @@ export const uploadToRemote = async (
       }
     }
     let remoteContent = localContent;
-    if (password !== "") {
-      remoteContent = await encryptArrayBuffer(localContent, password);
+    if (!cipher.isPasswordEmpty()) {
+      remoteContent = await cipher.encryptContent(localContent);
     }
 
     const bytesIn5MB = 5242880;
@@ -645,8 +645,8 @@ export const downloadFromRemote = async (
   fileOrFolderPath: string,
   vault: Vault,
   mtime: number,
-  password: string = "",
-  remoteEncryptedKey: string = "",
+  cipher: Cipher,
+  remoteEncryptedKey: string,
   skipSaving: boolean = false
 ) => {
   const isFolder = fileOrFolderPath.endsWith("/");
@@ -664,7 +664,7 @@ export const downloadFromRemote = async (
     return new ArrayBuffer(0);
   } else {
     let downloadFile = fileOrFolderPath;
-    if (password !== "") {
+    if (!cipher.isPasswordEmpty()) {
       downloadFile = remoteEncryptedKey;
     }
     downloadFile = getRemoteWithPrefixPath(
@@ -677,8 +677,8 @@ export const downloadFromRemote = async (
       downloadFile
     );
     let localContent = remoteContent;
-    if (password !== "") {
-      localContent = await decryptArrayBuffer(remoteContent, password);
+    if (!cipher.isPasswordEmpty()) {
+      localContent = await cipher.decryptContent(remoteContent);
     }
     if (!skipSaving) {
       await vault.adapter.writeBinary(fileOrFolderPath, localContent, {
@@ -700,14 +700,14 @@ export const deleteFromRemote = async (
   s3Client: S3Client,
   s3Config: S3Config,
   fileOrFolderPath: string,
-  password: string = "",
+  cipher: Cipher,
   remoteEncryptedKey: string = ""
 ) => {
   if (fileOrFolderPath === "/") {
     return;
   }
   let remoteFileName = fileOrFolderPath;
-  if (password !== "") {
+  if (!cipher.isPasswordEmpty()) {
     remoteFileName = remoteEncryptedKey;
   }
   remoteFileName = getRemoteWithPrefixPath(
@@ -721,7 +721,7 @@ export const deleteFromRemote = async (
     })
   );
 
-  if (fileOrFolderPath.endsWith("/") && password === "") {
+  if (fileOrFolderPath.endsWith("/") && cipher.isPasswordEmpty()) {
     const x = await listFromRemoteRaw(s3Client, s3Config, remoteFileName);
     x.forEach(async (element) => {
       await s3Client.send(
@@ -731,7 +731,7 @@ export const deleteFromRemote = async (
         })
       );
     });
-  } else if (fileOrFolderPath.endsWith("/") && password !== "") {
+  } else if (fileOrFolderPath.endsWith("/") && !cipher.isPasswordEmpty()) {
     // TODO
   } else {
     // pass

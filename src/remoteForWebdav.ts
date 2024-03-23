@@ -4,10 +4,11 @@ import { Platform, Vault, requestUrl } from "obsidian";
 import { Queue } from "@fyears/tsqueue";
 import chunk from "lodash/chunk";
 import flatten from "lodash/flatten";
+import cloneDeep from "lodash/cloneDeep";
 import { getReasonPhrase } from "http-status-codes";
 import { Entity, UploadedType, VALID_REQURL, WebdavConfig } from "./baseTypes";
-import { decryptArrayBuffer, encryptArrayBuffer } from "./encrypt";
 import { bufferToArrayBuffer, getPathFolder, mkdirpInVault } from "./misc";
+import { Cipher } from "./encryptUnified";
 
 import type {
   FileStat,
@@ -139,7 +140,6 @@ if (VALID_REQURL) {
 
 // @ts-ignore
 import { AuthType, BufferLike, createClient } from "webdav/dist/web/index.js";
-import cloneDeep from "lodash/cloneDeep";
 export type { WebDAVClient } from "webdav";
 
 export const DEFAULT_WEBDAV_CONFIG = {
@@ -316,15 +316,15 @@ export const uploadToRemote = async (
   client: WrappedWebdavClient,
   fileOrFolderPath: string,
   vault: Vault | undefined,
-  isRecursively: boolean = false,
-  password: string = "",
+  isRecursively: boolean,
+  cipher: Cipher,
   remoteEncryptedKey: string = "",
   uploadRaw: boolean = false,
   rawContent: string | ArrayBuffer = ""
 ): Promise<UploadedType> => {
   await client.init();
   let uploadFile = fileOrFolderPath;
-  if (password !== "") {
+  if (!cipher.isPasswordEmpty()) {
     if (remoteEncryptedKey === undefined || remoteEncryptedKey === "") {
       throw Error(
         `uploadToRemote(webdav) you have password but remoteEncryptedKey is empty!`
@@ -343,7 +343,7 @@ export const uploadToRemote = async (
       throw Error(`you specify uploadRaw, but you also provide a folder key!`);
     }
     // folder
-    if (password === "") {
+    if (cipher.isPasswordEmpty()) {
       // if not encrypted, mkdir a remote folder
       await client.client.createDirectory(uploadFile, {
         recursive: true,
@@ -386,8 +386,8 @@ export const uploadToRemote = async (
       mtimeCli = (await vault.adapter.stat(fileOrFolderPath))?.mtime;
     }
     let remoteContent = localContent;
-    if (password !== "") {
-      remoteContent = await encryptArrayBuffer(localContent, password);
+    if (!cipher.isPasswordEmpty()) {
+      remoteContent = await cipher.encryptContent(localContent);
     }
     // updated 20220326: the algorithm guarantee this
     // // we need to create folders before uploading
@@ -491,7 +491,7 @@ export const downloadFromRemote = async (
   fileOrFolderPath: string,
   vault: Vault,
   mtime: number,
-  password: string = "",
+  cipher: Cipher,
   remoteEncryptedKey: string = "",
   skipSaving: boolean = false
 ) => {
@@ -512,15 +512,15 @@ export const downloadFromRemote = async (
     return new ArrayBuffer(0);
   } else {
     let downloadFile = fileOrFolderPath;
-    if (password !== "") {
+    if (!cipher.isPasswordEmpty()) {
       downloadFile = remoteEncryptedKey;
     }
     downloadFile = getWebdavPath(downloadFile, client.remoteBaseDir);
     // console.info(`downloadFile=${downloadFile}`);
     const remoteContent = await downloadFromRemoteRaw(client, downloadFile);
     let localContent = remoteContent;
-    if (password !== "") {
-      localContent = await decryptArrayBuffer(remoteContent, password);
+    if (!cipher.isPasswordEmpty()) {
+      localContent = await cipher.decryptContent(remoteContent);
     }
     if (!skipSaving) {
       await vault.adapter.writeBinary(fileOrFolderPath, localContent, {
@@ -534,14 +534,14 @@ export const downloadFromRemote = async (
 export const deleteFromRemote = async (
   client: WrappedWebdavClient,
   fileOrFolderPath: string,
-  password: string = "",
+  cipher: Cipher,
   remoteEncryptedKey: string = ""
 ) => {
   if (fileOrFolderPath === "/") {
     return;
   }
   let remoteFileName = fileOrFolderPath;
-  if (password !== "") {
+  if (!cipher.isPasswordEmpty()) {
     remoteFileName = remoteEncryptedKey;
   }
   remoteFileName = getWebdavPath(remoteFileName, client.remoteBaseDir);

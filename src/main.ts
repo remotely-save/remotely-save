@@ -67,6 +67,7 @@ import { SyncAlgoV3Modal } from "./syncAlgoV3Notice";
 import AggregateError from "aggregate-error";
 import { exportVaultSyncPlansToFiles } from "./debugMode";
 import { changeMobileStatusBar, compareVersion } from "./misc";
+import { Cipher } from "./encryptUnified";
 
 const DEFAULT_SETTINGS: RemotelySavePluginSettings = {
   s3: DEFAULT_S3_CONFIG,
@@ -97,6 +98,7 @@ const DEFAULT_SETTINGS: RemotelySavePluginSettings = {
   syncDirection: "bidirectional",
   obfuscateSettingFile: true,
   enableMobileStatusBar: false,
+  encryptionMethod: "unknown",
 };
 
 interface OAuth2Info {
@@ -254,10 +256,12 @@ export default class RemotelySavePlugin extends Plugin {
         getNotice(t("syncrun_step3"));
       }
       this.syncStatus = "checking_password";
-      const passwordCheckResult = await isPasswordOk(
-        remoteEntityList,
-        this.settings.password
+
+      const cipher = new Cipher(
+        this.settings.password,
+        this.settings.encryptionMethod ?? "unknown"
       );
+      const passwordCheckResult = await isPasswordOk(remoteEntityList, cipher);
       if (!passwordCheckResult.ok) {
         getNotice(t("syncrun_passworderr"));
         throw Error(passwordCheckResult.reason);
@@ -306,7 +310,7 @@ export default class RemotelySavePlugin extends Plugin {
         this.app.vault.configDir,
         this.settings.syncUnderscoreItems ?? false,
         this.settings.ignorePaths ?? [],
-        this.settings.password,
+        cipher,
         this.settings.serviceType
       );
       mixedEntityMappings = await getSyncPlanInplace(
@@ -341,7 +345,7 @@ export default class RemotelySavePlugin extends Plugin {
           this.vaultRandomID,
           profileID,
           this.app.vault,
-          this.settings.password,
+          cipher,
           this.settings.concurrency ?? 5,
           (key: string) => self.trash(key),
           this.settings.protectModifyPercentage ?? 50,
@@ -909,6 +913,22 @@ export default class RemotelySavePlugin extends Plugin {
 
     if (this.settings.enableMobileStatusBar === undefined) {
       this.settings.enableMobileStatusBar = false;
+    }
+
+    if (
+      this.settings.encryptionMethod === undefined ||
+      this.settings.encryptionMethod === "unknown"
+    ) {
+      if (
+        this.settings.password === undefined ||
+        this.settings.password === ""
+      ) {
+        // we have a preferred way
+        this.settings.encryptionMethod = "rclone-base64";
+      } else {
+        // likely to be inherited from the old version
+        this.settings.encryptionMethod = "openssl-base64";
+      }
     }
 
     await this.saveSettings();

@@ -17,13 +17,13 @@ import {
   Entity,
   UploadedType,
 } from "./baseTypes";
-import { decryptArrayBuffer, encryptArrayBuffer } from "./encrypt";
 import {
   bufferToArrayBuffer,
   getRandomArrayBuffer,
   getRandomIntInclusive,
   mkdirpInVault,
 } from "./misc";
+import { Cipher } from "./encryptUnified";
 
 const SCOPES = ["User.Read", "Files.ReadWrite.AppFolder", "offline_access"];
 const REDIRECT_URI = `obsidian://${COMMAND_CALLBACK_ONEDRIVE}`;
@@ -694,8 +694,8 @@ export const uploadToRemote = async (
   client: WrappedOnedriveClient,
   fileOrFolderPath: string,
   vault: Vault | undefined,
-  isRecursively: boolean = false,
-  password: string = "",
+  isRecursively: boolean,
+  cipher: Cipher,
   remoteEncryptedKey: string = "",
   foldersCreatedBefore: Set<string> | undefined = undefined,
   uploadRaw: boolean = false,
@@ -704,7 +704,7 @@ export const uploadToRemote = async (
   await client.init();
 
   let uploadFile = fileOrFolderPath;
-  if (password !== "") {
+  if (!cipher.isPasswordEmpty()) {
     if (remoteEncryptedKey === undefined || remoteEncryptedKey === "") {
       throw Error(
         `uploadToRemote(onedrive) you have password but remoteEncryptedKey is empty!`
@@ -734,7 +734,7 @@ export const uploadToRemote = async (
       throw Error(`you specify uploadRaw, but you also provide a folder key!`);
     }
     // folder
-    if (password === "") {
+    if (cipher.isPasswordEmpty()) {
       // if not encrypted, mkdir a remote folder
       if (foldersCreatedBefore?.has(uploadFile)) {
         // created, pass
@@ -770,9 +770,8 @@ export const uploadToRemote = async (
         1,
         65536 /* max allowed */
       );
-      const arrBufRandom = await encryptArrayBuffer(
-        getRandomArrayBuffer(byteLengthRandom),
-        password
+      const arrBufRandom = await cipher.encryptContent(
+        getRandomArrayBuffer(byteLengthRandom)
       );
 
       // an encrypted folder is always small, we just use put here
@@ -816,8 +815,8 @@ export const uploadToRemote = async (
       localContent = await vault.adapter.readBinary(fileOrFolderPath);
     }
     let remoteContent = localContent;
-    if (password !== "") {
-      remoteContent = await encryptArrayBuffer(localContent, password);
+    if (!cipher.isPasswordEmpty()) {
+      remoteContent = await cipher.encryptContent(localContent);
     }
 
     // no need to create parent folders firstly, cool!
@@ -930,7 +929,7 @@ export const downloadFromRemote = async (
   fileOrFolderPath: string,
   vault: Vault,
   mtime: number,
-  password: string = "",
+  cipher: Cipher,
   remoteEncryptedKey: string = "",
   skipSaving: boolean = false
 ) => {
@@ -948,14 +947,14 @@ export const downloadFromRemote = async (
     return new ArrayBuffer(0);
   } else {
     let downloadFile = fileOrFolderPath;
-    if (password !== "") {
+    if (!cipher.isPasswordEmpty()) {
       downloadFile = remoteEncryptedKey;
     }
     downloadFile = getOnedrivePath(downloadFile, client.remoteBaseDir);
     const remoteContent = await downloadFromRemoteRaw(client, downloadFile);
     let localContent = remoteContent;
-    if (password !== "") {
-      localContent = await decryptArrayBuffer(remoteContent, password);
+    if (!cipher.isPasswordEmpty()) {
+      localContent = await cipher.decryptContent(remoteContent);
     }
     if (!skipSaving) {
       await vault.adapter.writeBinary(fileOrFolderPath, localContent, {
@@ -969,14 +968,14 @@ export const downloadFromRemote = async (
 export const deleteFromRemote = async (
   client: WrappedOnedriveClient,
   fileOrFolderPath: string,
-  password: string = "",
+  cipher: Cipher,
   remoteEncryptedKey: string = ""
 ) => {
   if (fileOrFolderPath === "/") {
     return;
   }
   let remoteFileName = fileOrFolderPath;
-  if (password !== "") {
+  if (!cipher.isPasswordEmpty()) {
     remoteFileName = remoteEncryptedKey;
   }
   remoteFileName = getOnedrivePath(remoteFileName, client.remoteBaseDir);

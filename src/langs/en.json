@@ -109,7 +109,12 @@
   "modal_sizesconflict_copynotice": "All the sizes conflicts info have been copied to the clipboard!",
   "settings_basic": "Basic Settings",
   "settings_password": "Encryption Password",
-  "settings_password_desc": "Password for E2E encryption. Empty for no password. You need to click \"Confirm\". Attention: the password and other info are saved locally.",
+  "settings_password_desc": "Password for E2E encryption. Empty for no password. You need to click \"Confirm\". Attention: The password and other info are saved locally. After changing the password, you need to manually delete every original files in the remote, and re-sync (so that upload) the encrypted files again.",
+  "settings_encryptionmethod": "Encryption Method",
+  "settings_encryptionmethod_desc": "Encryption method for E2E encryption. RClone method is recommended but it doesn't encrypt path structure. OpenSSL is the legacy method of this plugin. Attention: After switching the method, you need to manually delete every original files in the remote and re-sync (so that upload) the encrypted files again.",
+  "settings_encryptionmethod_rclone": "RClone (recommended)",
+  "settings_encryptionmethod_openssl": "OpenSSL (legacy)",
+
   "settings_autorun": "Schedule For Auto Run",
   "settings_autorun_desc": "The plugin tries to schedule the running after every interval. Battery may be impacted.",
   "settings_autorun_notset": "(not set)",

@@ -1,6 +1,7 @@
 import PQueue from "p-queue";
 import XRegExp from "xregexp";
 import type {
+  CipherMethodType,
   ConflictActionType,
   EmptyFolderCleanType,
   Entity,
@@ -22,14 +23,6 @@ import {
   DEFAULT_FILE_NAME_FOR_METADATAONREMOTE,
   DEFAULT_FILE_NAME_FOR_METADATAONREMOTE2,
 } from "./metadataOnRemote";
-import {
-  MAGIC_ENCRYPTED_PREFIX_BASE32,
-  MAGIC_ENCRYPTED_PREFIX_BASE64URL,
-  decryptBase32ToString,
-  decryptBase64urlToString,
-  encryptStringToBase64url,
-  getSizeFromOrigToEnc,
-} from "./encrypt";
 import { RemoteClient } from "./remote";
 import { Vault } from "obsidian";
 
@@ -39,6 +32,7 @@ import {
   clearPrevSyncRecordByVaultAndProfile,
   upsertPrevSyncRecordByVaultAndProfile,
 } from "./localdb";
+import { Cipher } from "./encryptUnified";
 
 export type SyncStatusType =
   | "idle"
@@ -55,19 +49,17 @@ export type SyncStatusType =
 export interface PasswordCheckType {
   ok: boolean;
   reason:
-    | "ok"
     | "empty_remote"
+    | "unknown_encryption_method"
     | "remote_encrypted_local_no_password"
     | "password_matched"
-    | "password_not_matched"
-    | "invalid_text_after_decryption"
-    | "remote_not_encrypted_local_has_password"
-    | "no_password_both_sides";
+    | "password_not_matched_or_remote_not_encrypted"
+    | "likely_no_password_both_sides";
 }
 
 export const isPasswordOk = async (
   remote: Entity[],
-  password: string = ""
+  cipher: Cipher
 ): Promise<PasswordCheckType> => {
   if (remote === undefined || remote.length === 0) {
     // remote empty
@@ -77,81 +69,40 @@ export const isPasswordOk = async (
     };
   }
   const santyCheckKey = remote[0].keyRaw;
-  if (santyCheckKey.startsWith(MAGIC_ENCRYPTED_PREFIX_BASE32)) {
-    // this is encrypted using old base32!
-    // try to decrypt it using the provided password.
-    if (password === "") {
+
+  if (cipher.isPasswordEmpty()) {
+    // TODO: no way to distinguish remote rclone encrypted
+    //       if local has no password??
+    if (Cipher.isLikelyEncryptedName(santyCheckKey)) {
       return {
         ok: false,
         reason: "remote_encrypted_local_no_password",
       };
-    }
-    try {
-      const res = await decryptBase32ToString(santyCheckKey, password);
-
-      // additional test
-      // because iOS Safari bypasses decryption with wrong password!
-      if (isVaildText(res)) {
-        return {
-          ok: true,
-          reason: "password_matched",
-        };
-      } else {
-        return {
-          ok: false,
-          reason: "invalid_text_after_decryption",
-        };
-      }
-    } catch (error) {
+    } else {
       return {
-        ok: false,
-        reason: "password_not_matched",
-      };
-    }
-  }
-  if (santyCheckKey.startsWith(MAGIC_ENCRYPTED_PREFIX_BASE64URL)) {
-    // this is encrypted using new base64url!
-    // try to decrypt it using the provided password.
-    if (password === "") {
-      return {
-        ok: false,
-        reason: "remote_encrypted_local_no_password",
-      };
-    }
-    try {
-      const res = await decryptBase64urlToString(santyCheckKey, password);
-
-      // additional test
-      // because iOS Safari bypasses decryption with wrong password!
-      if (isVaildText(res)) {
-        return {
-          ok: true,
-          reason: "password_matched",
-        };
-      } else {
-        return {
-          ok: false,
-          reason: "invalid_text_after_decryption",
-        };
-      }
-    } catch (error) {
-      return {
-        ok: false,
-        reason: "password_not_matched",
+        ok: true,
+        reason: "likely_no_password_both_sides",
       };
     }
   } else {
-    // it is not encrypted!
-    if (password !== "") {
+    if (cipher.method === "unknown") {
       return {
         ok: false,
-        reason: "remote_not_encrypted_local_has_password",
+        reason: "unknown_encryption_method",
       };
     }
-    return {
-      ok: true,
-      reason: "no_password_both_sides",
-    };
+    try {
+      await cipher.decryptName(santyCheckKey);
+      return {
+        ok: true,
+        reason: "password_matched",
+      };
+    } catch (error) {
+      return {
+        ok: false,
+        reason: "password_not_matched_or_remote_not_encrypted",
+      };
+    }
   }
 };
 
@@ -231,12 +182,9 @@ const copyEntityAndFixTimeFormat = (
 
 /**
  * Inplace, no copy again.
- * @param remote
- * @param password
- * @returns
  */
-const decryptRemoteEntityInplace = async (remote: Entity, password: string) => {
-  if (password == undefined || password === "") {
+const decryptRemoteEntityInplace = async (remote: Entity, cipher: Cipher) => {
+  if (cipher?.isPasswordEmpty()) {
     remote.key = remote.keyRaw;
     remote.keyEnc = remote.keyRaw;
     remote.size = remote.sizeRaw;
@@ -244,19 +192,9 @@ const decryptRemoteEntityInplace = async (remote: Entity, password: string) => {
     return remote;
   }
 
-  if (remote.keyRaw.startsWith(MAGIC_ENCRYPTED_PREFIX_BASE32)) {
-    remote.keyEnc = remote.keyRaw;
-    remote.key = await decryptBase32ToString(remote.keyEnc, password);
-    remote.sizeEnc = remote.sizeRaw;
-  } else if (remote.keyRaw.startsWith(MAGIC_ENCRYPTED_PREFIX_BASE64URL)) {
-    remote.keyEnc = remote.keyRaw;
-    remote.key = await decryptBase64urlToString(remote.keyEnc, password);
-    remote.sizeEnc = remote.sizeRaw;
-  } else {
-    throw Error(
-      `unexpected key to decrypt: ${JSON.stringify(remote, null, 2)}`
-    );
-  }
+  remote.keyEnc = remote.keyRaw;
+  remote.key = await cipher.decryptName(remote.keyEnc);
+  remote.sizeEnc = remote.sizeRaw;
 
   // TODO
   // remote.size = getSizeFromEncToOrig(remote.sizeEnc, password);
@@ -309,13 +247,10 @@ const ensureMTimeOfRemoteEntityValid = (remote: Entity) => {
 
 /**
  * Inplace, no copy again.
- * @param local
- * @param password
- * @returns
  */
 const encryptLocalEntityInplace = async (
   local: Entity,
-  password: string,
+  cipher: Cipher,
   remoteKeyEnc: string | undefined
 ) => {
   // console.debug(
@@ -333,7 +268,7 @@ const encryptLocalEntityInplace = async (
     throw Error(`local ${local.keyRaw} is abnormal without key`);
   }
 
-  if (password === undefined || password === "") {
+  if (cipher.isPasswordEmpty()) {
     local.sizeEnc = local.sizeRaw; // if no enc, the remote file has the same size
     local.keyEnc = local.keyRaw;
     return local;
@@ -344,7 +279,7 @@ const encryptLocalEntityInplace = async (
     // it's not filled yet, we fill it
     // local.size is possibly undefined if it's "prevSync" Entity
     // but local.key should always have value
-    local.sizeEnc = getSizeFromOrigToEnc(local.size);
+    local.sizeEnc = cipher.getSizeFromOrigToEnc(local.size);
   }
 
   if (local.keyEnc === undefined || local.keyEnc === "") {
@@ -357,10 +292,7 @@ const encryptLocalEntityInplace = async (
       local.keyEnc = remoteKeyEnc;
     } else {
       // we assign a new encrypted key because of no remote
-      // the old version uses base32
-      // local.keyEnc = await encryptStringToBase32(local.key, password);
-      // the new version users base64url
-      local.keyEnc = await encryptStringToBase64url(local.key, password);
+      local.keyEnc = await cipher.encryptName(local.key);
     }
   }
   return local;
@@ -377,7 +309,7 @@ export const ensembleMixedEnties = async (
   configDir: string,
   syncUnderscoreItems: boolean,
   ignorePaths: string[],
-  password: string,
+  cipher: Cipher,
   serviceType: SUPPORTED_SERVICES_TYPE
 ): Promise<SyncPlanType> => {
   const finalMappings: SyncPlanType = {};
@@ -387,7 +319,7 @@ export const ensembleMixedEnties = async (
     const remoteCopied = ensureMTimeOfRemoteEntityValid(
       await decryptRemoteEntityInplace(
         copyEntityAndFixTimeFormat(remote, serviceType),
-        password
+        cipher
       )
     );
 
@@ -436,14 +368,14 @@ export const ensembleMixedEnties = async (
       if (finalMappings.hasOwnProperty(key)) {
         const prevSyncCopied = await encryptLocalEntityInplace(
           copyEntityAndFixTimeFormat(prevSync, serviceType),
-          password,
+          cipher,
           finalMappings[key].remote?.keyEnc
         );
         finalMappings[key].prevSync = prevSyncCopied;
       } else {
         const prevSyncCopied = await encryptLocalEntityInplace(
           copyEntityAndFixTimeFormat(prevSync, serviceType),
-          password,
+          cipher,
           undefined
         );
         finalMappings[key] = {
@@ -474,14 +406,14 @@ export const ensembleMixedEnties = async (
     if (finalMappings.hasOwnProperty(key)) {
       const localCopied = await encryptLocalEntityInplace(
         copyEntityAndFixTimeFormat(local, serviceType),
-        password,
+        cipher,
         finalMappings[key].remote?.keyEnc
       );
       finalMappings[key].local = localCopied;
     } else {
       const localCopied = await encryptLocalEntityInplace(
         copyEntityAndFixTimeFormat(local, serviceType),
-        password,
+        cipher,
         undefined
       );
       finalMappings[key] = {
@@ -1017,7 +949,7 @@ const dispatchOperationToActualV3 = async (
   db: InternalDBs,
   vault: Vault,
   localDeleteFunc: any,
-  password: string
+  cipher: Cipher
 ) => {
   // console.debug(
   //   `inside dispatchOperationToActualV3, key=${key}, r=${JSON.stringify(
@@ -1045,7 +977,7 @@ const dispatchOperationToActualV3 = async (
     if (
       client.serviceType === "onedrive" &&
       r.local!.size === 0 &&
-      password === ""
+      cipher.isPasswordEmpty()
     ) {
       // special treatment for empty files for OneDrive
       // TODO: it's ugly, any other way?
@@ -1057,10 +989,10 @@ const dispatchOperationToActualV3 = async (
         r.key,
         vault,
         false,
-        password,
+        cipher,
         r.local!.keyEnc
       );
-      await decryptRemoteEntityInplace(entity, password);
+      await decryptRemoteEntityInplace(entity, cipher);
       await fullfillMTimeOfRemoteEntityInplace(entity, mtimeCli);
       await upsertPrevSyncRecordByVaultAndProfile(
         db,
@@ -1081,7 +1013,7 @@ const dispatchOperationToActualV3 = async (
       r.key,
       vault,
       r.remote!.mtimeCli!,
-      password,
+      cipher,
       r.remote!.keyEnc
     );
     await upsertPrevSyncRecordByVaultAndProfile(
@@ -1092,7 +1024,7 @@ const dispatchOperationToActualV3 = async (
     );
   } else if (r.decision === "local_is_deleted_thus_also_delete_remote") {
     // local is deleted, we need to delete remote now
-    await client.deleteFromRemote(r.key, password, r.remote!.keyEnc);
+    await client.deleteFromRemote(r.key, cipher, r.remote!.keyEnc);
     await clearPrevSyncRecordByVaultAndProfile(
       db,
       vaultRandomID,
@@ -1119,11 +1051,11 @@ const dispatchOperationToActualV3 = async (
       r.key,
       vault,
       false,
-      password,
+      cipher,
       r.local!.keyEnc
     );
     // we need to decrypt the key!!!
-    await decryptRemoteEntityInplace(entity, password);
+    await decryptRemoteEntityInplace(entity, cipher);
     await fullfillMTimeOfRemoteEntityInplace(entity, mtimeCli);
     await upsertPrevSyncRecordByVaultAndProfile(
       db,
@@ -1133,7 +1065,7 @@ const dispatchOperationToActualV3 = async (
     );
   } else if (r.decision === "folder_to_be_deleted") {
     await localDeleteFunc(r.key);
-    await client.deleteFromRemote(r.key, password, r.remote!.keyEnc);
+    await client.deleteFromRemote(r.key, cipher, r.remote!.keyEnc);
     await clearPrevSyncRecordByVaultAndProfile(
       db,
       vaultRandomID,
@@ -1151,7 +1083,7 @@ export const doActualSync = async (
   vaultRandomID: string,
   profileID: string,
   vault: Vault,
-  password: string,
+  cipher: Cipher,
   concurrency: number,
   localDeleteFunc: any,
   protectModifyPercentage: number,
@@ -1252,7 +1184,7 @@ export const doActualSync = async (
             db,
             vault,
             localDeleteFunc,
-            password
+            cipher
           );
 
           console.debug(`finished ${key}`);

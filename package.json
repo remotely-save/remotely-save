@@ -58,6 +58,7 @@
     "@aws-sdk/signature-v4-crt": "^3.474.0",
     "@aws-sdk/types": "^3.468.0",
     "@azure/msal-node": "^2.6.0",
+    "@fyears/rclone-crypt": "^0.0.6",
     "@fyears/tsqueue": "^1.0.1",
     "@microsoft/microsoft-graph-client": "^3.0.7",
     "@smithy/fetch-http-handler": "^2.3.1",

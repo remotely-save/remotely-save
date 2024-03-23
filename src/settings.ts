@@ -22,6 +22,7 @@ import {
   VALID_REQURL,
   WebdavAuthType,
   WebdavDepthType,
+  CipherMethodType,
 } from "./baseTypes";
 import { exportVaultSyncPlansToFiles } from "./debugMode";
 import { exportQrCodeUri } from "./importExport";
@@ -1631,6 +1632,28 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
         button.setButtonText(t("confirm"));
         button.onClick(async () => {
           new PasswordModal(this.app, this.plugin, newPassword).open();
+        });
+      });
+
+    new Setting(basicDiv)
+      .setName(t("settings_encryptionmethod"))
+      .setDesc(t("settings_encryptionmethod_desc"))
+      .addDropdown((dropdown) => {
+        dropdown.addOption("rclone", t("settings_encryptionmethod_rclone"));
+        dropdown.addOption("openssl", t("settings_encryptionmethod_openssl"));
+        if (this.plugin.settings.encryptionMethod === "rclone-base64") {
+          dropdown.setValue("rclone");
+        } else if (this.plugin.settings.encryptionMethod === "openssl-base64") {
+          dropdown.setValue("openssl");
+        }
+
+        dropdown.onChange(async (val: string) => {
+          if (val === "rclone") {
+            this.plugin.settings.encryptionMethod = "rclone-base64";
+          } else if (val === "openssl") {
+            this.plugin.settings.encryptionMethod = "openssl-base64";
+          }
+          await this.plugin.saveSettings();
         });
       });
 

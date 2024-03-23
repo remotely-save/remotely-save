@@ -88,6 +88,8 @@ export type SyncDirectionType =
   | "incremental_pull_only"
   | "incremental_push_only";
 
+export type CipherMethodType = "rclone-base64" | "openssl-base64" | "unknown";
+
 export interface RemotelySavePluginSettings {
   s3: S3Config;
   webdav: WebdavConfig;
@@ -118,6 +120,8 @@ export interface RemotelySavePluginSettings {
   obfuscateSettingFile?: boolean;
 
   enableMobileStatusBar?: boolean;
+
+  encryptionMethod?: CipherMethodType;
 
   /**
    * @deprecated
