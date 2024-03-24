@@ -147,7 +147,7 @@ const copyEntityAndFixTimeFormat = (
     if (result.mtimeCli === 0) {
       result.mtimeCli = undefined;
     } else {
-      if (serviceType === "s3") {
+      if (serviceType === "s3" || serviceType === "dropbox") {
         // round to second instead of millisecond
         result.mtimeCli = Math.floor(result.mtimeCli / 1000.0) * 1000;
       }
@@ -158,7 +158,7 @@ const copyEntityAndFixTimeFormat = (
     if (result.mtimeSvr === 0) {
       result.mtimeSvr = undefined;
     } else {
-      if (serviceType === "s3") {
+      if (serviceType === "s3" || serviceType === "dropbox") {
         // round to second instead of millisecond
         result.mtimeSvr = Math.floor(result.mtimeSvr / 1000.0) * 1000;
       }
@@ -169,7 +169,7 @@ const copyEntityAndFixTimeFormat = (
     if (result.prevSyncTime === 0) {
       result.prevSyncTime = undefined;
     } else {
-      if (serviceType === "s3") {
+      if (serviceType === "s3" || serviceType === "dropbox") {
         // round to second instead of millisecond
         result.prevSyncTime = Math.floor(result.prevSyncTime / 1000.0) * 1000;
       }
