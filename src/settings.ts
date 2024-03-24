@@ -123,6 +123,60 @@ class PasswordModal extends Modal {
   }
 }
 
+class EncryptionMethodModal extends Modal {
+  plugin: RemotelySavePlugin;
+  newEncryptionMethod: CipherMethodType;
+  constructor(
+    app: App,
+    plugin: RemotelySavePlugin,
+    newEncryptionMethod: CipherMethodType
+  ) {
+    super(app);
+    this.plugin = plugin;
+    this.newEncryptionMethod = newEncryptionMethod;
+  }
+
+  onOpen() {
+    let { contentEl } = this;
+
+    const t = (x: TransItemType, vars?: any) => {
+      return this.plugin.i18n.t(x, vars);
+    };
+
+    // contentEl.setText("Add Or change password.");
+    contentEl.createEl("h2", { text: t("modal_encryptionmethod_title") });
+    t("modal_encryptionmethod_shortdesc")
+      .split("\n")
+      .forEach((val, idx) => {
+        contentEl.createEl("p", {
+          text: stringToFragment(val),
+        });
+      });
+
+    new Setting(contentEl)
+      .addButton((button) => {
+        button.setButtonText(t("confirm"));
+        button.onClick(async () => {
+          this.plugin.settings.encryptionMethod = this.newEncryptionMethod;
+          await this.plugin.saveSettings();
+          this.close();
+        });
+        button.setClass("encryptionmethod-second-confirm");
+      })
+      .addButton((button) => {
+        button.setButtonText(t("goback"));
+        button.onClick(() => {
+          this.close();
+        });
+      });
+  }
+
+  onClose() {
+    let { contentEl } = this;
+    contentEl.empty();
+  }
+}
+
 class ChangeRemoteBaseDirModal extends Modal {
   readonly plugin: RemotelySavePlugin;
   readonly newRemoteBaseDir: string;
@@ -1637,23 +1691,27 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
 
     new Setting(basicDiv)
       .setName(t("settings_encryptionmethod"))
-      .setDesc(t("settings_encryptionmethod_desc"))
+      .setDesc(stringToFragment(t("settings_encryptionmethod_desc")))
       .addDropdown((dropdown) => {
-        dropdown.addOption("rclone", t("settings_encryptionmethod_rclone"));
-        dropdown.addOption("openssl", t("settings_encryptionmethod_openssl"));
-        if (this.plugin.settings.encryptionMethod === "rclone-base64") {
-          dropdown.setValue("rclone");
-        } else if (this.plugin.settings.encryptionMethod === "openssl-base64") {
-          dropdown.setValue("openssl");
-        }
-
+        dropdown.addOption(
+          "rclone-base64",
+          t("settings_encryptionmethod_rclone")
+        );
+        dropdown.addOption(
+          "openssl-base64",
+          t("settings_encryptionmethod_openssl")
+        );
         dropdown.onChange(async (val: string) => {
-          if (val === "rclone") {
-            this.plugin.settings.encryptionMethod = "rclone-base64";
-          } else if (val === "openssl") {
-            this.plugin.settings.encryptionMethod = "openssl-base64";
+          if (this.plugin.settings.password === "") {
+            this.plugin.settings.encryptionMethod = val as CipherMethodType;
+            await this.plugin.saveSettings();
+          } else {
+            new EncryptionMethodModal(
+              this.app,
+              this.plugin,
+              val as CipherMethodType
+            ).open();
           }
-          await this.plugin.saveSettings();
         });
       });
 

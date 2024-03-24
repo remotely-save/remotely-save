@@ -497,8 +497,8 @@ export const uploadToRemote = async (
       throw Error(`you specify uploadRaw, but you also provide a folder key!`);
     }
     // folder
-    if (cipher.isPasswordEmpty()) {
-      // if not encrypted, mkdir a remote folder
+    if (cipher.isPasswordEmpty() || cipher.isFolderAware()) {
+      // if not encrypted, || encrypted isFolderAware, mkdir a remote folder
       if (foldersCreatedBefore?.has(uploadFile)) {
         // created, pass
       } else {
@@ -530,7 +530,8 @@ export const uploadToRemote = async (
         mtimeCli: mtime,
       };
     } else {
-      // if encrypted, upload a fake file with the encrypted file name
+      // if encrypted && !isFolderAware(),
+      // upload a fake file with the encrypted file name
       await retryReq(
         () =>
           client.dropbox.filesUpload({

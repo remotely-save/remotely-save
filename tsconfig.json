@@ -14,7 +14,7 @@
     "esModuleInterop": true,
     "importHelpers": true,
     "isolatedModules": true,
-    "lib": ["dom", "es5", "scripthost", "es2015"]
+    "lib": ["dom", "es5", "scripthost", "es2015", "webworker"]
   },
   "include": ["**/*.ts"]
 }

@@ -51,10 +51,15 @@ if (VALID_REQURL) {
       const reqContentType =
         transformedHeaders["accept"] ?? transformedHeaders["content-type"];
 
+      const retractedHeaders = { ...transformedHeaders };
+      if (retractedHeaders.hasOwnProperty("authorization")) {
+        retractedHeaders["authorization"] = "<retracted>";
+      }
+
       console.debug(`before request:`);
       console.debug(`url: ${options.url}`);
       console.debug(`method: ${options.method}`);
-      console.debug(`headers: ${JSON.stringify(transformedHeaders, null, 2)}`);
+      console.debug(`headers: ${JSON.stringify(retractedHeaders, null, 2)}`);
       console.debug(`reqContentType: ${reqContentType}`);
 
       let r = await requestUrl({
@@ -343,8 +348,8 @@ export const uploadToRemote = async (
       throw Error(`you specify uploadRaw, but you also provide a folder key!`);
     }
     // folder
-    if (cipher.isPasswordEmpty()) {
-      // if not encrypted, mkdir a remote folder
+    if (cipher.isPasswordEmpty() || cipher.isFolderAware()) {
+      // if not encrypted, || encrypted isFolderAware, mkdir a remote folder
       await client.client.createDirectory(uploadFile, {
         recursive: true,
       });
@@ -353,7 +358,8 @@ export const uploadToRemote = async (
         entity: res,
       };
     } else {
-      // if encrypted, upload a fake file with the encrypted file name
+      // if encrypted && !isFolderAware(),
+      // upload a fake file with the encrypted file name
       await client.client.putFileContents(uploadFile, "", {
         overwrite: true,
         onUploadProgress: (progress: any) => {

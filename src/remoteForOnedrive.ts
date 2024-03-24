@@ -550,7 +550,7 @@ export class WrappedOnedriveClient {
     // 20220401: On Android, requestUrl has issue that text becomes base64.
     // Use fetch everywhere instead!
     if (false /*VALID_REQURL*/) {
-      await requestUrl({
+      const res = await requestUrl({
         url: theUrl,
         method: "PUT",
         body: payload,
@@ -560,8 +560,9 @@ export class WrappedOnedriveClient {
           Authorization: `Bearer ${await this.authGetter.getAccessToken()}`,
         },
       });
+      return res.json as DriveItem | UploadSession;
     } else {
-      await fetch(theUrl, {
+      const res = await fetch(theUrl, {
         method: "PUT",
         body: payload,
         headers: {
@@ -569,6 +570,7 @@ export class WrappedOnedriveClient {
           Authorization: `Bearer ${await this.authGetter.getAccessToken()}`,
         },
       });
+      return (await res.json()) as DriveItem | UploadSession;
     }
   };
 
@@ -734,8 +736,8 @@ export const uploadToRemote = async (
       throw Error(`you specify uploadRaw, but you also provide a folder key!`);
     }
     // folder
-    if (cipher.isPasswordEmpty()) {
-      // if not encrypted, mkdir a remote folder
+    if (cipher.isPasswordEmpty() || cipher.isFolderAware()) {
+      // if not encrypted, || encrypted isFolderAware, mkdir a remote folder
       if (foldersCreatedBefore?.has(uploadFile)) {
         // created, pass
       } else {
@@ -763,7 +765,7 @@ export const uploadToRemote = async (
         mtimeCli: mtime,
       };
     } else {
-      // if encrypted,
+      // if encrypted && !isFolderAware(),
       // upload a fake, random-size file
       // with the encrypted file name
       const byteLengthRandom = getRandomIntInclusive(

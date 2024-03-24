@@ -11,3 +11,4 @@
 - [x] sync direction: incremental pull only
 - [x] sync protection: warning based on the threshold
 - [ ] partial sync: better sync on save
+- [x] encrpytion: new encryption method, see [this](../../encryption/)

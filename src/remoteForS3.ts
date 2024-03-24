@@ -233,7 +233,14 @@ const fromS3ObjectToEntity = (
   if (x.Key! in mtimeRecords) {
     const m2 = mtimeRecords[x.Key!];
     if (m2 !== 0) {
-      mtimeCli = m2;
+      // to be compatible with RClone, we read and store the time in seconds in new version!
+      if (m2 >= 1000000000000) {
+        // it's a millsecond, uploaded by old codes..
+        mtimeCli = m2;
+      } else {
+        // it's a second, uploaded by new codes of the plugin from March 24, 2024
+        mtimeCli = m2 * 1000;
+      }
     }
   }
   const key = getLocalNoPrefixPath(x.Key!, remotePrefix);
@@ -261,7 +268,14 @@ const fromS3HeadObjectToEntity = (
       parseFloat(x.Metadata.mtime || x.Metadata.MTime || "0")
     );
     if (m2 !== 0) {
-      mtimeCli = m2;
+      // to be compatible with RClone, we read and store the time in seconds in new version!
+      if (m2 >= 1000000000000) {
+        // it's a millsecond, uploaded by old codes..
+        mtimeCli = m2;
+      } else {
+        // it's a second, uploaded by new codes of the plugin from March 24, 2024
+        mtimeCli = m2 * 1000;
+      }
     }
   }
   // console.debug(
@@ -402,8 +416,8 @@ export const uploadToRemote = async (
         Body: "",
         ContentType: contentType,
         Metadata: {
-          MTime: `${mtime}`,
-          CTime: `${ctime}`,
+          MTime: `${mtime / 1000.0}`,
+          CTime: `${ctime / 1000.0}`,
         },
       })
     );
@@ -465,8 +479,8 @@ export const uploadToRemote = async (
         Body: body,
         ContentType: contentType,
         Metadata: {
-          MTime: `${mtime}`,
-          CTime: `${ctime}`,
+          MTime: `${mtime / 1000.0}`,
+          CTime: `${ctime / 1000.0}`,
         },
       },
     });

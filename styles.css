@@ -8,6 +8,10 @@
   font-weight: bold;
 }
 
+.encryptionmethod-second-confirm {
+  font-weight: bold;
+}
+
 .settings-auth-related {
   border-top: 1px solid var(--background-modifier-border);
   padding-top: 18px;

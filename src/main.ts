@@ -389,6 +389,8 @@ export default class RemotelySavePlugin extends Plugin {
         }
       }
 
+      cipher.closeResources();
+
       if (this.settings.currLogLevel === "info") {
         getNotice(t("syncrun_shortstep2"));
       } else {

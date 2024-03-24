@@ -118,6 +118,12 @@ export const base64ToArrayBuffer = (b64text: string) => {
   return bufferToArrayBuffer(Buffer.from(b64text, "base64"));
 };
 
+export const copyArrayBuffer = (src: ArrayBuffer) => {
+  var dst = new ArrayBuffer(src.byteLength);
+  new Uint8Array(dst).set(new Uint8Array(src));
+  return dst;
+};
+
 /**
  * https://stackoverflow.com/questions/43131242
  * @param hex

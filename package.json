@@ -39,6 +39,7 @@
     "cross-env": "^7.0.3",
     "dotenv": "^16.3.1",
     "esbuild": "^0.19.9",
+    "esbuild-plugin-inline-worker": "^0.1.1",
     "jsdom": "^23.0.1",
     "mocha": "^10.2.0",
     "npm-check-updates": "^16.14.12",
@@ -50,7 +51,8 @@
     "typescript": "^5.3.3",
     "webdav-server": "^2.6.2",
     "webpack": "^5.89.0",
-    "webpack-cli": "^5.1.4"
+    "webpack-cli": "^5.1.4",
+    "worker-loader": "^3.0.8"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.474.0",
@@ -58,7 +60,7 @@
     "@aws-sdk/signature-v4-crt": "^3.474.0",
     "@aws-sdk/types": "^3.468.0",
     "@azure/msal-node": "^2.6.0",
-    "@fyears/rclone-crypt": "^0.0.6",
+    "@fyears/rclone-crypt": "^0.0.7",
     "@fyears/tsqueue": "^1.0.1",
     "@microsoft/microsoft-graph-client": "^3.0.7",
     "@smithy/fetch-http-handler": "^2.3.1",
