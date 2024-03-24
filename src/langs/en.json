@@ -271,7 +271,7 @@
   "setting_syncdirection_bidirectional_desc": "Bidirectional (default)",
   "setting_syncdirection_incremental_push_only_desc": "Incremental Push Only (aka backup mode)",
   "setting_syncdirection_incremental_pull_only_desc": "Incremental Pull Only",
-  "settings_enablemobilestatusbar": "Enable Mobile Status Bar Or Not",
+  "settings_enablemobilestatusbar": "Mobile Status Bar (experimental)",
   "settings_enablemobilestatusbar_desc": "By default Obsidian mobile hides status bar. But some users want to show it up. So here is a hack.",
   "settings_importexport": "Import and Export Partial Settings",
   "settings_export": "Export",

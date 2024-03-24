@@ -1,4 +1,4 @@
-import { Vault } from "obsidian";
+import { Platform, Vault } from "obsidian";
 import * as path from "path";
 
 import { base32, base64url } from "rfc4648";
@@ -520,7 +520,12 @@ export const changeMobileStatusBar = (op: "enable" | "disable") => {
   ) as HTMLElement;
   if (op === "enable") {
     bar.style.setProperty("display", "flex");
-    bar.style.setProperty("margin-bottom", "40px");
+    const navBar = document.getElementsByClassName(
+      "mobile-navbar"
+    )[0] as HTMLElement;
+    // thanks to community's solution
+    const height = window.getComputedStyle(navBar).getPropertyValue("height");
+    bar.style.setProperty("margin-bottom", height);
   } else {
     bar.style.removeProperty("display");
     bar.style.removeProperty("margin-bottom");

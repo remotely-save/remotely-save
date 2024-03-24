@@ -270,7 +270,7 @@
   "setting_syncdirection_bidirectional_desc": "雙向同步（預設）",
   "setting_syncdirection_incremental_push_only_desc": "只增量推送（也即：備份模式）",
   "setting_syncdirection_incremental_pull_only_desc": "只增量拉取",
-  "settings_enablemobilestatusbar": "是否顯示手機的狀態列",
+  "settings_enablemobilestatusbar": "手機的狀態列（實驗性質）",
   "settings_enablemobilestatusbar_desc": "Obsidian 手機版預設隱藏了狀態列。有些使用者希望展示它。這裡提供了設定選項。",
   "settings_importexport": "匯入匯出部分設定",
   "settings_export": "匯出",
