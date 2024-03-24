@@ -228,6 +228,13 @@ export class WrappedWebdavClient {
     if (this.client !== undefined) {
       return;
     }
+
+    if (Platform.isIosApp && !this.webdavConfig.address.startsWith("https")) {
+      throw Error(
+        `Your webdav address could only be https, not http, because of the iOS restriction.`
+      );
+    }
+
     const headers = {
       "Cache-Control": "no-cache",
     };

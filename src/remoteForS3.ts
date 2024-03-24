@@ -22,7 +22,7 @@ import { buildQueryString } from "@smithy/querystring-builder";
 import { HeaderBag, HttpHandlerOptions, Provider } from "@aws-sdk/types";
 import { Buffer } from "buffer";
 import * as mime from "mime-types";
-import { Vault, requestUrl, RequestUrlParam } from "obsidian";
+import { Vault, requestUrl, RequestUrlParam, Platform } from "obsidian";
 import { Readable } from "stream";
 import * as path from "path";
 import AggregateError from "aggregate-error";
@@ -770,6 +770,13 @@ export const checkConnectivity = async (
   callbackFunc?: any
 ) => {
   try {
+    // TODO: no universal way now, just check this in connectivity
+    if (Platform.isIosApp && !s3Config.s3Endpoint.startsWith("https")) {
+      throw Error(
+        `Your s3 endpoint could only be https, not http, because of the iOS restriction.`
+      );
+    }
+
     // const results = await s3Client.send(
     //   new HeadBucketCommand({ Bucket: s3Config.s3BucketName })
     // );
