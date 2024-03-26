@@ -53,8 +53,9 @@ export interface PasswordCheckType {
     | "unknown_encryption_method"
     | "remote_encrypted_local_no_password"
     | "password_matched"
-    | "password_not_matched_or_remote_not_encrypted"
-    | "likely_no_password_both_sides";
+    | "password_or_method_not_matched_or_remote_not_encrypted"
+    | "likely_no_password_both_sides"
+    | "encryption_method_not_matched";
 }
 
 export const isPasswordOk = async (
@@ -91,8 +92,19 @@ export const isPasswordOk = async (
         reason: "unknown_encryption_method",
       };
     }
+    if (
+      Cipher.isLikelyEncryptedNameNotMatchMethod(santyCheckKey, cipher.method)
+    ) {
+      return {
+        ok: false,
+        reason: "encryption_method_not_matched",
+      };
+    }
     try {
-      await cipher.decryptName(santyCheckKey);
+      const k = await cipher.decryptName(santyCheckKey);
+      if (k === undefined) {
+        throw Error(`decryption failed`);
+      }
       return {
         ok: true,
         reason: "password_matched",
@@ -100,7 +112,7 @@ export const isPasswordOk = async (
     } catch (error) {
       return {
         ok: false,
-        reason: "password_not_matched_or_remote_not_encrypted",
+        reason: "password_or_method_not_matched_or_remote_not_encrypted",
       };
     }
   }

@@ -125,15 +125,9 @@ class PasswordModal extends Modal {
 
 class EncryptionMethodModal extends Modal {
   plugin: RemotelySavePlugin;
-  newEncryptionMethod: CipherMethodType;
-  constructor(
-    app: App,
-    plugin: RemotelySavePlugin,
-    newEncryptionMethod: CipherMethodType
-  ) {
+  constructor(app: App, plugin: RemotelySavePlugin) {
     super(app);
     this.plugin = plugin;
-    this.newEncryptionMethod = newEncryptionMethod;
   }
 
   onOpen() {
@@ -153,22 +147,13 @@ class EncryptionMethodModal extends Modal {
         });
       });
 
-    new Setting(contentEl)
-      .addButton((button) => {
-        button.setButtonText(t("confirm"));
-        button.onClick(async () => {
-          this.plugin.settings.encryptionMethod = this.newEncryptionMethod;
-          await this.plugin.saveSettings();
-          this.close();
-        });
-        button.setClass("encryptionmethod-second-confirm");
-      })
-      .addButton((button) => {
-        button.setButtonText(t("goback"));
-        button.onClick(() => {
-          this.close();
-        });
+    new Setting(contentEl).addButton((button) => {
+      button.setButtonText(t("confirm"));
+      button.onClick(async () => {
+        this.close();
       });
+      button.setClass("encryptionmethod-second-confirm");
+    });
   }
 
   onClose() {
@@ -1693,26 +1678,17 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
       .setName(t("settings_encryptionmethod"))
       .setDesc(stringToFragment(t("settings_encryptionmethod_desc")))
       .addDropdown((dropdown) => {
-        dropdown.addOption(
-          "rclone-base64",
-          t("settings_encryptionmethod_rclone")
-        );
-        dropdown.addOption(
-          "openssl-base64",
-          t("settings_encryptionmethod_openssl")
-        );
-        dropdown.onChange(async (val: string) => {
-          if (this.plugin.settings.password === "") {
+        dropdown
+          .addOption("rclone-base64", t("settings_encryptionmethod_rclone"))
+          .addOption("openssl-base64", t("settings_encryptionmethod_openssl"))
+          .setValue(this.plugin.settings.encryptionMethod ?? "rclone-base64")
+          .onChange(async (val: string) => {
             this.plugin.settings.encryptionMethod = val as CipherMethodType;
             await this.plugin.saveSettings();
-          } else {
-            new EncryptionMethodModal(
-              this.app,
-              this.plugin,
-              val as CipherMethodType
-            ).open();
-          }
-        });
+            if (this.plugin.settings.password !== "") {
+              new EncryptionMethodModal(this.app, this.plugin).open();
+            }
+          });
       });
 
     new Setting(basicDiv)

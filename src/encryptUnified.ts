@@ -42,9 +42,18 @@ export class Cipher {
       return content;
     }
     if (this.method === "openssl-base64") {
-      return await openssl.encryptArrayBuffer(content, this.password);
+      const res = await openssl.encryptArrayBuffer(content, this.password);
+      if (res === undefined) {
+        throw Error(`cannot encrypt content`);
+      }
+      return res;
     } else if (this.method === "rclone-base64") {
-      return await this.cipherRClone!.encryptContentByCallingWorker(content);
+      const res =
+        await this.cipherRClone!.encryptContentByCallingWorker(content);
+      if (res === undefined) {
+        throw Error(`cannot encrypt content`);
+      }
+      return res;
     } else {
       throw Error(`not supported encrypt method=${this.method}`);
     }
@@ -56,9 +65,18 @@ export class Cipher {
       return content;
     }
     if (this.method === "openssl-base64") {
-      return await openssl.decryptArrayBuffer(content, this.password);
+      const res = await openssl.decryptArrayBuffer(content, this.password);
+      if (res === undefined) {
+        throw Error(`cannot decrypt content`);
+      }
+      return res;
     } else if (this.method === "rclone-base64") {
-      return await this.cipherRClone!.decryptContentByCallingWorker(content);
+      const res =
+        await this.cipherRClone!.decryptContentByCallingWorker(content);
+      if (res === undefined) {
+        throw Error(`cannot decrypt content`);
+      }
+      return res;
     } else {
       throw Error(`not supported decrypt method=${this.method}`);
     }
@@ -70,15 +88,23 @@ export class Cipher {
       return name;
     }
     if (this.method === "openssl-base64") {
-      return await openssl.encryptStringToBase64url(name, this.password);
+      const res = await openssl.encryptStringToBase64url(name, this.password);
+      if (res === undefined) {
+        throw Error(`cannot encrypt name=${name}`);
+      }
+      return res;
     } else if (this.method === "rclone-base64") {
-      return await this.cipherRClone!.encryptNameByCallingWorker(name);
+      const res = await this.cipherRClone!.encryptNameByCallingWorker(name);
+      if (res === undefined) {
+        throw Error(`cannot encrypt name=${name}`);
+      }
+      return res;
     } else {
       throw Error(`not supported encrypt method=${this.method}`);
     }
   }
 
-  async decryptName(name: string) {
+  async decryptName(name: string): Promise<string> {
     // console.debug("start decryptName");
     if (this.password === "") {
       return name;
@@ -88,7 +114,7 @@ export class Cipher {
         // backward compitable with the openssl-base32
         try {
           const res = await openssl.decryptBase32ToString(name, this.password);
-          if (isVaildText(res)) {
+          if (res !== undefined && isVaildText(res)) {
             return res;
           } else {
             throw Error(`cannot decrypt name=${name}`);
@@ -102,7 +128,7 @@ export class Cipher {
             name,
             this.password
           );
-          if (isVaildText(res)) {
+          if (res !== undefined && isVaildText(res)) {
             return res;
           } else {
             throw Error(`cannot decrypt name=${name}`);
@@ -110,9 +136,17 @@ export class Cipher {
         } catch (error) {
           throw Error(`cannot decrypt name=${name}`);
         }
+      } else {
+        throw Error(
+          `method=${this.method} but the name=${name}, likely mismatch`
+        );
       }
     } else if (this.method === "rclone-base64") {
-      return await this.cipherRClone!.decryptNameByCallingWorker(name);
+      const res = await this.cipherRClone!.decryptNameByCallingWorker(name);
+      if (res === undefined) {
+        throw Error(`cannot decrypt name=${name}`);
+      }
+      return res;
     } else {
       throw Error(`not supported decrypt method=${this.method}`);
     }
@@ -136,10 +170,43 @@ export class Cipher {
    * @param name
    * @returns
    */
-  static isLikelyEncryptedName(name: string): boolean {
+  static isLikelyOpenSSLEncryptedName(name: string): boolean {
     if (
       name.startsWith(openssl.MAGIC_ENCRYPTED_PREFIX_BASE32) ||
       name.startsWith(openssl.MAGIC_ENCRYPTED_PREFIX_BASE64URL)
+    ) {
+      return true;
+    }
+    return false;
+  }
+
+  /**
+   * quick guess, no actual decryption here
+   * @param name
+   * @returns
+   */
+  static isLikelyEncryptedName(name: string): boolean {
+    return Cipher.isLikelyOpenSSLEncryptedName(name);
+  }
+
+  /**
+   * quick guess, no actual decryption here, only openssl can be guessed here
+   * @param name
+   * @returns
+   */
+  static isLikelyEncryptedNameNotMatchMethod(
+    name: string,
+    method: CipherMethodType
+  ): boolean {
+    if (
+      Cipher.isLikelyOpenSSLEncryptedName(name) &&
+      method !== "openssl-base64"
+    ) {
+      return true;
+    }
+    if (
+      !Cipher.isLikelyOpenSSLEncryptedName(name) &&
+      method === "openssl-base64"
     ) {
       return true;
     }

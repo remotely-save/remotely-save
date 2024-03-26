@@ -165,6 +165,9 @@ export const base64ToBase64url = (a: string, pad: boolean = false) => {
  * @param a
  */
 export const isVaildText = (a: string) => {
+  if (a === undefined) {
+    return false;
+  }
   // If the regex matches, the string is invalid.
   return !XRegExp("\\p{Cc}|\\p{Cf}|\\p{Co}|\\p{Cn}|\\p{Zl}|\\p{Zp}", "A").test(
     a
