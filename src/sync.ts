@@ -738,11 +738,9 @@ export const getSyncPlanInplace = async (
               keptFolder.add(getParentFolder(key));
             }
           } else {
-            throw Error(
-              `remote is created (branch 3) but size larger than ${skipSizeLargerThan}, don't know what to do: ${JSON.stringify(
-                mixedEntry
-              )}`
-            );
+            mixedEntry.decisionBranch = 36;
+            mixedEntry.decision = "remote_is_created_too_large_then_do_nothing";
+            keptFolder.add(getParentFolder(key));
           }
         } else if (
           (prevSync.mtimeSvr === remote.mtimeCli ||
@@ -801,11 +799,9 @@ export const getSyncPlanInplace = async (
               keptFolder.add(getParentFolder(key));
             }
           } else {
-            throw Error(
-              `local is created (branch 6) but size larger than ${skipSizeLargerThan}, don't know what to do: ${JSON.stringify(
-                mixedEntry
-              )}`
-            );
+            mixedEntry.decisionBranch = 37;
+            mixedEntry.decision = "local_is_created_too_large_then_do_nothing";
+            keptFolder.add(getParentFolder(key));
           }
         } else if (
           (prevSync.mtimeSvr === local.mtimeCli ||
@@ -899,6 +895,8 @@ const splitThreeStepsOnEntityMappings = (
       val.decision === "equal" ||
       val.decision === "conflict_created_then_do_nothing" ||
       val.decision === "folder_existed_both_then_do_nothing" ||
+      val.decision === "local_is_created_too_large_then_do_nothing" ||
+      val.decision === "remote_is_created_too_large_then_do_nothing" ||
       val.decision === "folder_to_skip"
     ) {
       // pass
@@ -1013,6 +1011,8 @@ const dispatchOperationToActualV3 = async (
   } else if (
     r.decision === "equal" ||
     r.decision === "conflict_created_then_do_nothing" ||
+    r.decision === "local_is_created_too_large_then_do_nothing" ||
+    r.decision === "remote_is_created_too_large_then_do_nothing" ||
     r.decision === "folder_to_skip" ||
     r.decision === "folder_existed_both_then_do_nothing"
   ) {
