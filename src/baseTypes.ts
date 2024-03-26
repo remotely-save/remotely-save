@@ -179,7 +179,9 @@ export type DecisionTypeForMixedEntity =
   | "folder_existed_remote_then_also_create_local"
   | "folder_to_be_created"
   | "folder_to_skip"
-  | "folder_to_be_deleted";
+  | "folder_to_be_deleted_on_both"
+  | "folder_to_be_deleted_on_remote"
+  | "folder_to_be_deleted_on_local";
 
 /**
  * uniform representation

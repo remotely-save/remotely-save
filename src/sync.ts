@@ -494,9 +494,41 @@ export const getSyncPlanInplace = async (
           mixedEntry.decisionBranch = 105;
           mixedEntry.decision = "folder_to_skip";
         } else if (howToCleanEmptyFolder === "clean_both") {
-          mixedEntry.decisionBranch = 106;
-          mixedEntry.decision = "folder_to_be_deleted";
-          // TODO: what to do in different sync direction?
+          if (local !== undefined && remote !== undefined) {
+            if (syncDirection === "bidirectional") {
+              mixedEntry.decisionBranch = 106;
+              mixedEntry.decision = "folder_to_be_deleted_on_both";
+            } else {
+              // right now it does nothing because of "incremental"
+              // TODO: should we delete??
+              mixedEntry.decisionBranch = 109;
+              mixedEntry.decision = "folder_to_skip";
+            }
+          } else if (local !== undefined && remote === undefined) {
+            if (syncDirection === "bidirectional") {
+              mixedEntry.decisionBranch = 110;
+              mixedEntry.decision = "folder_to_be_deleted_on_local";
+            } else {
+              // right now it does nothing because of "incremental"
+              // TODO: should we delete??
+              mixedEntry.decisionBranch = 111;
+              mixedEntry.decision = "folder_to_skip";
+            }
+          } else if (local === undefined && remote !== undefined) {
+            if (syncDirection === "bidirectional") {
+              mixedEntry.decisionBranch = 112;
+              mixedEntry.decision = "folder_to_be_deleted_on_remote";
+            } else {
+              // right now it does nothing because of "incremental"
+              // TODO: should we delete??
+              mixedEntry.decisionBranch = 113;
+              mixedEntry.decision = "folder_to_skip";
+            }
+          } else {
+            // no folder to delete, do nothing
+            mixedEntry.decisionBranch = 114;
+            mixedEntry.decision = "folder_to_skip";
+          }
         } else {
           throw Error(
             `do not know how to deal with empty folder ${mixedEntry.key}`
@@ -877,7 +909,9 @@ const splitThreeStepsOnEntityMappings = (
       val.decision === "only_history" ||
       val.decision === "local_is_deleted_thus_also_delete_remote" ||
       val.decision === "remote_is_deleted_thus_also_delete_local" ||
-      val.decision === "folder_to_be_deleted"
+      val.decision === "folder_to_be_deleted_on_both" ||
+      val.decision === "folder_to_be_deleted_on_local" ||
+      val.decision === "folder_to_be_deleted_on_remote"
     ) {
       const level = atWhichLevel(key);
       const k = deletionOps[level - 1];
@@ -888,7 +922,11 @@ const splitThreeStepsOnEntityMappings = (
       }
       realTotalCount += 1;
 
-      if (val.decision.includes("deleted")) {
+      if (
+        val.decision.includes("deleted") &&
+        !val.decision.includes("folder")
+      ) {
+        // only count files here, skip folder
         realModifyDeleteCount += 1;
       }
     } else if (
@@ -1063,9 +1101,23 @@ const dispatchOperationToActualV3 = async (
       profileID,
       entity
     );
-  } else if (r.decision === "folder_to_be_deleted") {
-    await localDeleteFunc(r.key);
-    await client.deleteFromRemote(r.key, cipher, r.remote!.keyEnc);
+  } else if (
+    r.decision === "folder_to_be_deleted_on_both" ||
+    r.decision === "folder_to_be_deleted_on_local" ||
+    r.decision === "folder_to_be_deleted_on_remote"
+  ) {
+    if (
+      r.decision === "folder_to_be_deleted_on_both" ||
+      r.decision === "folder_to_be_deleted_on_local"
+    ) {
+      await localDeleteFunc(r.key);
+    }
+    if (
+      r.decision === "folder_to_be_deleted_on_both" ||
+      r.decision === "folder_to_be_deleted_on_remote"
+    ) {
+      await client.deleteFromRemote(r.key, cipher, r.remote!.keyEnc);
+    }
     await clearPrevSyncRecordByVaultAndProfile(
       db,
       vaultRandomID,
