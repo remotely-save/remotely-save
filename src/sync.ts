@@ -888,7 +888,7 @@ const splitThreeStepsOnEntityMappings = (
       }
       realTotalCount += 1;
 
-      if (val.decision.startsWith("deleted")) {
+      if (val.decision.includes("deleted")) {
         realModifyDeleteCount += 1;
       }
     } else if (
@@ -915,8 +915,8 @@ const splitThreeStepsOnEntityMappings = (
       realTotalCount += 1;
 
       if (
-        val.decision.startsWith("modified") ||
-        val.decision.startsWith("conflict")
+        val.decision.includes("modified") ||
+        val.decision.includes("conflict")
       ) {
         realModifyDeleteCount += 1;
       }
@@ -1115,6 +1115,12 @@ export const doActualSync = async (
     allFilesCount > 0
   ) {
     if (
+      protectModifyPercentage === 100 &&
+      realModifyDeleteCount === allFilesCount
+    ) {
+      // special treatment for 100%
+      // let it pass, we do nothing here
+    } else if (
       realModifyDeleteCount * 100 >=
       allFilesCount * protectModifyPercentage
     ) {

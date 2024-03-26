@@ -23,7 +23,7 @@
   "syncrun_shortstep2skip": "2/2 Remotely Save real sync is skipped in dry run mode.",
   "syncrun_shortstep2": "2/2 Remotely Save finished!",
   "syncrun_abort": "{{manifestID}}-{{theDate}}: abort sync, triggerSource={{triggerSource}}, error while {{syncStatus}}",
-  "syncrun_abort_protectmodifypercentage": "Abort! you set changing files  >= {{protectModifyPercentage}}% is not allowed but {{realModifyDeleteCount}}/{{allFilesCount}}={{percent}}% is going to be modified or deleted! If you are sure you want this sync, please adjust the allowed ratio in the settings.",
+  "syncrun_abort_protectmodifypercentage": "Abort! you set changing files >= {{protectModifyPercentage}}% is not allowed but {{realModifyDeleteCount}}/{{allFilesCount}}={{percent}}% is going to be modified or deleted! If you are sure you want this sync, please adjust the allowed ratio in the settings.",
   "protocol_saveqr": "New not-oauth2 settings for {{manifestName}} is saved. Reopen the plugin settings to make it effective.",
   "protocol_callbacknotsupported": "Your uri calls a callback that's not supported yet: {{params}}",
   "protocol_dropbox_connecting": "Connecting to Dropbox...\nPlease DO NOT close this modal.",
