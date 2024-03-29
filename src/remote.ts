@@ -239,7 +239,8 @@ export class RemoteClient {
   deleteFromRemote = async (
     fileOrFolderPath: string,
     cipher: Cipher,
-    remoteEncryptedKey: string = ""
+    remoteEncryptedKey: string = "",
+    synthesizedFolder: boolean = false
   ) => {
     if (this.serviceType === "s3") {
       return await s3.deleteFromRemote(
@@ -247,7 +248,8 @@ export class RemoteClient {
         this.s3Config!,
         fileOrFolderPath,
         cipher,
-        remoteEncryptedKey
+        remoteEncryptedKey,
+        synthesizedFolder
       );
     } else if (this.serviceType === "webdav") {
       return await webdav.deleteFromRemote(

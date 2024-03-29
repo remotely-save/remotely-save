@@ -204,6 +204,7 @@ export interface Entity {
   sizeRaw: number;
   hash?: string;
   etag?: string;
+  synthesizedFolder?: boolean;
 }
 
 export interface UploadedType {

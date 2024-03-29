@@ -250,6 +250,7 @@ const fromS3ObjectToEntity = (
     mtimeCli: mtimeCli,
     sizeRaw: x.Size!,
     etag: x.ETag,
+    synthesizedFolder: false,
   };
   return r;
 };
@@ -599,7 +600,10 @@ export const listAllFromRemote = async (
   s3Client: S3Client,
   s3Config: S3Config
 ) => {
-  return await listFromRemoteRaw(s3Client, s3Config, s3Config.remotePrefix);
+  const res = (
+    await listFromRemoteRaw(s3Client, s3Config, s3Config.remotePrefix)
+  ).filter((x) => x.keyRaw !== "" && x.keyRaw !== "/");
+  return res;
 };
 
 /**
@@ -715,9 +719,13 @@ export const deleteFromRemote = async (
   s3Config: S3Config,
   fileOrFolderPath: string,
   cipher: Cipher,
-  remoteEncryptedKey: string = ""
+  remoteEncryptedKey: string = "",
+  synthesizedFolder: boolean = false
 ) => {
   if (fileOrFolderPath === "/") {
+    return;
+  }
+  if (synthesizedFolder) {
     return;
   }
   let remoteFileName = fileOrFolderPath;

@@ -18,6 +18,7 @@ import {
   isVaildText,
   atWhichLevel,
   mkdirpInVault,
+  getFolderLevels,
 } from "./misc";
 import {
   DEFAULT_FILE_NAME_FOR_METADATAONREMOTE,
@@ -326,7 +327,10 @@ export const ensembleMixedEnties = async (
 ): Promise<SyncPlanType> => {
   const finalMappings: SyncPlanType = {};
 
+  const synthFolders: Record<string, Entity> = {};
+
   // remote has to be first
+  // we also have to synthesize folders here
   for (const remote of remoteEntityList) {
     const remoteCopied = ensureMTimeOfRemoteEntityValid(
       await decryptRemoteEntityInplace(
@@ -351,6 +355,42 @@ export const ensembleMixedEnties = async (
     finalMappings[key] = {
       key: key,
       remote: remoteCopied,
+    };
+
+    for (const f of getFolderLevels(key, true)) {
+      if (finalMappings.hasOwnProperty(f)) {
+        delete synthFolders[f];
+        continue;
+      }
+      if (
+        !synthFolders.hasOwnProperty(f) ||
+        remoteCopied.mtimeSvr! >= synthFolders[f].mtimeSvr!
+      ) {
+        synthFolders[f] = {
+          key: f,
+          keyRaw: `<synth: ${f}>`,
+          keyEnc: `<enc synth: ${f}>`,
+          size: 0,
+          sizeRaw: 0,
+          sizeEnc: 0,
+          mtimeSvr: remoteCopied.mtimeSvr,
+          mtimeSvrFmt: remoteCopied.mtimeSvrFmt,
+          mtimeCli: remoteCopied.mtimeCli,
+          mtimeCliFmt: remoteCopied.mtimeCliFmt,
+          synthesizedFolder: true,
+        };
+      }
+    }
+  }
+
+  console.debug(`synthFolders:`);
+  console.debug(synthFolders);
+
+  // special: add synth folders
+  for (const key of Object.keys(synthFolders)) {
+    finalMappings[key] = {
+      key: key,
+      remote: synthFolders[key],
     };
   }
 
@@ -1074,7 +1114,12 @@ const dispatchOperationToActualV3 = async (
     );
   } else if (r.decision === "local_is_deleted_thus_also_delete_remote") {
     // local is deleted, we need to delete remote now
-    await client.deleteFromRemote(r.key, cipher, r.remote!.keyEnc);
+    await client.deleteFromRemote(
+      r.key,
+      cipher,
+      r.remote!.keyEnc,
+      r.remote!.synthesizedFolder
+    );
     await clearPrevSyncRecordByVaultAndProfile(
       db,
       vaultRandomID,
@@ -1128,7 +1173,12 @@ const dispatchOperationToActualV3 = async (
       r.decision === "folder_to_be_deleted_on_both" ||
       r.decision === "folder_to_be_deleted_on_remote"
     ) {
-      await client.deleteFromRemote(r.key, cipher, r.remote!.keyEnc);
+      await client.deleteFromRemote(
+        r.key,
+        cipher,
+        r.remote!.keyEnc,
+        r.remote!.synthesizedFolder
+      );
     }
     await clearPrevSyncRecordByVaultAndProfile(
       db,
