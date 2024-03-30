@@ -224,6 +224,8 @@ export interface MixedEntity {
   decisionBranch?: number;
   decision?: DecisionTypeForMixedEntity;
   conflictAction?: ConflictActionType;
+
+  sideNotes?: any;
 }
 
 /**

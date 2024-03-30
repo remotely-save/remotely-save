@@ -903,13 +903,27 @@ export const getSyncPlanInplace = async (
     throw Error(`unexpectedly keptFolder no decisions: ${[...keptFolder]}`);
   }
 
+  // finally we want to make our life easier
+  const currTime = Date.now();
+  const currTimeFmt = unixTimeToStr(currTime);
+  // because the path should not as / in the beginning,
+  // we should be safe to add these keys:
+  mixedEntityMappings["/$@meta"] = {
+    key: "/$@meta", // don't mess up with the types
+    sideNotes: {
+      generateTime: currTime,
+      generateTimeFmt: currTimeFmt,
+    },
+  };
+
   return mixedEntityMappings;
 };
 
-const splitThreeStepsOnEntityMappings = (
+const splitFourStepsOnEntityMappings = (
   mixedEntityMappings: Record<string, MixedEntity>
 ) => {
   type StepArrayType = MixedEntity[] | undefined | null;
+  const onlyMarkSyncedOps: StepArrayType[] = [];
   const folderCreationOps: StepArrayType[] = [];
   const deletionOps: StepArrayType[] = [];
   const uploadDownloads: StepArrayType[] = [];
@@ -925,6 +939,11 @@ const splitThreeStepsOnEntityMappings = (
 
   for (let i = 0; i < sortedKeys.length; ++i) {
     const key = sortedKeys[i];
+
+    if (key === "/$@meta") {
+      continue; // special
+    }
+
     const val = mixedEntityMappings[key];
 
     if (!key.endsWith("/")) {
@@ -932,14 +951,27 @@ const splitThreeStepsOnEntityMappings = (
     }
 
     if (
-      val.decision === "equal" ||
-      val.decision === "conflict_created_then_do_nothing" ||
-      val.decision === "folder_existed_both_then_do_nothing" ||
       val.decision === "local_is_created_too_large_then_do_nothing" ||
       val.decision === "remote_is_created_too_large_then_do_nothing" ||
       val.decision === "folder_to_skip"
     ) {
       // pass
+    } else if (
+      val.decision === "equal" ||
+      val.decision === "conflict_created_then_do_nothing" ||
+      val.decision === "folder_existed_both_then_do_nothing"
+    ) {
+      if (
+        onlyMarkSyncedOps.length === 0 ||
+        onlyMarkSyncedOps[0] === undefined ||
+        onlyMarkSyncedOps[0] === null
+      ) {
+        onlyMarkSyncedOps[0] = [val];
+      } else {
+        onlyMarkSyncedOps[0].push(val); // only one level is needed here
+      }
+
+      // don't need to update realTotalCount here
     } else if (
       val.decision === "folder_existed_local_then_also_create_remote" ||
       val.decision === "folder_existed_remote_then_also_create_local" ||
@@ -1019,6 +1051,7 @@ const splitThreeStepsOnEntityMappings = (
   deletionOps.reverse(); // inplace reverse
 
   return {
+    onlyMarkSyncedOps: onlyMarkSyncedOps,
     folderCreationOps: folderCreationOps,
     deletionOps: deletionOps,
     uploadDownloads: uploadDownloads,
@@ -1049,14 +1082,36 @@ const dispatchOperationToActualV3 = async (
   if (r.decision === "only_history") {
     clearPrevSyncRecordByVaultAndProfile(db, vaultRandomID, profileID, key);
   } else if (
-    r.decision === "equal" ||
-    r.decision === "conflict_created_then_do_nothing" ||
     r.decision === "local_is_created_too_large_then_do_nothing" ||
     r.decision === "remote_is_created_too_large_then_do_nothing" ||
-    r.decision === "folder_to_skip" ||
+    r.decision === "folder_to_skip"
+  ) {
+    // !! no actual sync being kept happens,
+    // so no sync record here
+    // pass
+  } else if (
+    r.decision === "equal" ||
+    r.decision === "conflict_created_then_do_nothing" ||
     r.decision === "folder_existed_both_then_do_nothing"
   ) {
-    // pass
+    // !! we need to upsert the record,
+    // so that next time we can determine the change delta
+    const entity = r.remote ?? r.local;
+    console.debug(
+      `we are in actual operation of equal, entity=${JSON.stringify(
+        entity,
+        null,
+        2
+      )}`
+    );
+    if (entity !== undefined) {
+      await upsertPrevSyncRecordByVaultAndProfile(
+        db,
+        vaultRandomID,
+        profileID,
+        entity
+      );
+    }
   } else if (
     r.decision === "local_is_modified_then_push" ||
     r.decision === "local_is_created_then_push" ||
@@ -1207,13 +1262,15 @@ export const doActualSync = async (
 ) => {
   console.debug(`concurrency === ${concurrency}`);
   const {
+    onlyMarkSyncedOps,
     folderCreationOps,
     deletionOps,
     uploadDownloads,
     allFilesCount,
     realModifyDeleteCount,
     realTotalCount,
-  } = splitThreeStepsOnEntityMappings(mixedEntityMappings);
+  } = splitFourStepsOnEntityMappings(mixedEntityMappings);
+  // console.debug(`onlyMarkSyncedOps: ${JSON.stringify(onlyMarkSyncedOps)}`);
   // console.debug(`folderCreationOps: ${JSON.stringify(folderCreationOps)}`);
   // console.debug(`deletionOps: ${JSON.stringify(deletionOps)}`);
   // console.debug(`uploadDownloads: ${JSON.stringify(uploadDownloads)}`);
@@ -1248,11 +1305,17 @@ export const doActualSync = async (
     }
   }
 
-  const nested = [folderCreationOps, deletionOps, uploadDownloads];
+  const nested = [
+    onlyMarkSyncedOps,
+    folderCreationOps,
+    deletionOps,
+    uploadDownloads,
+  ];
   const logTexts = [
-    `1. create all folders from shadowest to deepest`,
-    `2. delete files and folders from deepest to shadowest`,
-    `3. upload or download files in parallel, with the desired concurrency=${concurrency}`,
+    `1. record the items already being synced`,
+    `2. create all folders from shadowest to deepest`,
+    `3. delete files and folders from deepest to shadowest`,
+    `4. upload or download files in parallel, with the desired concurrency=${concurrency}`,
   ];
 
   let realCounter = 0;
