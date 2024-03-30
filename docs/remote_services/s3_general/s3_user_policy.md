@@ -33,6 +33,7 @@ Using the principle of least privilege is crucial for security when allowing a t
             "Effect": "Allow",
             "Action": [
                 "s3:HeadObject",
+                "s3:ListBucket",
                 "s3:PutObject",
                 "s3:CopyObject",
                 "s3:UploadPart",
@@ -48,7 +49,10 @@ Using the principle of least privilege is crucial for security when allowing a t
                 "s3:DeleteObject",
                 "s3:DeleteObjects"
             ],
-            "Resource": "arn:aws:s3:::my-bucket/*"
+            "Resource": [
+                "arn:aws:s3:::my-bucket",
+                "arn:aws:s3:::my-bucket/*"
+            ]
         }
     ]
 }
