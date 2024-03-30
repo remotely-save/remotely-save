@@ -23,17 +23,16 @@ This is yet another unofficial sync plugin for Obsidian. If you like it or find 
   - Webdav
   - [Here](./docs/services_connectable_or_not.md) shows more connectable (or not-connectable) services in details.
 - **Obsidian Mobile supported.** Vaults can be synced across mobile and desktop devices with the cloud service as the "broker".
-- **[End-to-end encryption](./docs/encryption.md) supported.** Files would be encrypted using openssl format before being sent to the cloud **if** user specify a password.
+- **[End-to-end encryption](./docs/encryption/README.md) supported.** Files would be encrypted using openssl format before being sent to the cloud **if** user specify a password.
 - **Scheduled auto sync supported.** You can also manually trigger the sync using sidebar ribbon, or using the command from the command palette (or even bind the hot key combination to the command then press the hot key combination).
 - **[Minimal Intrusive](./docs/minimal_intrusive_design.md).**
 - **Skip Large files** and **skip paths** by custom regex conditions!
 - **Fully open source under [Apache-2.0 License](./LICENSE).**
-- **[Sync Algorithm open](./docs/sync_algorithm_v2.md) for discussion.**
+- **[Sync Algorithm open](./docs/sync_algorithm/v3/intro.md) for discussion.**
+- **[Basic Conflict Detection And Handling](./docs/sync_algorithm/v3/intro.md)** now, more to come!
 
 ## Limitations
 
-- **To support deletions sync, extra metadata will also be uploaded.** See [Minimal Intrusive](./docs/minimal_intrusive_design.md).
-- **No Conflict resolution. No content-diff-and-patch algorithm.** All files and folders are compared using their local and remote "last modified time" and those with later "last modified time" wins.
 - **Cloud services cost you money.** Always be aware of the costs and pricing. Specifically, all the operations, including but not limited to downloading, uploading, listing all files, calling any api, storage sizes, may or may not cost you money.
 - **Some limitations from the browser environment.** More technical details are [in the doc](./docs/browser_env.md).
 - **You should protect your `data.json` file.** The file contains sensitive information.
@@ -93,6 +92,7 @@ Additionally, the plugin author may occasionally visit Obsidian official forum a
 - If you decide to authorize this plugin to connect to OneDrive, please go to plugin's settings, and choose OneDrive then follow the instructions.
 - Password-based end-to-end encryption is also supported. But please be aware that **the vault name itself is not encrypted**.
 - If you want to sync the files across multiple devices, **your vault name should be the same** while using default settings.
+- You might also want to checkout [faq for OneDrive](./docs/remote_services/onedrive/README.md).
 
 ### webdav
 

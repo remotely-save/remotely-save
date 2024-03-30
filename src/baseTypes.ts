@@ -83,6 +83,13 @@ export interface OnedriveConfig {
   remoteBaseDir?: string;
 }
 
+export type SyncDirectionType =
+  | "bidirectional"
+  | "incremental_pull_only"
+  | "incremental_push_only";
+
+export type CipherMethodType = "rclone-base64" | "openssl-base64" | "unknown";
+
 export interface RemotelySavePluginSettings {
   s3: S3Config;
   webdav: WebdavConfig;
@@ -94,16 +101,32 @@ export interface RemotelySavePluginSettings {
   autoRunEveryMilliseconds?: number;
   initRunAfterMilliseconds?: number;
   syncOnSaveAfterMilliseconds?: number;
-  agreeToUploadExtraMetadata?: boolean;
+
   concurrency?: number;
   syncConfigDir?: boolean;
   syncUnderscoreItems?: boolean;
   lang?: LangTypeAndAuto;
-
+  agreeToUseSyncV3?: boolean;
   skipSizeLargerThan?: number;
   ignorePaths?: string[];
   enableStatusBarInfo?: boolean;
   deleteToWhere?: "system" | "obsidian";
+  conflictAction?: ConflictActionType;
+  howToCleanEmptyFolder?: EmptyFolderCleanType;
+
+  protectModifyPercentage?: number;
+  syncDirection?: SyncDirectionType;
+
+  obfuscateSettingFile?: boolean;
+
+  enableMobileStatusBar?: boolean;
+
+  encryptionMethod?: CipherMethodType;
+
+  /**
+   * @deprecated
+   */
+  agreeToUploadExtraMetadata?: boolean;
 
   /**
    * @deprecated
@@ -114,14 +137,6 @@ export interface RemotelySavePluginSettings {
    * @deprecated
    */
   logToDB?: boolean;
-}
-
-export interface RemoteItem {
-  key: string;
-  lastModified?: number;
-  size: number;
-  remoteType: SUPPORTED_SERVICES_TYPE;
-  etag?: string;
 }
 
 export const COMMAND_URI = "remotely-save";
@@ -139,32 +154,83 @@ export interface UriParams {
 // 80 days
 export const OAUTH2_FORCE_EXPIRE_MILLISECONDS = 1000 * 60 * 60 * 24 * 80;
 
-type DecisionTypeForFile =
-  | "skipUploading" // special, mtimeLocal === mtimeRemote
-  | "uploadLocalDelHistToRemote" // "delLocalIfExists && delRemoteIfExists && cleanLocalDelHist && uploadLocalDelHistToRemote"
-  | "keepRemoteDelHist" // "delLocalIfExists && delRemoteIfExists && cleanLocalDelHist && keepRemoteDelHist"
-  | "uploadLocalToRemote" // "skipLocal && uploadLocalToRemote && cleanLocalDelHist && cleanRemoteDelHist"
-  | "downloadRemoteToLocal"; // "downloadRemoteToLocal && skipRemote && cleanLocalDelHist && cleanRemoteDelHist"
+export type EmptyFolderCleanType = "skip" | "clean_both";
 
-type DecisionTypeForFileSize =
-  | "skipUploadingTooLarge"
-  | "skipDownloadingTooLarge"
-  | "skipUsingLocalDelTooLarge"
-  | "skipUsingRemoteDelTooLarge"
-  | "errorLocalTooLargeConflictRemote"
-  | "errorRemoteTooLargeConflictLocal";
+export type ConflictActionType = "keep_newer" | "keep_larger" | "rename_both";
 
-type DecisionTypeForFolder =
-  | "createFolder"
-  | "uploadLocalDelHistToRemoteFolder"
-  | "keepRemoteDelHistFolder"
-  | "skipFolder";
+export type DecisionTypeForMixedEntity =
+  | "only_history"
+  | "equal"
+  | "local_is_modified_then_push"
+  | "remote_is_modified_then_pull"
+  | "local_is_created_then_push"
+  | "remote_is_created_then_pull"
+  | "local_is_created_too_large_then_do_nothing"
+  | "remote_is_created_too_large_then_do_nothing"
+  | "local_is_deleted_thus_also_delete_remote"
+  | "remote_is_deleted_thus_also_delete_local"
+  | "conflict_created_then_keep_local"
+  | "conflict_created_then_keep_remote"
+  | "conflict_created_then_keep_both"
+  | "conflict_created_then_do_nothing"
+  | "conflict_modified_then_keep_local"
+  | "conflict_modified_then_keep_remote"
+  | "conflict_modified_then_keep_both"
+  | "folder_existed_both_then_do_nothing"
+  | "folder_existed_local_then_also_create_remote"
+  | "folder_existed_remote_then_also_create_local"
+  | "folder_to_be_created"
+  | "folder_to_skip"
+  | "folder_to_be_deleted_on_both"
+  | "folder_to_be_deleted_on_remote"
+  | "folder_to_be_deleted_on_local";
 
-export type DecisionType =
-  | DecisionTypeForFile
-  | DecisionTypeForFileSize
-  | DecisionTypeForFolder;
+/**
+ * uniform representation
+ * everything should be flat and primitive, so that we can copy.
+ */
+export interface Entity {
+  key?: string;
+  keyEnc?: string;
+  keyRaw: string;
+  mtimeCli?: number;
+  mtimeCliFmt?: string;
+  mtimeSvr?: number;
+  mtimeSvrFmt?: string;
+  prevSyncTime?: number;
+  prevSyncTimeFmt?: string;
+  size?: number; // might be unknown or to be filled
+  sizeEnc?: number;
+  sizeRaw: number;
+  hash?: string;
+  etag?: string;
+  synthesizedFolder?: boolean;
+}
 
+export interface UploadedType {
+  entity: Entity;
+  mtimeCli?: number;
+}
+
+/**
+ * A replacement of FileOrFolderMixedState
+ */
+export interface MixedEntity {
+  key: string;
+  local?: Entity;
+  prevSync?: Entity;
+  remote?: Entity;
+
+  decisionBranch?: number;
+  decision?: DecisionTypeForMixedEntity;
+  conflictAction?: ConflictActionType;
+
+  sideNotes?: any;
+}
+
+/**
+ * @deprecated
+ */
 export interface FileOrFolderMixedState {
   key: string;
   existLocal?: boolean;
@@ -179,7 +245,7 @@ export interface FileOrFolderMixedState {
   sizeRemoteEnc?: number;
   changeRemoteMtimeUsingMapping?: boolean;
   changeLocalMtimeUsingMapping?: boolean;
-  decision?: DecisionType;
+  decision?: string; // old DecisionType is deleted, fallback to string
   decisionBranch?: number;
   syncDone?: "done";
   remoteEncryptedKey?: string;

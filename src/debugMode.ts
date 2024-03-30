@@ -11,8 +11,6 @@ import {
   FileOrFolderMixedState,
 } from "./baseTypes";
 
-import { log } from "./moreOnLog";
-
 const turnSyncPlanToTable = (record: string) => {
   const syncPlan: SyncPlanType = JSON.parse(record);
   const { ts, tsFmt, remoteType, mixedStates } = syncPlan;
@@ -77,7 +75,7 @@ export const exportVaultSyncPlansToFiles = async (
   vault: Vault,
   vaultRandomID: string
 ) => {
-  log.info("exporting");
+  console.info("exporting");
   await mkdirpInVault(DEFAULT_DEBUG_FOLDER, vault);
   const records = await readAllSyncPlanRecordTextsByVault(db, vaultRandomID);
   let md = "";
@@ -93,5 +91,5 @@ export const exportVaultSyncPlansToFiles = async (
   await vault.create(filePath, md, {
     mtime: ts,
   });
-  log.info("finish exporting");
+  console.info("finish exporting");
 };

@@ -285,3 +285,56 @@ describe("Misc: special char for dir", () => {
     expect(misc.checkHasSpecialCharForDir("xxx?yyy")).to.be.true;
   });
 });
+
+describe("Misc: Dropbox: should fix the folder name cases", () => {
+  it("should do nothing on empty folders", () => {
+    const input: any[] = [];
+    expect(misc.fixEntityListCasesInplace(input)).to.be.empty;
+  });
+
+  it("should sort folders by length by side effect", () => {
+    const input = [
+      { keyRaw: "aaaa/" },
+      { keyRaw: "bbb/" },
+      { keyRaw: "c/" },
+      { keyRaw: "dd/" },
+    ];
+
+    const output = [
+      { keyRaw: "c/" },
+      { keyRaw: "dd/" },
+      { keyRaw: "bbb/" },
+      { keyRaw: "aaaa/" },
+    ];
+    expect(misc.fixEntityListCasesInplace(input)).to.deep.equal(output);
+  });
+
+  it("should fix folder names", () => {
+    const input = [
+      { keyRaw: "AAA/" },
+      { keyRaw: "aaa/bbb/CCC.md" },
+      { keyRaw: "aaa/BBB/" },
+
+      { keyRaw: "ddd/" },
+      { keyRaw: "DDD/EEE/fff.md" },
+      { keyRaw: "DDD/eee/" },
+
+      { keyRaw: "Ggg/" },
+      { keyRaw: "ggG/hHH你好/Fff世界.md" },
+      { keyRaw: "ggG/Hhh你好/" },
+    ];
+
+    const output = [
+      { keyRaw: "AAA/" },
+      { keyRaw: "ddd/" },
+      { keyRaw: "Ggg/" },
+      { keyRaw: "AAA/BBB/" },
+      { keyRaw: "ddd/eee/" },
+      { keyRaw: "Ggg/Hhh你好/" },
+      { keyRaw: "AAA/BBB/CCC.md" },
+      { keyRaw: "ddd/eee/fff.md" },
+      { keyRaw: "Ggg/Hhh你好/Fff世界.md" },
+    ];
+    expect(misc.fixEntityListCasesInplace(input)).to.deep.equal(output);
+  });
+});

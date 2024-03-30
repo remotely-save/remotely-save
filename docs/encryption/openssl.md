@@ -1,10 +1,22 @@
-# Encryption
+# OpenSSL enc format
 
 If a password is set, the files are encrypted before being sent to the cloud.
 
-The encryption algorithm is delibrately designed to be aligned with openssl format.
+## Warning
 
-1. The encryption algorithm is implemented using web-crypto.
+**ALWAYS BACKUP YOUR VAULT MANUALLY!!!**
+
+If you switch between RClone Crypt format and OpenSSL enc format, you have to delete the cloud vault files **manually** and **fully**, so that the plugin can re-sync (i.e. re-upload) the newly encrypted versions to the cloud.
+
+## Comparation between encryption formats
+
+See the doc [Comparation](./comparation.md).
+
+## Interoperability with official OpenSSL
+
+This encryption algorithm is delibrately designed to be aligned with openssl format.
+
+1. The encryption algorithm is implemented using web-crypto. Using AES-256-CBC.
 2. The file content is encrypted using openssl format. Assuming a file named `sometext.txt`, a password `somepassword`, then the encryption is equivalent to the following command:
 
    ```bash

@@ -10,13 +10,13 @@ import {
   encryptStringToBase64url,
   getSizeFromEncToOrig,
   getSizeFromOrigToEnc,
-} from "../src/encrypt";
+} from "../src/encryptOpenSSL";
 import { base64ToBase64url, bufferToArrayBuffer } from "../src/misc";
 
 chai.use(chaiAsPromised);
 const expect = chai.expect;
 
-describe("Encryption tests", () => {
+describe("Encryption OpenSSL tests", () => {
   beforeEach(function () {
     global.window = {
       crypto: require("crypto").webcrypto,
