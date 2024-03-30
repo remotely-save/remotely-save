@@ -779,7 +779,7 @@ export const checkConnectivity = async (
 ) => {
   try {
     // TODO: no universal way now, just check this in connectivity
-    if (Platform.isIosApp && !s3Config.s3Endpoint.startsWith("https")) {
+    if (Platform.isIosApp && s3Config.s3Endpoint.startsWith("http://")) {
       throw Error(
         `Your s3 endpoint could only be https, not http, because of the iOS restriction.`
       );
