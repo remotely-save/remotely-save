@@ -471,6 +471,11 @@ export class WrappedOnedriveClient {
       const pathFrag = encodeURI(pathFragOrig);
       theUrl = `${API_PREFIX}${pathFrag}`;
     }
+    // we want to support file name with hash #
+    // because every url we construct here do not contain the # symbol
+    // thus it should be safe to directly replace the character
+    theUrl = theUrl.replace(/#/g, "%23");
+    // console.debug(`building url: [${pathFragOrig}] => [${theUrl}]`)
     return theUrl;
   };
 
