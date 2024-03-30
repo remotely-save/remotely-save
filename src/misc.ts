@@ -534,3 +534,52 @@ export const changeMobileStatusBar = (op: "enable" | "disable") => {
     bar.style.removeProperty("margin-bottom");
   }
 };
+
+/**
+ * https://github.com/remotely-save/remotely-save/issues/567
+ * https://www.dropboxforum.com/t5/Dropbox-API-Support-Feedback/Case-Sensitivity-in-API-2/td-p/191279
+ * @param entities
+ */
+export const fixEntityListCasesInplace = (entities: { keyRaw: string }[]) => {
+  entities.sort((a, b) => a.keyRaw.length - b.keyRaw.length);
+  // console.log(JSON.stringify(entities,null,2));
+
+  const caseMapping: Record<string, string> = { "": "" };
+  for (const e of entities) {
+    // console.log(`looking for: ${JSON.stringify(e, null, 2)}`);
+
+    let parentFolder = getParentFolder(e.keyRaw);
+    if (parentFolder === "/") {
+      parentFolder = "";
+    }
+    const parentFolderLower = parentFolder.toLocaleLowerCase();
+    const segs = e.keyRaw.split("/");
+    if (e.keyRaw.endsWith("/")) {
+      // folder
+      if (caseMapping.hasOwnProperty(parentFolderLower)) {
+        const newKeyRaw = `${caseMapping[parentFolderLower]}${segs
+          .slice(-2)
+          .join("/")}`;
+        caseMapping[newKeyRaw.toLocaleLowerCase()] = newKeyRaw;
+        e.keyRaw = newKeyRaw;
+        // console.log(JSON.stringify(caseMapping,null,2));
+        continue;
+      } else {
+        throw Error(`${parentFolder} doesn't have cases record??`);
+      }
+    } else {
+      // file
+      if (caseMapping.hasOwnProperty(parentFolderLower)) {
+        const newKeyRaw = `${caseMapping[parentFolderLower]}${segs
+          .slice(-1)
+          .join("/")}`;
+        e.keyRaw = newKeyRaw;
+        continue;
+      } else {
+        throw Error(`${parentFolder} doesn't have cases record??`);
+      }
+    }
+  }
+
+  return entities;
+};

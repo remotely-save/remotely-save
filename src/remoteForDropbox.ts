@@ -12,6 +12,7 @@ import {
 } from "./baseTypes";
 import {
   bufferToArrayBuffer,
+  fixEntityListCasesInplace,
   getFolderLevels,
   hasEmojiInText,
   headersToRecord,
@@ -634,6 +635,8 @@ export const listAllFromRemote = async (client: WrappedDropboxClient) => {
       .map((x) => fromDropboxItemToEntity(x, client.remoteBaseDir));
     unifiedContents.push(...unifiedContents2);
   }
+
+  fixEntityListCasesInplace(unifiedContents);
 
   return unifiedContents;
 };
