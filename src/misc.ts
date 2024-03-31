@@ -4,7 +4,6 @@ import * as path from "path";
 import { base32, base64url } from "rfc4648";
 import XRegExp from "xregexp";
 import emojiRegex from "emoji-regex";
-import delay from "delay";
 
 declare global {
   interface Window {
@@ -550,7 +549,8 @@ export const changeMobileStatusBar = (
             k.className.contains("mobile-navbar") ||
             k.className.contains("mobile-toolbar")
           ) {
-            await delay(300); // have to wait, otherwise the height is not correct??
+            // have to wait, otherwise the height is not correct??
+            await new Promise((resolve) => setTimeout(resolve, 300));
             const height = window
               .getComputedStyle(k as Element)
               .getPropertyValue("height");
