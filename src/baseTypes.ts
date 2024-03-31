@@ -272,9 +272,9 @@ export const DEFAULT_LOG_HISTORY_FILE_PREFIX = "log_hist_exported_on_";
 
 export type SyncTriggerSourceType =
   | "manual"
-  | "auto"
   | "dry"
-  | "autoOnceInit"
+  | "auto"
+  | "auto_once_init"
   | "auto_sync_on_save";
 
 export const REMOTELY_SAVE_VERSION_2022 = "0.3.25";

@@ -5,7 +5,7 @@
   "goback": "Go Back",
   "submit": "Submit",
   "sometext": "Here are some texts.",
-  "syncrun_alreadyrunning": "{{pluginName}} already running in stage {{syncStatus}}!",
+  "syncrun_alreadyrunning": "New command {{newTriggerSource}} stops because {{pluginName}} is already running in stage {{syncStatus}}!",
   "syncrun_syncingribbon": "{{pluginName}}: syncing from {{triggerSource}}",
   "syncrun_step0": "0/8 Remotely Save is running in dry mode, thus not actual file changes would happen.",
   "syncrun_step1": "1/8 Remotely Save is preparing ({{serviceType}})",

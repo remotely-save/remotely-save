@@ -167,15 +167,17 @@ export default class RemotelySavePlugin extends Plugin {
       }
     };
     if (this.syncStatus !== "idle") {
-      // here the notice is shown regardless of triggerSource
-      new Notice(
+      // really, users don't want to see this in auto mode
+      // so we use getNotice to avoid unnecessary show up
+      getNotice(
         t("syncrun_alreadyrunning", {
           pluginName: this.manifest.name,
           syncStatus: this.syncStatus,
+          newTriggerSource: triggerSource,
         })
       );
       if (this.currSyncMsg !== undefined && this.currSyncMsg !== "") {
-        new Notice(this.currSyncMsg);
+        getNotice(this.currSyncMsg);
       }
       return;
     }
@@ -378,7 +380,8 @@ export default class RemotelySavePlugin extends Plugin {
               realCounter,
               realTotalCount,
               pathName,
-              decision
+              decision,
+              triggerSource
             ),
           this.db
         );
@@ -1105,7 +1108,7 @@ export default class RemotelySavePlugin extends Plugin {
     ) {
       this.app.workspace.onLayoutReady(() => {
         window.setTimeout(() => {
-          this.syncRun("autoOnceInit");
+          this.syncRun("auto_once_init");
         }, this.settings.initRunAfterMilliseconds);
       });
     }
@@ -1139,7 +1142,7 @@ export default class RemotelySavePlugin extends Plugin {
           // if it has modified after lastSuccessSync
           // then schedule a run for syncOnSaveAfterMilliseconds after it was modified
           const lastModified = currentFile.stat.mtime;
-          const lastSuccessSyncMillis = await getLastSuccessSyncByVault(
+          const lastSuccessSyncMillis = await getLastSuccessSyncTimeByVault(
             this.db,
             this.vaultRandomID
           );
@@ -1174,7 +1177,8 @@ export default class RemotelySavePlugin extends Plugin {
 
         // listen to current file save changes
         this.registerEvent(
-          this.app.vault.on("modify", () => {
+          this.app.vault.on("modify", (x) => {
+            // console.debug(`event=modify! file=${x}`);
             checkCurrFileModified("FILE_CHANGES");
           })
         );
@@ -1197,9 +1201,10 @@ export default class RemotelySavePlugin extends Plugin {
     i: number,
     totalCount: number,
     pathName: string,
-    decision: string
+    decision: string,
+    triggerSource: SyncTriggerSourceType
   ) {
-    const msg = `syncing progress=${i}/${totalCount},decision=${decision},path=${pathName}`;
+    const msg = `syncing progress=${i}/${totalCount},decision=${decision},path=${pathName},source=${triggerSource}`;
     this.currSyncMsg = msg;
   }
 

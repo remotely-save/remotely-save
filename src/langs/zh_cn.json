@@ -5,7 +5,7 @@
   "goback": "返回",
   "submit": "提交",
   "sometext": "这里有一段文字。",
-  "syncrun_alreadyrunning": "{{pluginName}} 正处于此阶段：{{syncStatus}}!",
+  "syncrun_alreadyrunning": "{{pluginName}} 正处于此阶段：{{syncStatus}}！中断触发 {{newTriggerSource}}。",
   "syncrun_syncingribbon": "{{pluginName}}：正在由 {{triggerSource}} 触发运行",
   "syncrun_step0": "0/8 Remotely Save 在空跑（dry run）模式，不会发生实际的文件交换。",
   "syncrun_step1": "1/8 Remotely Save 准备同步（{{serviceType}}）",
