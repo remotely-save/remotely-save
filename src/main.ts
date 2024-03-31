@@ -151,6 +151,7 @@ export default class RemotelySavePlugin extends Plugin {
   vaultRandomID!: string;
   debugServerTemp?: string;
   syncEvent?: Events;
+  appContainerObserver?: MutationObserver;
 
   async syncRun(triggerSource: SyncTriggerSourceType = "manual") {
     const t = (x: TransItemType, vars?: any) => {
@@ -820,6 +821,10 @@ export default class RemotelySavePlugin extends Plugin {
   async onunload() {
     console.info(`unloading plugin ${this.manifest.id}`);
     this.syncRibbon = undefined;
+    if (this.appContainerObserver !== undefined) {
+      this.appContainerObserver.disconnect();
+      this.appContainerObserver = undefined;
+    }
     if (this.oauth2Info !== undefined) {
       this.oauth2Info.helperModal = undefined;
       this.oauth2Info = {
@@ -1187,9 +1192,11 @@ export default class RemotelySavePlugin extends Plugin {
   }
 
   enableMobileStatusBarIfSet() {
-    if (Platform.isMobile && this.settings.enableMobileStatusBar) {
-      changeMobileStatusBar("enable");
-    }
+    this.app.workspace.onLayoutReady(() => {
+      if (Platform.isMobile && this.settings.enableMobileStatusBar) {
+        this.appContainerObserver = changeMobileStatusBar("enable");
+      }
+    });
   }
 
   async saveAgreeToUseNewSyncAlgorithm() {

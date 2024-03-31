@@ -2098,10 +2098,16 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
             .onChange(async (val) => {
               if (val === "enable") {
                 this.plugin.settings.enableMobileStatusBar = true;
-                changeMobileStatusBar("enable");
+                this.plugin.appContainerObserver =
+                  changeMobileStatusBar("enable");
               } else {
                 this.plugin.settings.enableMobileStatusBar = false;
-                changeMobileStatusBar("disable");
+                changeMobileStatusBar(
+                  "disable",
+                  this.plugin.appContainerObserver
+                );
+                this.plugin.appContainerObserver?.disconnect();
+                this.plugin.appContainerObserver = undefined;
               }
               await this.plugin.saveSettings();
             });

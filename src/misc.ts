@@ -4,6 +4,7 @@ import * as path from "path";
 import { base32, base64url } from "rfc4648";
 import XRegExp from "xregexp";
 import emojiRegex from "emoji-regex";
+import delay from "delay";
 
 declare global {
   interface Window {
@@ -517,21 +518,80 @@ export const stringToFragment = (string: string) => {
  * https://forum.obsidian.md/t/css-to-show-status-bar-on-mobile-devices/77185
  * @param op
  */
-export const changeMobileStatusBar = (op: "enable" | "disable") => {
-  const bar = document.querySelector(
+export const changeMobileStatusBar = (
+  op: "enable" | "disable",
+  oldAppContainerObserver?: MutationObserver
+) => {
+  const appContainer = document.getElementsByClassName("app-container")[0] as
+    | HTMLElement
+    | undefined;
+
+  const statusbar = document.querySelector(
     ".is-mobile .app-container .status-bar"
-  ) as HTMLElement;
+  ) as HTMLElement | undefined;
+
+  if (appContainer === undefined || statusbar === undefined) {
+    // give up, exit
+    console.warn(`give up watching appContainer for statusbar`);
+    console.warn(`appContainer=${appContainer}, statusbar=${statusbar}`);
+    return undefined;
+  }
+
   if (op === "enable") {
-    bar.style.setProperty("display", "flex");
-    const navBar = document.getElementsByClassName(
-      "mobile-navbar"
-    )[0] as HTMLElement;
-    // thanks to community's solution
-    const height = window.getComputedStyle(navBar).getPropertyValue("height");
-    bar.style.setProperty("margin-bottom", height);
+    const callback = async (
+      mutationList: MutationRecord[],
+      observer: MutationObserver
+    ) => {
+      for (const mutation of mutationList) {
+        // console.debug(mutation);
+        if (mutation.type === "childList" && mutation.addedNodes.length > 0) {
+          const k = mutation.addedNodes[0] as Element;
+          if (
+            k.className.contains("mobile-navbar") ||
+            k.className.contains("mobile-toolbar")
+          ) {
+            await delay(300); // have to wait, otherwise the height is not correct??
+            const height = window
+              .getComputedStyle(k as Element)
+              .getPropertyValue("height");
+
+            statusbar.style.setProperty("display", "flex");
+            statusbar.style.setProperty("margin-bottom", height);
+          }
+        }
+      }
+    };
+    const observer = new MutationObserver(callback);
+    observer.observe(appContainer, {
+      attributes: false,
+      childList: true,
+      characterData: false,
+      subtree: false,
+    });
+
+    try {
+      // init, manual call
+      const navBar = document.getElementsByClassName(
+        "mobile-navbar"
+      )[0] as HTMLElement;
+      // thanks to community's solution
+      const height = window.getComputedStyle(navBar).getPropertyValue("height");
+      statusbar.style.setProperty("display", "flex");
+      statusbar.style.setProperty("margin-bottom", height);
+    } catch (e) {
+      // skip
+    }
+
+    return observer;
   } else {
-    bar.style.removeProperty("display");
-    bar.style.removeProperty("margin-bottom");
+    if (oldAppContainerObserver !== undefined) {
+      console.debug(`disconnect oldAppContainerObserver`);
+      oldAppContainerObserver.disconnect();
+      oldAppContainerObserver = undefined;
+    }
+    statusbar.style.removeProperty("display");
+    statusbar.style.removeProperty("margin-bottom");
+    return undefined;
   }
 };
 
