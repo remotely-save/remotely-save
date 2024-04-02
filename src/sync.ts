@@ -1096,14 +1096,17 @@ const dispatchOperationToActualV3 = async (
   ) {
     // !! we need to upsert the record,
     // so that next time we can determine the change delta
-    const entity = r.remote ?? r.local;
-    console.debug(
-      `we are in actual operation of equal, entity=${JSON.stringify(
+    // if we have prevSync, we store it because it should keep all necessary info
+    let entity = r.prevSync;
+    // if we don't have prevSync, we use remote entity AND local mtime
+    // as if it is "uploaded"
+    if (entity === undefined && r.remote !== undefined) {
+      entity = await decryptRemoteEntityInplace(r.remote, cipher);
+      entity = await fullfillMTimeOfRemoteEntityInplace(
         entity,
-        null,
-        2
-      )}`
-    );
+        r.local?.mtimeCli
+      );
+    }
     if (entity !== undefined) {
       await upsertPrevSyncRecordByVaultAndProfile(
         db,
