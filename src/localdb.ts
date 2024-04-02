@@ -382,13 +382,13 @@ export const readAllSyncPlanRecordTextsByVault = async (
 };
 
 /**
- * We remove records that are older than 3 days or 100 records.
+ * We remove records that are older than 1 days or 20 records.
  * It's a heavy operation, so we shall not place it in the start up.
  * @param db
  */
 export const clearExpiredSyncPlanRecords = async (db: InternalDBs) => {
-  const MILLISECONDS_OLD = 1000 * 60 * 60 * 24 * 3; // 3 days
-  const COUNT_TO_MANY = 100;
+  const MILLISECONDS_OLD = 1000 * 60 * 60 * 24 * 1; // 1 days
+  const COUNT_TO_MANY = 20;
 
   const currTs = Date.now();
   const expiredTs = currTs - MILLISECONDS_OLD;
