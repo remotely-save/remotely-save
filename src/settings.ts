@@ -23,9 +23,14 @@ import {
   WebdavAuthType,
   WebdavDepthType,
   CipherMethodType,
+  QRExportType,
 } from "./baseTypes";
 import { exportVaultSyncPlansToFiles } from "./debugMode";
-import { exportQrCodeUri } from "./importExport";
+import {
+  exportQrCodeUri,
+  importQrCodeUri,
+  parseUriByHand,
+} from "./importExport";
 import {
   clearAllPrevSyncRecordByVault,
   clearAllSyncPlanRecords,
@@ -52,6 +57,7 @@ import {
   stringToFragment,
 } from "./misc";
 import { simpleTransRemotePrefix } from "./remoteForS3";
+import cloneDeep from "lodash/cloneDeep";
 
 class PasswordModal extends Modal {
   plugin: RemotelySavePlugin;
@@ -695,9 +701,11 @@ class SyncConfigDirModal extends Modal {
 
 class ExportSettingsQrCodeModal extends Modal {
   plugin: RemotelySavePlugin;
-  constructor(app: App, plugin: RemotelySavePlugin) {
+  exportType: QRExportType;
+  constructor(app: App, plugin: RemotelySavePlugin, exportType: QRExportType) {
     super(app);
     this.plugin = plugin;
+    this.exportType = exportType;
   }
 
   async onOpen() {
@@ -710,7 +718,8 @@ class ExportSettingsQrCodeModal extends Modal {
     const { rawUri, imgUri } = await exportQrCodeUri(
       this.plugin.settings,
       this.app.vault.getName(),
-      this.plugin.manifest.version
+      this.plugin.manifest.version,
+      this.exportType
     );
 
     const div1 = contentEl.createDiv();
@@ -2128,15 +2137,87 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
       .setName(t("settings_export"))
       .setDesc(t("settings_export_desc"))
       .addButton(async (button) => {
-        button.setButtonText(t("settings_export_desc_button"));
+        button.setButtonText(t("settings_export_all_but_oauth2_button"));
         button.onClick(async () => {
-          new ExportSettingsQrCodeModal(this.app, this.plugin).open();
+          new ExportSettingsQrCodeModal(
+            this.app,
+            this.plugin,
+            "all_but_oauth2"
+          ).open();
+        });
+      })
+      .addButton(async (button) => {
+        button.setButtonText(t("settings_export_dropbox_button"));
+        button.onClick(async () => {
+          new ExportSettingsQrCodeModal(
+            this.app,
+            this.plugin,
+            "dropbox"
+          ).open();
+        });
+      })
+      .addButton(async (button) => {
+        button.setButtonText(t("settings_export_onedrive_button"));
+        button.onClick(async () => {
+          new ExportSettingsQrCodeModal(
+            this.app,
+            this.plugin,
+            "onedrive"
+          ).open();
         });
       });
 
+    let importSettingVal = "";
     new Setting(importExportDiv)
       .setName(t("settings_import"))
-      .setDesc(t("settings_import_desc"));
+      .setDesc(t("settings_import_desc"))
+      .addText((text) =>
+        text
+          .setPlaceholder("obsidian://remotely-save?func=settings&...")
+          .setValue("")
+          .onChange((val) => {
+            importSettingVal = val;
+          })
+      )
+      .addButton(async (button) => {
+        button.setButtonText(t("confirm"));
+        button.onClick(async () => {
+          if (importSettingVal !== "") {
+            // console.debug(importSettingVal);
+            try {
+              const inputParams = parseUriByHand(importSettingVal);
+              const parsed = importQrCodeUri(
+                inputParams,
+                this.app.vault.getName()
+              );
+              if (parsed.status === "error") {
+                new Notice(parsed.message);
+              } else {
+                const copied = cloneDeep(parsed.result);
+                // new Notice(JSON.stringify(copied))
+                this.plugin.settings = Object.assign(
+                  {},
+                  this.plugin.settings,
+                  copied
+                );
+                this.plugin.saveSettings();
+                new Notice(
+                  t("protocol_saveqr", {
+                    manifestName: this.plugin.manifest.name,
+                  })
+                );
+              }
+            } catch (e) {
+              new Notice(`${e}`);
+            }
+
+            importSettingVal = "";
+          } else {
+            new Notice(t("settings_import_error_notice"));
+            importSettingVal = "";
+          }
+        });
+      });
 
     //////////////////////////////////////////////////
     // below for debug

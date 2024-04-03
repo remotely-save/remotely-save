@@ -524,6 +524,7 @@ export default class RemotelySavePlugin extends Plugin {
     this.syncStatus = "idle";
 
     this.registerObsidianProtocolHandler(COMMAND_URI, async (inputParams) => {
+      // console.debug(inputParams);
       const parsed = importQrCodeUri(inputParams, this.app.vault.getName());
       if (parsed.status === "error") {
         new Notice(parsed.message);

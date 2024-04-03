@@ -407,6 +407,19 @@ class MyAuthProvider implements AuthenticationProvider {
   };
 }
 
+/**
+ * to export the settings in qrcode,
+ * we want to "trim" or "shrink" the settings
+ * @param onedriveConfig
+ */
+export const getShrinkedSettings = (onedriveConfig: OnedriveConfig) => {
+  const config = cloneDeep(onedriveConfig);
+  config.accessToken = "x";
+  config.accessTokenExpiresInSeconds = 1;
+  config.accessTokenExpiresAtTime = 1;
+  return config;
+};
+
 export class WrappedOnedriveClient {
   onedriveConfig: OnedriveConfig;
   remoteBaseDir: string;
