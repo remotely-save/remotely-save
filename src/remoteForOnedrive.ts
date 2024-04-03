@@ -267,6 +267,10 @@ const fromDriveItemToEntity = (x: DriveItem, remoteBaseDir: string): Entity => {
   // pure english: /drive/root:/Apps/remotely-save/${remoteBaseDir}
   // or localized, e.g.: /drive/root:/应用/remotely-save/${remoteBaseDir}
   const FIRST_COMMON_PREFIX_REGEX = /^\/drive\/root:\/[^\/]+\/remotely-save\//g;
+
+  // why?? /drive/root:/Apps/Graph
+  const FIFTH_COMMON_PREFIX_REGEX = /^\/drive\/root:\/[^\/]+\/Graph\//g;
+
   // or the root is absolute path /Livefolders,
   // e.g.: /Livefolders/应用/remotely-save/${remoteBaseDir}
   const SECOND_COMMON_PREFIX_REGEX = /^\/Livefolders\/[^\/]+\/remotely-save\//g;
@@ -289,6 +293,7 @@ const fromDriveItemToEntity = (x: DriveItem, remoteBaseDir: string): Entity => {
   }
   const fullPathOriginal = `${x.parentReference.path}/${x.name}`;
   const matchFirstPrefixRes = fullPathOriginal.match(FIRST_COMMON_PREFIX_REGEX);
+  const matchFifthPrefixRes = fullPathOriginal.match(FIFTH_COMMON_PREFIX_REGEX);
   const matchSecondPrefixRes = fullPathOriginal.match(
     SECOND_COMMON_PREFIX_REGEX
   );
@@ -298,6 +303,12 @@ const fromDriveItemToEntity = (x: DriveItem, remoteBaseDir: string): Entity => {
     fullPathOriginal.startsWith(`${matchFirstPrefixRes[0]}${remoteBaseDir}`)
   ) {
     const foundPrefix = `${matchFirstPrefixRes[0]}${remoteBaseDir}`;
+    key = fullPathOriginal.substring(foundPrefix.length + 1);
+  } else if (
+    matchFifthPrefixRes !== null &&
+    fullPathOriginal.startsWith(`${matchFifthPrefixRes[0]}${remoteBaseDir}`)
+  ) {
+    const foundPrefix = `${matchFifthPrefixRes[0]}${remoteBaseDir}`;
     key = fullPathOriginal.substring(foundPrefix.length + 1);
   } else if (
     matchSecondPrefixRes !== null &&
