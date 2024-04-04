@@ -221,14 +221,19 @@ const fullfillMTimeOfRemoteEntityInplace = (
   remote: Entity,
   mtimeCli?: number
 ) => {
+  // TODO:
+  // on 20240405, we find that dropbox's mtimeCli is not updated
+  // if the content is not updated even the time is updated...
+  // so we do not check remote.mtimeCli for now..
   if (
     mtimeCli !== undefined &&
-    mtimeCli > 0 &&
+    mtimeCli > 0 /* &&
     (remote.mtimeCli === undefined ||
       remote.mtimeCli <= 0 ||
       (remote.mtimeSvr !== undefined &&
         remote.mtimeSvr > 0 &&
         remote.mtimeCli >= remote.mtimeSvr))
+    */
   ) {
     remote.mtimeCli = mtimeCli;
   }
@@ -1171,8 +1176,13 @@ const dispatchOperationToActualV3 = async (
         cipher,
         r.local!.keyEnc
       );
+      // console.debug(`after uploadToRemote`);
+      // console.debug(`entity=${JSON.stringify(entity,null,2)}`)
+      // console.debug(`mtimeCli=${mtimeCli}`)
       await decryptRemoteEntityInplace(entity, cipher);
+      // console.debug(`after dec, entity=${JSON.stringify(entity,null,2)}`)
       await fullfillMTimeOfRemoteEntityInplace(entity, mtimeCli);
+      // console.debug(`after fullfill, entity=${JSON.stringify(entity,null,2)}`)
       await upsertPrevSyncRecordByVaultAndProfile(
         db,
         vaultRandomID,
