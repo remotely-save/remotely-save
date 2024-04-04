@@ -1,4 +1,3 @@
-import { rangeDelay } from "delay";
 import { Dropbox, DropboxAuth } from "dropbox";
 import type { files, DropboxResponseError, DropboxResponse } from "dropbox";
 import { Vault } from "obsidian";
@@ -12,6 +11,7 @@ import {
 } from "./baseTypes";
 import {
   bufferToArrayBuffer,
+  delay,
   fixEntityListCasesInplace,
   getFolderLevels,
   hasEmojiInText,
@@ -19,6 +19,7 @@ import {
   mkdirpInVault,
 } from "./misc";
 import { Cipher } from "./encryptUnified";
+import { random } from "lodash";
 
 export { Dropbox } from "dropbox";
 
@@ -292,7 +293,7 @@ async function retryReq<T>(
           2
         )}`
       );
-      await rangeDelay(secMin * 1000, secMax * 1000);
+      await delay(random(secMin * 1000, secMax * 1000));
     }
   }
 }

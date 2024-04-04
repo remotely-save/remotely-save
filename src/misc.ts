@@ -514,6 +514,14 @@ export const stringToFragment = (string: string) => {
 };
 
 /**
+ * https://stackoverflow.com/questions/39538473/using-settimeout-on-promise-chain
+ * @param ms 
+ * @returns 
+ */
+export const delay = (ms: number) =>
+  new Promise((resolve) => setTimeout(resolve, ms));
+
+/**
  * https://forum.obsidian.md/t/css-to-show-status-bar-on-mobile-devices/77185
  * @param op
  */
@@ -550,7 +558,7 @@ export const changeMobileStatusBar = (
             k.className.contains("mobile-toolbar")
           ) {
             // have to wait, otherwise the height is not correct??
-            await new Promise((resolve) => setTimeout(resolve, 300));
+            await delay(300);
             const height = window
               .getComputedStyle(k as Element)
               .getPropertyValue("height");
