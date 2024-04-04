@@ -515,8 +515,8 @@ export const stringToFragment = (string: string) => {
 
 /**
  * https://stackoverflow.com/questions/39538473/using-settimeout-on-promise-chain
- * @param ms 
- * @returns 
+ * @param ms
+ * @returns
  */
 export const delay = (ms: number) =>
   new Promise((resolve) => setTimeout(resolve, ms));
