@@ -1120,26 +1120,31 @@ const dispatchOperationToActualV3 = async (
     r.decision === "conflict_created_then_do_nothing" ||
     r.decision === "folder_existed_both_then_do_nothing"
   ) {
-    // !! we need to upsert the record,
+    // !! we MIGHT need to upsert the record,
     // so that next time we can determine the change delta
-    // if we have prevSync, we store it because it should keep all necessary info
-    let entity = r.prevSync;
-    // if we don't have prevSync, we use remote entity AND local mtime
-    // as if it is "uploaded"
-    if (entity === undefined && r.remote !== undefined) {
-      entity = await decryptRemoteEntityInplace(r.remote, cipher);
-      entity = await fullfillMTimeOfRemoteEntityInplace(
-        entity,
-        r.local?.mtimeCli
-      );
-    }
-    if (entity !== undefined) {
-      await upsertPrevSyncRecordByVaultAndProfile(
-        db,
-        vaultRandomID,
-        profileID,
-        entity
-      );
+
+    if (r.prevSync !== undefined) {
+      // if we have prevSync,
+      // we don't need to do anything, because the record is already there!
+    } else {
+      // if we don't have prevSync, we use remote entity AND local mtime
+      // as if it is "uploaded"
+      if (r.remote !== undefined) {
+        let entity = await decryptRemoteEntityInplace(r.remote, cipher);
+        entity = await fullfillMTimeOfRemoteEntityInplace(
+          entity,
+          r.local?.mtimeCli
+        );
+
+        if (entity !== undefined) {
+          await upsertPrevSyncRecordByVaultAndProfile(
+            db,
+            vaultRandomID,
+            profileID,
+            entity
+          );
+        }
+      }
     }
   } else if (
     r.decision === "local_is_modified_then_push" ||
