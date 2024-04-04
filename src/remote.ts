@@ -13,6 +13,7 @@ import * as onedrive from "./remoteForOnedrive";
 import * as s3 from "./remoteForS3";
 import * as webdav from "./remoteForWebdav";
 import { Cipher } from "./encryptUnified";
+import { Profiler } from "./profiler";
 
 export class RemoteClient {
   readonly serviceType: SUPPORTED_SERVICES_TYPE;
@@ -31,7 +32,8 @@ export class RemoteClient {
     dropboxConfig?: DropboxConfig,
     onedriveConfig?: OnedriveConfig,
     vaultName?: string,
-    saveUpdatedConfigFunc?: () => Promise<any>
+    saveUpdatedConfigFunc?: () => Promise<any>,
+    profiler?: Profiler
   ) {
     this.serviceType = serviceType;
     // the client may modify the config inplace,

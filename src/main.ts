@@ -35,6 +35,7 @@ import {
   upsertLastSuccessSyncTimeByVault,
   getLastSuccessSyncTimeByVault,
   getAllPrevSyncRecordsByVaultAndProfile,
+  insertProfilerResultByVault,
 } from "./localdb";
 import { RemoteClient } from "./remote";
 import {
@@ -69,6 +70,7 @@ import AggregateError from "aggregate-error";
 import { exportVaultSyncPlansToFiles } from "./debugMode";
 import { changeMobileStatusBar, compareVersion } from "./misc";
 import { Cipher } from "./encryptUnified";
+import { Profiler } from "./profiler";
 
 const DEFAULT_SETTINGS: RemotelySavePluginSettings = {
   s3: DEFAULT_S3_CONFIG,
@@ -154,6 +156,8 @@ export default class RemotelySavePlugin extends Plugin {
   appContainerObserver?: MutationObserver;
 
   async syncRun(triggerSource: SyncTriggerSourceType = "manual") {
+    const profiler = new Profiler("start of syncRun");
+
     const t = (x: TransItemType, vars?: any) => {
       return this.i18n.t(x, vars);
     };
@@ -234,6 +238,7 @@ export default class RemotelySavePlugin extends Plugin {
       }
 
       this.syncStatus = "preparing";
+      profiler.insert("finish step1");
 
       if (this.settings.currLogLevel === "info") {
         // pass
@@ -249,11 +254,14 @@ export default class RemotelySavePlugin extends Plugin {
         this.settings.dropbox,
         this.settings.onedrive,
         this.app.vault.getName(),
-        () => self.saveSettings()
+        () => self.saveSettings(),
+        profiler
       );
       const remoteEntityList = await client.listAllFromRemote();
       console.debug("remoteEntityList:");
       console.debug(remoteEntityList);
+
+      profiler.insert("finish step2 (listing remote)");
 
       if (this.settings.currLogLevel === "info") {
         // pass
@@ -272,6 +280,8 @@ export default class RemotelySavePlugin extends Plugin {
         throw Error(passwordCheckResult.reason);
       }
 
+      profiler.insert("finish step3 (checking password)");
+
       if (this.settings.currLogLevel === "info") {
         // pass
       } else {
@@ -282,10 +292,13 @@ export default class RemotelySavePlugin extends Plugin {
         this.app.vault,
         this.settings.syncConfigDir ?? false,
         this.app.vault.configDir,
-        this.manifest.id
+        this.manifest.id,
+        profiler
       );
       console.debug("localEntityList:");
       console.debug(localEntityList);
+
+      profiler.insert("finish step4 (local meta)");
 
       if (this.settings.currLogLevel === "info") {
         // pass
@@ -300,6 +313,8 @@ export default class RemotelySavePlugin extends Plugin {
       );
       console.debug("prevSyncEntityList:");
       console.debug(prevSyncEntityList);
+
+      profiler.insert("finish step5 (prev sync)");
 
       if (this.settings.currLogLevel === "info") {
         // pass
@@ -316,23 +331,30 @@ export default class RemotelySavePlugin extends Plugin {
         this.settings.syncUnderscoreItems ?? false,
         this.settings.ignorePaths ?? [],
         cipher,
-        this.settings.serviceType
+        this.settings.serviceType,
+        profiler
       );
+      profiler.insert("finish building partial mixedEntity");
       mixedEntityMappings = await getSyncPlanInplace(
         mixedEntityMappings,
         this.settings.howToCleanEmptyFolder ?? "skip",
         this.settings.skipSizeLargerThan ?? -1,
         this.settings.conflictAction ?? "keep_newer",
-        this.settings.syncDirection ?? "bidirectional"
+        this.settings.syncDirection ?? "bidirectional",
+        profiler
       );
       console.info(`mixedEntityMappings:`);
       console.info(mixedEntityMappings); // for debugging
+      profiler.insert("finish building full sync plan");
       await insertSyncPlanRecordByVault(
         this.db,
         mixedEntityMappings,
         this.vaultRandomID,
         client.serviceType
       );
+
+      profiler.insert("finish writing sync plan");
+      profiler.insert("finish step6 (plan)");
 
       // The operations above are almost read only and kind of safe.
       // The operations below begins to write or delete (!!!) something.
@@ -384,7 +406,8 @@ export default class RemotelySavePlugin extends Plugin {
               decision,
               triggerSource
             ),
-          this.db
+          this.db,
+          profiler
         );
       } else {
         this.syncStatus = "syncing";
@@ -397,6 +420,8 @@ export default class RemotelySavePlugin extends Plugin {
 
       cipher.closeResources();
 
+      profiler.insert("finish step7 (actual sync)");
+
       if (this.settings.currLogLevel === "info") {
         getNotice(t("syncrun_shortstep2"));
       } else {
@@ -405,6 +430,8 @@ export default class RemotelySavePlugin extends Plugin {
 
       this.syncStatus = "finish";
       this.syncStatus = "idle";
+
+      profiler.insert("finish step8");
 
       const lastSuccessSyncMillis = Date.now();
       await upsertLastSuccessSyncTimeByVault(
@@ -429,6 +456,7 @@ export default class RemotelySavePlugin extends Plugin {
         }-${Date.now()}: finish sync, triggerSource=${triggerSource}`
       );
     } catch (error: any) {
+      profiler.insert("start error branch");
       const msg = t("syncrun_abort", {
         manifestID: this.manifest.id,
         theDate: `${Date.now()}`,
@@ -450,7 +478,19 @@ export default class RemotelySavePlugin extends Plugin {
         setIcon(this.syncRibbon, iconNameSyncWait);
         this.syncRibbon.setAttribute("aria-label", originLabel);
       }
+
+      profiler.insert("finish error branch");
     }
+
+    profiler.insert("finish syncRun");
+    console.debug(profiler.toString());
+    insertProfilerResultByVault(
+      this.db,
+      profiler.toString(),
+      this.vaultRandomID,
+      this.settings.serviceType
+    );
+    profiler.clear();
   }
 
   async onload() {

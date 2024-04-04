@@ -25,7 +25,10 @@ import {
   CipherMethodType,
   QRExportType,
 } from "./baseTypes";
-import { exportVaultSyncPlansToFiles } from "./debugMode";
+import {
+  exportVaultProfilerResultsToFiles,
+  exportVaultSyncPlansToFiles,
+} from "./debugMode";
 import {
   exportQrCodeUri,
   importQrCodeUri,
@@ -2352,6 +2355,21 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
             this.plugin.vaultRandomID
           );
           new Notice(t("settings_delprevsync_notice"));
+        });
+      });
+
+    new Setting(debugDiv)
+      .setName(t("settings_profiler_results"))
+      .setDesc(t("settings_profiler_results_desc"))
+      .addButton(async (button) => {
+        button.setButtonText(t("settings_profiler_results_button_all"));
+        button.onClick(async () => {
+          await exportVaultProfilerResultsToFiles(
+            this.plugin.db,
+            this.app.vault,
+            this.plugin.vaultRandomID
+          );
+          new Notice(t("settings_profiler_results_notice"));
         });
       });
 

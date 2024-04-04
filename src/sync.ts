@@ -34,6 +34,7 @@ import {
   upsertPrevSyncRecordByVaultAndProfile,
 } from "./localdb";
 import { Cipher } from "./encryptUnified";
+import { Profiler } from "./profiler";
 
 export type SyncStatusType =
   | "idle"
@@ -323,8 +324,13 @@ export const ensembleMixedEnties = async (
   syncUnderscoreItems: boolean,
   ignorePaths: string[],
   cipher: Cipher,
-  serviceType: SUPPORTED_SERVICES_TYPE
+  serviceType: SUPPORTED_SERVICES_TYPE,
+
+  profiler: Profiler
 ): Promise<SyncPlanType> => {
+  profiler.addIndent();
+  profiler.insert("ensembleMixedEnties: enter");
+
   const finalMappings: SyncPlanType = {};
 
   const synthFolders: Record<string, Entity> = {};
@@ -383,6 +389,8 @@ export const ensembleMixedEnties = async (
     }
   }
 
+  profiler.insert("ensembleMixedEnties: finish remote");
+
   console.debug(`synthFolders:`);
   console.debug(synthFolders);
 
@@ -393,6 +401,8 @@ export const ensembleMixedEnties = async (
       remote: synthFolders[key],
     };
   }
+
+  profiler.insert("ensembleMixedEnties: finish synth");
 
   if (Object.keys(finalMappings).length === 0 || localEntityList.length === 0) {
     // Special checking:
@@ -438,6 +448,8 @@ export const ensembleMixedEnties = async (
     }
   }
 
+  profiler.insert("ensembleMixedEnties: finish prevSync");
+
   // local has to be last
   // because we want to get keyEnc based on the remote
   // (we don't consume prevSync here because it gains no benefit)
@@ -475,8 +487,13 @@ export const ensembleMixedEnties = async (
     }
   }
 
+  profiler.insert("ensembleMixedEnties: finish local");
+
   console.debug("in the end of ensembleMixedEnties, finalMappings is:");
   console.debug(finalMappings);
+
+  profiler.insert("ensembleMixedEnties: exit");
+  profiler.removeIndent();
   return finalMappings;
 };
 
@@ -490,12 +507,16 @@ export const getSyncPlanInplace = async (
   howToCleanEmptyFolder: EmptyFolderCleanType,
   skipSizeLargerThan: number,
   conflictAction: ConflictActionType,
-  syncDirection: SyncDirectionType
+  syncDirection: SyncDirectionType,
+  profiler: Profiler
 ) => {
+  profiler.addIndent();
+  profiler.insert("getSyncPlanInplace: enter");
   // from long(deep) to short(shadow)
   const sortedKeys = Object.keys(mixedEntityMappings).sort(
     (k1, k2) => k2.length - k1.length
   );
+  profiler.insert("getSyncPlanInplace: finish sorting");
 
   const keptFolder = new Set<string>();
 
@@ -897,6 +918,8 @@ export const getSyncPlanInplace = async (
     }
   }
 
+  profiler.insert("getSyncPlanInplace: finish looping");
+
   keptFolder.delete("/");
   keptFolder.delete("");
   if (keptFolder.size > 0) {
@@ -915,6 +938,9 @@ export const getSyncPlanInplace = async (
       generateTimeFmt: currTimeFmt,
     },
   };
+
+  profiler.insert("getSyncPlanInplace: exit");
+  profiler.removeIndent();
 
   return mixedEntityMappings;
 };
@@ -1261,8 +1287,11 @@ export const doActualSync = async (
   protectModifyPercentage: number,
   getProtectModifyPercentageErrorStrFunc: any,
   callbackSyncProcess: any,
-  db: InternalDBs
+  db: InternalDBs,
+  profiler: Profiler
 ) => {
+  profiler.addIndent();
+  profiler.insert("doActualSync: enter");
   console.debug(`concurrency === ${concurrency}`);
   const {
     onlyMarkSyncedOps,
@@ -1280,6 +1309,7 @@ export const doActualSync = async (
   console.debug(`allFilesCount: ${allFilesCount}`);
   console.debug(`realModifyDeleteCount: ${realModifyDeleteCount}`);
   console.debug(`realTotalCount: ${realTotalCount}`);
+  profiler.insert("doActualSync: finish splitting steps");
 
   console.debug(`protectModifyPercentage: ${protectModifyPercentage}`);
 
@@ -1304,6 +1334,8 @@ export const doActualSync = async (
         allFilesCount
       );
 
+      profiler.insert("doActualSync: error branch");
+      profiler.removeIndent();
       throw Error(errorStr);
     }
   }
@@ -1323,6 +1355,8 @@ export const doActualSync = async (
 
   let realCounter = 0;
   for (let i = 0; i < nested.length; ++i) {
+    profiler.addIndent();
+    profiler.insert(`doActualSync: step ${i} start`);
     console.debug(logTexts[i]);
 
     const operations = nested[i];
@@ -1398,5 +1432,11 @@ export const doActualSync = async (
         throw new AggregateError(potentialErrors);
       }
     }
+
+    profiler.insert(`doActualSync: step ${i} end`);
+    profiler.removeIndent();
   }
+
+  profiler.insert(`doActualSync: exit`);
+  profiler.removeIndent();
 };

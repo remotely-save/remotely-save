@@ -1,16 +1,21 @@
 import { TFile, TFolder, type Vault } from "obsidian";
 import type { Entity, MixedEntity } from "./baseTypes";
 import { listFilesInObsFolder } from "./obsFolderLister";
+import { Profiler } from "./profiler";
 
 export const getLocalEntityList = async (
   vault: Vault,
   syncConfigDir: boolean,
   configDir: string,
-  pluginID: string
+  pluginID: string,
+  profiler: Profiler
 ) => {
+  profiler.addIndent();
+  profiler.insert("enter getLocalEntityList");
   const local: Entity[] = [];
 
   const localTAbstractFiles = vault.getAllLoadedFiles();
+  profiler.insert("finish getting getAllLoadedFiles");
   for (const entry of localTAbstractFiles) {
     let r = {} as Entity;
     let key = entry.path;
@@ -54,12 +59,18 @@ export const getLocalEntityList = async (
     local.push(r);
   }
 
+  profiler.insert("finish transforming getAllLoadedFiles");
+
   if (syncConfigDir) {
+    profiler.insert("into syncConfigDir");
     const syncFiles = await listFilesInObsFolder(configDir, vault, pluginID);
     for (const f of syncFiles) {
       local.push(f);
     }
+    profiler.insert("finish syncConfigDir");
   }
 
+  profiler.insert("finish getLocalEntityList");
+  profiler.removeIndent();
   return local;
 };
