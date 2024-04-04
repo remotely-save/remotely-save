@@ -1369,9 +1369,9 @@ export const doActualSync = async (
 
     for (let j = 0; j < operations.length; ++j) {
       const singleLevelOps = operations[j];
-      console.debug(
-        `singleLevelOps=${JSON.stringify(singleLevelOps, null, 2)}`
-      );
+      // console.debug(
+      //   `singleLevelOps=${JSON.stringify(singleLevelOps, null, 2)}`
+      // );
       if (singleLevelOps === undefined || singleLevelOps === null) {
         continue;
       }
@@ -1385,9 +1385,9 @@ export const doActualSync = async (
         const key = val.key;
 
         const fn = async () => {
-          console.debug(
-            `start syncing "${key}" with plan ${JSON.stringify(val)}`
-          );
+          // console.debug(
+          //   `start syncing "${key}" with plan ${JSON.stringify(val)}`
+          // );
 
           if (callbackSyncProcess !== undefined) {
             await callbackSyncProcess(
@@ -1412,7 +1412,7 @@ export const doActualSync = async (
             cipher
           );
 
-          console.debug(`finished ${key}`);
+          // console.debug(`finished ${key}`);
         };
 
         queue.add(fn).catch((e) => {

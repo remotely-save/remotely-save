@@ -1,4 +1,6 @@
 import localforage from "localforage";
+import { extendPrototype } from "localforage-getitems";
+extendPrototype(localforage);
 export type LocalForage = typeof localforage;
 import { nanoid } from "nanoid";
 import { requireApiVersion, TAbstractFile, TFile, TFolder } from "obsidian";
@@ -434,13 +436,12 @@ export const getAllPrevSyncRecordsByVaultAndProfile = async (
   vaultRandomID: string,
   profileID: string
 ) => {
-  // console.debug('inside getAllPrevSyncRecordsByVaultAndProfile')
-  const keys = await db.prevSyncRecordsTbl.keys();
-  // console.debug(`inside getAllPrevSyncRecordsByVaultAndProfile, keys=${keys}`)
   const res: Entity[] = [];
-  for (const key of keys) {
+  const kv: Record<string, Entity | null> =
+    await db.prevSyncRecordsTbl.getItems();
+  for (const key of Object.getOwnPropertyNames(kv)) {
     if (key.startsWith(`${vaultRandomID}\t${profileID}\t`)) {
-      const val: Entity | null = await db.prevSyncRecordsTbl.getItem(key);
+      const val = kv[key];
       if (val !== null) {
         res.push(val);
       }

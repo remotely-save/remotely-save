@@ -76,6 +76,7 @@
     "emoji-regex": "^10.3.0",
     "http-status-codes": "^2.3.0",
     "localforage": "^1.10.0",
+    "localforage-getitems": "^1.4.2",
     "lodash": "^4.17.21",
     "lucide": "^0.298.0",
     "mime-types": "^2.1.35",
