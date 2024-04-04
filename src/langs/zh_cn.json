@@ -93,6 +93,7 @@
   "modal_dropboxauth_maualinput_conn_succ_revoke": "您已作为用户 {{username}} 连接到 Dropbox。如果您想断开连接，点击此按钮。",
   "modal_dropboxauth_maualinput_conn_fail": "连接 Dropbox 途中出错了。",
   "modal_onedriveauth_shortdesc": "现在只支持个人版 OneDrive，（暂）不支持企业版。\n在浏览器中访问以下地址，然后按照网页提示操作。\n到了最后，您应该会被自动重定向回来 Obsidian。",
+  "modal_onedriveauth_shortdesc_linux": "您正在用 Linux，有可能无法跳转回来。请考虑<a href=\"https://github.com/remotely-save/remotely-save/issues/415\">使用</a> flatpack 版本的 Obsidian，或创建 <a href=\"https://github.com/remotely-save/remotely-save/blob/master/docs/linux.md\"><code>obsidian.desktop</code> 文件</a>。",
   "modal_onedriveauth_copybutton": "点击此按钮从而复制鉴权 url",
   "modal_onedriveauth_copynotice": "鉴权 url 已复制到剪贴板！",
   "modal_onedriverevokeauth_step1": "第 1 步：用浏览器打开以下地址，点击本插件对应的“Edit”按钮，点击“Remove these permissions”按钮。",

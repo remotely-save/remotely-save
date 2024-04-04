@@ -93,6 +93,7 @@
   "modal_dropboxauth_maualinput_conn_succ_revoke": "You've connected as user {{username}}. If you want to disconnect, click this button.",
   "modal_dropboxauth_maualinput_conn_fail": "Something goes wrong while connecting to Dropbox.",
   "modal_onedriveauth_shortdesc": "Currently only OneDrive for personal is supported. OneDrive for Business is NOT supported (yet).\nVisit the address in a browser, and follow the steps.\nFinally you should be redirected to Obsidian.",
+  "modal_onedriveauth_shortdesc_linux": "It seems that you are using Obsidian on Linux, and you might not be able to jump back here properly. Please consider <a href=\"https://github.com/remotely-save/remotely-save/issues/415\">using</a> the flatpack version of Obsidian, or creating an <a href=\"https://github.com/remotely-save/remotely-save/blob/master/docs/linux.md\"><code>obsidian.desktop</code> file</a>.",
   "modal_onedriveauth_copybutton": "Click to copy the auth url",
   "modal_onedriveauth_copynotice": "The auth url is copied to the clipboard!",
   "modal_onedriverevokeauth_step1": "Step 1: Go to the following address, click the \"Edit\" button for the plugin, then click \"Remove these permissions\" button on the page.",

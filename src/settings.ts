@@ -550,6 +550,15 @@ export class OnedriveAuthModal extends Modal {
           text: val,
         });
       });
+    if (Platform.isLinux) {
+      t("modal_onedriveauth_shortdesc_linux")
+        .split("\n")
+        .forEach((val) => {
+          contentEl.createEl("p", {
+            text: stringToFragment(val),
+          });
+        });
+    }
     const div2 = contentEl.createDiv();
     div2.createEl(
       "button",
