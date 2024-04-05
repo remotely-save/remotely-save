@@ -57,7 +57,6 @@
   "statusbar_lastsync_label": "上一次同步于：{{date}}",
   "statusbar_lastsync_never": "没触发过同步",
   "statusbar_lastsync_never_label": "没触发过同步",
-
   "modal_password_title": "稍等一下，请阅读下文：",
   "modal_password_shortdesc": "如果密码不是空的，那么文件会在上传之前，在本地先用此密码加密。\n如果密码是空的，那么文件会被非加密地上传。",
   "modal_password_attn1": "注意 1/5：库（Vault）名字是不会加密的！本插件会在一些远程存储里创建一个和库名字有着同名的文件夹。",
@@ -143,7 +142,6 @@
   "settings_skiplargefiles": "跳过大文件",
   "settings_skiplargefiles_desc": "跳过大于某一个阈值的文件。这里 1 MB = 10^6 bytes。",
   "settings_skiplargefiles_notset": "（不设置）",
-
   "settings_ignorepaths": "忽略的文件或文件夹的正则表达式",
   "settings_ignorepaths_desc": "忽略的文件或文件夹的正则表达式。每行一条。路径是相对于库（Vault）根目录的，没有前置 / 符号。",
   "settings_enablestatusbar_info": "在状态栏显示上一次成功的同步",
@@ -153,7 +151,6 @@
   "settings_resetstatusbar_time_desc": "重设上一次成功同步的时间记录。",
   "settings_resetstatusbar_button": "重设",
   "settings_resetstatusbar_notice": "重设完毕！",
-
   "settings_checkonnectivity": "检查可否连接",
   "settings_checkonnectivity_desc": "检查可否连接。",
   "settings_checkonnectivity_button": "检查",
@@ -186,6 +183,8 @@
   "settings_s3_accuratemtime_desc": "读取（已上传的）准确的文件修改时间，有助于同步算法更加准确和稳定。但是它也会导致额外的 api 请求、时间、金钱花费。",
   "settings_s3_urlstyle": "S3 URL style",
   "settings_s3_urlstyle_desc": "是否对 S3 对象强制使用 path style URL（例如使用 https://s3.amazonaws.com/*/ 而不是 https://*.s3.amazonaws.com/）。",
+  "settings_s3_reverse_proxy_url": "S3 反向代理地址",
+  "settings_s3_reverse_proxy_url_desc": "S3 反向代理地址。（如果没有设置反向代理请留空）",
   "settings_s3_connect_succ": "很好！可以访问到对应存储桶。",
   "settings_s3_connect_fail": "无法访问到对应存储桶。",
   "settings_dropbox": "Dropbox 设置",
@@ -322,6 +321,7 @@
   "settings_resetcache_desc": "（出于调试原因）重设本地缓存和数据库。您需要在重设之后重新载入此插件。本重设不会删除 s3，密码……等设定。",
   "settings_resetcache_button": "重设",
   "settings_resetcache_notice": "本地同步缓存和数据库已被删除。请手动重新载入此插件。",
+
   "syncalgov3_title": "Remotely Save 的同步算法有重大更新",
   "syncalgov3_texts": "欢迎使用 Remotely Save！\n从这个版本开始，插件更新了同步算法：\n<ul><li>更稳健的删除同步</li><li>引入冲突处理</li><li>避免上传元数据</li><li>修改删除保护</li><li>备份模式</li><li>新的加密方式</li><li>……</li></ul>\n敬请期待更多更新！详细介绍请参阅<a href='https://github.com/remotely-save/remotely-save/tree/master/docs/sync_algorithm/v3/intro.md'>文档网站</a>。\n如果您同意使用新版本，请阅读和勾选两个勾选框，然后点击“同意”按钮，开始使用插件吧！\n如果您不同意，请点击“不同意”按钮，插件将自动停止运行（unload）。\n此外，请考虑<a href='https://github.com/remotely-save/remotely-save'>访问 GitHub 页面然后点赞 ⭐</a>！您的支持对我十分重要！谢谢！",
   "syncalgov3_checkbox_manual_backup": "我将会首先手动备份我的库（Vault）。",
@@ -329,3 +329,4 @@
   "syncalgov3_button_agree": "同意",
   "syncalgov3_button_disagree": "不同意"
 }
+

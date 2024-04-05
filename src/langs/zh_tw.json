@@ -56,7 +56,6 @@
   "statusbar_lastsync_label": "上一次同步於：{{date}}",
   "statusbar_lastsync_never": "沒觸發過同步",
   "statusbar_lastsync_never_label": "沒觸發過同步",
-
   "modal_password_title": "稍等一下，請閱讀下文：",
   "modal_password_shortdesc": "如果密碼不是空的，那麼檔案會在上傳之前，在本地先用此密碼加密。\n如果密碼是空的，那麼檔案會被非加密地上傳。",
   "modal_password_attn1": "注意 1/5：儲存庫（Vault）名字是不會加密的！本外掛會在一些遠端儲存裡建立一個和庫名字有著同名的資料夾。",
@@ -142,7 +141,6 @@
   "settings_skiplargefiles": "跳過大檔案",
   "settings_skiplargefiles_desc": "跳過大於某一個閾值的檔案。這裡 1 MB = 10^6 bytes。",
   "settings_skiplargefiles_notset": "（不設定）",
-
   "settings_ignorepaths": "忽略的檔案或資料夾的正則表示式",
   "settings_ignorepaths_desc": "忽略的檔案或資料夾的正則表示式。每行一條。路徑是相對於庫（Vault）根目錄的，沒有前置 / 符號。",
   "settings_enablestatusbar_info": "在狀態列顯示上一次成功的同步",
@@ -152,7 +150,6 @@
   "settings_resetstatusbar_time_desc": "重設上一次成功同步的時間記錄。",
   "settings_resetstatusbar_button": "重設",
   "settings_resetstatusbar_notice": "重設完畢！",
-
   "settings_checkonnectivity": "檢查可否連線",
   "settings_checkonnectivity_desc": "檢查可否連線。",
   "settings_checkonnectivity_button": "檢查",
@@ -185,6 +182,8 @@
   "settings_s3_accuratemtime_desc": "讀取（已上傳的）準確的檔案修改時間，有助於同步演算法更加準確和穩定。但是它也會導致額外的 api 請求、時間、金錢花費。",
   "settings_s3_urlstyle": "S3 URL style",
   "settings_s3_urlstyle_desc": "是否對 S3 物件強制使用 path style URL（例如使用 https://s3.amazonaws.com/*/ 而不是 https://*.s3.amazonaws.com/）。",
+  "settings_s3_reverse_proxy_url": "S3 反向代理地址",
+  "settings_s3_reverse_proxy_url_desc": "S3 反向代理地址。（如果沒有設置反向代理請留空）",
   "settings_s3_connect_succ": "很好！可以訪問到對應儲存桶。",
   "settings_s3_connect_fail": "無法訪問到對應儲存桶。",
   "settings_dropbox": "Dropbox 設定",
@@ -321,6 +320,7 @@
   "settings_resetcache_desc": "（出於除錯原因）重設本地快取和資料庫。您需要在重設之後重新載入此外掛。本重設不會刪除 s3，密碼……等設定。",
   "settings_resetcache_button": "重設",
   "settings_resetcache_notice": "本地同步快取和資料庫已被刪除。請手動重新載入此外掛。",
+
   "syncalgov3_title": "Remotely Save 的同步演算法有重大更新",
   "syncalgov3_texts": "歡迎使用 Remotely Save！\n從這個版本開始，外掛更新了同步演算法：\n<ul><li>更穩健的刪除同步</li><li>引入衝突處理</li><li>避免上傳元資料</li><li>修改刪除保護</li><li>備份模式</li><li>新的加密方式</li><li>……</li></ul>\n敬請期待更多更新！詳細介紹請參閱<a href='https://github.com/remotely-save/remotely-save/tree/master/docs/sync_algorithm/v3/intro.md'>文件網站</a>。\n如果您同意使用新版本，請閱讀和勾選兩個勾選框，然後點選“同意”按鈕，開始使用外掛吧！\n如果您不同意，請點選“不同意”按鈕，外掛將自動停止執行（unload）。\n此外，請考慮<a href='https://github.com/remotely-save/remotely-save'>訪問 GitHub 頁面然後點贊 ⭐</a>！您的支援對我十分重要！謝謝！",
   "syncalgov3_checkbox_manual_backup": "我將會首先手動備份我的庫（Vault）。",
@@ -328,3 +328,4 @@
   "syncalgov3_button_agree": "同意",
   "syncalgov3_button_disagree": "不同意"
 }
+

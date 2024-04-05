@@ -32,6 +32,7 @@ export interface S3Config {
    * @deprecated
    */
   bypassCorsLocally?: boolean;
+  reverseProxyUrl: string;
 }
 
 export interface DropboxConfig {
