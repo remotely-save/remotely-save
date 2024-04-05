@@ -12,8 +12,8 @@ See [here](./export_sync_plans.md).
 
 See [here](./check_console_output.md).
 
-## Advanced: Save Console Output Then Read Them Later
+## Advanced: Use `Logstravaganza` to export logs
 
-This method works for desktop and mobile devices (iOS, Android).
+This method works for desktop and mobile devices (iOS, Android), especially useful for iOS.
 
-See [here](./save_console_output_and_export.md).
+See [here](./use_logstravaganza.md).

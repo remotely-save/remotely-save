@@ -23,6 +23,8 @@ const DEFAULT_SETTINGS: RemotelySavePluginSettings = {
   password: "password",
   serviceType: "s3",
   currLogLevel: "info",
+  ignorePaths: ["somefoldertoignore"],
+  enableStatusBarInfo: true,
 };
 
 describe("Config Persist tests", () => {

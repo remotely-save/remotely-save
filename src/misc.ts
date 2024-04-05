@@ -1,11 +1,9 @@
-import { Vault } from "obsidian";
+import { Platform, Vault } from "obsidian";
 import * as path from "path";
 
 import { base32, base64url } from "rfc4648";
 import XRegExp from "xregexp";
 import emojiRegex from "emoji-regex";
-
-import { log } from "./moreOnLog";
 
 declare global {
   interface Window {
@@ -30,7 +28,7 @@ export const isHiddenPath = (
   }
   const k = path.posix.normalize(item); // TODO: only unix path now
   const k2 = k.split("/"); // TODO: only unix path now
-  // log.info(k2)
+  // console.info(k2)
   for (const singlePart of k2) {
     if (singlePart === "." || singlePart === ".." || singlePart === "") {
       continue;
@@ -75,14 +73,14 @@ export const getFolderLevels = (x: string, addEndingSlash: boolean = false) => {
 };
 
 export const mkdirpInVault = async (thePath: string, vault: Vault) => {
-  // log.info(thePath);
+  // console.info(thePath);
   const foldersToBuild = getFolderLevels(thePath);
-  // log.info(foldersToBuild);
+  // console.info(foldersToBuild);
   for (const folder of foldersToBuild) {
     const r = await vault.adapter.exists(folder);
-    // log.info(r);
+    // console.info(r);
     if (!r) {
-      log.info(`mkdir ${folder}`);
+      console.info(`mkdir ${folder}`);
       await vault.adapter.mkdir(folder);
     }
   }
@@ -120,14 +118,24 @@ export const base64ToArrayBuffer = (b64text: string) => {
   return bufferToArrayBuffer(Buffer.from(b64text, "base64"));
 };
 
+export const copyArrayBuffer = (src: ArrayBuffer) => {
+  var dst = new ArrayBuffer(src.byteLength);
+  new Uint8Array(dst).set(new Uint8Array(src));
+  return dst;
+};
+
 /**
  * https://stackoverflow.com/questions/43131242
  * @param hex
  * @returns
  */
 export const hexStringToTypedArray = (hex: string) => {
+  const f = hex.match(/[\da-f]{2}/gi);
+  if (f === null) {
+    throw Error(`input ${hex} is not hex, no way to transform`);
+  }
   return new Uint8Array(
-    hex.match(/[\da-f]{2}/gi).map(function (h) {
+    f.map(function (h) {
       return parseInt(h, 16);
     })
   );
@@ -157,6 +165,9 @@ export const base64ToBase64url = (a: string, pad: boolean = false) => {
  * @param a
  */
 export const isVaildText = (a: string) => {
+  if (a === undefined) {
+    return false;
+  }
   // If the regex matches, the string is invalid.
   return !XRegExp("\\p{Cc}|\\p{Cf}|\\p{Co}|\\p{Cn}|\\p{Zl}|\\p{Zp}", "A").test(
     a
@@ -236,7 +247,7 @@ export const setToString = (a: Set<string>, delimiter: string = ",") => {
 export const extractSvgSub = (x: string, subEl: string = "rect") => {
   const parser = new window.DOMParser();
   const dom = parser.parseFromString(x, "image/svg+xml");
-  const svg = dom.querySelector("svg");
+  const svg = dom.querySelector("svg")!;
   svg.setAttribute("viewbox", "0 0 10 10");
   return svg.innerHTML;
 };
@@ -317,7 +328,7 @@ export const getTypeName = (obj: any) => {
  * @param x
  * @returns
  */
-export const atWhichLevel = (x: string) => {
+export const atWhichLevel = (x: string | undefined) => {
   if (
     x === undefined ||
     x === "" ||
@@ -413,11 +424,14 @@ export const toText = (x: any) => {
  */
 export const statFix = async (vault: Vault, path: string) => {
   const s = await vault.adapter.stat(path);
+  if (s === undefined || s === null) {
+    return s;
+  }
   if (s.ctime === undefined || s.ctime === null || Number.isNaN(s.ctime)) {
-    s.ctime = undefined;
+    s.ctime = undefined as any; // force assignment
   }
   if (s.mtime === undefined || s.mtime === null || Number.isNaN(s.mtime)) {
-    s.mtime = undefined;
+    s.mtime = undefined as any; // force assignment
   }
   if (
     (s.size === undefined || s.size === null || Number.isNaN(s.size)) &&
@@ -426,4 +440,214 @@ export const statFix = async (vault: Vault, path: string) => {
     s.size = 0;
   }
   return s;
+};
+
+export const isSpecialFolderNameToSkip = (
+  x: string,
+  more: string[] | undefined
+) => {
+  let specialFolders = [
+    ".git",
+    ".github",
+    ".gitlab",
+    ".svn",
+    "node_modules",
+    ".DS_Store",
+    "__MACOSX ",
+    "Icon\r", // https://superuser.com/questions/298785/icon-file-on-os-x-desktop
+    "desktop.ini",
+    "Desktop.ini",
+    "thumbs.db",
+    "Thumbs.db",
+  ].concat(more !== undefined ? more : []);
+  for (const iterator of specialFolders) {
+    if (
+      x === iterator ||
+      x === `${iterator}/` ||
+      x.endsWith(`/${iterator}`) ||
+      x.endsWith(`/${iterator}/`)
+    ) {
+      return true;
+    }
+  }
+  return false;
+};
+
+/**
+ *
+ * @param x versionX
+ * @param y versionY
+ * @returns 1(x>y), 0(x==y), -1(x<y)
+ */
+export const compareVersion = (x: string | null, y: string | null) => {
+  if (x === undefined || x === null) {
+    return -1;
+  }
+  if (y === undefined || y === null) {
+    return 1;
+  }
+  if (x === y) {
+    return 0;
+  }
+  const [x1, x2, x3] = x.split(".").map((k) => Number(k));
+  const [y1, y2, y3] = y.split(".").map((k) => Number(k));
+  if (
+    x1 > y1 ||
+    (x1 === y1 && x2 > y2) ||
+    (x1 === y1 && x2 === y2 && x3 > y3)
+  ) {
+    return 1;
+  }
+  return -1;
+};
+
+/**
+ * https://stackoverflow.com/questions/19929641/how-to-append-an-html-string-to-a-documentfragment
+ * To introduce some advanced html fragments.
+ * @param string
+ * @returns
+ */
+export const stringToFragment = (string: string) => {
+  const wrapper = document.createElement("template");
+  wrapper.innerHTML = string;
+  return wrapper.content;
+};
+
+/**
+ * https://stackoverflow.com/questions/39538473/using-settimeout-on-promise-chain
+ * @param ms
+ * @returns
+ */
+export const delay = (ms: number) =>
+  new Promise((resolve) => setTimeout(resolve, ms));
+
+/**
+ * https://forum.obsidian.md/t/css-to-show-status-bar-on-mobile-devices/77185
+ * @param op
+ */
+export const changeMobileStatusBar = (
+  op: "enable" | "disable",
+  oldAppContainerObserver?: MutationObserver
+) => {
+  const appContainer = document.getElementsByClassName("app-container")[0] as
+    | HTMLElement
+    | undefined;
+
+  const statusbar = document.querySelector(
+    ".is-mobile .app-container .status-bar"
+  ) as HTMLElement | undefined;
+
+  if (appContainer === undefined || statusbar === undefined) {
+    // give up, exit
+    console.warn(`give up watching appContainer for statusbar`);
+    console.warn(`appContainer=${appContainer}, statusbar=${statusbar}`);
+    return undefined;
+  }
+
+  if (op === "enable") {
+    const callback = async (
+      mutationList: MutationRecord[],
+      observer: MutationObserver
+    ) => {
+      for (const mutation of mutationList) {
+        // console.debug(mutation);
+        if (mutation.type === "childList" && mutation.addedNodes.length > 0) {
+          const k = mutation.addedNodes[0] as Element;
+          if (
+            k.className.contains("mobile-navbar") ||
+            k.className.contains("mobile-toolbar")
+          ) {
+            // have to wait, otherwise the height is not correct??
+            await delay(300);
+            const height = window
+              .getComputedStyle(k as Element)
+              .getPropertyValue("height");
+
+            statusbar.style.setProperty("display", "flex");
+            statusbar.style.setProperty("margin-bottom", height);
+          }
+        }
+      }
+    };
+    const observer = new MutationObserver(callback);
+    observer.observe(appContainer, {
+      attributes: false,
+      childList: true,
+      characterData: false,
+      subtree: false,
+    });
+
+    try {
+      // init, manual call
+      const navBar = document.getElementsByClassName(
+        "mobile-navbar"
+      )[0] as HTMLElement;
+      // thanks to community's solution
+      const height = window.getComputedStyle(navBar).getPropertyValue("height");
+      statusbar.style.setProperty("display", "flex");
+      statusbar.style.setProperty("margin-bottom", height);
+    } catch (e) {
+      // skip
+    }
+
+    return observer;
+  } else {
+    if (oldAppContainerObserver !== undefined) {
+      console.debug(`disconnect oldAppContainerObserver`);
+      oldAppContainerObserver.disconnect();
+      oldAppContainerObserver = undefined;
+    }
+    statusbar.style.removeProperty("display");
+    statusbar.style.removeProperty("margin-bottom");
+    return undefined;
+  }
+};
+
+/**
+ * https://github.com/remotely-save/remotely-save/issues/567
+ * https://www.dropboxforum.com/t5/Dropbox-API-Support-Feedback/Case-Sensitivity-in-API-2/td-p/191279
+ * @param entities
+ */
+export const fixEntityListCasesInplace = (entities: { keyRaw: string }[]) => {
+  entities.sort((a, b) => a.keyRaw.length - b.keyRaw.length);
+  // console.log(JSON.stringify(entities,null,2));
+
+  const caseMapping: Record<string, string> = { "": "" };
+  for (const e of entities) {
+    // console.log(`looking for: ${JSON.stringify(e, null, 2)}`);
+
+    let parentFolder = getParentFolder(e.keyRaw);
+    if (parentFolder === "/") {
+      parentFolder = "";
+    }
+    const parentFolderLower = parentFolder.toLocaleLowerCase();
+    const segs = e.keyRaw.split("/");
+    if (e.keyRaw.endsWith("/")) {
+      // folder
+      if (caseMapping.hasOwnProperty(parentFolderLower)) {
+        const newKeyRaw = `${caseMapping[parentFolderLower]}${segs
+          .slice(-2)
+          .join("/")}`;
+        caseMapping[newKeyRaw.toLocaleLowerCase()] = newKeyRaw;
+        e.keyRaw = newKeyRaw;
+        // console.log(JSON.stringify(caseMapping,null,2));
+        continue;
+      } else {
+        throw Error(`${parentFolder} doesn't have cases record??`);
+      }
+    } else {
+      // file
+      if (caseMapping.hasOwnProperty(parentFolderLower)) {
+        const newKeyRaw = `${caseMapping[parentFolderLower]}${segs
+          .slice(-1)
+          .join("/")}`;
+        e.keyRaw = newKeyRaw;
+        continue;
+      } else {
+        throw Error(`${parentFolder} doesn't have cases record??`);
+      }
+    }
+  }
+
+  return entities;
 };

@@ -11,27 +11,28 @@ import {
   S3Client,
 } from "@aws-sdk/client-s3";
 import { Upload } from "@aws-sdk/lib-storage";
-import { HttpHandler, HttpRequest, HttpResponse } from "@aws-sdk/protocol-http";
+import { HttpHandler, HttpRequest, HttpResponse } from "@smithy/protocol-http";
 import {
   FetchHttpHandler,
   FetchHttpHandlerOptions,
-} from "@aws-sdk/fetch-http-handler";
+} from "@smithy/fetch-http-handler";
 // @ts-ignore
-import { requestTimeout } from "@aws-sdk/fetch-http-handler/dist-es/request-timeout";
-import { buildQueryString } from "@aws-sdk/querystring-builder";
+import { requestTimeout } from "@smithy/fetch-http-handler/dist-es/request-timeout";
+import { buildQueryString } from "@smithy/querystring-builder";
 import { HeaderBag, HttpHandlerOptions, Provider } from "@aws-sdk/types";
 import { Buffer } from "buffer";
 import * as mime from "mime-types";
-import { Vault, requestUrl, RequestUrlParam } from "obsidian";
+import { Vault, requestUrl, RequestUrlParam, Platform } from "obsidian";
 import { Readable } from "stream";
+import * as path from "path";
 import AggregateError from "aggregate-error";
 import {
   DEFAULT_CONTENT_TYPE,
-  RemoteItem,
+  Entity,
   S3Config,
+  UploadedType,
   VALID_REQURL,
 } from "./baseTypes";
-import { decryptArrayBuffer, encryptArrayBuffer } from "./encrypt";
 import {
   arrayBufferToBuffer,
   bufferToArrayBuffer,
@@ -40,7 +41,8 @@ import {
 
 export { S3Client } from "@aws-sdk/client-s3";
 
-import { log } from "./moreOnLog";
+import PQueue from "p-queue";
+import { Cipher } from "./encryptUnified";
 
 ////////////////////////////////////////////////////////////////////////////////
 // special handler using Obsidian requestUrl
@@ -53,11 +55,13 @@ import { log } from "./moreOnLog";
  * But this uses Obsidian requestUrl instead.
  */
 class ObsHttpHandler extends FetchHttpHandler {
-  requestTimeoutInMs: number;
-  constructor(options?: FetchHttpHandlerOptions) {
+  requestTimeoutInMs: number | undefined;
+  s3Config: S3Config | undefined;
+  constructor(options?: FetchHttpHandlerOptions, s3Config?: S3Config) {
     super(options);
     this.requestTimeoutInMs =
       options === undefined ? undefined : options.requestTimeout;
+    this.s3Config = s3Config;
   }
   async handle(
     request: HttpRequest,
@@ -78,9 +82,11 @@ class ObsHttpHandler extends FetchHttpHandler {
     }
 
     const { port, method } = request;
-    const url = `${request.protocol}//${request.hostname}${
-      port ? `:${port}` : ""
-    }${path}`;
+    let url = `${request.protocol}//${request.hostname}${port ? `:${port}` : ""
+      }${path}`;
+    if (this.s3Config && this.s3Config.reverseProxyUrl && this.s3Config.reverseProxyUrl !== "") {
+      url = url.replace(this.s3Config.s3Endpoint, this.s3Config.reverseProxyUrl);
+    }
     const body =
       method === "GET" || method === "HEAD" ? undefined : request.body;
 
@@ -93,7 +99,7 @@ class ObsHttpHandler extends FetchHttpHandler {
       transformedHeaders[keyLower] = request.headers[key];
     }
 
-    let contentType: string = undefined;
+    let contentType: string | undefined = undefined;
     if (transformedHeaders["content-type"] !== undefined) {
       contentType = transformedHeaders["content-type"];
     }
@@ -154,7 +160,7 @@ class ObsHttpHandler extends FetchHttpHandler {
 // other stuffs
 ////////////////////////////////////////////////////////////////////////////////
 
-export const DEFAULT_S3_CONFIG = {
+export const DEFAULT_S3_CONFIG: S3Config = {
   s3Endpoint: "",
   s3Region: "",
   s3AccessKeyID: "",
@@ -163,31 +169,138 @@ export const DEFAULT_S3_CONFIG = {
   bypassCorsLocally: true,
   partsConcurrency: 20,
   forcePathStyle: false,
+  remotePrefix: "",
+  useAccurateMTime: false, // it causes money, disable by default
+  reverseProxyUrl: "",
 };
 
 export type S3ObjectType = _Object;
 
-const fromS3ObjectToRemoteItem = (x: S3ObjectType) => {
-  return {
-    key: x.Key,
-    lastModified: x.LastModified.valueOf(),
-    size: x.Size,
-    remoteType: "s3",
-    etag: x.ETag,
-  } as RemoteItem;
+export const simpleTransRemotePrefix = (x: string) => {
+  if (x === undefined) {
+    return "";
+  }
+  let y = path.posix.normalize(x.trim());
+  if (y === undefined || y === "" || y === "/" || y === ".") {
+    return "";
+  }
+  if (y.startsWith("/")) {
+    y = y.slice(1);
+  }
+  if (!y.endsWith("/")) {
+    y = `${y}/`;
+  }
+  return y;
 };
 
-const fromS3HeadObjectToRemoteItem = (
-  key: string,
-  x: HeadObjectCommandOutput
+const getRemoteWithPrefixPath = (
+  fileOrFolderPath: string,
+  remotePrefix: string
 ) => {
-  return {
-    key: key,
-    lastModified: x.LastModified.valueOf(),
-    size: x.ContentLength,
-    remoteType: "s3",
+  let key = fileOrFolderPath;
+  if (fileOrFolderPath === "/" || fileOrFolderPath === "") {
+    // special
+    key = remotePrefix;
+  }
+  if (!fileOrFolderPath.startsWith("/")) {
+    key = `${remotePrefix}${fileOrFolderPath}`;
+  }
+  return key;
+};
+
+const getLocalNoPrefixPath = (
+  fileOrFolderPathWithRemotePrefix: string,
+  remotePrefix: string
+) => {
+  if (
+    !(
+      fileOrFolderPathWithRemotePrefix === `${remotePrefix}` ||
+      fileOrFolderPathWithRemotePrefix.startsWith(`${remotePrefix}`)
+    )
+  ) {
+    throw Error(
+      `"${fileOrFolderPathWithRemotePrefix}" doesn't starts with "${remotePrefix}"`
+    );
+  }
+  return fileOrFolderPathWithRemotePrefix.slice(`${remotePrefix}`.length);
+};
+
+const fromS3ObjectToEntity = (
+  x: S3ObjectType,
+  remotePrefix: string,
+  mtimeRecords: Record<string, number>,
+  ctimeRecords: Record<string, number>
+) => {
+  // console.debug(`fromS3ObjectToEntity: ${x.Key!}, ${JSON.stringify(x,null,2)}`);
+  // S3 officially only supports seconds precision!!!!!
+  const mtimeSvr = Math.floor(x.LastModified!.valueOf() / 1000.0) * 1000;
+  let mtimeCli = mtimeSvr;
+  if (x.Key! in mtimeRecords) {
+    const m2 = mtimeRecords[x.Key!];
+    if (m2 !== 0) {
+      // to be compatible with RClone, we read and store the time in seconds in new version!
+      if (m2 >= 1000000000000) {
+        // it's a millsecond, uploaded by old codes..
+        mtimeCli = m2;
+      } else {
+        // it's a second, uploaded by new codes of the plugin from March 24, 2024
+        mtimeCli = m2 * 1000;
+      }
+    }
+  }
+  const key = getLocalNoPrefixPath(x.Key!, remotePrefix);
+  const r: Entity = {
+    keyRaw: key,
+    mtimeSvr: mtimeSvr,
+    mtimeCli: mtimeCli,
+    sizeRaw: x.Size!,
     etag: x.ETag,
-  } as RemoteItem;
+    synthesizedFolder: false,
+  };
+  return r;
+};
+
+const fromS3HeadObjectToEntity = (
+  fileOrFolderPathWithRemotePrefix: string,
+  x: HeadObjectCommandOutput,
+  remotePrefix: string
+) => {
+  // console.debug(`fromS3HeadObjectToEntity: ${fileOrFolderPathWithRemotePrefix}: ${JSON.stringify(x,null,2)}`);
+  // S3 officially only supports seconds precision!!!!!
+  const mtimeSvr = Math.floor(x.LastModified!.valueOf() / 1000.0) * 1000;
+  let mtimeCli = mtimeSvr;
+  if (x.Metadata !== undefined) {
+    const m2 = Math.floor(
+      parseFloat(x.Metadata.mtime || x.Metadata.MTime || "0")
+    );
+    if (m2 !== 0) {
+      // to be compatible with RClone, we read and store the time in seconds in new version!
+      if (m2 >= 1000000000000) {
+        // it's a millsecond, uploaded by old codes..
+        mtimeCli = m2;
+      } else {
+        // it's a second, uploaded by new codes of the plugin from March 24, 2024
+        mtimeCli = m2 * 1000;
+      }
+    }
+  }
+  // console.debug(
+  //   `fromS3HeadObjectToEntity, fileOrFolderPathWithRemotePrefix=${fileOrFolderPathWithRemotePrefix}, remotePrefix=${remotePrefix}, x=${JSON.stringify(
+  //     x
+  //   )} `
+  // );
+  const key = getLocalNoPrefixPath(
+    fileOrFolderPathWithRemotePrefix,
+    remotePrefix
+  );
+  // console.debug(`fromS3HeadObjectToEntity, key=${key} after removing prefix`);
+  return {
+    keyRaw: key,
+    mtimeSvr: mtimeSvr,
+    mtimeCli: mtimeCli,
+    sizeRaw: x.ContentLength,
+    etag: x.ETag,
+  } as Entity;
 };
 
 export const getS3Client = (s3Config: S3Config) => {
@@ -197,8 +310,9 @@ export const getS3Client = (s3Config: S3Config) => {
   }
 
   let s3Client: S3Client;
+  if ((VALID_REQURL && s3Config.bypassCorsLocally) || (s3Config.reverseProxyUrl && s3Config.reverseProxyUrl !== "")) {
+    console.log("reverseProxyUrl", s3Config.reverseProxyUrl);
 
-  if (VALID_REQURL && s3Config.bypassCorsLocally) {
     s3Client = new S3Client({
       region: s3Config.s3Region,
       endpoint: endpoint,
@@ -207,7 +321,7 @@ export const getS3Client = (s3Config: S3Config) => {
         accessKeyId: s3Config.s3AccessKeyID,
         secretAccessKey: s3Config.s3SecretAccessKey,
       },
-      requestHandler: new ObsHttpHandler(),
+      requestHandler: new ObsHttpHandler(undefined, s3Config),
     });
   } else {
     s3Client = new S3Client({
@@ -237,33 +351,54 @@ export const getS3Client = (s3Config: S3Config) => {
 export const getRemoteMeta = async (
   s3Client: S3Client,
   s3Config: S3Config,
-  fileOrFolderPath: string
+  fileOrFolderPathWithRemotePrefix: string
 ) => {
+  if (
+    s3Config.remotePrefix !== undefined &&
+    s3Config.remotePrefix !== "" &&
+    !fileOrFolderPathWithRemotePrefix.startsWith(s3Config.remotePrefix)
+  ) {
+    throw Error(`s3 getRemoteMeta should only accept prefix-ed path`);
+  }
   const res = await s3Client.send(
     new HeadObjectCommand({
       Bucket: s3Config.s3BucketName,
-      Key: fileOrFolderPath,
+      Key: fileOrFolderPathWithRemotePrefix,
     })
   );
 
-  return fromS3HeadObjectToRemoteItem(fileOrFolderPath, res);
+  return fromS3HeadObjectToEntity(
+    fileOrFolderPathWithRemotePrefix,
+    res,
+    s3Config.remotePrefix ?? ""
+  );
 };
 
 export const uploadToRemote = async (
   s3Client: S3Client,
   s3Config: S3Config,
   fileOrFolderPath: string,
-  vault: Vault,
-  isRecursively: boolean = false,
-  password: string = "",
+  vault: Vault | undefined,
+  isRecursively: boolean,
+  cipher: Cipher,
   remoteEncryptedKey: string = "",
   uploadRaw: boolean = false,
-  rawContent: string | ArrayBuffer = ""
-) => {
+  rawContent: string | ArrayBuffer = "",
+  rawContentMTime: number = 0,
+  rawContentCTime: number = 0
+): Promise<UploadedType> => {
+  console.debug(`uploading ${fileOrFolderPath}`);
   let uploadFile = fileOrFolderPath;
-  if (password !== "") {
+  if (!cipher.isPasswordEmpty()) {
+    if (remoteEncryptedKey === undefined || remoteEncryptedKey === "") {
+      throw Error(
+        `uploadToRemote(s3) you have password but remoteEncryptedKey is empty!`
+      );
+    }
     uploadFile = remoteEncryptedKey;
   }
+  uploadFile = getRemoteWithPrefixPath(uploadFile, s3Config.remotePrefix ?? "");
+  // console.debug(`actual uploadFile=${uploadFile}`);
   const isFolder = fileOrFolderPath.endsWith("/");
 
   if (isFolder && isRecursively) {
@@ -273,6 +408,13 @@ export const uploadToRemote = async (
       throw Error(`you specify uploadRaw, but you also provide a folder key!`);
     }
     // folder
+    let mtime = 0;
+    let ctime = 0;
+    const s = await vault?.adapter?.stat(fileOrFolderPath);
+    if (s !== undefined && s !== null) {
+      mtime = s.mtime;
+      ctime = s.ctime;
+    }
     const contentType = DEFAULT_CONTENT_TYPE;
     await s3Client.send(
       new PutObjectCommand({
@@ -280,36 +422,59 @@ export const uploadToRemote = async (
         Key: uploadFile,
         Body: "",
         ContentType: contentType,
+        Metadata: {
+          MTime: `${mtime / 1000.0}`,
+          CTime: `${ctime / 1000.0}`,
+        },
       })
     );
-    return await getRemoteMeta(s3Client, s3Config, uploadFile);
+    const res = await getRemoteMeta(s3Client, s3Config, uploadFile);
+    return {
+      entity: res,
+      mtimeCli: mtime,
+    };
   } else {
     // file
     // we ignore isRecursively parameter here
     let contentType = DEFAULT_CONTENT_TYPE;
-    if (password === "") {
+    if (cipher.isPasswordEmpty()) {
       contentType =
         mime.contentType(
           mime.lookup(fileOrFolderPath) || DEFAULT_CONTENT_TYPE
         ) || DEFAULT_CONTENT_TYPE;
     }
     let localContent = undefined;
+    let mtime = 0;
+    let ctime = 0;
     if (uploadRaw) {
       if (typeof rawContent === "string") {
         localContent = new TextEncoder().encode(rawContent).buffer;
       } else {
         localContent = rawContent;
       }
+      mtime = rawContentMTime;
+      ctime = rawContentCTime;
     } else {
+      if (vault === undefined) {
+        throw new Error(
+          `the vault variable is not passed but we want to read ${fileOrFolderPath} for S3`
+        );
+      }
       localContent = await vault.adapter.readBinary(fileOrFolderPath);
+      const s = await vault.adapter.stat(fileOrFolderPath);
+      if (s !== undefined && s !== null) {
+        mtime = s.mtime;
+        ctime = s.ctime;
+      }
     }
     let remoteContent = localContent;
-    if (password !== "") {
-      remoteContent = await encryptArrayBuffer(localContent, password);
+    if (!cipher.isPasswordEmpty()) {
+      remoteContent = await cipher.encryptContent(localContent);
     }
 
     const bytesIn5MB = 5242880;
     const body = new Uint8Array(remoteContent);
+
     const upload = new Upload({
       client: s3Client,
       queueSize: s3Config.partsConcurrency, // concurrency
@@ -320,30 +485,52 @@ export const uploadToRemote = async (
         Key: uploadFile,
         Body: body,
         ContentType: contentType,
+        Metadata: {
+          MTime: `${mtime / 1000.0}`,
+          CTime: `${ctime / 1000.0}`,
+        },
       },
     });
     upload.on("httpUploadProgress", (progress) => {
-      // log.info(progress);
+      // console.info(progress);
     });
     await upload.done();
 
-    return await getRemoteMeta(s3Client, s3Config, uploadFile);
+    const res = await getRemoteMeta(s3Client, s3Config, uploadFile);
+    // console.debug(
+    //   `uploaded ${uploadFile} with res=${JSON.stringify(res, null, 2)}`
+    // );
+    return {
+      entity: res,
+      mtimeCli: mtime,
+    };
   }
 };
 
-export const listFromRemote = async (
+const listFromRemoteRaw = async (
   s3Client: S3Client,
   s3Config: S3Config,
-  prefix?: string
+  prefixOfRawKeys?: string
 ) => {
   const confCmd = {
     Bucket: s3Config.s3BucketName,
   } as ListObjectsV2CommandInput;
-  if (prefix !== undefined) {
-    confCmd.Prefix = prefix;
+  if (prefixOfRawKeys !== undefined && prefixOfRawKeys !== "") {
+    confCmd.Prefix = prefixOfRawKeys;
   }
 
   const contents = [] as _Object[];
+  const mtimeRecords: Record<string, number> = {};
+  const ctimeRecords: Record<string, number> = {};
+  const queueHead = new PQueue({
+    concurrency: s3Config.partsConcurrency,
+    autoStart: true,
+  });
+  queueHead.on("error", (error) => {
+    queueHead.pause();
+    queueHead.clear();
+    throw error;
+  });
 
   let isTruncated = true;
   do {
@@ -357,7 +544,38 @@ export const listFromRemote = async (
     }
     contents.push(...rsp.Contents);
 
-    isTruncated = rsp.IsTruncated;
+    if (s3Config.useAccurateMTime) {
+      // head requests of all objects, love it
+      for (const content of rsp.Contents) {
+        queueHead.add(async () => {
+          const rspHead = await s3Client.send(
+            new HeadObjectCommand({
+              Bucket: s3Config.s3BucketName,
+              Key: content.Key,
+            })
+          );
+          if (rspHead.$metadata.httpStatusCode !== 200) {
+            throw Error("some thing bad while heading single object!");
+          }
+          if (rspHead.Metadata === undefined) {
+            // pass
+          } else {
+            mtimeRecords[content.Key!] = Math.floor(
+              parseFloat(
+                rspHead.Metadata.mtime || rspHead.Metadata.MTime || "0"
+              )
+            );
+            ctimeRecords[content.Key!] = Math.floor(
+              parseFloat(
+                rspHead.Metadata.ctime || rspHead.Metadata.CTime || "0"
+              )
+            );
+          }
+        });
+      }
+    }
+
+    isTruncated = rsp.IsTruncated ?? false;
     confCmd.ContinuationToken = rsp.NextContinuationToken;
     if (
       isTruncated &&
@@ -368,10 +586,30 @@ export const listFromRemote = async (
     }
   } while (isTruncated);
 
+  // wait for any head requests
+  await queueHead.onIdle();
+
   // ensemble fake rsp
-  return {
-    Contents: contents.map((x) => fromS3ObjectToRemoteItem(x)),
-  };
+  // in the end, we need to transform the response list
+  // back to the local contents-alike list
+  return contents.map((x) =>
+    fromS3ObjectToEntity(
+      x,
+      s3Config.remotePrefix ?? "",
+      mtimeRecords,
+      ctimeRecords
+    )
+  );
+};
+
+export const listAllFromRemote = async (
+  s3Client: S3Client,
+  s3Config: S3Config
+) => {
+  const res = (
+    await listFromRemoteRaw(s3Client, s3Config, s3Config.remotePrefix)
+  ).filter((x) => x.keyRaw !== "" && x.keyRaw !== "/");
+  return res;
 };
 
 /**
@@ -382,8 +620,11 @@ export const listFromRemote = async (
  * @returns Promise<ArrayBuffer>
  */
 const getObjectBodyToArrayBuffer = async (
-  b: Readable | ReadableStream | Blob
+  b: Readable | ReadableStream | Blob | undefined
 ) => {
+  if (b === undefined) {
+    throw Error(`ObjectBody is undefined and don't know how to deal with it`);
+  }
   if (b instanceof Readable) {
     return (await new Promise((resolve, reject) => {
       const chunks: Uint8Array[] = [];
@@ -403,12 +644,19 @@ const getObjectBodyToArrayBuffer = async (
 const downloadFromRemoteRaw = async (
   s3Client: S3Client,
   s3Config: S3Config,
-  fileOrFolderPath: string
+  fileOrFolderPathWithRemotePrefix: string
 ) => {
+  if (
+    s3Config.remotePrefix !== undefined &&
+    s3Config.remotePrefix !== "" &&
+    !fileOrFolderPathWithRemotePrefix.startsWith(s3Config.remotePrefix)
+  ) {
+    throw Error(`downloadFromRemoteRaw should only accept prefix-ed path`);
+  }
   const data = await s3Client.send(
     new GetObjectCommand({
       Bucket: s3Config.s3BucketName,
-      Key: fileOrFolderPath,
+      Key: fileOrFolderPathWithRemotePrefix,
     })
   );
   const bodyContents = await getObjectBodyToArrayBuffer(data.Body);
@@ -421,8 +669,8 @@ export const downloadFromRemote = async (
   fileOrFolderPath: string,
   vault: Vault,
   mtime: number,
-  password: string = "",
-  remoteEncryptedKey: string = "",
+  cipher: Cipher,
+  remoteEncryptedKey: string,
   skipSaving: boolean = false
 ) => {
   const isFolder = fileOrFolderPath.endsWith("/");
@@ -440,17 +688,21 @@ export const downloadFromRemote = async (
     return new ArrayBuffer(0);
   } else {
     let downloadFile = fileOrFolderPath;
-    if (password !== "") {
+    if (!cipher.isPasswordEmpty()) {
       downloadFile = remoteEncryptedKey;
     }
+    downloadFile = getRemoteWithPrefixPath(
+      downloadFile,
+      s3Config.remotePrefix ?? ""
+    );
     const remoteContent = await downloadFromRemoteRaw(
       s3Client,
       s3Config,
       downloadFile
     );
     let localContent = remoteContent;
-    if (password !== "") {
-      localContent = await decryptArrayBuffer(remoteContent, password);
+    if (!cipher.isPasswordEmpty()) {
+      localContent = await cipher.decryptContent(remoteContent);
     }
     if (!skipSaving) {
       await vault.adapter.writeBinary(fileOrFolderPath, localContent, {
@@ -472,16 +724,24 @@ export const deleteFromRemote = async (
   s3Client: S3Client,
   s3Config: S3Config,
   fileOrFolderPath: string,
-  password: string = "",
-  remoteEncryptedKey: string = ""
+  cipher: Cipher,
+  remoteEncryptedKey: string = "",
+  synthesizedFolder: boolean = false
 ) => {
   if (fileOrFolderPath === "/") {
     return;
   }
+  if (synthesizedFolder) {
+    return;
+  }
   let remoteFileName = fileOrFolderPath;
-  if (password !== "") {
+  if (!cipher.isPasswordEmpty()) {
     remoteFileName = remoteEncryptedKey;
   }
+  remoteFileName = getRemoteWithPrefixPath(
+    remoteFileName,
+    s3Config.remotePrefix ?? ""
+  );
   await s3Client.send(
     new DeleteObjectCommand({
       Bucket: s3Config.s3BucketName,
@@ -489,9 +749,9 @@ export const deleteFromRemote = async (
     })
   );
 
-  if (fileOrFolderPath.endsWith("/") && password === "") {
-    const x = await listFromRemote(s3Client, s3Config, fileOrFolderPath);
-    x.Contents.forEach(async (element) => {
+  if (fileOrFolderPath.endsWith("/") && cipher.isPasswordEmpty()) {
+    const x = await listFromRemoteRaw(s3Client, s3Config, remoteFileName);
+    x.forEach(async (element) => {
       await s3Client.send(
         new DeleteObjectCommand({
           Bucket: s3Config.s3BucketName,
@@ -499,7 +759,7 @@ export const deleteFromRemote = async (
         })
       );
     });
-  } else if (fileOrFolderPath.endsWith("/") && password !== "") {
+  } else if (fileOrFolderPath.endsWith("/") && !cipher.isPasswordEmpty()) {
     // TODO
   } else {
     // pass
@@ -509,6 +769,11 @@ export const deleteFromRemote = async (
 /**
  * Check the config of S3 by heading bucket
  * https://stackoverflow.com/questions/50842835
+ *
+ * Updated on 20240102:
+ * Users are not always have permission of heading bucket,
+ * so we need to use listing objects instead...
+ *
  * @param s3Client
  * @param s3Config
  * @returns
@@ -519,24 +784,37 @@ export const checkConnectivity = async (
   callbackFunc?: any
 ) => {
   try {
-    const results = await s3Client.send(
-      new HeadBucketCommand({ Bucket: s3Config.s3BucketName })
-    );
+    // TODO: no universal way now, just check this in connectivity
+    if (Platform.isIosApp && s3Config.s3Endpoint.startsWith("http://")) {
+      throw Error(
+        `Your s3 endpoint could only be https, not http, because of the iOS restriction.`
+      );
+    }
+
+    // const results = await s3Client.send(
+    //   new HeadBucketCommand({ Bucket: s3Config.s3BucketName })
+    // );
+    // very simplified version of listing objects
+    const confCmd = {
+      Bucket: s3Config.s3BucketName,
+    } as ListObjectsV2CommandInput;
+    const results = await s3Client.send(new ListObjectsV2Command(confCmd));
+
     if (
       results === undefined ||
       results.$metadata === undefined ||
       results.$metadata.httpStatusCode === undefined
     ) {
       const err = "results or $metadata or httStatusCode is undefined";
-      log.debug(err);
+      console.debug(err);
       if (callbackFunc !== undefined) {
         callbackFunc(err);
       }
       return false;
     }
     return results.$metadata.httpStatusCode === 200;
-  } catch (err) {
-    log.debug(err);
+  } catch (err: any) {
+    console.debug(err);
     if (callbackFunc !== undefined) {
       if (s3Config.s3Endpoint.contains(s3Config.s3BucketName)) {
         const err2 = new AggregateError([

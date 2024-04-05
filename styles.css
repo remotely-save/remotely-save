@@ -8,6 +8,10 @@
   font-weight: bold;
 }
 
+.encryptionmethod-second-confirm {
+  font-weight: bold;
+}
+
 .settings-auth-related {
   border-top: 1px solid var(--background-modifier-border);
   padding-top: 18px;
@@ -60,4 +64,13 @@
 .qrcode-img {
   width: 350px;
   height: 350px;
+}
+
+.ignorepaths-textarea {
+  font-family: monospace;
+}
+
+.logtohttpserver-warning {
+  color: red;
+  font-weight: bolder;
 }

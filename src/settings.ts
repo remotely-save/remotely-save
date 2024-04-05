@@ -6,30 +6,39 @@ import {
   Setting,
   Platform,
   requireApiVersion,
+  requestUrl,
 } from "obsidian";
 import type { TextComponent } from "obsidian";
 import { createElement, Eye, EyeOff } from "lucide";
 import {
+  API_VER_ENSURE_REQURL_OK,
   API_VER_REQURL,
+  ConflictActionType,
   DEFAULT_DEBUG_FOLDER,
+  EmptyFolderCleanType,
   SUPPORTED_SERVICES_TYPE,
   SUPPORTED_SERVICES_TYPE_WITH_REMOTE_BASE_DIR,
+  SyncDirectionType,
   VALID_REQURL,
   WebdavAuthType,
   WebdavDepthType,
+  CipherMethodType,
+  QRExportType,
 } from "./baseTypes";
 import {
+  exportVaultProfilerResultsToFiles,
   exportVaultSyncPlansToFiles,
-  exportVaultLoggerOutputToFiles,
 } from "./debugMode";
-import { exportQrCodeUri } from "./importExport";
 import {
-  clearAllSyncMetaMapping,
+  exportQrCodeUri,
+  importQrCodeUri,
+  parseUriByHand,
+} from "./importExport";
+import {
+  clearAllPrevSyncRecordByVault,
   clearAllSyncPlanRecords,
   destroyDBs,
-  clearAllLoggerOutputRecords,
-  insertLoggerOutputByVault,
-  clearExpiredLoggerOutputRecords,
+  upsertLastSuccessSyncTimeByVault,
 } from "./localdb";
 import type RemotelySavePlugin from "./main"; // unavoidable
 import { RemoteClient } from "./remote";
@@ -45,14 +54,13 @@ import {
 } from "./remoteForOnedrive";
 import { messyConfigToNormal } from "./configPersist";
 import type { TransItemType } from "./i18n";
-import { checkHasSpecialCharForDir } from "./misc";
-import { applyWebdavPresetRulesInplace } from "./presetRules";
-
 import {
-  applyLogWriterInplace,
-  log,
-  restoreLogWritterInplace,
-} from "./moreOnLog";
+  changeMobileStatusBar,
+  checkHasSpecialCharForDir,
+  stringToFragment,
+} from "./misc";
+import { simpleTransRemotePrefix } from "./remoteForS3";
+import cloneDeep from "lodash/cloneDeep";
 
 class PasswordModal extends Modal {
   plugin: RemotelySavePlugin;
@@ -116,6 +124,45 @@ class PasswordModal extends Modal {
           this.close();
         });
       });
+  }
+
+  onClose() {
+    let { contentEl } = this;
+    contentEl.empty();
+  }
+}
+
+class EncryptionMethodModal extends Modal {
+  plugin: RemotelySavePlugin;
+  constructor(app: App, plugin: RemotelySavePlugin) {
+    super(app);
+    this.plugin = plugin;
+  }
+
+  onOpen() {
+    let { contentEl } = this;
+
+    const t = (x: TransItemType, vars?: any) => {
+      return this.plugin.i18n.t(x, vars);
+    };
+
+    // contentEl.setText("Add Or change password.");
+    contentEl.createEl("h2", { text: t("modal_encryptionmethod_title") });
+    t("modal_encryptionmethod_shortdesc")
+      .split("\n")
+      .forEach((val, idx) => {
+        contentEl.createEl("p", {
+          text: stringToFragment(val),
+        });
+      });
+
+    new Setting(contentEl).addButton((button) => {
+      button.setButtonText(t("confirm"));
+      button.onClick(async () => {
+        this.close();
+      });
+      button.setClass("encryptionmethod-second-confirm");
+    });
   }
 
   onClose() {
@@ -202,6 +249,88 @@ class ChangeRemoteBaseDirModal extends Modal {
             this.close();
           });
           button.setClass("remotebasedir-second-confirm");
+        })
+        .addButton((button) => {
+          button.setButtonText(t("goback"));
+          button.onClick(() => {
+            this.close();
+          });
+        });
+    }
+  }
+
+  onClose() {
+    let { contentEl } = this;
+    contentEl.empty();
+  }
+}
+
+/**
+ * s3 is special and do not necessarily the same as others
+ * thus a new Modal here
+ */
+class ChangeRemotePrefixModal extends Modal {
+  readonly plugin: RemotelySavePlugin;
+  readonly newRemotePrefix: string;
+  constructor(app: App, plugin: RemotelySavePlugin, newRemotePrefix: string) {
+    super(app);
+    this.plugin = plugin;
+    this.newRemotePrefix = newRemotePrefix;
+  }
+
+  onOpen() {
+    let { contentEl } = this;
+
+    const t = (x: TransItemType, vars?: any) => {
+      return this.plugin.i18n.t(x, vars);
+    };
+
+    contentEl.createEl("h2", { text: t("modal_remoteprefix_title") });
+    t("modal_remoteprefix_shortdesc")
+      .split("\n")
+      .forEach((val, idx) => {
+        contentEl.createEl("p", {
+          text: val,
+        });
+      });
+
+    contentEl.createEl("p", {
+      text: t("modal_remoteprefix_tosave", { prefix: this.newRemotePrefix }),
+    });
+
+    if (
+      this.newRemotePrefix === "" ||
+      this.newRemotePrefix === this.app.vault.getName()
+    ) {
+      new Setting(contentEl)
+        .addButton((button) => {
+          button.setButtonText(t("modal_remoteprefix_secondconfirm_empty"));
+          button.onClick(async () => {
+            // in the settings, the value is reset to the special case ""
+            this.plugin.settings.s3.remotePrefix = "";
+            await this.plugin.saveSettings();
+            new Notice(t("modal_remoteprefix_notice"));
+            this.close();
+          });
+          button.setClass("remoteprefix-second-confirm");
+        })
+        .addButton((button) => {
+          button.setButtonText(t("goback"));
+          button.onClick(() => {
+            this.close();
+          });
+        });
+    } else {
+      new Setting(contentEl)
+        .addButton((button) => {
+          button.setButtonText(t("modal_remoteprefix_secondconfirm_change"));
+          button.onClick(async () => {
+            this.plugin.settings.s3.remotePrefix = this.newRemotePrefix;
+            await this.plugin.saveSettings();
+            new Notice(t("modal_remoteprefix_notice"));
+            this.close();
+          });
+          button.setClass("remoteprefix-second-confirm");
         })
         .addButton((button) => {
           button.setButtonText(t("goback"));
@@ -326,12 +455,17 @@ class DropboxAuthModal extends Modal {
               const authRes = await sendAuthReqDropbox(
                 this.plugin.settings.dropbox.clientID,
                 verifier,
-                authCode
+                authCode,
+                async (e: any) => {
+                  new Notice(t("protocol_dropbox_connect_fail"));
+                  new Notice(`${e}`);
+                  throw e;
+                }
               );
               const self = this;
               setConfigBySuccessfullAuthInplace(
                 this.plugin.settings.dropbox,
-                authRes,
+                authRes!,
                 () => self.plugin.saveSettings()
               );
               const client = new RemoteClient(
@@ -419,6 +553,15 @@ export class OnedriveAuthModal extends Modal {
           text: val,
         });
       });
+    if (Platform.isLinux) {
+      t("modal_onedriveauth_shortdesc_linux")
+        .split("\n")
+        .forEach((val) => {
+          contentEl.createEl("p", {
+            text: stringToFragment(val),
+          });
+        });
+    }
     const div2 = contentEl.createDiv();
     div2.createEl(
       "button",
@@ -570,9 +713,11 @@ class SyncConfigDirModal extends Modal {
 
 class ExportSettingsQrCodeModal extends Modal {
   plugin: RemotelySavePlugin;
-  constructor(app: App, plugin: RemotelySavePlugin) {
+  exportType: QRExportType;
+  constructor(app: App, plugin: RemotelySavePlugin, exportType: QRExportType) {
     super(app);
     this.plugin = plugin;
+    this.exportType = exportType;
   }
 
   async onOpen() {
@@ -585,7 +730,8 @@ class ExportSettingsQrCodeModal extends Modal {
     const { rawUri, imgUri } = await exportQrCodeUri(
       this.plugin.settings,
       this.app.vault.getName(),
-      this.plugin.manifest.version
+      this.plugin.manifest.version,
+      this.exportType
     );
 
     const div1 = contentEl.createDiv();
@@ -640,7 +786,7 @@ const getEyesElements = () => {
 
 const wrapTextWithPasswordHide = (text: TextComponent) => {
   const { eye, eyeOff } = getEyesElements();
-  const hider = text.inputEl.insertAdjacentElement("afterend", createSpan());
+  const hider = text.inputEl.insertAdjacentElement("afterend", createSpan())!;
   // the init type of hider is "hidden" === eyeOff === password
   hider.innerHTML = eyeOff;
   hider.addEventListener("click", (e) => {
@@ -819,7 +965,7 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
           });
       });
 
-    if (VALID_REQURL) {
+    if (VALID_REQURL && !requireApiVersion(API_VER_ENSURE_REQURL_OK)) {
       new Setting(s3Div)
         .setName(t("settings_s3_bypasscorslocally"))
         .setDesc(t("settings_s3_bypasscorslocally_desc"))
@@ -830,8 +976,7 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
 
           dropdown
             .setValue(
-              `${
-                this.plugin.settings.s3.bypassCorsLocally ? "enable" : "disable"
+              `${this.plugin.settings.s3.bypassCorsLocally ? "enable" : "disable"
               }`
             )
             .onChange(async (value) => {
@@ -865,6 +1010,63 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
             await this.plugin.saveSettings();
           });
       });
+
+    new Setting(s3Div)
+      .setName(t("settings_s3_accuratemtime"))
+      .setDesc(t("settings_s3_accuratemtime_desc"))
+      .addDropdown((dropdown) => {
+        dropdown
+          .addOption("disable", t("disable"))
+          .addOption("enable", t("enable"));
+
+        dropdown
+          .setValue(
+            `${this.plugin.settings.s3.useAccurateMTime ? "enable" : "disable"}`
+          )
+          .onChange(async (val) => {
+            if (val === "enable") {
+              this.plugin.settings.s3.useAccurateMTime = true;
+            } else {
+              this.plugin.settings.s3.useAccurateMTime = false;
+            }
+            await this.plugin.saveSettings();
+          });
+      });
+
+    let newS3RemotePrefix = this.plugin.settings.s3.remotePrefix || "";
+    new Setting(s3Div)
+      .setName(t("settings_remoteprefix"))
+      .setDesc(t("settings_remoteprefix_desc"))
+      .addText((text) =>
+        text
+          .setPlaceholder("")
+          .setValue(newS3RemotePrefix)
+          .onChange((value) => {
+            newS3RemotePrefix = simpleTransRemotePrefix(value.trim());
+          })
+      )
+      .addButton((button) => {
+        button.setButtonText(t("confirm"));
+        button.onClick(() => {
+          new ChangeRemotePrefixModal(
+            this.app,
+            this.plugin,
+            simpleTransRemotePrefix(newS3RemotePrefix.trim())
+          ).open();
+        });
+      });
+    new Setting(s3Div)
+      .setName(t("settings_s3_reverse_proxy_url"))
+      .setDesc(t("settings_s3_reverse_proxy_url_desc"))
+      .addText((text) =>
+        text
+          .setPlaceholder("")
+          .setValue(this.plugin.settings.s3.reverseProxyUrl)
+          .onChange(async (value) => {
+            this.plugin.settings.s3.reverseProxyUrl = value.trim();
+            await this.plugin.saveSettings();
+          })
+      );
 
     new Setting(s3Div)
       .setName(t("settings_checkonnectivity"))
@@ -1273,15 +1475,15 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
           .setValue(this.plugin.settings.webdav.address)
           .onChange(async (value) => {
             this.plugin.settings.webdav.address = value.trim();
+            // deprecate auto on 20240116, force to manual_1
             if (
+              this.plugin.settings.webdav.depth === "auto" ||
               this.plugin.settings.webdav.depth === "auto_1" ||
-              this.plugin.settings.webdav.depth === "auto_infinity"
+              this.plugin.settings.webdav.depth === "auto_infinity" ||
+              this.plugin.settings.webdav.depth === "auto_unknown"
             ) {
-              this.plugin.settings.webdav.depth = "auto_unknown";
+              this.plugin.settings.webdav.depth = "manual_1";
             }
-
-            // TODO: any more elegant way?
-            applyWebdavPresetRulesInplace(this.plugin.settings.webdav);
 
             // normally saved
             await this.plugin.saveSettings();
@@ -1298,11 +1500,14 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
           .setValue(this.plugin.settings.webdav.username)
           .onChange(async (value) => {
             this.plugin.settings.webdav.username = value.trim();
+            // deprecate auto on 20240116, force to manual_1
             if (
+              this.plugin.settings.webdav.depth === "auto" ||
               this.plugin.settings.webdav.depth === "auto_1" ||
-              this.plugin.settings.webdav.depth === "auto_infinity"
+              this.plugin.settings.webdav.depth === "auto_infinity" ||
+              this.plugin.settings.webdav.depth === "auto_unknown"
             ) {
-              this.plugin.settings.webdav.depth = "auto_unknown";
+              this.plugin.settings.webdav.depth = "manual_1";
             }
             await this.plugin.saveSettings();
           });
@@ -1318,11 +1523,14 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
           .setValue(this.plugin.settings.webdav.password)
           .onChange(async (value) => {
             this.plugin.settings.webdav.password = value.trim();
+            // deprecate auto on 20240116, force to manual_1
             if (
+              this.plugin.settings.webdav.depth === "auto" ||
               this.plugin.settings.webdav.depth === "auto_1" ||
-              this.plugin.settings.webdav.depth === "auto_infinity"
+              this.plugin.settings.webdav.depth === "auto_infinity" ||
+              this.plugin.settings.webdav.depth === "auto_unknown"
             ) {
-              this.plugin.settings.webdav.depth = "auto_unknown";
+              this.plugin.settings.webdav.depth = "manual_1";
             }
             await this.plugin.saveSettings();
           });
@@ -1345,8 +1553,8 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
 
         dropdown
           .setValue(this.plugin.settings.webdav.authType)
-          .onChange(async (val: WebdavAuthType) => {
-            this.plugin.settings.webdav.authType = val;
+          .onChange(async (val) => {
+            this.plugin.settings.webdav.authType = val as WebdavAuthType;
             await this.plugin.saveSettings();
           });
       });
@@ -1355,41 +1563,23 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
       .setName(t("settings_webdav_depth"))
       .setDesc(t("settings_webdav_depth_desc"))
       .addDropdown((dropdown) => {
-        dropdown.addOption("auto", t("settings_webdav_depth_auto"));
         dropdown.addOption("manual_1", t("settings_webdav_depth_1"));
         dropdown.addOption("manual_infinity", t("settings_webdav_depth_inf"));
 
-        let initVal = "auto";
-        const autoOptions: Set<WebdavDepthType> = new Set([
-          "auto_unknown",
-          "auto_1",
-          "auto_infinity",
-        ]);
-        if (autoOptions.has(this.plugin.settings.webdav.depth)) {
-          initVal = "auto";
-        } else {
-          initVal = this.plugin.settings.webdav.depth || "auto";
-        }
+        dropdown
+          .setValue(this.plugin.settings.webdav.depth || "manual_1")
+          .onChange(async (val) => {
+            if (val === "manual_1") {
+              this.plugin.settings.webdav.depth = "manual_1";
+              this.plugin.settings.webdav.manualRecursive = true;
+            } else if (val === "manual_infinity") {
+              this.plugin.settings.webdav.depth = "manual_infinity";
+              this.plugin.settings.webdav.manualRecursive = false;
+            }
 
-        type DepthOption = "auto" | "manual_1" | "manual_infinity";
-        dropdown.setValue(initVal).onChange(async (val: DepthOption) => {
-          if (val === "auto") {
-            this.plugin.settings.webdav.depth = "auto_unknown";
-            this.plugin.settings.webdav.manualRecursive = false;
-          } else if (val === "manual_1") {
-            this.plugin.settings.webdav.depth = "manual_1";
-            this.plugin.settings.webdav.manualRecursive = true;
-          } else if (val === "manual_infinity") {
-            this.plugin.settings.webdav.depth = "manual_infinity";
-            this.plugin.settings.webdav.manualRecursive = false;
-          }
-
-          // TODO: any more elegant way?
-          applyWebdavPresetRulesInplace(this.plugin.settings.webdav);
-
-          // normally save
-          await this.plugin.saveSettings();
-        });
+            // normally save
+            await this.plugin.saveSettings();
+          });
       });
 
     let newWebdavRemoteBaseDir =
@@ -1467,8 +1657,8 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
         dropdown.addOption("onedrive", t("settings_chooseservice_onedrive"));
         dropdown
           .setValue(this.plugin.settings.serviceType)
-          .onChange(async (val: SUPPORTED_SERVICES_TYPE) => {
-            this.plugin.settings.serviceType = val;
+          .onChange(async (val) => {
+            this.plugin.settings.serviceType = val as SUPPORTED_SERVICES_TYPE;
             s3Div.toggleClass(
               "s3-hide",
               this.plugin.settings.serviceType !== "s3"
@@ -1517,6 +1707,23 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
       });
 
     new Setting(basicDiv)
+      .setName(t("settings_encryptionmethod"))
+      .setDesc(stringToFragment(t("settings_encryptionmethod_desc")))
+      .addDropdown((dropdown) => {
+        dropdown
+          .addOption("rclone-base64", t("settings_encryptionmethod_rclone"))
+          .addOption("openssl-base64", t("settings_encryptionmethod_openssl"))
+          .setValue(this.plugin.settings.encryptionMethod ?? "rclone-base64")
+          .onChange(async (val: string) => {
+            this.plugin.settings.encryptionMethod = val as CipherMethodType;
+            await this.plugin.saveSettings();
+            if (this.plugin.settings.password !== "") {
+              new EncryptionMethodModal(this.app, this.plugin).open();
+            }
+          });
+      });
+
+    new Setting(basicDiv)
       .setName(t("settings_autorun"))
       .setDesc(t("settings_autorun_desc"))
       .addDropdown((dropdown) => {
@@ -1545,6 +1752,7 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
               realVal > 0
             ) {
               const intervalID = window.setInterval(() => {
+                console.info("auto run from settings.ts");
                 this.plugin.syncRun("auto");
               }, realVal);
               this.plugin.autoRunIntervalID = intervalID;
@@ -1578,6 +1786,77 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
             await this.plugin.saveSettings();
           });
       });
+
+    new Setting(basicDiv)
+      .setName(t("settings_saverun"))
+      .setDesc(t("settings_saverun_desc"))
+      .addDropdown((dropdown) => {
+        dropdown.addOption("-1", t("settings_saverun_notset"));
+        dropdown.addOption(`${1000 * 1}`, t("settings_saverun_1sec"));
+        dropdown.addOption(`${1000 * 5}`, t("settings_saverun_5sec"));
+        dropdown.addOption(`${1000 * 10}`, t("settings_saverun_10sec"));
+        dropdown.addOption(`${1000 * 60}`, t("settings_saverun_1min"));
+        let runScheduled = false;
+        dropdown
+          .setValue(`${this.plugin.settings.syncOnSaveAfterMilliseconds}`)
+          .onChange(async (val: string) => {
+            const realVal = parseInt(val);
+            this.plugin.settings.syncOnSaveAfterMilliseconds = realVal;
+            await this.plugin.saveSettings();
+            if (
+              (realVal === undefined || realVal === null || realVal <= 0) &&
+              this.plugin.syncOnSaveIntervalID !== undefined
+            ) {
+              // clear
+              window.clearInterval(this.plugin.syncOnSaveIntervalID);
+              this.plugin.syncOnSaveIntervalID = undefined;
+            } else if (
+              realVal !== undefined &&
+              realVal !== null &&
+              realVal > 0
+            ) {
+              const intervalID = window.setInterval(() => {
+                const currentFile = this.app.workspace.getActiveFile();
+
+                if (currentFile) {
+                  // get the last modified time of the current file
+                  // if it has been modified within the last syncOnSaveAfterMilliseconds
+                  // then schedule a run for syncOnSaveAfterMilliseconds after it was modified
+                  const lastModified = currentFile.stat.mtime;
+                  const currentTime = Date.now();
+                  // console.debug(
+                  //   `Checking if file was modified within last ${
+                  //     this.plugin.settings.syncOnSaveAfterMilliseconds / 1000
+                  //   } seconds, last modified: ${
+                  //     (currentTime - lastModified) / 1000
+                  //   } seconds ago`
+                  // );
+                  if (
+                    currentTime - lastModified <
+                    this.plugin.settings.syncOnSaveAfterMilliseconds!
+                  ) {
+                    if (!runScheduled) {
+                      const scheduleTimeFromNow =
+                        this.plugin.settings.syncOnSaveAfterMilliseconds! -
+                        (currentTime - lastModified);
+                      console.info(
+                        `schedule a run for ${scheduleTimeFromNow} milliseconds later`
+                      );
+                      runScheduled = true;
+                      setTimeout(() => {
+                        this.plugin.syncRun("auto_sync_on_save");
+                        runScheduled = false;
+                      }, scheduleTimeFromNow);
+                    }
+                  }
+                }
+              }, realVal);
+              this.plugin.syncOnSaveIntervalID = intervalID;
+              this.plugin.registerInterval(intervalID);
+            }
+          });
+      });
+
     new Setting(basicDiv)
       .setName(t("settings_skiplargefiles"))
       .setDesc(t("settings_skiplargefiles_desc"))
@@ -1594,6 +1873,60 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
             this.plugin.settings.skipSizeLargerThan = parseInt(val);
             await this.plugin.saveSettings();
           });
+      });
+
+    // custom status bar items is not supported on mobile
+    if (!Platform.isMobileApp) {
+      new Setting(basicDiv)
+        .setName(t("settings_enablestatusbar_info"))
+        .setDesc(t("settings_enablestatusbar_info_desc"))
+        .addToggle((toggle) => {
+          toggle
+            .setValue(this.plugin.settings.enableStatusBarInfo ?? false)
+            .onChange(async (val) => {
+              this.plugin.settings.enableStatusBarInfo = val;
+              await this.plugin.saveSettings();
+              new Notice(t("settings_enablestatusbar_reloadrequired_notice"));
+            });
+        });
+
+      new Setting(basicDiv)
+        .setName(t("settings_resetstatusbar_time"))
+        .setDesc(t("settings_resetstatusbar_time_desc"))
+        .addButton((button) => {
+          button.setButtonText(t("settings_resetstatusbar_button"));
+          button.onClick(async () => {
+            // reset last sync time
+            await upsertLastSuccessSyncTimeByVault(
+              this.plugin.db,
+              this.plugin.vaultRandomID,
+              -1
+            );
+            this.plugin.updateLastSuccessSyncMsg(-1);
+            new Notice(t("settings_resetstatusbar_notice"));
+          });
+        });
+    }
+
+    new Setting(basicDiv)
+      .setName(t("settings_ignorepaths"))
+      .setDesc(t("settings_ignorepaths_desc"))
+      .setClass("ignorepaths-settings")
+
+      .addTextArea((textArea) => {
+        textArea
+          .setValue(`${(this.plugin.settings.ignorePaths ?? []).join("\n")}`)
+          .onChange(async (value) => {
+            this.plugin.settings.ignorePaths = value
+              .trim()
+              .split("\n")
+              .filter((x) => x.trim() !== "");
+            await this.plugin.saveSettings();
+          });
+        textArea.inputEl.rows = 10;
+        textArea.inputEl.cols = 30;
+
+        textArea.inputEl.addClass("ignorepaths-textarea");
       });
 
     //////////////////////////////////////////////////
@@ -1674,6 +2007,145 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
           });
       });
 
+    new Setting(advDiv)
+      .setName(t("settings_deletetowhere"))
+      .setDesc(t("settings_deletetowhere_desc"))
+      .addDropdown((dropdown) => {
+        dropdown.addOption("system", t("settings_deletetowhere_system_trash"));
+        dropdown.addOption(
+          "obsidian",
+          t("settings_deletetowhere_obsidian_trash")
+        );
+        dropdown
+          .setValue(this.plugin.settings.deleteToWhere ?? "system")
+          .onChange(async (val) => {
+            this.plugin.settings.deleteToWhere = val as "system" | "obsidian";
+            await this.plugin.saveSettings();
+          });
+      });
+
+    new Setting(advDiv)
+      .setName(t("settings_conflictaction"))
+      .setDesc(t("settings_conflictaction_desc"))
+      .addDropdown((dropdown) => {
+        dropdown.addOption(
+          "keep_newer",
+          t("settings_conflictaction_keep_newer")
+        );
+        dropdown.addOption(
+          "keep_larger",
+          t("settings_conflictaction_keep_larger")
+        );
+        dropdown
+          .setValue(this.plugin.settings.conflictAction ?? "keep_newer")
+          .onChange(async (val) => {
+            this.plugin.settings.conflictAction = val as ConflictActionType;
+            await this.plugin.saveSettings();
+          });
+      });
+
+    new Setting(advDiv)
+      .setName(t("settings_cleanemptyfolder"))
+      .setDesc(t("settings_cleanemptyfolder_desc"))
+      .addDropdown((dropdown) => {
+        dropdown.addOption("skip", t("settings_cleanemptyfolder_skip"));
+        dropdown.addOption(
+          "clean_both",
+          t("settings_cleanemptyfolder_clean_both")
+        );
+        dropdown
+          .setValue(this.plugin.settings.howToCleanEmptyFolder ?? "skip")
+          .onChange(async (val) => {
+            this.plugin.settings.howToCleanEmptyFolder =
+              val as EmptyFolderCleanType;
+            await this.plugin.saveSettings();
+          });
+      });
+
+    new Setting(advDiv)
+      .setName(t("settings_protectmodifypercentage"))
+      .setDesc(t("settings_protectmodifypercentage_desc"))
+      .addDropdown((dropdown) => {
+        for (const i of Array.from({ length: 11 }, (x, i) => i * 10)) {
+          let desc = `${i}`;
+          if (i === 0) {
+            desc = t("settings_protectmodifypercentage_000_desc");
+          } else if (i === 50) {
+            desc = t("settings_protectmodifypercentage_050_desc");
+          } else if (i === 100) {
+            desc = t("settings_protectmodifypercentage_100_desc");
+          }
+          dropdown.addOption(`${i}`, desc);
+        }
+        dropdown
+          .setValue(`${this.plugin.settings.protectModifyPercentage ?? 50}`)
+          .onChange(async (val) => {
+            this.plugin.settings.protectModifyPercentage = parseInt(val);
+            await this.plugin.saveSettings();
+          });
+      });
+
+    new Setting(advDiv)
+      .setName(t("setting_syncdirection"))
+      .setDesc(t("setting_syncdirection_desc"))
+      .addDropdown((dropdown) => {
+        dropdown.addOption(
+          "bidirectional",
+          t("setting_syncdirection_bidirectional_desc")
+        );
+        dropdown.addOption(
+          "incremental_push_only",
+          t("setting_syncdirection_incremental_push_only_desc")
+        );
+        dropdown.addOption(
+          "incremental_pull_only",
+          t("setting_syncdirection_incremental_pull_only_desc")
+        );
+
+        dropdown
+          .setValue(this.plugin.settings.syncDirection ?? "bidirectional")
+          .onChange(async (val) => {
+            this.plugin.settings.syncDirection = val as SyncDirectionType;
+            await this.plugin.saveSettings();
+          });
+      });
+
+    if (Platform.isMobile) {
+      new Setting(advDiv)
+        .setName(t("settings_enablemobilestatusbar"))
+        .setDesc(t("settings_enablemobilestatusbar_desc"))
+        .addDropdown(async (dropdown) => {
+          dropdown
+            .addOption("enable", t("enable"))
+            .addOption("disable", t("disable"));
+
+          dropdown
+            .setValue(
+              `${
+                this.plugin.settings.enableMobileStatusBar
+                  ? "enable"
+                  : "disable"
+              }`
+            )
+            .onChange(async (val) => {
+              if (val === "enable") {
+                this.plugin.settings.enableMobileStatusBar = true;
+                this.plugin.appContainerObserver =
+                  changeMobileStatusBar("enable");
+              } else {
+                this.plugin.settings.enableMobileStatusBar = false;
+                changeMobileStatusBar(
+                  "disable",
+                  this.plugin.appContainerObserver
+                );
+                this.plugin.appContainerObserver?.disconnect();
+                this.plugin.appContainerObserver = undefined;
+              }
+              await this.plugin.saveSettings();
+            });
+        });
+    }
+
     //////////////////////////////////////////////////
     // below for import and export functions
     //////////////////////////////////////////////////
@@ -1688,15 +2160,87 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
       .setName(t("settings_export"))
       .setDesc(t("settings_export_desc"))
       .addButton(async (button) => {
-        button.setButtonText(t("settings_export_desc_button"));
+        button.setButtonText(t("settings_export_all_but_oauth2_button"));
         button.onClick(async () => {
-          new ExportSettingsQrCodeModal(this.app, this.plugin).open();
+          new ExportSettingsQrCodeModal(
+            this.app,
+            this.plugin,
+            "all_but_oauth2"
+          ).open();
+        });
+      })
+      .addButton(async (button) => {
+        button.setButtonText(t("settings_export_dropbox_button"));
+        button.onClick(async () => {
+          new ExportSettingsQrCodeModal(
+            this.app,
+            this.plugin,
+            "dropbox"
+          ).open();
+        });
+      })
+      .addButton(async (button) => {
+        button.setButtonText(t("settings_export_onedrive_button"));
+        button.onClick(async () => {
+          new ExportSettingsQrCodeModal(
+            this.app,
+            this.plugin,
+            "onedrive"
+          ).open();
         });
       });
 
+    let importSettingVal = "";
     new Setting(importExportDiv)
       .setName(t("settings_import"))
-      .setDesc(t("settings_import_desc"));
+      .setDesc(t("settings_import_desc"))
+      .addText((text) =>
+        text
+          .setPlaceholder("obsidian://remotely-save?func=settings&...")
+          .setValue("")
+          .onChange((val) => {
+            importSettingVal = val;
+          })
+      )
+      .addButton(async (button) => {
+        button.setButtonText(t("confirm"));
+        button.onClick(async () => {
+          if (importSettingVal !== "") {
+            // console.debug(importSettingVal);
+            try {
+              const inputParams = parseUriByHand(importSettingVal);
+              const parsed = importQrCodeUri(
+                inputParams,
+                this.app.vault.getName()
+              );
+              if (parsed.status === "error") {
+                new Notice(parsed.message);
+              } else {
+                const copied = cloneDeep(parsed.result);
+                // new Notice(JSON.stringify(copied))
+                this.plugin.settings = Object.assign(
+                  {},
+                  this.plugin.settings,
+                  copied
+                );
+                this.plugin.saveSettings();
+                new Notice(
+                  t("protocol_saveqr", {
+                    manifestName: this.plugin.manifest.name,
+                  })
+                );
+              }
+            } catch (e) {
+              new Notice(`${e}`);
+            }
+
+            importSettingVal = "";
+          } else {
+            new Notice(t("settings_import_error_notice"));
+            importSettingVal = "";
+          }
+        });
+      });
 
     //////////////////////////////////////////////////
     // below for debug
@@ -1712,12 +2256,11 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
         dropdown.addOption("info", "info");
         dropdown.addOption("debug", "debug");
         dropdown
-          .setValue(this.plugin.settings.currLogLevel)
+          .setValue(this.plugin.settings.currLogLevel ?? "info")
           .onChange(async (val: string) => {
             this.plugin.settings.currLogLevel = val;
-            log.setLevel(val as any);
             await this.plugin.saveSettings();
-            log.info(`the log level is changed to ${val}`);
+            console.info(`the log level is changed to ${val}`);
           });
       });
 
@@ -1728,38 +2271,79 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
         button.setButtonText(t("settings_outputsettingsconsole_button"));
         button.onClick(async () => {
           const c = messyConfigToNormal(await this.plugin.loadData());
-          log.info(c);
+          console.info(c);
           new Notice(t("settings_outputsettingsconsole_notice"));
         });
       });
 
     new Setting(debugDiv)
+      .setName(t("settings_obfuscatesettingfile"))
+      .setDesc(t("settings_obfuscatesettingfile_desc"))
+      .addDropdown(async (dropdown) => {
+        dropdown
+          .addOption("enable", t("enable"))
+          .addOption("disable", t("disable"));
+
+        dropdown
+          .setValue(
+            `${
+              this.plugin.settings.obfuscateSettingFile ? "enable" : "disable"
+            }`
+          )
+          .onChange(async (val) => {
+            if (val === "enable") {
+              this.plugin.settings.obfuscateSettingFile = true;
+            } else {
+              this.plugin.settings.obfuscateSettingFile = false;
+            }
+            await this.plugin.saveSettings();
+          });
+      });
+
+    new Setting(debugDiv)
+      .setName(t("settings_viewconsolelog"))
+      .setDesc(stringToFragment(t("settings_viewconsolelog_desc")));
+
+    new Setting(debugDiv)
       .setName(t("settings_syncplans"))
       .setDesc(t("settings_syncplans_desc"))
       .addButton(async (button) => {
-        button.setButtonText(t("settings_syncplans_button_json"));
+        button.setButtonText(t("settings_syncplans_button_1"));
         button.onClick(async () => {
           await exportVaultSyncPlansToFiles(
             this.plugin.db,
             this.app.vault,
             this.plugin.vaultRandomID,
-            "json"
+            1
           );
           new Notice(t("settings_syncplans_notice"));
         });
       })
       .addButton(async (button) => {
-        button.setButtonText(t("settings_syncplans_button_table"));
+        button.setButtonText(t("settings_syncplans_button_5"));
         button.onClick(async () => {
           await exportVaultSyncPlansToFiles(
             this.plugin.db,
             this.app.vault,
             this.plugin.vaultRandomID,
-            "table"
+            5
+          );
+          new Notice(t("settings_syncplans_notice"));
+        });
+      })
+      .addButton(async (button) => {
+        button.setButtonText(t("settings_syncplans_button_all"));
+        button.onClick(async () => {
+          await exportVaultSyncPlansToFiles(
+            this.plugin.db,
+            this.app.vault,
+            this.plugin.vaultRandomID,
+            -1
           );
           new Notice(t("settings_syncplans_notice"));
         });
       });
+
     new Setting(debugDiv)
       .setName(t("settings_delsyncplans"))
       .setDesc(t("settings_delsyncplans_desc"))
@@ -1772,70 +2356,31 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
       });
 
     new Setting(debugDiv)
-      .setName(t("settings_logtodb"))
-      .setDesc(t("settings_logtodb_desc"))
-      .addDropdown(async (dropdown) => {
-        dropdown.addOption("enable", t("enable"));
-        dropdown.addOption("disable", t("disable"));
-        dropdown
-          .setValue(this.plugin.settings.logToDB ? "enable" : "disable")
-          .onChange(async (val: string) => {
-            const logToDB = val === "enable";
-            if (logToDB) {
-              applyLogWriterInplace((...msg: any[]) => {
-                insertLoggerOutputByVault(
-                  this.plugin.db,
-                  this.plugin.vaultRandomID,
-                  ...msg
-                );
-              });
-            } else {
-              restoreLogWritterInplace();
-            }
-            clearExpiredLoggerOutputRecords(this.plugin.db);
-            this.plugin.settings.logToDB = logToDB;
-            await this.plugin.saveSettings();
-          });
+      .setName(t("settings_delprevsync"))
+      .setDesc(t("settings_delprevsync_desc"))
+      .addButton(async (button) => {
+        button.setButtonText(t("settings_delprevsync_button"));
+        button.onClick(async () => {
+          await clearAllPrevSyncRecordByVault(
+            this.plugin.db,
+            this.plugin.vaultRandomID
+          );
+          new Notice(t("settings_delprevsync_notice"));
+        });
       });
 
     new Setting(debugDiv)
-      .setName(t("settings_logtodbexport"))
-      .setDesc(
-        t("settings_logtodbexport_desc", {
-          debugFolder: DEFAULT_DEBUG_FOLDER,
-        })
-      )
+      .setName(t("settings_profiler_results"))
+      .setDesc(t("settings_profiler_results_desc"))
       .addButton(async (button) => {
-        button.setButtonText(t("settings_logtodbexport_button"));
+        button.setButtonText(t("settings_profiler_results_button_all"));
         button.onClick(async () => {
-          await exportVaultLoggerOutputToFiles(
+          await exportVaultProfilerResultsToFiles(
             this.plugin.db,
             this.app.vault,
             this.plugin.vaultRandomID
           );
-          new Notice(t("settings_logtodbexport_notice"));
-        });
-      });
-
-    new Setting(debugDiv)
-      .setName(t("settings_logtodbclear"))
-      .setDesc(t("settings_logtodbclear_desc"))
-      .addButton(async (button) => {
-        button.setButtonText(t("settings_logtodbclear_button"));
-        button.onClick(async () => {
-          await clearAllLoggerOutputRecords(this.plugin.db);
-          new Notice(t("settings_logtodbclear_notice"));
-        });
-      });
-
-    new Setting(debugDiv)
-      .setName(t("settings_delsyncmap"))
-      .setDesc(t("settings_delsyncmap_desc"))
-      .addButton(async (button) => {
-        button.setButtonText(t("settings_delsyncmap_button"));
-        button.onClick(async () => {
-          await clearAllSyncMetaMapping(this.plugin.db);
-          new Notice(t("settings_delsyncmap_notice"));
+          new Notice(t("settings_profiler_results_notice"));
         });
       });
 
@@ -1858,6 +2403,7 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
         button.onClick(async () => {
           await destroyDBs();
           new Notice(t("settings_resetcache_notice"));
+          this.plugin.unload();
         });
       });
   }

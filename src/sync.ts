@@ -1,302 +1,148 @@
-import {
-  TAbstractFile,
-  TFile,
-  TFolder,
-  Vault,
-  requireApiVersion,
-} from "obsidian";
-import AggregateError from "aggregate-error";
 import PQueue from "p-queue";
+import XRegExp from "xregexp";
 import type {
-  RemoteItem,
-  SyncTriggerSourceType,
-  DecisionType,
-  FileOrFolderMixedState,
+  CipherMethodType,
+  ConflictActionType,
+  EmptyFolderCleanType,
+  Entity,
+  MixedEntity,
   SUPPORTED_SERVICES_TYPE,
+  SyncDirectionType,
 } from "./baseTypes";
-import { API_VER_STAT_FOLDER } from "./baseTypes";
+import { isInsideObsFolder } from "./obsFolderLister";
 import {
-  decryptBase32ToString,
-  decryptBase64urlToString,
-  encryptStringToBase64url,
-  getSizeFromOrigToEnc,
-  MAGIC_ENCRYPTED_PREFIX_BASE32,
-  MAGIC_ENCRYPTED_PREFIX_BASE64URL,
-} from "./encrypt";
-import type { FileFolderHistoryRecord, InternalDBs } from "./localdb";
-import {
-  clearDeleteRenameHistoryOfKeyAndVault,
-  getSyncMetaMappingByRemoteKeyAndVault,
-  upsertSyncMetaMappingDataByVault,
-} from "./localdb";
-import {
+  isSpecialFolderNameToSkip,
   isHiddenPath,
+  unixTimeToStr,
+  getParentFolder,
   isVaildText,
+  atWhichLevel,
   mkdirpInVault,
   getFolderLevels,
-  getParentFolder,
-  atWhichLevel,
-  unixTimeToStr,
-  statFix,
 } from "./misc";
-import { RemoteClient } from "./remote";
 import {
-  MetadataOnRemote,
-  DeletionOnRemote,
-  serializeMetadataOnRemote,
-  deserializeMetadataOnRemote,
   DEFAULT_FILE_NAME_FOR_METADATAONREMOTE,
   DEFAULT_FILE_NAME_FOR_METADATAONREMOTE2,
-  isEqualMetadataOnRemote,
 } from "./metadataOnRemote";
-import { isInsideObsFolder, ObsConfigDirFileType } from "./obsFolderLister";
+import { RemoteClient } from "./remote";
+import { Vault } from "obsidian";
 
-import { log } from "./moreOnLog";
+import AggregateError from "aggregate-error";
+import {
+  InternalDBs,
+  clearPrevSyncRecordByVaultAndProfile,
+  upsertPrevSyncRecordByVaultAndProfile,
+} from "./localdb";
+import { Cipher } from "./encryptUnified";
+import { Profiler } from "./profiler";
 
 export type SyncStatusType =
   | "idle"
   | "preparing"
   | "getting_remote_files_list"
-  | "getting_remote_extra_meta"
   | "getting_local_meta"
+  | "getting_local_prev_sync"
   | "checking_password"
   | "generating_plan"
   | "syncing"
   | "cleaning"
   | "finish";
 
-export interface SyncPlanType {
-  ts: number;
-  tsFmt?: string;
-  syncTriggerSource?: SyncTriggerSourceType;
-  remoteType: SUPPORTED_SERVICES_TYPE;
-  mixedStates: Record<string, FileOrFolderMixedState>;
-}
-
 export interface PasswordCheckType {
   ok: boolean;
   reason:
-    | "ok"
     | "empty_remote"
+    | "unknown_encryption_method"
     | "remote_encrypted_local_no_password"
     | "password_matched"
-    | "password_not_matched"
-    | "invalid_text_after_decryption"
-    | "remote_not_encrypted_local_has_password"
-    | "no_password_both_sides";
+    | "password_or_method_not_matched_or_remote_not_encrypted"
+    | "likely_no_password_both_sides"
+    | "encryption_method_not_matched";
 }
 
 export const isPasswordOk = async (
-  remote: RemoteItem[],
-  password: string = ""
-) => {
+  remote: Entity[],
+  cipher: Cipher
+): Promise<PasswordCheckType> => {
   if (remote === undefined || remote.length === 0) {
     // remote empty
     return {
       ok: true,
       reason: "empty_remote",
-    } as PasswordCheckType;
-  }
-  const santyCheckKey = remote[0].key;
-  if (santyCheckKey.startsWith(MAGIC_ENCRYPTED_PREFIX_BASE32)) {
-    // this is encrypted using old base32!
-    // try to decrypt it using the provided password.
-    if (password === "") {
-      return {
-        ok: false,
-        reason: "remote_encrypted_local_no_password",
-      } as PasswordCheckType;
-    }
-    try {
-      const res = await decryptBase32ToString(santyCheckKey, password);
-
-      // additional test
-      // because iOS Safari bypasses decryption with wrong password!
-      if (isVaildText(res)) {
-        return {
-          ok: true,
-          reason: "password_matched",
-        } as PasswordCheckType;
-      } else {
-        return {
-          ok: false,
-          reason: "invalid_text_after_decryption",
-        } as PasswordCheckType;
-      }
-    } catch (error) {
-      return {
-        ok: false,
-        reason: "password_not_matched",
-      } as PasswordCheckType;
-    }
-  }
-  if (santyCheckKey.startsWith(MAGIC_ENCRYPTED_PREFIX_BASE64URL)) {
-    // this is encrypted using new base64url!
-    // try to decrypt it using the provided password.
-    if (password === "") {
-      return {
-        ok: false,
-        reason: "remote_encrypted_local_no_password",
-      } as PasswordCheckType;
-    }
-    try {
-      const res = await decryptBase64urlToString(santyCheckKey, password);
-
-      // additional test
-      // because iOS Safari bypasses decryption with wrong password!
-      if (isVaildText(res)) {
-        return {
-          ok: true,
-          reason: "password_matched",
-        } as PasswordCheckType;
-      } else {
-        return {
-          ok: false,
-          reason: "invalid_text_after_decryption",
-        } as PasswordCheckType;
-      }
-    } catch (error) {
-      return {
-        ok: false,
-        reason: "password_not_matched",
-      } as PasswordCheckType;
-    }
-  } else {
-    // it is not encrypted!
-    if (password !== "") {
-      return {
-        ok: false,
-        reason: "remote_not_encrypted_local_has_password",
-      } as PasswordCheckType;
-    }
-    return {
-      ok: true,
-      reason: "no_password_both_sides",
-    } as PasswordCheckType;
-  }
-};
-
-export const parseRemoteItems = async (
-  remote: RemoteItem[],
-  db: InternalDBs,
-  vaultRandomID: string,
-  remoteType: SUPPORTED_SERVICES_TYPE,
-  password: string = ""
-) => {
-  const remoteStates = [] as FileOrFolderMixedState[];
-  let metadataFile: FileOrFolderMixedState = undefined;
-  if (remote === undefined) {
-    return {
-      remoteStates: remoteStates,
-      metadataFile: metadataFile,
     };
   }
+  const santyCheckKey = remote[0].keyRaw;
 
-  for (const entry of remote) {
-    const remoteEncryptedKey = entry.key;
-    let key = remoteEncryptedKey;
-    if (password !== "") {
-      if (remoteEncryptedKey.startsWith(MAGIC_ENCRYPTED_PREFIX_BASE32)) {
-        key = await decryptBase32ToString(remoteEncryptedKey, password);
-      } else if (
-        remoteEncryptedKey.startsWith(MAGIC_ENCRYPTED_PREFIX_BASE64URL)
-      ) {
-        key = await decryptBase64urlToString(remoteEncryptedKey, password);
-      } else {
-        throw Error(`unexpected key=${remoteEncryptedKey}`);
-      }
-    }
-    const backwardMapping = await getSyncMetaMappingByRemoteKeyAndVault(
-      remoteType,
-      db,
-      key,
-      entry.lastModified,
-      entry.etag,
-      vaultRandomID
-    );
-
-    let r = {} as FileOrFolderMixedState;
-    if (backwardMapping !== undefined) {
-      key = backwardMapping.localKey;
-      const mtimeRemote = backwardMapping.localMtime || entry.lastModified;
-
-      // the backwardMapping.localSize is the file BEFORE encryption
-      // we want to split two sizes for comparation later
-
-      r = {
-        key: key,
-        existRemote: true,
-        mtimeRemote: mtimeRemote,
-        mtimeRemoteFmt: unixTimeToStr(mtimeRemote),
-        sizeRemote: backwardMapping.localSize,
-        sizeRemoteEnc: password === "" ? undefined : entry.size,
-        remoteEncryptedKey: remoteEncryptedKey,
-        changeRemoteMtimeUsingMapping: true,
+  if (cipher.isPasswordEmpty()) {
+    // TODO: no way to distinguish remote rclone encrypted
+    //       if local has no password??
+    if (Cipher.isLikelyEncryptedName(santyCheckKey)) {
+      return {
+        ok: false,
+        reason: "remote_encrypted_local_no_password",
       };
     } else {
-      // do not have backwardMapping
-      r = {
-        key: key,
-        existRemote: true,
-        mtimeRemote: entry.lastModified,
-        mtimeRemoteFmt: unixTimeToStr(entry.lastModified),
-        sizeRemote: password === "" ? entry.size : undefined,
-        sizeRemoteEnc: password === "" ? undefined : entry.size,
-        remoteEncryptedKey: remoteEncryptedKey,
-        changeRemoteMtimeUsingMapping: false,
+      return {
+        ok: true,
+        reason: "likely_no_password_both_sides",
       };
     }
-
-    if (r.key === DEFAULT_FILE_NAME_FOR_METADATAONREMOTE) {
-      metadataFile = Object.assign({}, r);
+  } else {
+    if (cipher.method === "unknown") {
+      return {
+        ok: false,
+        reason: "unknown_encryption_method",
+      };
     }
-    if (r.key === DEFAULT_FILE_NAME_FOR_METADATAONREMOTE2) {
-      throw Error(
-        `A reserved file name ${r.key} has been found. You may upgrade the plugin to latest version to try to deal with it.`
-      );
+    if (
+      Cipher.isLikelyEncryptedNameNotMatchMethod(santyCheckKey, cipher.method)
+    ) {
+      return {
+        ok: false,
+        reason: "encryption_method_not_matched",
+      };
     }
-
-    remoteStates.push(r);
+    try {
+      const k = await cipher.decryptName(santyCheckKey);
+      if (k === undefined) {
+        throw Error(`decryption failed`);
+      }
+      return {
+        ok: true,
+        reason: "password_matched",
+      };
+    } catch (error) {
+      return {
+        ok: false,
+        reason: "password_or_method_not_matched_or_remote_not_encrypted",
+      };
+    }
   }
-  return {
-    remoteStates: remoteStates,
-    metadataFile: metadataFile,
-  };
 };
 
-export const fetchMetadataFile = async (
-  metadataFile: FileOrFolderMixedState,
-  client: RemoteClient,
-  vault: Vault,
-  password: string = ""
-) => {
-  if (metadataFile === undefined) {
-    log.debug("no metadata file, so no fetch");
-    return {
-      deletions: [],
-    } as MetadataOnRemote;
-  }
-
-  const buf = await client.downloadFromRemote(
-    metadataFile.key,
-    vault,
-    metadataFile.mtimeRemote,
-    password,
-    metadataFile.remoteEncryptedKey,
-    true
-  );
-  const metadata = deserializeMetadataOnRemote(buf);
-  return metadata;
-};
-
-const isSkipItem = (
+const isSkipItemByName = (
   key: string,
   syncConfigDir: boolean,
   syncUnderscoreItems: boolean,
-  configDir: string
+  configDir: string,
+  ignorePaths: string[]
 ) => {
+  if (key === undefined) {
+    throw Error(`isSkipItemByName meets undefinded key!`);
+  }
+  if (ignorePaths !== undefined && ignorePaths.length > 0) {
+    for (const r of ignorePaths) {
+      if (XRegExp(r, "A").test(key)) {
+        return true;
+      }
+    }
+  }
   if (syncConfigDir && isInsideObsFolder(key, configDir)) {
     return false;
+  }
+  if (isSpecialFolderNameToSkip(key, [])) {
+    // some special dirs and files are always skipped
+    return true;
   }
   return (
     isHiddenPath(key, true, false) ||
@@ -307,1001 +153,925 @@ const isSkipItem = (
   );
 };
 
-const ensembleMixedStates = async (
-  remoteStates: FileOrFolderMixedState[],
-  local: TAbstractFile[],
-  localConfigDirContents: ObsConfigDirFileType[] | undefined,
-  remoteDeleteHistory: DeletionOnRemote[],
-  localFileHistory: FileFolderHistoryRecord[],
-  syncConfigDir: boolean,
-  configDir: string,
-  syncUnderscoreItems: boolean,
-  password: string
+const copyEntityAndFixTimeFormat = (
+  src: Entity,
+  serviceType: SUPPORTED_SERVICES_TYPE
 ) => {
-  const results = {} as Record<string, FileOrFolderMixedState>;
-
-  for (const r of remoteStates) {
-    const key = r.key;
-
-    if (isSkipItem(key, syncConfigDir, syncUnderscoreItems, configDir)) {
-      continue;
+  const result = Object.assign({}, src);
+  if (result.mtimeCli !== undefined) {
+    if (result.mtimeCli === 0) {
+      result.mtimeCli = undefined;
+    } else {
+      if (serviceType === "s3" || serviceType === "dropbox") {
+        // round to second instead of millisecond
+        result.mtimeCli = Math.floor(result.mtimeCli / 1000.0) * 1000;
+      }
+      result.mtimeCliFmt = unixTimeToStr(result.mtimeCli);
     }
-    results[key] = r;
-    results[key].existLocal = false;
   }
-
-  for (const entry of local) {
-    let r = {} as FileOrFolderMixedState;
-    let key = entry.path;
-
-    if (entry.path === "/") {
-      // ignore
-      continue;
-    } else if (entry instanceof TFile) {
-      const mtimeLocal = Math.max(entry.stat.mtime ?? 0, entry.stat.ctime ?? 0);
-      r = {
-        key: entry.path,
-        existLocal: true,
-        mtimeLocal: mtimeLocal,
-        mtimeLocalFmt: unixTimeToStr(mtimeLocal),
-        sizeLocal: entry.stat.size,
-        sizeLocalEnc:
-          password === "" ? undefined : getSizeFromOrigToEnc(entry.stat.size),
-      };
-    } else if (entry instanceof TFolder) {
-      key = `${entry.path}/`;
-      r = {
-        key: key,
-        existLocal: true,
-        mtimeLocal: undefined,
-        mtimeLocalFmt: undefined,
-        sizeLocal: 0,
-        sizeLocalEnc: password === "" ? undefined : getSizeFromOrigToEnc(0),
-      };
+  if (result.mtimeSvr !== undefined) {
+    if (result.mtimeSvr === 0) {
+      result.mtimeSvr = undefined;
     } else {
-      throw Error(`unexpected ${entry}`);
+      if (serviceType === "s3" || serviceType === "dropbox") {
+        // round to second instead of millisecond
+        result.mtimeSvr = Math.floor(result.mtimeSvr / 1000.0) * 1000;
+      }
+      result.mtimeSvrFmt = unixTimeToStr(result.mtimeSvr);
     }
-
-    if (isSkipItem(key, syncConfigDir, syncUnderscoreItems, configDir)) {
-      continue;
-    }
-
-    if (results.hasOwnProperty(key)) {
-      results[key].key = r.key;
-      results[key].existLocal = r.existLocal;
-      results[key].mtimeLocal = r.mtimeLocal;
-      results[key].mtimeLocalFmt = r.mtimeLocalFmt;
-      results[key].sizeLocal = r.sizeLocal;
-      results[key].sizeLocalEnc = r.sizeLocalEnc;
+  }
+  if (result.prevSyncTime !== undefined) {
+    if (result.prevSyncTime === 0) {
+      result.prevSyncTime = undefined;
     } else {
-      results[key] = r;
-      results[key].existRemote = false;
+      if (serviceType === "s3" || serviceType === "dropbox") {
+        // round to second instead of millisecond
+        result.prevSyncTime = Math.floor(result.prevSyncTime / 1000.0) * 1000;
+      }
+      result.prevSyncTimeFmt = unixTimeToStr(result.prevSyncTime);
     }
   }
 
-  if (syncConfigDir && localConfigDirContents !== undefined) {
-    for (const entry of localConfigDirContents) {
-      const key = entry.key;
-      let mtimeLocal = Math.max(entry.mtime ?? 0, entry.ctime ?? 0);
-      if (Number.isNaN(mtimeLocal) || mtimeLocal === 0) {
-        mtimeLocal = undefined;
-      }
-      const r: FileOrFolderMixedState = {
-        key: key,
-        existLocal: true,
-        mtimeLocal: mtimeLocal,
-        mtimeLocalFmt: unixTimeToStr(mtimeLocal),
-        sizeLocal: entry.size,
-        sizeLocalEnc:
-          password === "" ? undefined : getSizeFromOrigToEnc(entry.size),
-      };
+  return result;
+};
 
-      if (results.hasOwnProperty(key)) {
-        results[key].key = r.key;
-        results[key].existLocal = r.existLocal;
-        results[key].mtimeLocal = r.mtimeLocal;
-        results[key].mtimeLocalFmt = r.mtimeLocalFmt;
-        results[key].sizeLocal = r.sizeLocal;
-        results[key].sizeLocalEnc = r.sizeLocalEnc;
-      } else {
-        results[key] = r;
-        results[key].existRemote = false;
-      }
-    }
+/**
+ * Inplace, no copy again.
+ */
+const decryptRemoteEntityInplace = async (remote: Entity, cipher: Cipher) => {
+  if (cipher?.isPasswordEmpty()) {
+    remote.key = remote.keyRaw;
+    remote.keyEnc = remote.keyRaw;
+    remote.size = remote.sizeRaw;
+    remote.sizeEnc = remote.sizeRaw;
+    return remote;
   }
 
-  for (const entry of remoteDeleteHistory) {
-    const key = entry.key;
-    const r = {
-      key: key,
-      deltimeRemote: entry.actionWhen,
-      deltimeRemoteFmt: unixTimeToStr(entry.actionWhen),
-    } as FileOrFolderMixedState;
+  remote.keyEnc = remote.keyRaw;
+  remote.key = await cipher.decryptName(remote.keyEnc);
+  remote.sizeEnc = remote.sizeRaw;
 
-    if (isSkipItem(key, syncConfigDir, syncUnderscoreItems, configDir)) {
-      continue;
-    }
+  // TODO
+  // remote.size = getSizeFromEncToOrig(remote.sizeEnc, password);
+  // but we don't have deterministic way to get a number because the encryption has padding...
 
-    if (results.hasOwnProperty(key)) {
-      results[key].key = r.key;
-      results[key].deltimeRemote = r.deltimeRemote;
-      results[key].deltimeRemoteFmt = r.deltimeRemoteFmt;
-    } else {
-      results[key] = r;
+  return remote;
+};
 
-      results[key].existLocal = false;
-      results[key].existRemote = false;
-    }
+const fullfillMTimeOfRemoteEntityInplace = (
+  remote: Entity,
+  mtimeCli?: number
+) => {
+  // TODO:
+  // on 20240405, we find that dropbox's mtimeCli is not updated
+  // if the content is not updated even the time is updated...
+  // so we do not check remote.mtimeCli for now..
+  if (
+    mtimeCli !== undefined &&
+    mtimeCli > 0 /* &&
+    (remote.mtimeCli === undefined ||
+      remote.mtimeCli <= 0 ||
+      (remote.mtimeSvr !== undefined &&
+        remote.mtimeSvr > 0 &&
+        remote.mtimeCli >= remote.mtimeSvr))
+    */
+  ) {
+    remote.mtimeCli = mtimeCli;
   }
+  return remote;
+};
 
-  for (const entry of localFileHistory) {
-    let key = entry.key;
-    if (entry.keyType === "folder") {
-      if (!entry.key.endsWith("/")) {
-        key = `${entry.key}/`;
-      }
-    } else if (entry.keyType === "file") {
-      // pass
-    } else {
-      throw Error(`unexpected ${entry}`);
-    }
-
-    if (isSkipItem(key, syncConfigDir, syncUnderscoreItems, configDir)) {
-      continue;
-    }
-
-    if (entry.actionType === "delete" || entry.actionType === "rename") {
-      const r = {
-        key: key,
-        deltimeLocal: entry.actionWhen,
-        deltimeLocalFmt: unixTimeToStr(entry.actionWhen),
-      } as FileOrFolderMixedState;
-
-      if (results.hasOwnProperty(key)) {
-        results[key].deltimeLocal = r.deltimeLocal;
-        results[key].deltimeLocalFmt = r.deltimeLocalFmt;
-      } else {
-        results[key] = r;
-        results[key].existLocal = false; // we have already checked local
-        results[key].existRemote = false; // we have already checked remote
-      }
-    } else if (entry.actionType === "renameDestination") {
-      const r = {
-        key: key,
-        mtimeLocal: entry.actionWhen,
-        mtimeLocalFmt: unixTimeToStr(entry.actionWhen),
-        changeLocalMtimeUsingMapping: true,
-      };
-      if (results.hasOwnProperty(key)) {
-        let mtimeLocal = Math.max(
-          r.mtimeLocal ?? 0,
-          results[key].mtimeLocal ?? 0
-        );
-        if (Number.isNaN(mtimeLocal) || mtimeLocal === 0) {
-          mtimeLocal = undefined;
-        }
-        results[key].mtimeLocal = mtimeLocal;
-        results[key].mtimeLocalFmt = unixTimeToStr(mtimeLocal);
-        results[key].changeLocalMtimeUsingMapping =
-          r.changeLocalMtimeUsingMapping;
-      } else {
-        // So, the file doesn't exist,
-        // except that it existed in the "renamed to" history records.
-        // Most likely because that the user deleted the file while Obsidian was closed,
-        // so Obsidian could not track the deletions.
-        // We are not sure how to deal with this, so do not generate anything here!
-        // // // The following 3 lines are of old logic, and have been removed:
-        // // results[key] = r;
-        // // results[key].existLocal = false; // we have already checked local
-        // // results[key].existRemote = false; // we have already checked remote
-      }
+/**
+ * Directly throw error here.
+ * We can only defer the checking now, because before decryption we don't know whether it's a file or folder.
+ * @param remote
+ */
+const ensureMTimeOfRemoteEntityValid = (remote: Entity) => {
+  if (
+    !remote.key!.endsWith("/") &&
+    remote.mtimeCli === undefined &&
+    remote.mtimeSvr === undefined
+  ) {
+    if (remote.key === remote.keyEnc) {
+      throw Error(
+        `Your remote file ${remote.key} has last modified time 0, don't know how to deal with it.`
+      );
     } else {
       throw Error(
-        `do not know how to deal with local file history ${entry.key} with ${entry.actionType}`
+        `Your remote file ${remote.key} (encrypted as ${remote.keyEnc}) has last modified time 0, don't know how to deal with it.`
       );
     }
   }
-
-  return results;
+  return remote;
 };
 
-const assignOperationToFileInplace = (
-  origRecord: FileOrFolderMixedState,
-  keptFolder: Set<string>,
-  skipSizeLargerThan: number,
-  password: string = ""
+/**
+ * Inplace, no copy again.
+ */
+const encryptLocalEntityInplace = async (
+  local: Entity,
+  cipher: Cipher,
+  remoteKeyEnc: string | undefined
 ) => {
-  let r = origRecord;
+  // console.debug(
+  //   `encryptLocalEntityInplace: local=${JSON.stringify(
+  //     local,
+  //     null,
+  //     2
+  //   )}, password=${
+  //     password === undefined || password === "" ? "[empty]" : "[not empty]"
+  //   }, remoteKeyEnc=${remoteKeyEnc}`
+  // );
 
-  // files and folders are treated differently
-  // here we only check files
-  if (r.key.endsWith("/")) {
-    return r;
+  if (local.key === undefined) {
+    // local.key should always have value
+    throw Error(`local ${local.keyRaw} is abnormal without key`);
   }
 
-  // we find the max date from four sources
-
-  // 0. find anything inconsistent
-  if (r.existLocal && (r.mtimeLocal === undefined || r.mtimeLocal <= 0)) {
-    throw Error(
-      `Error: Abnormal last modified time locally: ${JSON.stringify(
-        r,
-        null,
-        2
-      )}`
-    );
-  }
-  if (r.existRemote && (r.mtimeRemote === undefined || r.mtimeRemote <= 0)) {
-    throw Error(
-      `Error: Abnormal last modified time remotely: ${JSON.stringify(
-        r,
-        null,
-        2
-      )}`
-    );
-  }
-  if (r.deltimeLocal !== undefined && r.deltimeLocal <= 0) {
-    throw Error(
-      `Error: Abnormal deletion time locally: ${JSON.stringify(r, null, 2)}`
-    );
-  }
-  if (r.deltimeRemote !== undefined && r.deltimeRemote <= 0) {
-    throw Error(
-      `Error: Abnormal deletion time remotely: ${JSON.stringify(r, null, 2)}`
-    );
+  if (cipher.isPasswordEmpty()) {
+    local.sizeEnc = local.sizeRaw; // if no enc, the remote file has the same size
+    local.keyEnc = local.keyRaw;
+    return local;
   }
 
-  if (
-    (r.existLocal && password !== "" && r.sizeLocalEnc === undefined) ||
-    (r.existRemote && password !== "" && r.sizeRemoteEnc === undefined)
-  ) {
-    throw new Error(
-      `Error: No encryption sizes: ${JSON.stringify(r, null, 2)}`
-    );
+  // below is for having password
+  if (local.sizeEnc === undefined && local.size !== undefined) {
+    // it's not filled yet, we fill it
+    // local.size is possibly undefined if it's "prevSync" Entity
+    // but local.key should always have value
+    local.sizeEnc = cipher.getSizeFromOrigToEnc(local.size);
   }
 
-  const sizeLocalComp = password === "" ? r.sizeLocal : r.sizeLocalEnc;
-  const sizeRemoteComp = password === "" ? r.sizeRemote : r.sizeRemoteEnc;
-
-  // 1. mtimeLocal
-  if (r.existLocal) {
-    const mtimeRemote = r.existRemote ? r.mtimeRemote : -1;
-    const deltimeRemote = r.deltimeRemote !== undefined ? r.deltimeRemote : -1;
-    const deltimeLocal = r.deltimeLocal !== undefined ? r.deltimeLocal : -1;
+  if (local.keyEnc === undefined || local.keyEnc === "") {
     if (
-      r.mtimeLocal >= mtimeRemote &&
-      r.mtimeLocal >= deltimeLocal &&
-      r.mtimeLocal >= deltimeRemote
+      remoteKeyEnc !== undefined &&
+      remoteKeyEnc !== "" &&
+      remoteKeyEnc !== local.key
     ) {
-      if (sizeLocalComp === undefined) {
-        throw new Error(
-          `Error: no local size but has local mtime: ${JSON.stringify(
-            r,
-            null,
-            2
-          )}`
-        );
-      }
-      if (r.mtimeLocal === r.mtimeRemote) {
-        // local and remote both exist and mtimes are the same
-        if (sizeLocalComp === sizeRemoteComp) {
-          // do not need to consider skipSizeLargerThan in this case
-          r.decision = "skipUploading";
-          r.decisionBranch = 1;
-        } else {
-          if (skipSizeLargerThan <= 0) {
-            r.decision = "uploadLocalToRemote";
-            r.decisionBranch = 2;
-          } else {
-            // limit the sizes
-            if (sizeLocalComp <= skipSizeLargerThan) {
-              if (sizeRemoteComp <= skipSizeLargerThan) {
-                r.decision = "uploadLocalToRemote";
-                r.decisionBranch = 18;
-              } else {
-                r.decision = "errorRemoteTooLargeConflictLocal";
-                r.decisionBranch = 19;
-              }
-            } else {
-              if (sizeRemoteComp <= skipSizeLargerThan) {
-                r.decision = "errorLocalTooLargeConflictRemote";
-                r.decisionBranch = 20;
-              } else {
-                r.decision = "skipUploadingTooLarge";
-                r.decisionBranch = 21;
-              }
-            }
-          }
-        }
-      } else {
-        // we have local laregest mtime,
-        // and the remote not existing or smaller mtime
-        if (skipSizeLargerThan <= 0) {
-          // no need to consider sizes
-          r.decision = "uploadLocalToRemote";
-          r.decisionBranch = 4;
-        } else {
-          // need to consider sizes
-          if (sizeLocalComp <= skipSizeLargerThan) {
-            if (sizeRemoteComp === undefined) {
-              r.decision = "uploadLocalToRemote";
-              r.decisionBranch = 22;
-            } else if (sizeRemoteComp <= skipSizeLargerThan) {
-              r.decision = "uploadLocalToRemote";
-              r.decisionBranch = 23;
-            } else {
-              r.decision = "errorRemoteTooLargeConflictLocal";
-              r.decisionBranch = 24;
-            }
-          } else {
-            if (sizeRemoteComp === undefined) {
-              r.decision = "skipUploadingTooLarge";
-              r.decisionBranch = 25;
-            } else if (sizeRemoteComp <= skipSizeLargerThan) {
-              r.decision = "errorLocalTooLargeConflictRemote";
-              r.decisionBranch = 26;
-            } else {
-              r.decision = "skipUploadingTooLarge";
-              r.decisionBranch = 27;
-            }
-          }
-        }
-      }
-      keptFolder.add(getParentFolder(r.key));
-      return r;
+      // we can reuse remote encrypted key if any
+      local.keyEnc = remoteKeyEnc;
+    } else {
+      // we assign a new encrypted key because of no remote
+      local.keyEnc = await cipher.encryptName(local.key);
     }
   }
-
-  // 2. mtimeRemote
-  if (r.existRemote) {
-    const mtimeLocal = r.existLocal ? r.mtimeLocal : -1;
-    const deltimeRemote = r.deltimeRemote !== undefined ? r.deltimeRemote : -1;
-    const deltimeLocal = r.deltimeLocal !== undefined ? r.deltimeLocal : -1;
-    if (
-      r.mtimeRemote > mtimeLocal &&
-      r.mtimeRemote >= deltimeLocal &&
-      r.mtimeRemote >= deltimeRemote
-    ) {
-      // we have remote laregest mtime,
-      // and the local not existing or smaller mtime
-      if (sizeRemoteComp === undefined) {
-        throw new Error(
-          `Error: no remote size but has remote mtime: ${JSON.stringify(
-            r,
-            null,
-            2
-          )}`
-        );
-      }
-
-      if (skipSizeLargerThan <= 0) {
-        // no need to consider sizes
-        r.decision = "downloadRemoteToLocal";
-        r.decisionBranch = 5;
-      } else {
-        // need to consider sizes
-        if (sizeRemoteComp <= skipSizeLargerThan) {
-          if (sizeLocalComp === undefined) {
-            r.decision = "downloadRemoteToLocal";
-            r.decisionBranch = 28;
-          } else if (sizeLocalComp <= skipSizeLargerThan) {
-            r.decision = "downloadRemoteToLocal";
-            r.decisionBranch = 29;
-          } else {
-            r.decision = "errorLocalTooLargeConflictRemote";
-            r.decisionBranch = 30;
-          }
-        } else {
-          if (sizeLocalComp === undefined) {
-            r.decision = "skipDownloadingTooLarge";
-            r.decisionBranch = 31;
-          } else if (sizeLocalComp <= skipSizeLargerThan) {
-            r.decision = "errorRemoteTooLargeConflictLocal";
-            r.decisionBranch = 32;
-          } else {
-            r.decision = "skipDownloadingTooLarge";
-            r.decisionBranch = 33;
-          }
-        }
-      }
-
-      keptFolder.add(getParentFolder(r.key));
-      return r;
-    }
-  }
-
-  // 3. deltimeLocal
-  if (r.deltimeLocal !== undefined && r.deltimeLocal !== 0) {
-    const mtimeLocal = r.existLocal ? r.mtimeLocal : -1;
-    const mtimeRemote = r.existRemote ? r.mtimeRemote : -1;
-    const deltimeRemote = r.deltimeRemote !== undefined ? r.deltimeRemote : -1;
-    if (
-      r.deltimeLocal >= mtimeLocal &&
-      r.deltimeLocal >= mtimeRemote &&
-      r.deltimeLocal >= deltimeRemote
-    ) {
-      if (skipSizeLargerThan <= 0) {
-        r.decision = "uploadLocalDelHistToRemote";
-        r.decisionBranch = 6;
-        if (r.existLocal || r.existRemote) {
-          // actual deletion would happen
-        }
-      } else {
-        const localTooLargeToDelete =
-          r.existLocal && sizeLocalComp > skipSizeLargerThan;
-        const remoteTooLargeToDelete =
-          r.existRemote && sizeRemoteComp > skipSizeLargerThan;
-        if (localTooLargeToDelete) {
-          if (remoteTooLargeToDelete) {
-            r.decision = "skipUsingLocalDelTooLarge";
-            r.decisionBranch = 34;
-          } else {
-            if (r.existRemote) {
-              r.decision = "errorLocalTooLargeConflictRemote";
-              r.decisionBranch = 35;
-            } else {
-              r.decision = "skipUsingLocalDelTooLarge";
-              r.decisionBranch = 36;
-            }
-          }
-        } else {
-          if (remoteTooLargeToDelete) {
-            if (r.existLocal) {
-              r.decision = "errorLocalTooLargeConflictRemote";
-              r.decisionBranch = 37;
-            } else {
-              r.decision = "skipUsingLocalDelTooLarge";
-              r.decisionBranch = 38;
-            }
-          } else {
-            r.decision = "uploadLocalDelHistToRemote";
-            r.decisionBranch = 39;
-          }
-        }
-      }
-      return r;
-    }
-  }
-
-  // 4. deltimeRemote
-  if (r.deltimeRemote !== undefined && r.deltimeRemote !== 0) {
-    const mtimeLocal = r.existLocal ? r.mtimeLocal : -1;
-    const mtimeRemote = r.existRemote ? r.mtimeRemote : -1;
-    const deltimeLocal = r.deltimeLocal !== undefined ? r.deltimeLocal : -1;
-    if (
-      r.deltimeRemote >= mtimeLocal &&
-      r.deltimeRemote >= mtimeRemote &&
-      r.deltimeRemote >= deltimeLocal
-    ) {
-      if (skipSizeLargerThan <= 0) {
-        r.decision = "keepRemoteDelHist";
-        r.decisionBranch = 7;
-        if (r.existLocal || r.existRemote) {
-          // actual deletion would happen
-        }
-      } else {
-        const localTooLargeToDelete =
-          r.existLocal && sizeLocalComp > skipSizeLargerThan;
-        const remoteTooLargeToDelete =
-          r.existRemote && sizeRemoteComp > skipSizeLargerThan;
-        if (localTooLargeToDelete) {
-          if (remoteTooLargeToDelete) {
-            r.decision = "skipUsingRemoteDelTooLarge";
-            r.decisionBranch = 40;
-          } else {
-            if (r.existRemote) {
-              r.decision = "errorLocalTooLargeConflictRemote";
-              r.decisionBranch = 41;
-            } else {
-              r.decision = "skipUsingRemoteDelTooLarge";
-              r.decisionBranch = 42;
-            }
-          }
-        } else {
-          if (remoteTooLargeToDelete) {
-            if (r.existLocal) {
-              r.decision = "errorLocalTooLargeConflictRemote";
-              r.decisionBranch = 43;
-            } else {
-              r.decision = "skipUsingRemoteDelTooLarge";
-              r.decisionBranch = 44;
-            }
-          } else {
-            r.decision = "keepRemoteDelHist";
-            r.decisionBranch = 45;
-          }
-        }
-      }
-      return r;
-    }
-  }
-
-  throw Error(`no decision for ${JSON.stringify(r)}`);
+  return local;
 };
 
-const assignOperationToFolderInplace = async (
-  origRecord: FileOrFolderMixedState,
-  keptFolder: Set<string>,
-  vault: Vault,
-  password: string = ""
-) => {
-  let r = origRecord;
+export type SyncPlanType = Record<string, MixedEntity>;
 
-  // files and folders are treated differently
-  // here we only check folders
-  if (!r.key.endsWith("/")) {
-    return r;
-  }
+export const ensembleMixedEnties = async (
+  localEntityList: Entity[],
+  prevSyncEntityList: Entity[],
+  remoteEntityList: Entity[],
 
-  if (!keptFolder.has(r.key)) {
-    // the folder does NOT have any must-be-kept children!
+  syncConfigDir: boolean,
+  configDir: string,
+  syncUnderscoreItems: boolean,
+  ignorePaths: string[],
+  cipher: Cipher,
+  serviceType: SUPPORTED_SERVICES_TYPE,
 
-    if (r.deltimeLocal !== undefined || r.deltimeRemote !== undefined) {
-      // it has some deletion "commands"
+  profiler: Profiler
+): Promise<SyncPlanType> => {
+  profiler.addIndent();
+  profiler.insert("ensembleMixedEnties: enter");
 
-      const deltimeLocal = r.deltimeLocal !== undefined ? r.deltimeLocal : -1;
-      const deltimeRemote =
-        r.deltimeRemote !== undefined ? r.deltimeRemote : -1;
+  const finalMappings: SyncPlanType = {};
 
-      // if it was created after deletion, we should keep it as is
-      if (requireApiVersion(API_VER_STAT_FOLDER)) {
-        if (r.existLocal) {
-          const { ctime, mtime } = await statFix(vault, r.key);
-          const cmtime = Math.max(ctime ?? 0, mtime ?? 0);
-          if (
-            !Number.isNaN(cmtime) &&
-            cmtime > 0 &&
-            cmtime >= deltimeLocal &&
-            cmtime >= deltimeRemote
-          ) {
-            keptFolder.add(getParentFolder(r.key));
-            if (r.existLocal && r.existRemote) {
-              r.decision = "skipFolder";
-              r.decisionBranch = 14;
-            } else if (r.existLocal || r.existRemote) {
-              r.decision = "createFolder";
-              r.decisionBranch = 15;
-            } else {
-              throw Error(
-                `Error: Folder ${r.key} doesn't exist locally and remotely but is marked must be kept. Abort.`
-              );
-            }
-          }
-        }
+  const synthFolders: Record<string, Entity> = {};
+
+  // remote has to be first
+  // we also have to synthesize folders here
+  for (const remote of remoteEntityList) {
+    const remoteCopied = ensureMTimeOfRemoteEntityValid(
+      await decryptRemoteEntityInplace(
+        copyEntityAndFixTimeFormat(remote, serviceType),
+        cipher
+      )
+    );
+
+    const key = remoteCopied.key!;
+    if (
+      isSkipItemByName(
+        key,
+        syncConfigDir,
+        syncUnderscoreItems,
+        configDir,
+        ignorePaths
+      )
+    ) {
+      continue;
+    }
+
+    finalMappings[key] = {
+      key: key,
+      remote: remoteCopied,
+    };
+
+    for (const f of getFolderLevels(key, true)) {
+      if (finalMappings.hasOwnProperty(f)) {
+        delete synthFolders[f];
+        continue;
       }
-
-      // If it was moved to here, after deletion, we should keep it as is.
-      // The logic not necessarily needs API_VER_STAT_FOLDER.
-      // The folder needs this logic because it's also determined by file children.
-      // But the file do not need this logic because the mtimeLocal is checked firstly.
       if (
-        r.existLocal &&
-        r.changeLocalMtimeUsingMapping &&
-        r.mtimeLocal > 0 &&
-        r.mtimeLocal > deltimeLocal &&
-        r.mtimeLocal > deltimeRemote
+        !synthFolders.hasOwnProperty(f) ||
+        remoteCopied.mtimeSvr! >= synthFolders[f].mtimeSvr!
       ) {
-        keptFolder.add(getParentFolder(r.key));
-        if (r.existLocal && r.existRemote) {
-          r.decision = "skipFolder";
-          r.decisionBranch = 16;
-        } else if (r.existLocal || r.existRemote) {
-          r.decision = "createFolder";
-          r.decisionBranch = 17;
+        synthFolders[f] = {
+          key: f,
+          keyRaw: `<synth: ${f}>`,
+          keyEnc: `<enc synth: ${f}>`,
+          size: 0,
+          sizeRaw: 0,
+          sizeEnc: 0,
+          mtimeSvr: remoteCopied.mtimeSvr,
+          mtimeSvrFmt: remoteCopied.mtimeSvrFmt,
+          mtimeCli: remoteCopied.mtimeCli,
+          mtimeCliFmt: remoteCopied.mtimeCliFmt,
+          synthesizedFolder: true,
+        };
+      }
+    }
+  }
+
+  profiler.insert("ensembleMixedEnties: finish remote");
+
+  console.debug(`synthFolders:`);
+  console.debug(synthFolders);
+
+  // special: add synth folders
+  for (const key of Object.keys(synthFolders)) {
+    finalMappings[key] = {
+      key: key,
+      remote: synthFolders[key],
+    };
+  }
+
+  profiler.insert("ensembleMixedEnties: finish synth");
+
+  if (Object.keys(finalMappings).length === 0 || localEntityList.length === 0) {
+    // Special checking:
+    // if one side is totally empty,
+    // usually that's a hard rest.
+    // So we need to ignore everything of prevSyncEntityList to avoid deletions!
+    // TODO: acutally erase everything of prevSyncEntityList?
+    // TODO: local should also go through a isSkipItemByName checking beforehand
+  } else {
+    // normally go through the prevSyncEntityList
+    for (const prevSync of prevSyncEntityList) {
+      const key = prevSync.key!;
+      if (
+        isSkipItemByName(
+          key,
+          syncConfigDir,
+          syncUnderscoreItems,
+          configDir,
+          ignorePaths
+        )
+      ) {
+        continue;
+      }
+
+      if (finalMappings.hasOwnProperty(key)) {
+        const prevSyncCopied = await encryptLocalEntityInplace(
+          copyEntityAndFixTimeFormat(prevSync, serviceType),
+          cipher,
+          finalMappings[key].remote?.keyEnc
+        );
+        finalMappings[key].prevSync = prevSyncCopied;
+      } else {
+        const prevSyncCopied = await encryptLocalEntityInplace(
+          copyEntityAndFixTimeFormat(prevSync, serviceType),
+          cipher,
+          undefined
+        );
+        finalMappings[key] = {
+          key: key,
+          prevSync: prevSyncCopied,
+        };
+      }
+    }
+  }
+
+  profiler.insert("ensembleMixedEnties: finish prevSync");
+
+  // local has to be last
+  // because we want to get keyEnc based on the remote
+  // (we don't consume prevSync here because it gains no benefit)
+  for (const local of localEntityList) {
+    const key = local.key!;
+    if (
+      isSkipItemByName(
+        key,
+        syncConfigDir,
+        syncUnderscoreItems,
+        configDir,
+        ignorePaths
+      )
+    ) {
+      continue;
+    }
+
+    if (finalMappings.hasOwnProperty(key)) {
+      const localCopied = await encryptLocalEntityInplace(
+        copyEntityAndFixTimeFormat(local, serviceType),
+        cipher,
+        finalMappings[key].remote?.keyEnc
+      );
+      finalMappings[key].local = localCopied;
+    } else {
+      const localCopied = await encryptLocalEntityInplace(
+        copyEntityAndFixTimeFormat(local, serviceType),
+        cipher,
+        undefined
+      );
+      finalMappings[key] = {
+        key: key,
+        local: localCopied,
+      };
+    }
+  }
+
+  profiler.insert("ensembleMixedEnties: finish local");
+
+  console.debug("in the end of ensembleMixedEnties, finalMappings is:");
+  console.debug(finalMappings);
+
+  profiler.insert("ensembleMixedEnties: exit");
+  profiler.removeIndent();
+  return finalMappings;
+};
+
+/**
+ * Heavy lifting.
+ * Basically follow the sync algorithm of https://github.com/Jwink3101/syncrclone
+ * Also deal with syncDirection which makes it more complicated
+ */
+export const getSyncPlanInplace = async (
+  mixedEntityMappings: Record<string, MixedEntity>,
+  howToCleanEmptyFolder: EmptyFolderCleanType,
+  skipSizeLargerThan: number,
+  conflictAction: ConflictActionType,
+  syncDirection: SyncDirectionType,
+  profiler: Profiler
+) => {
+  profiler.addIndent();
+  profiler.insert("getSyncPlanInplace: enter");
+  // from long(deep) to short(shadow)
+  const sortedKeys = Object.keys(mixedEntityMappings).sort(
+    (k1, k2) => k2.length - k1.length
+  );
+  profiler.insert("getSyncPlanInplace: finish sorting");
+
+  const keptFolder = new Set<string>();
+
+  for (let i = 0; i < sortedKeys.length; ++i) {
+    const key = sortedKeys[i];
+    const mixedEntry = mixedEntityMappings[key];
+    const { local, prevSync, remote } = mixedEntry;
+
+    // console.debug(`getSyncPlanInplace: key=${key}`)
+
+    if (key.endsWith("/")) {
+      // folder
+      // folder doesn't worry about mtime and size, only check their existences
+      if (keptFolder.has(key)) {
+        // parent should also be kept
+        // console.debug(`${key} in keptFolder`)
+        keptFolder.add(getParentFolder(key));
+        // should fill the missing part
+        if (local !== undefined && remote !== undefined) {
+          mixedEntry.decisionBranch = 101;
+          mixedEntry.decision = "folder_existed_both_then_do_nothing";
+        } else if (local !== undefined && remote === undefined) {
+          if (syncDirection === "incremental_pull_only") {
+            mixedEntry.decisionBranch = 107;
+            mixedEntry.decision = "folder_to_skip";
+          } else {
+            mixedEntry.decisionBranch = 102;
+            mixedEntry.decision =
+              "folder_existed_local_then_also_create_remote";
+          }
+        } else if (local === undefined && remote !== undefined) {
+          if (syncDirection === "incremental_push_only") {
+            mixedEntry.decisionBranch = 108;
+            mixedEntry.decision = "folder_to_skip";
+          } else {
+            mixedEntry.decisionBranch = 103;
+            mixedEntry.decision =
+              "folder_existed_remote_then_also_create_local";
+          }
+        } else {
+          // why?? how??
+          mixedEntry.decisionBranch = 104;
+          mixedEntry.decision = "folder_to_be_created";
+        }
+        keptFolder.delete(key); // no need to save it in the Set later
+      } else {
+        if (howToCleanEmptyFolder === "skip") {
+          mixedEntry.decisionBranch = 105;
+          mixedEntry.decision = "folder_to_skip";
+        } else if (howToCleanEmptyFolder === "clean_both") {
+          if (local !== undefined && remote !== undefined) {
+            if (syncDirection === "bidirectional") {
+              mixedEntry.decisionBranch = 106;
+              mixedEntry.decision = "folder_to_be_deleted_on_both";
+            } else {
+              // right now it does nothing because of "incremental"
+              // TODO: should we delete??
+              mixedEntry.decisionBranch = 109;
+              mixedEntry.decision = "folder_to_skip";
+            }
+          } else if (local !== undefined && remote === undefined) {
+            if (syncDirection === "bidirectional") {
+              mixedEntry.decisionBranch = 110;
+              mixedEntry.decision = "folder_to_be_deleted_on_local";
+            } else {
+              // right now it does nothing because of "incremental"
+              // TODO: should we delete??
+              mixedEntry.decisionBranch = 111;
+              mixedEntry.decision = "folder_to_skip";
+            }
+          } else if (local === undefined && remote !== undefined) {
+            if (syncDirection === "bidirectional") {
+              mixedEntry.decisionBranch = 112;
+              mixedEntry.decision = "folder_to_be_deleted_on_remote";
+            } else {
+              // right now it does nothing because of "incremental"
+              // TODO: should we delete??
+              mixedEntry.decisionBranch = 113;
+              mixedEntry.decision = "folder_to_skip";
+            }
+          } else {
+            // no folder to delete, do nothing
+            mixedEntry.decisionBranch = 114;
+            mixedEntry.decision = "folder_to_skip";
+          }
         } else {
           throw Error(
-            `Error: Folder ${r.key} doesn't exist locally and remotely but is marked must be kept. Abort.`
+            `do not know how to deal with empty folder ${mixedEntry.key}`
           );
         }
       }
-
-      if (r.decision === undefined) {
-        // not yet decided by the above reason
-        if (deltimeLocal > 0 && deltimeLocal > deltimeRemote) {
-          r.decision = "uploadLocalDelHistToRemoteFolder";
-          r.decisionBranch = 8;
-        } else {
-          r.decision = "keepRemoteDelHistFolder";
-          r.decisionBranch = 9;
-        }
-      }
     } else {
-      // it does not have any deletion commands
-      // keep it as is, and create it if necessary
-      keptFolder.add(getParentFolder(r.key));
-      if (r.existLocal && r.existRemote) {
-        r.decision = "skipFolder";
-        r.decisionBranch = 10;
-      } else if (r.existLocal || r.existRemote) {
-        r.decision = "createFolder";
-        r.decisionBranch = 11;
+      // file
+
+      if (local === undefined && remote === undefined) {
+        // both deleted, only in history
+        mixedEntry.decisionBranch = 1;
+        mixedEntry.decision = "only_history";
+      } else if (local !== undefined && remote !== undefined) {
+        if (
+          (local.mtimeCli === remote.mtimeCli ||
+            local.mtimeCli === remote.mtimeSvr) &&
+          local.sizeEnc === remote.sizeEnc
+        ) {
+          // completely equal / identical
+          mixedEntry.decisionBranch = 2;
+          mixedEntry.decision = "equal";
+          keptFolder.add(getParentFolder(key));
+        } else {
+          // Both exists, but modified or conflict
+          // Look for past files of A or B.
+
+          const localEqualPrevSync =
+            prevSync?.mtimeCli === local.mtimeCli &&
+            prevSync?.sizeEnc === local.sizeEnc;
+          const remoteEqualPrevSync =
+            (prevSync?.mtimeSvr === remote.mtimeCli ||
+              prevSync?.mtimeSvr === remote.mtimeSvr) &&
+            prevSync?.sizeEnc === remote.sizeEnc;
+
+          if (localEqualPrevSync && !remoteEqualPrevSync) {
+            // If only one compares true (no prev also means it compares False), the other is modified. Backup and sync.
+            if (
+              skipSizeLargerThan <= 0 ||
+              remote.sizeEnc! <= skipSizeLargerThan
+            ) {
+              if (syncDirection === "incremental_push_only") {
+                mixedEntry.decisionBranch = 26;
+                mixedEntry.decision = "conflict_modified_then_keep_local";
+                keptFolder.add(getParentFolder(key));
+              } else {
+                mixedEntry.decisionBranch = 9;
+                mixedEntry.decision = "remote_is_modified_then_pull";
+                keptFolder.add(getParentFolder(key));
+              }
+            } else {
+              throw Error(
+                `remote is modified (branch 9) but size larger than ${skipSizeLargerThan}, don't know what to do: ${JSON.stringify(
+                  mixedEntry
+                )}`
+              );
+            }
+          } else if (!localEqualPrevSync && remoteEqualPrevSync) {
+            // If only one compares true (no prev also means it compares False), the other is modified. Backup and sync.
+            if (
+              skipSizeLargerThan <= 0 ||
+              local.sizeEnc! <= skipSizeLargerThan
+            ) {
+              if (syncDirection === "incremental_pull_only") {
+                mixedEntry.decisionBranch = 27;
+                mixedEntry.decision = "conflict_modified_then_keep_remote";
+                keptFolder.add(getParentFolder(key));
+              } else {
+                mixedEntry.decisionBranch = 10;
+                mixedEntry.decision = "local_is_modified_then_push";
+                keptFolder.add(getParentFolder(key));
+              }
+            } else {
+              throw Error(
+                `local is modified (branch 10) but size larger than ${skipSizeLargerThan}, don't know what to do: ${JSON.stringify(
+                  mixedEntry
+                )}`
+              );
+            }
+          } else if (!localEqualPrevSync && !remoteEqualPrevSync) {
+            // If both compare False (Didn't exist means both are new. Both exist but don't compare means both are modified)
+            if (prevSync === undefined) {
+              // Didn't exist means both are new
+              if (syncDirection === "bidirectional") {
+                if (conflictAction === "keep_newer") {
+                  if (
+                    (local.mtimeCli ?? local.mtimeSvr ?? 0) >=
+                    (remote.mtimeCli ?? remote.mtimeSvr ?? 0)
+                  ) {
+                    mixedEntry.decisionBranch = 11;
+                    mixedEntry.decision = "conflict_created_then_keep_local";
+                    keptFolder.add(getParentFolder(key));
+                  } else {
+                    mixedEntry.decisionBranch = 12;
+                    mixedEntry.decision = "conflict_created_then_keep_remote";
+                    keptFolder.add(getParentFolder(key));
+                  }
+                } else if (conflictAction === "keep_larger") {
+                  if (local.sizeEnc! >= remote.sizeEnc!) {
+                    mixedEntry.decisionBranch = 13;
+                    mixedEntry.decision = "conflict_created_then_keep_local";
+                    keptFolder.add(getParentFolder(key));
+                  } else {
+                    mixedEntry.decisionBranch = 14;
+                    mixedEntry.decision = "conflict_created_then_keep_remote";
+                    keptFolder.add(getParentFolder(key));
+                  }
+                } else {
+                  mixedEntry.decisionBranch = 15;
+                  mixedEntry.decision = "conflict_created_then_keep_both";
+                  keptFolder.add(getParentFolder(key));
+                }
+              } else if (syncDirection === "incremental_pull_only") {
+                mixedEntry.decisionBranch = 22;
+                mixedEntry.decision = "conflict_created_then_keep_remote";
+                keptFolder.add(getParentFolder(key));
+              } else if (syncDirection === "incremental_push_only") {
+                mixedEntry.decisionBranch = 23;
+                mixedEntry.decision = "conflict_created_then_keep_local";
+                keptFolder.add(getParentFolder(key));
+              } else {
+                throw Error(
+                  `no idea how to deal with syncDirection=${syncDirection} while conflict created`
+                );
+              }
+            } else {
+              // Both exist but don't compare means both are modified
+              if (syncDirection === "bidirectional") {
+                if (conflictAction === "keep_newer") {
+                  if (
+                    (local.mtimeCli ?? local.mtimeSvr ?? 0) >=
+                    (remote.mtimeCli ?? remote.mtimeSvr ?? 0)
+                  ) {
+                    mixedEntry.decisionBranch = 16;
+                    mixedEntry.decision = "conflict_modified_then_keep_local";
+                    keptFolder.add(getParentFolder(key));
+                  } else {
+                    mixedEntry.decisionBranch = 17;
+                    mixedEntry.decision = "conflict_modified_then_keep_remote";
+                    keptFolder.add(getParentFolder(key));
+                  }
+                } else if (conflictAction === "keep_larger") {
+                  if (local.sizeEnc! >= remote.sizeEnc!) {
+                    mixedEntry.decisionBranch = 18;
+                    mixedEntry.decision = "conflict_modified_then_keep_local";
+                    keptFolder.add(getParentFolder(key));
+                  } else {
+                    mixedEntry.decisionBranch = 19;
+                    mixedEntry.decision = "conflict_modified_then_keep_remote";
+                    keptFolder.add(getParentFolder(key));
+                  }
+                } else {
+                  mixedEntry.decisionBranch = 20;
+                  mixedEntry.decision = "conflict_modified_then_keep_both";
+                  keptFolder.add(getParentFolder(key));
+                }
+              } else if (syncDirection === "incremental_pull_only") {
+                mixedEntry.decisionBranch = 24;
+                mixedEntry.decision = "conflict_modified_then_keep_remote";
+                keptFolder.add(getParentFolder(key));
+              } else if (syncDirection === "incremental_push_only") {
+                mixedEntry.decisionBranch = 25;
+                mixedEntry.decision = "conflict_modified_then_keep_local";
+                keptFolder.add(getParentFolder(key));
+              } else {
+                throw Error(
+                  `no idea how to deal with syncDirection=${syncDirection} while conflict modified`
+                );
+              }
+            }
+          } else {
+            // Both compare true.
+            // This is likely because of the mtimeCli and mtimeSvr tricks.
+            // The result should be equal!!!
+            mixedEntry.decisionBranch = 21;
+            mixedEntry.decision = "equal";
+            keptFolder.add(getParentFolder(key));
+          }
+        }
+      } else if (local === undefined && remote !== undefined) {
+        // A is missing
+        if (prevSync === undefined) {
+          // if B is not in the previous list, B is new
+          if (
+            skipSizeLargerThan <= 0 ||
+            remote.sizeEnc! <= skipSizeLargerThan
+          ) {
+            if (syncDirection === "incremental_push_only") {
+              mixedEntry.decisionBranch = 28;
+              mixedEntry.decision = "conflict_created_then_do_nothing";
+              keptFolder.add(getParentFolder(key));
+            } else {
+              mixedEntry.decisionBranch = 3;
+              mixedEntry.decision = "remote_is_created_then_pull";
+              keptFolder.add(getParentFolder(key));
+            }
+          } else {
+            mixedEntry.decisionBranch = 36;
+            mixedEntry.decision = "remote_is_created_too_large_then_do_nothing";
+            keptFolder.add(getParentFolder(key));
+          }
+        } else if (
+          (prevSync.mtimeSvr === remote.mtimeCli ||
+            prevSync.mtimeSvr === remote.mtimeSvr) &&
+          prevSync.sizeEnc === remote.sizeEnc
+        ) {
+          // if B is in the previous list and UNMODIFIED, B has been deleted by A
+          if (syncDirection === "incremental_push_only") {
+            mixedEntry.decisionBranch = 29;
+            mixedEntry.decision = "conflict_created_then_do_nothing";
+            keptFolder.add(getParentFolder(key));
+          } else if (syncDirection === "incremental_pull_only") {
+            mixedEntry.decisionBranch = 35;
+            mixedEntry.decision = "conflict_created_then_keep_remote";
+            keptFolder.add(getParentFolder(key));
+          } else {
+            mixedEntry.decisionBranch = 4;
+            mixedEntry.decision = "local_is_deleted_thus_also_delete_remote";
+          }
+        } else {
+          // if B is in the previous list and MODIFIED, B has been deleted by A but modified by B
+          if (
+            skipSizeLargerThan <= 0 ||
+            remote.sizeEnc! <= skipSizeLargerThan
+          ) {
+            if (syncDirection === "incremental_push_only") {
+              mixedEntry.decisionBranch = 30;
+              mixedEntry.decision = "conflict_created_then_do_nothing";
+              keptFolder.add(getParentFolder(key));
+            } else {
+              mixedEntry.decisionBranch = 5;
+              mixedEntry.decision = "remote_is_modified_then_pull";
+              keptFolder.add(getParentFolder(key));
+            }
+          } else {
+            throw Error(
+              `remote is modified (branch 5) but size larger than ${skipSizeLargerThan}, don't know what to do: ${JSON.stringify(
+                mixedEntry
+              )}`
+            );
+          }
+        }
+      } else if (local !== undefined && remote === undefined) {
+        // B is missing
+
+        if (prevSync === undefined) {
+          // if A is not in the previous list, A is new
+          if (skipSizeLargerThan <= 0 || local.sizeEnc! <= skipSizeLargerThan) {
+            if (syncDirection === "incremental_pull_only") {
+              mixedEntry.decisionBranch = 31;
+              mixedEntry.decision = "conflict_created_then_do_nothing";
+              keptFolder.add(getParentFolder(key));
+            } else {
+              mixedEntry.decisionBranch = 6;
+              mixedEntry.decision = "local_is_created_then_push";
+              keptFolder.add(getParentFolder(key));
+            }
+          } else {
+            mixedEntry.decisionBranch = 37;
+            mixedEntry.decision = "local_is_created_too_large_then_do_nothing";
+            keptFolder.add(getParentFolder(key));
+          }
+        } else if (
+          (prevSync.mtimeSvr === local.mtimeCli ||
+            prevSync.mtimeCli === local.mtimeCli) &&
+          prevSync.sizeEnc === local.sizeEnc
+        ) {
+          // if A is in the previous list and UNMODIFIED, A has been deleted by B
+          if (syncDirection === "incremental_push_only") {
+            mixedEntry.decisionBranch = 32;
+            mixedEntry.decision = "conflict_created_then_keep_local";
+          } else if (syncDirection === "incremental_pull_only") {
+            mixedEntry.decisionBranch = 33;
+            mixedEntry.decision = "conflict_created_then_do_nothing";
+          } else {
+            mixedEntry.decisionBranch = 7;
+            mixedEntry.decision = "remote_is_deleted_thus_also_delete_local";
+          }
+        } else {
+          // if A is in the previous list and MODIFIED, A has been deleted by B but modified by A
+          if (skipSizeLargerThan <= 0 || local.sizeEnc! <= skipSizeLargerThan) {
+            if (syncDirection === "incremental_pull_only") {
+              mixedEntry.decisionBranch = 34;
+              mixedEntry.decision = "conflict_created_then_do_nothing";
+              keptFolder.add(getParentFolder(key));
+            } else {
+              mixedEntry.decisionBranch = 8;
+              mixedEntry.decision = "local_is_modified_then_push";
+              keptFolder.add(getParentFolder(key));
+            }
+          } else {
+            throw Error(
+              `local is modified (branch 8) but size larger than ${skipSizeLargerThan}, don't know what to do: ${JSON.stringify(
+                mixedEntry
+              )}`
+            );
+          }
+        }
       } else {
         throw Error(
-          `Error: Folder ${r.key} doesn't exist locally and remotely but is marked must be kept. Abort.`
+          `should not reach branch -1 while getting sync plan: ${JSON.stringify(
+            mixedEntry
+          )}`
+        );
+      }
+
+      if (mixedEntry.decision === undefined) {
+        throw Error(
+          `unexpectedly no decision of file in the end: ${JSON.stringify(
+            mixedEntry
+          )}`
         );
       }
     }
-  } else {
-    // the folder has some must be kept children!
-    // so itself and its parent folder must be kept
-    keptFolder.add(getParentFolder(r.key));
-    if (r.existLocal && r.existRemote) {
-      r.decision = "skipFolder";
-      r.decisionBranch = 12;
-    } else if (r.existLocal || r.existRemote) {
-      r.decision = "createFolder";
-      r.decisionBranch = 13;
-    } else {
-      throw Error(
-        `Error: Folder ${r.key} doesn't exist locally and remotely but is marked must be kept. Abort.`
-      );
-    }
   }
 
-  // save the memory, save the world!
-  // we have dealt with it, so we don't need it any more.
-  keptFolder.delete(r.key);
-  return r;
+  profiler.insert("getSyncPlanInplace: finish looping");
+
+  keptFolder.delete("/");
+  keptFolder.delete("");
+  if (keptFolder.size > 0) {
+    throw Error(`unexpectedly keptFolder no decisions: ${[...keptFolder]}`);
+  }
+
+  // finally we want to make our life easier
+  const currTime = Date.now();
+  const currTimeFmt = unixTimeToStr(currTime);
+  // because the path should not as / in the beginning,
+  // we should be safe to add these keys:
+  mixedEntityMappings["/$@meta"] = {
+    key: "/$@meta", // don't mess up with the types
+    sideNotes: {
+      generateTime: currTime,
+      generateTimeFmt: currTimeFmt,
+    },
+  };
+
+  profiler.insert("getSyncPlanInplace: exit");
+  profiler.removeIndent();
+
+  return mixedEntityMappings;
 };
 
-const DELETION_DECISIONS: Set<DecisionType> = new Set([
-  "uploadLocalDelHistToRemote",
-  "keepRemoteDelHist",
-  "uploadLocalDelHistToRemoteFolder",
-  "keepRemoteDelHistFolder",
-]);
-const SIZES_GO_WRONG_DECISIONS: Set<DecisionType> = new Set([
-  "errorLocalTooLargeConflictRemote",
-  "errorRemoteTooLargeConflictLocal",
-]);
-
-export const getSyncPlan = async (
-  remoteStates: FileOrFolderMixedState[],
-  local: TAbstractFile[],
-  localConfigDirContents: ObsConfigDirFileType[] | undefined,
-  remoteDeleteHistory: DeletionOnRemote[],
-  localFileHistory: FileFolderHistoryRecord[],
-  remoteType: SUPPORTED_SERVICES_TYPE,
-  triggerSource: SyncTriggerSourceType,
-  vault: Vault,
-  syncConfigDir: boolean,
-  configDir: string,
-  syncUnderscoreItems: boolean,
-  skipSizeLargerThan: number,
-  password: string = ""
+const splitFourStepsOnEntityMappings = (
+  mixedEntityMappings: Record<string, MixedEntity>
 ) => {
-  const mixedStates = await ensembleMixedStates(
-    remoteStates,
-    local,
-    localConfigDirContents,
-    remoteDeleteHistory,
-    localFileHistory,
-    syncConfigDir,
-    configDir,
-    syncUnderscoreItems,
-    password
-  );
+  type StepArrayType = MixedEntity[] | undefined | null;
+  const onlyMarkSyncedOps: StepArrayType[] = [];
+  const folderCreationOps: StepArrayType[] = [];
+  const deletionOps: StepArrayType[] = [];
+  const uploadDownloads: StepArrayType[] = [];
 
-  const sortedKeys = Object.keys(mixedStates).sort(
+  // from long(deep) to short(shadow)
+  const sortedKeys = Object.keys(mixedEntityMappings).sort(
     (k1, k2) => k2.length - k1.length
   );
 
-  const sizesGoWrong: FileOrFolderMixedState[] = [];
-  const deletions: DeletionOnRemote[] = [];
-
-  const keptFolder = new Set<string>();
-  for (let i = 0; i < sortedKeys.length; ++i) {
-    const key = sortedKeys[i];
-    const val = mixedStates[key];
-
-    if (key.endsWith("/")) {
-      // decide some folders
-      // because the keys are sorted by length
-      // so all the children must have been shown up before in the iteration
-      await assignOperationToFolderInplace(val, keptFolder, vault, password);
-    } else {
-      // get all operations of files
-      // and at the same time get some helper info for folders
-      assignOperationToFileInplace(
-        val,
-        keptFolder,
-        skipSizeLargerThan,
-        password
-      );
-    }
-
-    if (SIZES_GO_WRONG_DECISIONS.has(val.decision)) {
-      sizesGoWrong.push(val);
-    }
-
-    if (DELETION_DECISIONS.has(val.decision)) {
-      if (val.decision === "uploadLocalDelHistToRemote") {
-        deletions.push({
-          key: key,
-          actionWhen: val.deltimeLocal,
-        });
-      } else if (val.decision === "keepRemoteDelHist") {
-        deletions.push({
-          key: key,
-          actionWhen: val.deltimeRemote,
-        });
-      } else if (val.decision === "uploadLocalDelHistToRemoteFolder") {
-        deletions.push({
-          key: key,
-          actionWhen: val.deltimeLocal,
-        });
-      } else if (val.decision === "keepRemoteDelHistFolder") {
-        deletions.push({
-          key: key,
-          actionWhen: val.deltimeRemote,
-        });
-      } else {
-        throw Error(`do not know how to delete for decision ${val.decision}`);
-      }
-    }
-  }
-
-  const currTs = Date.now();
-  const currTsFmt = unixTimeToStr(currTs);
-  const plan = {
-    ts: currTs,
-    tsFmt: currTsFmt,
-    remoteType: remoteType,
-    syncTriggerSource: triggerSource,
-    mixedStates: mixedStates,
-  } as SyncPlanType;
-  return {
-    plan: plan,
-    sortedKeys: sortedKeys,
-    deletions: deletions,
-    sizesGoWrong: sizesGoWrong,
-  };
-};
-
-const uploadExtraMeta = async (
-  client: RemoteClient,
-  metadataFile: FileOrFolderMixedState | undefined,
-  origMetadata: MetadataOnRemote | undefined,
-  deletions: DeletionOnRemote[],
-  password: string = ""
-) => {
-  if (deletions === undefined || deletions.length === 0) {
-    return;
-  }
-
-  const key = DEFAULT_FILE_NAME_FOR_METADATAONREMOTE;
-  let remoteEncryptedKey = key;
-
-  if (password !== "") {
-    if (metadataFile === undefined) {
-      remoteEncryptedKey = undefined;
-    } else {
-      remoteEncryptedKey = metadataFile.remoteEncryptedKey;
-    }
-    if (remoteEncryptedKey === undefined || remoteEncryptedKey === "") {
-      // remoteEncryptedKey = await encryptStringToBase32(key, password);
-      remoteEncryptedKey = await encryptStringToBase64url(key, password);
-    }
-  }
-
-  const newMetadata: MetadataOnRemote = {
-    deletions: deletions,
-  };
-
-  if (isEqualMetadataOnRemote(origMetadata, newMetadata)) {
-    log.debug(
-      "metadata are the same, no need to re-generate and re-upload it."
-    );
-    return;
-  }
-
-  const resultText = serializeMetadataOnRemote(newMetadata);
-
-  await client.uploadToRemote(
-    key,
-    undefined,
-    false,
-    password,
-    remoteEncryptedKey,
-    undefined,
-    true,
-    resultText
-  );
-};
-
-const dispatchOperationToActual = async (
-  key: string,
-  vaultRandomID: string,
-  r: FileOrFolderMixedState,
-  client: RemoteClient,
-  db: InternalDBs,
-  vault: Vault,
-  localDeleteFunc: any,
-  password: string = ""
-) => {
-  let remoteEncryptedKey = key;
-  if (password !== "") {
-    remoteEncryptedKey = r.remoteEncryptedKey;
-    if (remoteEncryptedKey === undefined || remoteEncryptedKey === "") {
-      // the old version uses base32
-      // remoteEncryptedKey = await encryptStringToBase32(key, password);
-      // the new version users base64url
-      remoteEncryptedKey = await encryptStringToBase64url(key, password);
-    }
-  }
-
-  if (r.decision === undefined) {
-    throw Error(`unknown decision in ${JSON.stringify(r)}`);
-  } else if (r.decision === "skipUploading") {
-    // do nothing!
-  } else if (r.decision === "uploadLocalDelHistToRemote") {
-    if (r.existLocal) {
-      await localDeleteFunc(r.key);
-    }
-    if (r.existRemote) {
-      await client.deleteFromRemote(r.key, password, remoteEncryptedKey);
-    }
-    await clearDeleteRenameHistoryOfKeyAndVault(db, r.key, vaultRandomID);
-  } else if (r.decision === "keepRemoteDelHist") {
-    if (r.existLocal) {
-      await localDeleteFunc(r.key);
-    }
-    if (r.existRemote) {
-      await client.deleteFromRemote(r.key, password, remoteEncryptedKey);
-    }
-    await clearDeleteRenameHistoryOfKeyAndVault(db, r.key, vaultRandomID);
-  } else if (r.decision === "uploadLocalToRemote") {
-    if (
-      client.serviceType === "onedrive" &&
-      r.sizeLocal === 0 &&
-      password === ""
-    ) {
-      // special treatment for empty files for OneDrive
-      // TODO: it's ugly, any other way?
-      // special treatment for OneDrive: do nothing, skip empty file without encryption
-      // if it's empty folder, or it's encrypted file/folder, it continues to be uploaded.
-    } else {
-      const remoteObjMeta = await client.uploadToRemote(
-        r.key,
-        vault,
-        false,
-        password,
-        remoteEncryptedKey
-      );
-      await upsertSyncMetaMappingDataByVault(
-        client.serviceType,
-        db,
-        r.key,
-        r.mtimeLocal,
-        r.sizeLocal,
-        r.key,
-        remoteObjMeta.lastModified,
-        remoteObjMeta.size,
-        remoteObjMeta.etag,
-        vaultRandomID
-      );
-    }
-    await clearDeleteRenameHistoryOfKeyAndVault(db, r.key, vaultRandomID);
-  } else if (r.decision === "downloadRemoteToLocal") {
-    await mkdirpInVault(r.key, vault); /* should be unnecessary */
-    await client.downloadFromRemote(
-      r.key,
-      vault,
-      r.mtimeRemote,
-      password,
-      remoteEncryptedKey
-    );
-    await clearDeleteRenameHistoryOfKeyAndVault(db, r.key, vaultRandomID);
-  } else if (r.decision === "createFolder") {
-    if (!r.existLocal) {
-      await mkdirpInVault(r.key, vault);
-    }
-    if (!r.existRemote) {
-      const remoteObjMeta = await client.uploadToRemote(
-        r.key,
-        vault,
-        false,
-        password,
-        remoteEncryptedKey
-      );
-      await upsertSyncMetaMappingDataByVault(
-        client.serviceType,
-        db,
-        r.key,
-        r.mtimeLocal,
-        r.sizeLocal,
-        r.key,
-        remoteObjMeta.lastModified,
-        remoteObjMeta.size,
-        remoteObjMeta.etag,
-        vaultRandomID
-      );
-    }
-    await clearDeleteRenameHistoryOfKeyAndVault(db, r.key, vaultRandomID);
-  } else if (r.decision === "uploadLocalDelHistToRemoteFolder") {
-    if (r.existLocal) {
-      await localDeleteFunc(r.key);
-    }
-    if (r.existRemote) {
-      await client.deleteFromRemote(r.key, password, remoteEncryptedKey);
-    }
-    await clearDeleteRenameHistoryOfKeyAndVault(db, r.key, vaultRandomID);
-  } else if (r.decision === "keepRemoteDelHistFolder") {
-    if (r.existLocal) {
-      await localDeleteFunc(r.key);
-    }
-    if (r.existRemote) {
-      await client.deleteFromRemote(r.key, password, remoteEncryptedKey);
-    }
-    await clearDeleteRenameHistoryOfKeyAndVault(db, r.key, vaultRandomID);
-  } else if (r.decision === "skipFolder") {
-    // do nothing!
-  } else if (r.decision === "skipUploadingTooLarge") {
-    // do nothing!
-  } else if (r.decision === "skipDownloadingTooLarge") {
-    // do nothing!
-  } else if (r.decision === "skipUsingLocalDelTooLarge") {
-    // do nothing!
-  } else if (r.decision === "skipUsingRemoteDelTooLarge") {
-    // do nothing!
-  } else {
-    throw Error(`unknown decision in ${JSON.stringify(r)}`);
-  }
-};
-
-const splitThreeSteps = (syncPlan: SyncPlanType, sortedKeys: string[]) => {
-  const mixedStates = syncPlan.mixedStates;
-  const totalCount = sortedKeys.length || 0;
-
-  const folderCreationOps: FileOrFolderMixedState[][] = [];
-  const deletionOps: FileOrFolderMixedState[][] = [];
-  const uploadDownloads: FileOrFolderMixedState[][] = [];
-  let realTotalCount = 0;
+  let allFilesCount = 0; // how many files in entities
+  let realModifyDeleteCount = 0; // how many files to be modified / deleted
+  let realTotalCount = 0; // how many files to be delt with
 
   for (let i = 0; i < sortedKeys.length; ++i) {
     const key = sortedKeys[i];
-    const val: FileOrFolderMixedState = Object.assign({}, mixedStates[key]); // copy to avoid issue
+
+    if (key === "/$@meta") {
+      continue; // special
+    }
+
+    const val = mixedEntityMappings[key];
+
+    if (!key.endsWith("/")) {
+      allFilesCount += 1;
+    }
 
     if (
-      val.decision === "skipFolder" ||
-      val.decision === "skipUploading" ||
-      val.decision === "skipDownloadingTooLarge" ||
-      val.decision === "skipUploadingTooLarge" ||
-      val.decision === "skipUsingLocalDelTooLarge" ||
-      val.decision === "skipUsingRemoteDelTooLarge"
+      val.decision === "local_is_created_too_large_then_do_nothing" ||
+      val.decision === "remote_is_created_too_large_then_do_nothing" ||
+      val.decision === "folder_to_skip"
     ) {
       // pass
-    } else if (val.decision === "createFolder") {
+    } else if (
+      val.decision === "equal" ||
+      val.decision === "conflict_created_then_do_nothing" ||
+      val.decision === "folder_existed_both_then_do_nothing"
+    ) {
+      if (
+        onlyMarkSyncedOps.length === 0 ||
+        onlyMarkSyncedOps[0] === undefined ||
+        onlyMarkSyncedOps[0] === null
+      ) {
+        onlyMarkSyncedOps[0] = [val];
+      } else {
+        onlyMarkSyncedOps[0].push(val); // only one level is needed here
+      }
+
+      // don't need to update realTotalCount here
+    } else if (
+      val.decision === "folder_existed_local_then_also_create_remote" ||
+      val.decision === "folder_existed_remote_then_also_create_local" ||
+      val.decision === "folder_to_be_created"
+    ) {
+      // console.debug(`splitting folder: key=${key},val=${JSON.stringify(val)}`);
       const level = atWhichLevel(key);
-      if (folderCreationOps[level - 1] === undefined) {
+      // console.debug(`atWhichLevel: ${level}`);
+      const k = folderCreationOps[level - 1];
+      if (k === undefined || k === null) {
         folderCreationOps[level - 1] = [val];
       } else {
-        folderCreationOps[level - 1].push(val);
+        k.push(val);
       }
       realTotalCount += 1;
     } else if (
-      val.decision === "uploadLocalDelHistToRemoteFolder" ||
-      val.decision === "keepRemoteDelHistFolder" ||
-      val.decision === "uploadLocalDelHistToRemote" ||
-      val.decision === "keepRemoteDelHist"
+      val.decision === "only_history" ||
+      val.decision === "local_is_deleted_thus_also_delete_remote" ||
+      val.decision === "remote_is_deleted_thus_also_delete_local" ||
+      val.decision === "folder_to_be_deleted_on_both" ||
+      val.decision === "folder_to_be_deleted_on_local" ||
+      val.decision === "folder_to_be_deleted_on_remote"
     ) {
       const level = atWhichLevel(key);
-      if (deletionOps[level - 1] === undefined) {
+      const k = deletionOps[level - 1];
+      if (k === undefined || k === null) {
         deletionOps[level - 1] = [val];
       } else {
-        deletionOps[level - 1].push(val);
+        k.push(val);
       }
       realTotalCount += 1;
+
+      if (
+        val.decision.includes("deleted") &&
+        !val.decision.includes("folder")
+      ) {
+        // only count files here, skip folder
+        realModifyDeleteCount += 1;
+      }
     } else if (
-      val.decision === "uploadLocalToRemote" ||
-      val.decision === "downloadRemoteToLocal"
+      val.decision === "local_is_modified_then_push" ||
+      val.decision === "remote_is_modified_then_pull" ||
+      val.decision === "local_is_created_then_push" ||
+      val.decision === "remote_is_created_then_pull" ||
+      val.decision === "conflict_created_then_keep_local" ||
+      val.decision === "conflict_created_then_keep_remote" ||
+      val.decision === "conflict_created_then_keep_both" ||
+      val.decision === "conflict_modified_then_keep_local" ||
+      val.decision === "conflict_modified_then_keep_remote" ||
+      val.decision === "conflict_modified_then_keep_both"
     ) {
-      if (uploadDownloads.length === 0) {
+      if (
+        uploadDownloads.length === 0 ||
+        uploadDownloads[0] === undefined ||
+        uploadDownloads[0] === null
+      ) {
         uploadDownloads[0] = [val];
       } else {
-        uploadDownloads[0].push(val); // only one level needed here
+        uploadDownloads[0].push(val); // only one level is needed here
       }
       realTotalCount += 1;
+
+      if (
+        val.decision.includes("modified") ||
+        val.decision.includes("conflict")
+      ) {
+        realModifyDeleteCount += 1;
+      }
     } else {
       throw Error(`unknown decision ${val.decision} for ${key}`);
     }
@@ -1313,99 +1083,306 @@ const splitThreeSteps = (syncPlan: SyncPlanType, sortedKeys: string[]) => {
   deletionOps.reverse(); // inplace reverse
 
   return {
+    onlyMarkSyncedOps: onlyMarkSyncedOps,
     folderCreationOps: folderCreationOps,
     deletionOps: deletionOps,
     uploadDownloads: uploadDownloads,
+    allFilesCount: allFilesCount,
+    realModifyDeleteCount: realModifyDeleteCount,
     realTotalCount: realTotalCount,
   };
 };
 
-export const doActualSync = async (
+const dispatchOperationToActualV3 = async (
+  key: string,
+  vaultRandomID: string,
+  profileID: string,
+  r: MixedEntity,
   client: RemoteClient,
   db: InternalDBs,
-  vaultRandomID: string,
   vault: Vault,
-  syncPlan: SyncPlanType,
-  sortedKeys: string[],
-  metadataFile: FileOrFolderMixedState,
-  origMetadata: MetadataOnRemote,
-  sizesGoWrong: FileOrFolderMixedState[],
-  deletions: DeletionOnRemote[],
   localDeleteFunc: any,
-  password: string = "",
-  concurrency: number = 1,
-  callbackSizesGoWrong?: any,
-  callbackSyncProcess?: any
+  cipher: Cipher
 ) => {
-  const mixedStates = syncPlan.mixedStates;
-  const totalCount = sortedKeys.length || 0;
+  // console.debug(
+  //   `inside dispatchOperationToActualV3, key=${key}, r=${JSON.stringify(
+  //     r,
+  //     null,
+  //     2
+  //   )}`
+  // );
+  if (r.decision === "only_history") {
+    clearPrevSyncRecordByVaultAndProfile(db, vaultRandomID, profileID, key);
+  } else if (
+    r.decision === "local_is_created_too_large_then_do_nothing" ||
+    r.decision === "remote_is_created_too_large_then_do_nothing" ||
+    r.decision === "folder_to_skip"
+  ) {
+    // !! no actual sync being kept happens,
+    // so no sync record here
+    // pass
+  } else if (
+    r.decision === "equal" ||
+    r.decision === "conflict_created_then_do_nothing" ||
+    r.decision === "folder_existed_both_then_do_nothing"
+  ) {
+    // !! we MIGHT need to upsert the record,
+    // so that next time we can determine the change delta
 
-  if (sizesGoWrong.length > 0) {
-    log.debug(`some sizes are larger than the threshold, abort and show hints`);
-    callbackSizesGoWrong(sizesGoWrong);
-    return;
-  }
+    if (r.prevSync !== undefined) {
+      // if we have prevSync,
+      // we don't need to do anything, because the record is already there!
+    } else {
+      // if we don't have prevSync, we use remote entity AND local mtime
+      // as if it is "uploaded"
+      if (r.remote !== undefined) {
+        let entity = await decryptRemoteEntityInplace(r.remote, cipher);
+        entity = await fullfillMTimeOfRemoteEntityInplace(
+          entity,
+          r.local?.mtimeCli
+        );
 
-  log.debug(`start syncing extra data firstly`);
-  await uploadExtraMeta(
-    client,
-    metadataFile,
-    origMetadata,
-    deletions,
-    password
-  );
-  log.debug(`finish syncing extra data firstly`);
-
-  log.debug(`concurrency === ${concurrency}`);
-  if (concurrency === 1) {
-    // run everything in sequence
-    // good old way
-    for (let i = 0; i < sortedKeys.length; ++i) {
-      const key = sortedKeys[i];
-      const val = mixedStates[key];
-
-      log.debug(`start syncing "${key}" with plan ${JSON.stringify(val)}`);
-
-      if (callbackSyncProcess !== undefined) {
-        await callbackSyncProcess(i, totalCount, key, val.decision);
+        if (entity !== undefined) {
+          await upsertPrevSyncRecordByVaultAndProfile(
+            db,
+            vaultRandomID,
+            profileID,
+            entity
+          );
+        }
       }
-
-      await dispatchOperationToActual(
-        key,
-        vaultRandomID,
-        val,
-        client,
-        db,
-        vault,
-        localDeleteFunc,
-        password
-      );
-      log.debug(`finished ${key}`);
     }
+  } else if (
+    r.decision === "local_is_modified_then_push" ||
+    r.decision === "local_is_created_then_push" ||
+    r.decision === "folder_existed_local_then_also_create_remote" ||
+    r.decision === "conflict_created_then_keep_local" ||
+    r.decision === "conflict_modified_then_keep_local"
+  ) {
+    if (
+      client.serviceType === "onedrive" &&
+      r.local!.size === 0 &&
+      cipher.isPasswordEmpty()
+    ) {
+      // special treatment for empty files for OneDrive
+      // TODO: it's ugly, any other way?
+      // special treatment for OneDrive: do nothing, skip empty file without encryption
+      // if it's empty folder, or it's encrypted file/folder, it continues to be uploaded.
+    } else {
+      // console.debug(`before upload in sync, r=${JSON.stringify(r, null, 2)}`);
+      const { entity, mtimeCli } = await client.uploadToRemote(
+        r.key,
+        vault,
+        false,
+        cipher,
+        r.local!.keyEnc
+      );
+      // console.debug(`after uploadToRemote`);
+      // console.debug(`entity=${JSON.stringify(entity,null,2)}`)
+      // console.debug(`mtimeCli=${mtimeCli}`)
+      await decryptRemoteEntityInplace(entity, cipher);
+      // console.debug(`after dec, entity=${JSON.stringify(entity,null,2)}`)
+      await fullfillMTimeOfRemoteEntityInplace(entity, mtimeCli);
+      // console.debug(`after fullfill, entity=${JSON.stringify(entity,null,2)}`)
+      await upsertPrevSyncRecordByVaultAndProfile(
+        db,
+        vaultRandomID,
+        profileID,
+        entity
+      );
+    }
+  } else if (
+    r.decision === "remote_is_modified_then_pull" ||
+    r.decision === "remote_is_created_then_pull" ||
+    r.decision === "conflict_created_then_keep_remote" ||
+    r.decision === "conflict_modified_then_keep_remote" ||
+    r.decision === "folder_existed_remote_then_also_create_local"
+  ) {
+    await mkdirpInVault(r.key, vault);
+    await client.downloadFromRemote(
+      r.key,
+      vault,
+      r.remote!.mtimeCli!,
+      cipher,
+      r.remote!.keyEnc
+    );
+    await upsertPrevSyncRecordByVaultAndProfile(
+      db,
+      vaultRandomID,
+      profileID,
+      r.remote!
+    );
+  } else if (r.decision === "local_is_deleted_thus_also_delete_remote") {
+    // local is deleted, we need to delete remote now
+    await client.deleteFromRemote(
+      r.key,
+      cipher,
+      r.remote!.keyEnc,
+      r.remote!.synthesizedFolder
+    );
+    await clearPrevSyncRecordByVaultAndProfile(
+      db,
+      vaultRandomID,
+      profileID,
+      r.key
+    );
+  } else if (r.decision === "remote_is_deleted_thus_also_delete_local") {
+    // remote is deleted, we need to delete local now
+    await localDeleteFunc(r.key);
+    await clearPrevSyncRecordByVaultAndProfile(
+      db,
+      vaultRandomID,
+      profileID,
+      r.key
+    );
+  } else if (
+    r.decision === "conflict_created_then_keep_both" ||
+    r.decision === "conflict_modified_then_keep_both"
+  ) {
+    throw Error(`${r.decision} not implemented yet: ${JSON.stringify(r)}`);
+  } else if (r.decision === "folder_to_be_created") {
+    await mkdirpInVault(r.key, vault);
+    const { entity, mtimeCli } = await client.uploadToRemote(
+      r.key,
+      vault,
+      false,
+      cipher,
+      r.local!.keyEnc
+    );
+    // we need to decrypt the key!!!
+    await decryptRemoteEntityInplace(entity, cipher);
+    await fullfillMTimeOfRemoteEntityInplace(entity, mtimeCli);
+    await upsertPrevSyncRecordByVaultAndProfile(
+      db,
+      vaultRandomID,
+      profileID,
+      entity
+    );
+  } else if (
+    r.decision === "folder_to_be_deleted_on_both" ||
+    r.decision === "folder_to_be_deleted_on_local" ||
+    r.decision === "folder_to_be_deleted_on_remote"
+  ) {
+    if (
+      r.decision === "folder_to_be_deleted_on_both" ||
+      r.decision === "folder_to_be_deleted_on_local"
+    ) {
+      await localDeleteFunc(r.key);
+    }
+    if (
+      r.decision === "folder_to_be_deleted_on_both" ||
+      r.decision === "folder_to_be_deleted_on_remote"
+    ) {
+      await client.deleteFromRemote(
+        r.key,
+        cipher,
+        r.remote!.keyEnc,
+        r.remote!.synthesizedFolder
+      );
+    }
+    await clearPrevSyncRecordByVaultAndProfile(
+      db,
+      vaultRandomID,
+      profileID,
+      r.key
+    );
+  } else {
+    throw Error(`don't know how to dispatch decision: ${JSON.stringify(r)}`);
+  }
+};
 
-    return; // shortcut return, avoid too many nests below
+export const doActualSync = async (
+  mixedEntityMappings: Record<string, MixedEntity>,
+  client: RemoteClient,
+  vaultRandomID: string,
+  profileID: string,
+  vault: Vault,
+  cipher: Cipher,
+  concurrency: number,
+  localDeleteFunc: any,
+  protectModifyPercentage: number,
+  getProtectModifyPercentageErrorStrFunc: any,
+  callbackSyncProcess: any,
+  db: InternalDBs,
+  profiler: Profiler
+) => {
+  profiler.addIndent();
+  profiler.insert("doActualSync: enter");
+  console.debug(`concurrency === ${concurrency}`);
+  const {
+    onlyMarkSyncedOps,
+    folderCreationOps,
+    deletionOps,
+    uploadDownloads,
+    allFilesCount,
+    realModifyDeleteCount,
+    realTotalCount,
+  } = splitFourStepsOnEntityMappings(mixedEntityMappings);
+  // console.debug(`onlyMarkSyncedOps: ${JSON.stringify(onlyMarkSyncedOps)}`);
+  // console.debug(`folderCreationOps: ${JSON.stringify(folderCreationOps)}`);
+  // console.debug(`deletionOps: ${JSON.stringify(deletionOps)}`);
+  // console.debug(`uploadDownloads: ${JSON.stringify(uploadDownloads)}`);
+  console.debug(`allFilesCount: ${allFilesCount}`);
+  console.debug(`realModifyDeleteCount: ${realModifyDeleteCount}`);
+  console.debug(`realTotalCount: ${realTotalCount}`);
+  profiler.insert("doActualSync: finish splitting steps");
+
+  console.debug(`protectModifyPercentage: ${protectModifyPercentage}`);
+
+  if (
+    protectModifyPercentage >= 0 &&
+    realModifyDeleteCount >= 0 &&
+    allFilesCount > 0
+  ) {
+    if (
+      protectModifyPercentage === 100 &&
+      realModifyDeleteCount === allFilesCount
+    ) {
+      // special treatment for 100%
+      // let it pass, we do nothing here
+    } else if (
+      realModifyDeleteCount * 100 >=
+      allFilesCount * protectModifyPercentage
+    ) {
+      const errorStr: string = getProtectModifyPercentageErrorStrFunc(
+        protectModifyPercentage,
+        realModifyDeleteCount,
+        allFilesCount
+      );
+
+      profiler.insert("doActualSync: error branch");
+      profiler.removeIndent();
+      throw Error(errorStr);
+    }
   }
 
-  const { folderCreationOps, deletionOps, uploadDownloads, realTotalCount } =
-    splitThreeSteps(syncPlan, sortedKeys);
-  const nested = [folderCreationOps, deletionOps, uploadDownloads];
+  const nested = [
+    onlyMarkSyncedOps,
+    folderCreationOps,
+    deletionOps,
+    uploadDownloads,
+  ];
   const logTexts = [
-    `1. create all folders from shadowest to deepest, also check undefined decision`,
-    `2. delete files and folders from deepest to shadowest`,
-    `3. upload or download files in parallel, with the desired concurrency=${concurrency}`,
+    `1. record the items already being synced`,
+    `2. create all folders from shadowest to deepest`,
+    `3. delete files and folders from deepest to shadowest`,
+    `4. upload or download files in parallel, with the desired concurrency=${concurrency}`,
   ];
 
   let realCounter = 0;
-
   for (let i = 0; i < nested.length; ++i) {
-    log.debug(logTexts[i]);
+    profiler.addIndent();
+    profiler.insert(`doActualSync: step ${i} start`);
+    console.debug(logTexts[i]);
 
-    const operations: FileOrFolderMixedState[][] = nested[i];
+    const operations = nested[i];
+    // console.debug(`curr operations=${JSON.stringify(operations, null, 2)}`);
 
     for (let j = 0; j < operations.length; ++j) {
-      const singleLevelOps: FileOrFolderMixedState[] | undefined =
-        operations[j];
-
+      const singleLevelOps = operations[j];
+      // console.debug(
+      //   `singleLevelOps=${JSON.stringify(singleLevelOps, null, 2)}`
+      // );
       if (singleLevelOps === undefined || singleLevelOps === null) {
         continue;
       }
@@ -1415,11 +1392,13 @@ export const doActualSync = async (
       let tooManyErrors = false;
 
       for (let k = 0; k < singleLevelOps.length; ++k) {
-        const val: FileOrFolderMixedState = singleLevelOps[k];
+        const val = singleLevelOps[k];
         const key = val.key;
 
         const fn = async () => {
-          log.debug(`start syncing "${key}" with plan ${JSON.stringify(val)}`);
+          // console.debug(
+          //   `start syncing "${key}" with plan ${JSON.stringify(val)}`
+          // );
 
           if (callbackSyncProcess !== undefined) {
             await callbackSyncProcess(
@@ -1432,18 +1411,19 @@ export const doActualSync = async (
             realCounter += 1;
           }
 
-          await dispatchOperationToActual(
+          await dispatchOperationToActualV3(
             key,
             vaultRandomID,
+            profileID,
             val,
             client,
             db,
             vault,
             localDeleteFunc,
-            password
+            cipher
           );
 
-          log.debug(`finished ${key}`);
+          // console.debug(`finished ${key}`);
         };
 
         queue.add(fn).catch((e) => {
@@ -1468,5 +1448,11 @@ export const doActualSync = async (
         throw new AggregateError(potentialErrors);
       }
     }
+
+    profiler.insert(`doActualSync: step ${i} end`);
+    profiler.removeIndent();
   }
+
+  profiler.insert(`doActualSync: exit`);
+  profiler.removeIndent();
 };

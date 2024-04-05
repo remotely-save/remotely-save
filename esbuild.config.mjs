@@ -1,6 +1,7 @@
 import dotenv from "dotenv/config";
 import esbuild from "esbuild";
 import process from "process";
+import inlineWorkerPlugin from "esbuild-plugin-inline-worker";
 // import builtins from 'builtin-modules'
 
 const banner = `/*
@@ -18,7 +19,7 @@ const DEFAULT_ONEDRIVE_CLIENT_ID = process.env.ONEDRIVE_CLIENT_ID || "";
 const DEFAULT_ONEDRIVE_AUTHORITY = process.env.ONEDRIVE_AUTHORITY || "";
 
 esbuild
-  .build({
+  .context({
     banner: {
       js: banner,
     },
@@ -33,11 +34,13 @@ esbuild
       "fs",
       "tls",
       "net",
+      "http",
+      "https",
       // ...builtins
     ],
     inject: ["./esbuild.injecthelper.mjs"],
     format: "cjs",
-    watch: !prod,
+    // watch: !prod, // no longer valid in esbuild 0.17
     target: "es2016",
     logLevel: "info",
     sourcemap: prod ? false : "inline",
@@ -52,5 +55,17 @@ esbuild
       "process.env.NODE_DEBUG": `undefined`, // ugly fix
       "process.env.DEBUG": `undefined`, // ugly fix
     },
+    plugins: [inlineWorkerPlugin()],
+  })
+  .then((context) => {
+    if (process.argv.includes("--watch")) {
+      // Enable watch mode
+      context.watch();
+    } else {
+      // Build once and exit if not in watch mode
+      context.rebuild().then((result) => {
+        context.dispose();
+      });
+    }
   })
   .catch(() => process.exit(1));

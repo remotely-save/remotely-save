@@ -2,6 +2,7 @@ import { CryptoProvider, PublicClientApplication } from "@azure/msal-node";
 import { AuthenticationProvider } from "@microsoft/microsoft-graph-client";
 import type {
   DriveItem,
+  FileSystemInfo,
   UploadSession,
   User,
 } from "@microsoft/microsoft-graph-types";
@@ -13,25 +14,24 @@ import {
   DEFAULT_CONTENT_TYPE,
   OAUTH2_FORCE_EXPIRE_MILLISECONDS,
   OnedriveConfig,
-  RemoteItem,
+  Entity,
+  UploadedType,
 } from "./baseTypes";
-import { decryptArrayBuffer, encryptArrayBuffer } from "./encrypt";
 import {
   bufferToArrayBuffer,
   getRandomArrayBuffer,
   getRandomIntInclusive,
   mkdirpInVault,
 } from "./misc";
-
-import { log } from "./moreOnLog";
+import { Cipher } from "./encryptUnified";
 
 const SCOPES = ["User.Read", "Files.ReadWrite.AppFolder", "offline_access"];
 const REDIRECT_URI = `obsidian://${COMMAND_CALLBACK_ONEDRIVE}`;
 
 export const DEFAULT_ONEDRIVE_CONFIG: OnedriveConfig = {
   accessToken: "",
-  clientID: process.env.DEFAULT_ONEDRIVE_CLIENT_ID,
-  authority: process.env.DEFAULT_ONEDRIVE_AUTHORITY,
+  clientID: process.env.DEFAULT_ONEDRIVE_CLIENT_ID ?? "",
+  authority: process.env.DEFAULT_ONEDRIVE_AUTHORITY ?? "",
   refreshToken: "",
   accessTokenExpiresInSeconds: 0,
   accessTokenExpiresAtTime: 0,
@@ -105,7 +105,8 @@ export const sendAuthReq = async (
   clientID: string,
   authority: string,
   authCode: string,
-  verifier: string
+  verifier: string,
+  errorCallBack: any
 ) => {
   // // original code snippets for references
   // const authResponse = await pca.acquireTokenByCode({
@@ -114,8 +115,8 @@ export const sendAuthReq = async (
   //   code: authCode,
   //   codeVerifier: verifier, // PKCE Code Verifier
   // });
-  // log.info('authResponse')
-  // log.info(authResponse)
+  // console.info('authResponse')
+  // console.info(authResponse)
   // return authResponse;
 
   // Because of the CORS problem,
@@ -123,28 +124,33 @@ export const sendAuthReq = async (
   // instead of using msal
   // https://docs.microsoft.com/en-us/azure/active-directory/develop/v2-oauth2-auth-code-flow
   // https://docs.microsoft.com/en-us/onedrive/developer/rest-api/getting-started/graph-oauth?view=odsp-graph-online#code-flow
-  const rsp1 = await request({
-    url: `${authority}/oauth2/v2.0/token`,
-    method: "POST",
-    contentType: "application/x-www-form-urlencoded",
-    body: new URLSearchParams({
-      tenant: "consumers",
-      client_id: clientID,
-      scope: SCOPES.join(" "),
-      code: authCode,
-      redirect_uri: REDIRECT_URI,
-      grant_type: "authorization_code",
-      code_verifier: verifier,
-    }).toString(),
-  });
+  try {
+    const rsp1 = await request({
+      url: `${authority}/oauth2/v2.0/token`,
+      method: "POST",
+      contentType: "application/x-www-form-urlencoded",
+      body: new URLSearchParams({
+        tenant: "consumers",
+        client_id: clientID,
+        scope: SCOPES.join(" "),
+        code: authCode,
+        redirect_uri: REDIRECT_URI,
+        grant_type: "authorization_code",
+        code_verifier: verifier,
+      }).toString(),
+    });
 
-  const rsp2 = JSON.parse(rsp1);
-  // log.info(rsp2);
+    const rsp2 = JSON.parse(rsp1);
+    // console.info(rsp2);
 
-  if (rsp2.error !== undefined) {
-    return rsp2 as AccessCodeResponseFailedType;
-  } else {
-    return rsp2 as AccessCodeResponseSuccessfulType;
+    if (rsp2.error !== undefined) {
+      return rsp2 as AccessCodeResponseFailedType;
+    } else {
+      return rsp2 as AccessCodeResponseSuccessfulType;
+    }
+  } catch (e) {
+    console.error(e);
+    await errorCallBack(e);
   }
 };
 
@@ -154,26 +160,31 @@ export const sendRefreshTokenReq = async (
   refreshToken: string
 ) => {
   // also use Obsidian request to bypass CORS issue.
-  const rsp1 = await request({
-    url: `${authority}/oauth2/v2.0/token`,
-    method: "POST",
-    contentType: "application/x-www-form-urlencoded",
-    body: new URLSearchParams({
-      tenant: "consumers",
-      client_id: clientID,
-      scope: SCOPES.join(" "),
-      refresh_token: refreshToken,
-      grant_type: "refresh_token",
-    }).toString(),
-  });
+  try {
+    const rsp1 = await request({
+      url: `${authority}/oauth2/v2.0/token`,
+      method: "POST",
+      contentType: "application/x-www-form-urlencoded",
+      body: new URLSearchParams({
+        tenant: "consumers",
+        client_id: clientID,
+        scope: SCOPES.join(" "),
+        refresh_token: refreshToken,
+        grant_type: "refresh_token",
+      }).toString(),
+    });
 
-  const rsp2 = JSON.parse(rsp1);
-  // log.info(rsp2);
+    const rsp2 = JSON.parse(rsp1);
+    // console.info(rsp2);
 
-  if (rsp2.error !== undefined) {
-    return rsp2 as AccessCodeResponseFailedType;
-  } else {
-    return rsp2 as AccessCodeResponseSuccessfulType;
+    if (rsp2.error !== undefined) {
+      return rsp2 as AccessCodeResponseFailedType;
+    } else {
+      return rsp2 as AccessCodeResponseSuccessfulType;
+    }
+  } catch (e) {
+    console.error(e);
+    throw e;
   }
 };
 
@@ -182,12 +193,12 @@ export const setConfigBySuccessfullAuthInplace = async (
   authRes: AccessCodeResponseSuccessfulType,
   saveUpdatedConfigFunc: () => Promise<any> | undefined
 ) => {
-  log.info("start updating local info of OneDrive token");
+  console.info("start updating local info of OneDrive token");
   config.accessToken = authRes.access_token;
   config.accessTokenExpiresAtTime =
     Date.now() + authRes.expires_in - 5 * 60 * 1000;
   config.accessTokenExpiresInSeconds = authRes.expires_in;
-  config.refreshToken = authRes.refresh_token;
+  config.refreshToken = authRes.refresh_token!;
 
   // manually set it expired after 80 days;
   config.credentialsShouldBeDeletedAtTime =
@@ -197,7 +208,7 @@ export const setConfigBySuccessfullAuthInplace = async (
     await saveUpdatedConfigFunc();
   }
 
-  log.info("finish updating local info of Onedrive token");
+  console.info("finish updating local info of Onedrive token");
 };
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -207,10 +218,6 @@ export const setConfigBySuccessfullAuthInplace = async (
 const getOnedrivePath = (fileOrFolderPath: string, remoteBaseDir: string) => {
   // https://docs.microsoft.com/en-us/onedrive/developer/rest-api/concepts/special-folders-appfolder?view=odsp-graph-online
   const prefix = `/drive/special/approot:/${remoteBaseDir}`;
-  if (fileOrFolderPath.startsWith(prefix)) {
-    // already transformed, return as is
-    return fileOrFolderPath;
-  }
 
   let key = fileOrFolderPath;
   if (fileOrFolderPath === "/" || fileOrFolderPath === "") {
@@ -221,7 +228,12 @@ const getOnedrivePath = (fileOrFolderPath: string, remoteBaseDir: string) => {
     key = key.slice(0, key.length - 1);
   }
 
-  key = `${prefix}/${key}`;
+  if (key.startsWith("/")) {
+    console.warn(`why the path ${key} starts with '/'? but we just go on.`);
+    key = `${prefix}${key}`;
+  } else {
+    key = `${prefix}/${key}`;
+  }
   return key;
 };
 
@@ -242,32 +254,50 @@ const getNormPath = (fileOrFolderPath: string, remoteBaseDir: string) => {
   return fileOrFolderPath.slice(`${prefix}/`.length);
 };
 
-const constructFromDriveItemToRemoteItemError = (x: DriveItem) => {
-  return `parentPath="${x.parentReference.path}", selfName="${x.name}"`;
+const constructFromDriveItemToEntityError = (x: DriveItem) => {
+  return `parentPath="${
+    x.parentReference?.path ?? "(no parentReference or path)"
+  }", selfName="${x.name}"`;
 };
 
-const fromDriveItemToRemoteItem = (
-  x: DriveItem,
-  remoteBaseDir: string
-): RemoteItem => {
+const fromDriveItemToEntity = (x: DriveItem, remoteBaseDir: string): Entity => {
   let key = "";
 
   // possible prefix:
   // pure english: /drive/root:/Apps/remotely-save/${remoteBaseDir}
   // or localized, e.g.: /drive/root:/应用/remotely-save/${remoteBaseDir}
   const FIRST_COMMON_PREFIX_REGEX = /^\/drive\/root:\/[^\/]+\/remotely-save\//g;
+
+  // why?? /drive/root:/Apps/Graph
+  const FIFTH_COMMON_PREFIX_REGEX = /^\/drive\/root:\/[^\/]+\/Graph\//g;
+
   // or the root is absolute path /Livefolders,
   // e.g.: /Livefolders/应用/remotely-save/${remoteBaseDir}
   const SECOND_COMMON_PREFIX_REGEX = /^\/Livefolders\/[^\/]+\/remotely-save\//g;
 
-  // another possibile prefix
-  const THIRD_COMMON_PREFIX_RAW = `/drive/items/`;
+  // another report, why???
+  // /drive/root:/something/app/remotely-save/${remoteBaseDir}
+  const THIRD_COMMON_PREFIX_REGEX =
+    /^\/drive\/root:\/[^\/]+\/app\/remotely-save\//g;
 
+  // another possibile prefix
+  const FOURTH_COMMON_PREFIX_RAW = `/drive/items/`;
+
+  if (
+    x.parentReference === undefined ||
+    x.parentReference === null ||
+    x.parentReference.path === undefined ||
+    x.parentReference.path === null
+  ) {
+    throw Error("x.parentReference.path is undefinded or null");
+  }
   const fullPathOriginal = `${x.parentReference.path}/${x.name}`;
   const matchFirstPrefixRes = fullPathOriginal.match(FIRST_COMMON_PREFIX_REGEX);
+  const matchFifthPrefixRes = fullPathOriginal.match(FIFTH_COMMON_PREFIX_REGEX);
   const matchSecondPrefixRes = fullPathOriginal.match(
     SECOND_COMMON_PREFIX_REGEX
   );
+  const matchThirdPrefixRes = fullPathOriginal.match(THIRD_COMMON_PREFIX_REGEX);
   if (
     matchFirstPrefixRes !== null &&
     fullPathOriginal.startsWith(`${matchFirstPrefixRes[0]}${remoteBaseDir}`)
@@ -275,15 +305,32 @@ const fromDriveItemToRemoteItem = (
     const foundPrefix = `${matchFirstPrefixRes[0]}${remoteBaseDir}`;
     key = fullPathOriginal.substring(foundPrefix.length + 1);
   } else if (
+    matchFifthPrefixRes !== null &&
+    fullPathOriginal.startsWith(`${matchFifthPrefixRes[0]}${remoteBaseDir}`)
+  ) {
+    const foundPrefix = `${matchFifthPrefixRes[0]}${remoteBaseDir}`;
+    key = fullPathOriginal.substring(foundPrefix.length + 1);
+  } else if (
     matchSecondPrefixRes !== null &&
     fullPathOriginal.startsWith(`${matchSecondPrefixRes[0]}${remoteBaseDir}`)
   ) {
     const foundPrefix = `${matchSecondPrefixRes[0]}${remoteBaseDir}`;
     key = fullPathOriginal.substring(foundPrefix.length + 1);
-  } else if (x.parentReference.path.startsWith(THIRD_COMMON_PREFIX_RAW)) {
+  } else if (
+    matchThirdPrefixRes !== null &&
+    fullPathOriginal.startsWith(`${matchThirdPrefixRes[0]}${remoteBaseDir}`)
+  ) {
+    const foundPrefix = `${matchThirdPrefixRes[0]}${remoteBaseDir}`;
+    key = fullPathOriginal.substring(foundPrefix.length + 1);
+  } else if (x.parentReference.path.startsWith(FOURTH_COMMON_PREFIX_RAW)) {
     // it's something like
     // /drive/items/<some_id>!<another_id>:/${remoteBaseDir}/<subfolder>
     // with uri encoded!
+    if (x.name === undefined || x.name === null) {
+      throw Error(
+        `OneDrive item no name variable while matching ${FOURTH_COMMON_PREFIX_RAW}`
+      );
+    }
     const parPath = decodeURIComponent(x.parentReference.path);
     key = parPath.substring(parPath.indexOf(":") + 1);
     if (key.startsWith(`/${remoteBaseDir}/`)) {
@@ -293,14 +340,14 @@ const fromDriveItemToRemoteItem = (
       key = x.name;
     } else {
       throw Error(
-        `we meet file/folder and do not know how to deal with it:\n${constructFromDriveItemToRemoteItemError(
+        `we meet file/folder and do not know how to deal with it:\n${constructFromDriveItemToEntityError(
           x
         )}`
       );
     }
   } else {
     throw Error(
-      `we meet file/folder and do not know how to deal with it:\n${constructFromDriveItemToRemoteItemError(
+      `we meet file/folder and do not know how to deal with it:\n${constructFromDriveItemToEntityError(
         x
       )}`
     );
@@ -310,11 +357,15 @@ const fromDriveItemToRemoteItem = (
   if (isFolder) {
     key = `${key}/`;
   }
+
+  const mtimeSvr = Date.parse(x?.fileSystemInfo!.lastModifiedDateTime!);
+  const mtimeCli = Date.parse(x?.fileSystemInfo!.lastModifiedDateTime!);
   return {
-    key: key,
-    lastModified: Date.parse(x.fileSystemInfo.lastModifiedDateTime),
-    size: isFolder ? 0 : x.size,
-    remoteType: "onedrive",
+    keyRaw: key,
+    mtimeSvr: mtimeSvr,
+    mtimeCli: mtimeCli,
+    sizeRaw: isFolder ? 0 : x.size!,
+    // hash: ?? // TODO
     etag: x.cTag || "", // do NOT use x.eTag because it changes if meta changes
   };
 };
@@ -356,16 +407,29 @@ class MyAuthProvider implements AuthenticationProvider {
       }
       const r2 = r as AccessCodeResponseSuccessfulType;
       this.onedriveConfig.accessToken = r2.access_token;
-      this.onedriveConfig.refreshToken = r2.refresh_token;
+      this.onedriveConfig.refreshToken = r2.refresh_token!;
       this.onedriveConfig.accessTokenExpiresInSeconds = r2.expires_in;
       this.onedriveConfig.accessTokenExpiresAtTime =
         currentTs + r2.expires_in * 1000 - 60 * 2 * 1000;
       await this.saveUpdatedConfigFunc();
-      log.info("Onedrive accessToken updated");
+      console.info("Onedrive accessToken updated");
       return this.onedriveConfig.accessToken;
     }
   };
 }
+
+/**
+ * to export the settings in qrcode,
+ * we want to "trim" or "shrink" the settings
+ * @param onedriveConfig
+ */
+export const getShrinkedSettings = (onedriveConfig: OnedriveConfig) => {
+  const config = cloneDeep(onedriveConfig);
+  config.accessToken = "x";
+  config.accessTokenExpiresInSeconds = 1;
+  config.accessTokenExpiresAtTime = 1;
+  return config;
+};
 
 export class WrappedOnedriveClient {
   onedriveConfig: OnedriveConfig;
@@ -395,26 +459,26 @@ export class WrappedOnedriveClient {
     }
 
     // check vault folder
-    // log.info(`checking remote has folder /${this.remoteBaseDir}`);
+    // console.info(`checking remote has folder /${this.remoteBaseDir}`);
     if (this.vaultFolderExists) {
-      // log.info(`already checked, /${this.remoteBaseDir} exist before`)
+      // console.info(`already checked, /${this.remoteBaseDir} exist before`)
     } else {
       const k = await this.getJson("/drive/special/approot/children");
-      // log.debug(k);
+      // console.debug(k);
       this.vaultFolderExists =
         (k.value as DriveItem[]).filter((x) => x.name === this.remoteBaseDir)
           .length > 0;
       if (!this.vaultFolderExists) {
-        log.info(`remote does not have folder /${this.remoteBaseDir}`);
+        console.info(`remote does not have folder /${this.remoteBaseDir}`);
         await this.postJson("/drive/special/approot/children", {
           name: `${this.remoteBaseDir}`,
           folder: {},
           "@microsoft.graph.conflictBehavior": "replace",
         });
-        log.info(`remote folder /${this.remoteBaseDir} created`);
+        console.info(`remote folder /${this.remoteBaseDir} created`);
         this.vaultFolderExists = true;
       } else {
-        // log.info(`remote folder /${this.remoteBaseDir} exists`);
+        // console.info(`remote folder /${this.remoteBaseDir} exists`);
       }
     }
   };
@@ -431,12 +495,17 @@ export class WrappedOnedriveClient {
       const pathFrag = encodeURI(pathFragOrig);
       theUrl = `${API_PREFIX}${pathFrag}`;
     }
+    // we want to support file name with hash #
+    // because every url we construct here do not contain the # symbol
+    // thus it should be safe to directly replace the character
+    theUrl = theUrl.replace(/#/g, "%23");
+    // console.debug(`building url: [${pathFragOrig}] => [${theUrl}]`)
     return theUrl;
   };
 
   getJson = async (pathFragOrig: string) => {
     const theUrl = this.buildUrl(pathFragOrig);
-    log.debug(`getJson, theUrl=${theUrl}`);
+    console.debug(`getJson, theUrl=${theUrl}`);
     return JSON.parse(
       await request({
         url: theUrl,
@@ -452,7 +521,7 @@ export class WrappedOnedriveClient {
 
   postJson = async (pathFragOrig: string, payload: any) => {
     const theUrl = this.buildUrl(pathFragOrig);
-    log.debug(`postJson, theUrl=${theUrl}`);
+    console.debug(`postJson, theUrl=${theUrl}`);
     return JSON.parse(
       await request({
         url: theUrl,
@@ -468,7 +537,7 @@ export class WrappedOnedriveClient {
 
   patchJson = async (pathFragOrig: string, payload: any) => {
     const theUrl = this.buildUrl(pathFragOrig);
-    log.debug(`patchJson, theUrl=${theUrl}`);
+    console.debug(`patchJson, theUrl=${theUrl}`);
     return JSON.parse(
       await request({
         url: theUrl,
@@ -484,7 +553,7 @@ export class WrappedOnedriveClient {
 
   deleteJson = async (pathFragOrig: string) => {
     const theUrl = this.buildUrl(pathFragOrig);
-    log.debug(`deleteJson, theUrl=${theUrl}`);
+    console.debug(`deleteJson, theUrl=${theUrl}`);
     if (VALID_REQURL) {
       await requestUrl({
         url: theUrl,
@@ -505,12 +574,12 @@ export class WrappedOnedriveClient {
 
   putArrayBuffer = async (pathFragOrig: string, payload: ArrayBuffer) => {
     const theUrl = this.buildUrl(pathFragOrig);
-    log.debug(`putArrayBuffer, theUrl=${theUrl}`);
+    console.debug(`putArrayBuffer, theUrl=${theUrl}`);
     // TODO:
     // 20220401: On Android, requestUrl has issue that text becomes base64.
     // Use fetch everywhere instead!
     if (false /*VALID_REQURL*/) {
-      await requestUrl({
+      const res = await requestUrl({
         url: theUrl,
         method: "PUT",
         body: payload,
@@ -520,8 +589,9 @@ export class WrappedOnedriveClient {
           Authorization: `Bearer ${await this.authGetter.getAccessToken()}`,
         },
       });
+      return res.json as DriveItem | UploadSession;
     } else {
-      await fetch(theUrl, {
+      const res = await fetch(theUrl, {
         method: "PUT",
         body: payload,
         headers: {
@@ -529,6 +599,7 @@ export class WrappedOnedriveClient {
           Authorization: `Bearer ${await this.authGetter.getAccessToken()}`,
         },
       });
+      return (await res.json()) as DriveItem | UploadSession;
     }
   };
 
@@ -548,7 +619,7 @@ export class WrappedOnedriveClient {
     size: number
   ) => {
     const theUrl = this.buildUrl(pathFragOrig);
-    log.debug(
+    console.debug(
       `putUint8ArrayByRange, theUrl=${theUrl}, range=${rangeStart}-${
         rangeEnd - 1
       }, len=${rangeEnd - rangeStart}, size=${size}`
@@ -602,15 +673,8 @@ export const getOnedriveClient = (
  * Use delta api to list all files and folders
  * https://docs.microsoft.com/en-us/onedrive/developer/rest-api/api/driveitem_delta?view=odsp-graph-online
  * @param client
- * @param prefix
  */
-export const listFromRemote = async (
-  client: WrappedOnedriveClient,
-  prefix?: string
-) => {
-  if (prefix !== undefined) {
-    throw Error("prefix not supported (yet)");
-  }
+export const listAllFromRemote = async (client: WrappedOnedriveClient) => {
   await client.init();
 
   const NEXT_LINK_KEY = "@odata.nextLink";
@@ -620,7 +684,7 @@ export const listFromRemote = async (
     `/drive/special/approot:/${client.remoteBaseDir}:/delta`
   );
   let driveItems = res.value as DriveItem[];
-  // log.debug(driveItems);
+  // console.debug(driveItems);
 
   while (NEXT_LINK_KEY in res) {
     res = await client.getJson(res[NEXT_LINK_KEY]);
@@ -633,52 +697,64 @@ export const listFromRemote = async (
     await client.saveUpdatedConfigFunc();
   }
 
-  // unify everything to RemoteItem
+  // unify everything to Entity
   const unifiedContents = driveItems
-    .map((x) => fromDriveItemToRemoteItem(x, client.remoteBaseDir))
-    .filter((x) => x.key !== "/");
+    .map((x) => fromDriveItemToEntity(x, client.remoteBaseDir))
+    .filter((x) => x.keyRaw !== "/");
 
-  return {
-    Contents: unifiedContents,
-  };
+  return unifiedContents;
 };
 
 export const getRemoteMeta = async (
   client: WrappedOnedriveClient,
-  fileOrFolderPath: string
+  remotePath: string
 ) => {
   await client.init();
-  const remotePath = getOnedrivePath(fileOrFolderPath, client.remoteBaseDir);
-  // log.info(`remotePath=${remotePath}`);
+  // console.info(`remotePath=${remotePath}`);
   const rsp = await client.getJson(
     `${remotePath}?$select=cTag,eTag,fileSystemInfo,folder,file,name,parentReference,size`
   );
-  // log.info(rsp);
+  // console.info(rsp);
   const driveItem = rsp as DriveItem;
-  const res = fromDriveItemToRemoteItem(driveItem, client.remoteBaseDir);
-  // log.info(res);
+  const res = fromDriveItemToEntity(driveItem, client.remoteBaseDir);
+  // console.info(res);
   return res;
 };
 
 export const uploadToRemote = async (
   client: WrappedOnedriveClient,
   fileOrFolderPath: string,
-  vault: Vault,
-  isRecursively: boolean = false,
-  password: string = "",
+  vault: Vault | undefined,
+  isRecursively: boolean,
+  cipher: Cipher,
   remoteEncryptedKey: string = "",
   foldersCreatedBefore: Set<string> | undefined = undefined,
   uploadRaw: boolean = false,
   rawContent: string | ArrayBuffer = ""
-) => {
+): Promise<UploadedType> => {
   await client.init();
 
   let uploadFile = fileOrFolderPath;
-  if (password !== "") {
+  if (!cipher.isPasswordEmpty()) {
+    if (remoteEncryptedKey === undefined || remoteEncryptedKey === "") {
+      throw Error(
+        `uploadToRemote(onedrive) you have password but remoteEncryptedKey is empty!`
+      );
+    }
     uploadFile = remoteEncryptedKey;
   }
   uploadFile = getOnedrivePath(uploadFile, client.remoteBaseDir);
-  log.debug(`uploadFile=${uploadFile}`);
+  console.debug(`uploadFile=${uploadFile}`);
+
+  let mtime = 0;
+  let ctime = 0;
+  const s = await vault?.adapter?.stat(fileOrFolderPath);
+  if (s !== undefined && s !== null) {
+    mtime = s.mtime;
+    ctime = s.ctime;
+  }
+  const ctimeStr = new Date(ctime).toISOString();
+  const mtimeStr = new Date(mtime).toISOString();
 
   const isFolder = fileOrFolderPath.endsWith("/");
 
@@ -689,31 +765,44 @@ export const uploadToRemote = async (
       throw Error(`you specify uploadRaw, but you also provide a folder key!`);
     }
     // folder
-    if (password === "") {
-      // if not encrypted, mkdir a remote folder
+    if (cipher.isPasswordEmpty() || cipher.isFolderAware()) {
+      // if not encrypted, || encrypted isFolderAware, mkdir a remote folder
       if (foldersCreatedBefore?.has(uploadFile)) {
         // created, pass
       } else {
         // https://stackoverflow.com/questions/56479865/creating-nested-folders-in-one-go-onedrive-api
         // use PATCH to create folder recursively!!!
-        await client.patchJson(uploadFile, {
+        let k: any = {
           folder: {},
           "@microsoft.graph.conflictBehavior": "replace",
-        });
+        };
+        if (mtime !== 0 && ctime !== 0) {
+          k = {
+            folder: {},
+            "@microsoft.graph.conflictBehavior": "replace",
+            fileSystemInfo: {
+              lastModifiedDateTime: mtimeStr,
+              createdDateTime: ctimeStr,
+            } as FileSystemInfo,
+          };
+        }
+        await client.patchJson(uploadFile, k);
       }
       const res = await getRemoteMeta(client, uploadFile);
-      return res;
+      return {
+        entity: res,
+        mtimeCli: mtime,
+      };
     } else {
-      // if encrypted,
+      // if encrypted && !isFolderAware(),
       // upload a fake, random-size file
       // with the encrypted file name
       const byteLengthRandom = getRandomIntInclusive(
         1,
         65536 /* max allowed */
       );
-      const arrBufRandom = await encryptArrayBuffer(
-        getRandomArrayBuffer(byteLengthRandom),
-        password
+      const arrBufRandom = await cipher.encryptContent(
+        getRandomArrayBuffer(byteLengthRandom)
       );
 
       // an encrypted folder is always small, we just use put here
@@ -723,9 +812,20 @@ export const uploadToRemote = async (
         })}`,
         arrBufRandom
       );
-      // log.info(uploadResult)
+      if (mtime !== 0 && ctime !== 0) {
+        await client.patchJson(`${uploadFile}`, {
+          fileSystemInfo: {
+            lastModifiedDateTime: mtimeStr,
+            createdDateTime: ctimeStr,
+          } as FileSystemInfo,
+        });
+      }
+      // console.info(uploadResult)
       const res = await getRemoteMeta(client, uploadFile);
-      return res;
+      return {
+        entity: res,
+        mtimeCli: mtime,
+      };
     }
   } else {
     // file
@@ -738,11 +838,16 @@ export const uploadToRemote = async (
         localContent = rawContent;
       }
     } else {
+      if (vault === undefined) {
+        throw new Error(
+          `the vault variable is not passed but we want to read ${fileOrFolderPath} for OneDrive`
+        );
+      }
       localContent = await vault.adapter.readBinary(fileOrFolderPath);
     }
     let remoteContent = localContent;
-    if (password !== "") {
-      remoteContent = await encryptArrayBuffer(localContent, password);
+    if (!cipher.isPasswordEmpty()) {
+      remoteContent = await cipher.encryptContent(localContent);
     }
 
     // no need to create parent folders firstly, cool!
@@ -760,23 +865,45 @@ export const uploadToRemote = async (
         })}`,
         remoteContent
       );
+      if (mtime !== 0 && ctime !== 0) {
+        await client.patchJson(`${uploadFile}`, {
+          fileSystemInfo: {
+            lastModifiedDateTime: mtimeStr,
+            createdDateTime: ctimeStr,
+          } as FileSystemInfo,
+        });
+      }
     } else {
       // upload large files!
       // ref: https://docs.microsoft.com/en-us/onedrive/developer/rest-api/api/driveitem_createuploadsession?view=odsp-graph-online
 
       // 1. create uploadSession
       // uploadFile already starts with /drive/special/approot:/${remoteBaseDir}
-      const s: UploadSession = await client.postJson(
-        `${uploadFile}:/createUploadSession`,
-        {
+      let k: any = {
+        item: {
+          "@microsoft.graph.conflictBehavior": "replace",
+        },
+      };
+      if (mtime !== 0 && ctime !== 0) {
+        k = {
           item: {
             "@microsoft.graph.conflictBehavior": "replace",
+
+            // this is only possible using uploadSession
+            fileSystemInfo: {
+              lastModifiedDateTime: mtimeStr,
+              createdDateTime: ctimeStr,
+            } as FileSystemInfo,
           },
-        }
+        };
+      }
+      const s: UploadSession = await client.postJson(
+        `${uploadFile}:/createUploadSession`,
+        k
       );
-      const uploadUrl = s.uploadUrl;
-      log.debug("uploadSession = ");
-      log.debug(s);
+      const uploadUrl = s.uploadUrl!;
+      console.debug("uploadSession = ");
+      console.debug(s);
 
       // 2. upload by ranges
       // convert to uint8
@@ -797,18 +924,20 @@ export const uploadToRemote = async (
     }
 
     const res = await getRemoteMeta(client, uploadFile);
-    return res;
+    return {
+      entity: res,
+      mtimeCli: mtime,
+    };
   }
 };
 
 const downloadFromRemoteRaw = async (
   client: WrappedOnedriveClient,
-  fileOrFolderPath: string
+  remotePath: string
 ): Promise<ArrayBuffer> => {
   await client.init();
-  const key = getOnedrivePath(fileOrFolderPath, client.remoteBaseDir);
   const rsp = await client.getJson(
-    `${key}?$select=@microsoft.graph.downloadUrl`
+    `${remotePath}?$select=@microsoft.graph.downloadUrl`
   );
   const downloadUrl: string = rsp["@microsoft.graph.downloadUrl"];
   if (VALID_REQURL) {
@@ -831,7 +960,7 @@ export const downloadFromRemote = async (
   fileOrFolderPath: string,
   vault: Vault,
   mtime: number,
-  password: string = "",
+  cipher: Cipher,
   remoteEncryptedKey: string = "",
   skipSaving: boolean = false
 ) => {
@@ -849,14 +978,14 @@ export const downloadFromRemote = async (
     return new ArrayBuffer(0);
   } else {
     let downloadFile = fileOrFolderPath;
-    if (password !== "") {
+    if (!cipher.isPasswordEmpty()) {
       downloadFile = remoteEncryptedKey;
     }
     downloadFile = getOnedrivePath(downloadFile, client.remoteBaseDir);
     const remoteContent = await downloadFromRemoteRaw(client, downloadFile);
     let localContent = remoteContent;
-    if (password !== "") {
-      localContent = await decryptArrayBuffer(remoteContent, password);
+    if (!cipher.isPasswordEmpty()) {
+      localContent = await cipher.decryptContent(remoteContent);
     }
     if (!skipSaving) {
       await vault.adapter.writeBinary(fileOrFolderPath, localContent, {
@@ -870,14 +999,14 @@ export const downloadFromRemote = async (
 export const deleteFromRemote = async (
   client: WrappedOnedriveClient,
   fileOrFolderPath: string,
-  password: string = "",
+  cipher: Cipher,
   remoteEncryptedKey: string = ""
 ) => {
   if (fileOrFolderPath === "/") {
     return;
   }
   let remoteFileName = fileOrFolderPath;
-  if (password !== "") {
+  if (!cipher.isPasswordEmpty()) {
     remoteFileName = remoteEncryptedKey;
   }
   remoteFileName = getOnedrivePath(remoteFileName, client.remoteBaseDir);
@@ -894,7 +1023,7 @@ export const checkConnectivity = async (
     const k = await getUserDisplayName(client);
     return k !== "<unknown display name>";
   } catch (err) {
-    log.debug(err);
+    console.debug(err);
     if (callbackFunc !== undefined) {
       callbackFunc(err);
     }
