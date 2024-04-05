@@ -976,7 +976,8 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
 
           dropdown
             .setValue(
-              `${this.plugin.settings.s3.bypassCorsLocally ? "enable" : "disable"
+              `${
+                this.plugin.settings.s3.bypassCorsLocally ? "enable" : "disable"
               }`
             )
             .onChange(async (value) => {
@@ -1056,14 +1057,14 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
         });
       });
     new Setting(s3Div)
-      .setName(t("settings_s3_reverse_proxy_url"))
-      .setDesc(t("settings_s3_reverse_proxy_url_desc"))
+      .setName(t("settings_s3_reverse_proxy_no_sign_url"))
+      .setDesc(t("settings_s3_reverse_proxy_no_sign_url_desc"))
       .addText((text) =>
         text
           .setPlaceholder("")
-          .setValue(this.plugin.settings.s3.reverseProxyUrl)
+          .setValue(this.plugin.settings.s3.reverseProxyNoSignUrl ?? "")
           .onChange(async (value) => {
-            this.plugin.settings.s3.reverseProxyUrl = value.trim();
+            this.plugin.settings.s3.reverseProxyNoSignUrl = value.trim();
             await this.plugin.saveSettings();
           })
       );

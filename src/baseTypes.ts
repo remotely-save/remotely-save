@@ -27,12 +27,12 @@ export interface S3Config {
   remotePrefix?: string;
 
   useAccurateMTime?: boolean;
+  reverseProxyNoSignUrl?: string;
 
   /**
    * @deprecated
    */
   bypassCorsLocally?: boolean;
-  reverseProxyUrl: string;
 }
 
 export interface DropboxConfig {

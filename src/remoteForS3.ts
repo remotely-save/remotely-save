@@ -56,12 +56,15 @@ import { Cipher } from "./encryptUnified";
  */
 class ObsHttpHandler extends FetchHttpHandler {
   requestTimeoutInMs: number | undefined;
-  s3Config: S3Config | undefined;
-  constructor(options?: FetchHttpHandlerOptions, s3Config?: S3Config) {
+  reverseProxyNoSignUrl: string | undefined;
+  constructor(
+    options?: FetchHttpHandlerOptions,
+    reverseProxyNoSignUrl?: string
+  ) {
     super(options);
     this.requestTimeoutInMs =
       options === undefined ? undefined : options.requestTimeout;
-    this.s3Config = s3Config;
+    this.reverseProxyNoSignUrl = reverseProxyNoSignUrl;
   }
   async handle(
     request: HttpRequest,
@@ -82,10 +85,16 @@ class ObsHttpHandler extends FetchHttpHandler {
     }
 
     const { port, method } = request;
-    let url = `${request.protocol}//${request.hostname}${port ? `:${port}` : ""
-      }${path}`;
-    if (this.s3Config && this.s3Config.reverseProxyUrl && this.s3Config.reverseProxyUrl !== "") {
-      url = url.replace(this.s3Config.s3Endpoint, this.s3Config.reverseProxyUrl);
+    let url = `${request.protocol}//${request.hostname}${
+      port ? `:${port}` : ""
+    }${path}`;
+    if (
+      this.reverseProxyNoSignUrl !== undefined &&
+      this.reverseProxyNoSignUrl !== ""
+    ) {
+      const urlObj = new URL(url);
+      urlObj.host = this.reverseProxyNoSignUrl;
+      url = urlObj.href;
     }
     const body =
       method === "GET" || method === "HEAD" ? undefined : request.body;
@@ -171,7 +180,7 @@ export const DEFAULT_S3_CONFIG: S3Config = {
   forcePathStyle: false,
   remotePrefix: "",
   useAccurateMTime: false, // it causes money, disable by default
-  reverseProxyUrl: "",
+  reverseProxyNoSignUrl: "",
 };
 
 export type S3ObjectType = _Object;
@@ -310,9 +319,7 @@ export const getS3Client = (s3Config: S3Config) => {
   }
 
   let s3Client: S3Client;
-  if ((VALID_REQURL && s3Config.bypassCorsLocally) || (s3Config.reverseProxyUrl && s3Config.reverseProxyUrl !== "")) {
-    console.log("reverseProxyUrl", s3Config.reverseProxyUrl);
-
+  if (VALID_REQURL && s3Config.bypassCorsLocally) {
     s3Client = new S3Client({
       region: s3Config.s3Region,
       endpoint: endpoint,
@@ -321,7 +328,10 @@ export const getS3Client = (s3Config: S3Config) => {
         accessKeyId: s3Config.s3AccessKeyID,
         secretAccessKey: s3Config.s3SecretAccessKey,
       },
-      requestHandler: new ObsHttpHandler(undefined, s3Config),
+      requestHandler: new ObsHttpHandler(
+        undefined,
+        s3Config.reverseProxyNoSignUrl
+      ),
     });
   } else {
     s3Client = new S3Client({
