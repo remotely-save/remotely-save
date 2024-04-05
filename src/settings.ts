@@ -2156,6 +2156,9 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
     importExportDiv.createEl("h2", {
       text: t("settings_importexport"),
     });
+    if (Platform.isMobile) {
+      importExportDiv.addClass("setting-need-wrapping-mobile");
+    }
 
     new Setting(importExportDiv)
       .setName(t("settings_export"))
