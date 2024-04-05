@@ -22,17 +22,17 @@ import { buildQueryString } from "@smithy/querystring-builder";
 import { HeaderBag, HttpHandlerOptions, Provider } from "@aws-sdk/types";
 import { Buffer } from "buffer";
 import * as mime from "mime-types";
-import { Vault, requestUrl, RequestUrlParam } from "obsidian";
+import { Vault, requestUrl, RequestUrlParam, Platform } from "obsidian";
 import { Readable } from "stream";
 import * as path from "path";
 import AggregateError from "aggregate-error";
 import {
   DEFAULT_CONTENT_TYPE,
-  RemoteItem,
+  Entity,
   S3Config,
+  UploadedType,
   VALID_REQURL,
 } from "./baseTypes";
-import { decryptArrayBuffer, encryptArrayBuffer } from "./encrypt";
 import {
   arrayBufferToBuffer,
   bufferToArrayBuffer,
@@ -41,8 +41,8 @@ import {
 
 export { S3Client } from "@aws-sdk/client-s3";
 
-import { log } from "./moreOnLog";
 import PQueue from "p-queue";
+import { Cipher } from "./encryptUnified";
 
 ////////////////////////////////////////////////////////////////////////////////
 // special handler using Obsidian requestUrl
@@ -225,51 +225,82 @@ const getLocalNoPrefixPath = (
   return fileOrFolderPathWithRemotePrefix.slice(`${remotePrefix}`.length);
 };
 
-const fromS3ObjectToRemoteItem = (
+const fromS3ObjectToEntity = (
   x: S3ObjectType,
   remotePrefix: string,
   mtimeRecords: Record<string, number>,
   ctimeRecords: Record<string, number>
 ) => {
-  let mtime = x.LastModified!.valueOf();
+  // console.debug(`fromS3ObjectToEntity: ${x.Key!}, ${JSON.stringify(x,null,2)}`);
+  // S3 officially only supports seconds precision!!!!!
+  const mtimeSvr = Math.floor(x.LastModified!.valueOf() / 1000.0) * 1000;
+  let mtimeCli = mtimeSvr;
   if (x.Key! in mtimeRecords) {
     const m2 = mtimeRecords[x.Key!];
     if (m2 !== 0) {
-      mtime = m2;
+      // to be compatible with RClone, we read and store the time in seconds in new version!
+      if (m2 >= 1000000000000) {
+        // it's a millsecond, uploaded by old codes..
+        mtimeCli = m2;
+      } else {
+        // it's a second, uploaded by new codes of the plugin from March 24, 2024
+        mtimeCli = m2 * 1000;
+      }
     }
   }
-  const r: RemoteItem = {
-    key: getLocalNoPrefixPath(x.Key!, remotePrefix),
-    lastModified: mtime,
-    size: x.Size!,
-    remoteType: "s3",
+  const key = getLocalNoPrefixPath(x.Key!, remotePrefix);
+  const r: Entity = {
+    keyRaw: key,
+    mtimeSvr: mtimeSvr,
+    mtimeCli: mtimeCli,
+    sizeRaw: x.Size!,
     etag: x.ETag,
+    synthesizedFolder: false,
   };
   return r;
 };
 
-const fromS3HeadObjectToRemoteItem = (
+const fromS3HeadObjectToEntity = (
   fileOrFolderPathWithRemotePrefix: string,
   x: HeadObjectCommandOutput,
-  remotePrefix: string,
-  useAccurateMTime: boolean
+  remotePrefix: string
 ) => {
-  let mtime = x.LastModified!.valueOf();
-  if (useAccurateMTime && x.Metadata !== undefined) {
-    const m2 = Math.round(
+  // console.debug(`fromS3HeadObjectToEntity: ${fileOrFolderPathWithRemotePrefix}: ${JSON.stringify(x,null,2)}`);
+  // S3 officially only supports seconds precision!!!!!
+  const mtimeSvr = Math.floor(x.LastModified!.valueOf() / 1000.0) * 1000;
+  let mtimeCli = mtimeSvr;
+  if (x.Metadata !== undefined) {
+    const m2 = Math.floor(
       parseFloat(x.Metadata.mtime || x.Metadata.MTime || "0")
     );
     if (m2 !== 0) {
-      mtime = m2;
+      // to be compatible with RClone, we read and store the time in seconds in new version!
+      if (m2 >= 1000000000000) {
+        // it's a millsecond, uploaded by old codes..
+        mtimeCli = m2;
+      } else {
+        // it's a second, uploaded by new codes of the plugin from March 24, 2024
+        mtimeCli = m2 * 1000;
+      }
     }
   }
+  // console.debug(
+  //   `fromS3HeadObjectToEntity, fileOrFolderPathWithRemotePrefix=${fileOrFolderPathWithRemotePrefix}, remotePrefix=${remotePrefix}, x=${JSON.stringify(
+  //     x
+  //   )} `
+  // );
+  const key = getLocalNoPrefixPath(
+    fileOrFolderPathWithRemotePrefix,
+    remotePrefix
+  );
+  // console.debug(`fromS3HeadObjectToEntity, key=${key} after removing prefix`);
   return {
-    key: getLocalNoPrefixPath(fileOrFolderPathWithRemotePrefix, remotePrefix),
-    lastModified: mtime,
-    size: x.ContentLength,
-    remoteType: "s3",
+    keyRaw: key,
+    mtimeSvr: mtimeSvr,
+    mtimeCli: mtimeCli,
+    sizeRaw: x.ContentLength,
     etag: x.ETag,
-  } as RemoteItem;
+  } as Entity;
 };
 
 export const getS3Client = (s3Config: S3Config) => {
@@ -336,11 +367,10 @@ export const getRemoteMeta = async (
     })
   );
 
-  return fromS3HeadObjectToRemoteItem(
+  return fromS3HeadObjectToEntity(
     fileOrFolderPathWithRemotePrefix,
     res,
-    s3Config.remotePrefix ?? "",
-    s3Config.useAccurateMTime ?? false
+    s3Config.remotePrefix ?? ""
   );
 };
 
@@ -349,19 +379,26 @@ export const uploadToRemote = async (
   s3Config: S3Config,
   fileOrFolderPath: string,
   vault: Vault | undefined,
-  isRecursively: boolean = false,
-  password: string = "",
+  isRecursively: boolean,
+  cipher: Cipher,
   remoteEncryptedKey: string = "",
   uploadRaw: boolean = false,
   rawContent: string | ArrayBuffer = "",
   rawContentMTime: number = 0,
   rawContentCTime: number = 0
-) => {
+): Promise<UploadedType> => {
+  console.debug(`uploading ${fileOrFolderPath}`);
   let uploadFile = fileOrFolderPath;
-  if (password !== "") {
+  if (!cipher.isPasswordEmpty()) {
+    if (remoteEncryptedKey === undefined || remoteEncryptedKey === "") {
+      throw Error(
+        `uploadToRemote(s3) you have password but remoteEncryptedKey is empty!`
+      );
+    }
     uploadFile = remoteEncryptedKey;
   }
   uploadFile = getRemoteWithPrefixPath(uploadFile, s3Config.remotePrefix ?? "");
+  // console.debug(`actual uploadFile=${uploadFile}`);
   const isFolder = fileOrFolderPath.endsWith("/");
 
   if (isFolder && isRecursively) {
@@ -386,17 +423,21 @@ export const uploadToRemote = async (
         Body: "",
         ContentType: contentType,
         Metadata: {
-          MTime: `${mtime}`,
-          CTime: `${ctime}`,
+          MTime: `${mtime / 1000.0}`,
+          CTime: `${ctime / 1000.0}`,
         },
       })
     );
-    return await getRemoteMeta(s3Client, s3Config, uploadFile);
+    const res = await getRemoteMeta(s3Client, s3Config, uploadFile);
+    return {
+      entity: res,
+      mtimeCli: mtime,
+    };
   } else {
     // file
     // we ignore isRecursively parameter here
     let contentType = DEFAULT_CONTENT_TYPE;
-    if (password === "") {
+    if (cipher.isPasswordEmpty()) {
       contentType =
         mime.contentType(
           mime.lookup(fileOrFolderPath) || DEFAULT_CONTENT_TYPE
@@ -427,8 +468,8 @@ export const uploadToRemote = async (
       }
     }
     let remoteContent = localContent;
-    if (password !== "") {
-      remoteContent = await encryptArrayBuffer(localContent, password);
+    if (!cipher.isPasswordEmpty()) {
+      remoteContent = await cipher.encryptContent(localContent);
     }
 
     const bytesIn5MB = 5242880;
@@ -445,17 +486,24 @@ export const uploadToRemote = async (
         Body: body,
         ContentType: contentType,
         Metadata: {
-          MTime: `${mtime}`,
-          CTime: `${ctime}`,
+          MTime: `${mtime / 1000.0}`,
+          CTime: `${ctime / 1000.0}`,
         },
       },
     });
     upload.on("httpUploadProgress", (progress) => {
-      // log.info(progress);
+      // console.info(progress);
     });
     await upload.done();
 
-    return await getRemoteMeta(s3Client, s3Config, uploadFile);
+    const res = await getRemoteMeta(s3Client, s3Config, uploadFile);
+    // console.debug(
+    //   `uploaded ${uploadFile} with res=${JSON.stringify(res, null, 2)}`
+    // );
+    return {
+      entity: res,
+      mtimeCli: mtime,
+    };
   }
 };
 
@@ -512,12 +560,12 @@ const listFromRemoteRaw = async (
           if (rspHead.Metadata === undefined) {
             // pass
           } else {
-            mtimeRecords[content.Key!] = Math.round(
+            mtimeRecords[content.Key!] = Math.floor(
               parseFloat(
                 rspHead.Metadata.mtime || rspHead.Metadata.MTime || "0"
               )
             );
-            ctimeRecords[content.Key!] = Math.round(
+            ctimeRecords[content.Key!] = Math.floor(
               parseFloat(
                 rspHead.Metadata.ctime || rspHead.Metadata.CTime || "0"
               )
@@ -544,23 +592,24 @@ const listFromRemoteRaw = async (
   // ensemble fake rsp
   // in the end, we need to transform the response list
   // back to the local contents-alike list
-  return {
-    Contents: contents.map((x) =>
-      fromS3ObjectToRemoteItem(
-        x,
-        s3Config.remotePrefix ?? "",
-        mtimeRecords,
-        ctimeRecords
-      )
-    ),
-  };
+  return contents.map((x) =>
+    fromS3ObjectToEntity(
+      x,
+      s3Config.remotePrefix ?? "",
+      mtimeRecords,
+      ctimeRecords
+    )
+  );
 };
 
 export const listAllFromRemote = async (
   s3Client: S3Client,
   s3Config: S3Config
 ) => {
-  return await listFromRemoteRaw(s3Client, s3Config, s3Config.remotePrefix);
+  const res = (
+    await listFromRemoteRaw(s3Client, s3Config, s3Config.remotePrefix)
+  ).filter((x) => x.keyRaw !== "" && x.keyRaw !== "/");
+  return res;
 };
 
 /**
@@ -620,8 +669,8 @@ export const downloadFromRemote = async (
   fileOrFolderPath: string,
   vault: Vault,
   mtime: number,
-  password: string = "",
-  remoteEncryptedKey: string = "",
+  cipher: Cipher,
+  remoteEncryptedKey: string,
   skipSaving: boolean = false
 ) => {
   const isFolder = fileOrFolderPath.endsWith("/");
@@ -639,7 +688,7 @@ export const downloadFromRemote = async (
     return new ArrayBuffer(0);
   } else {
     let downloadFile = fileOrFolderPath;
-    if (password !== "") {
+    if (!cipher.isPasswordEmpty()) {
       downloadFile = remoteEncryptedKey;
     }
     downloadFile = getRemoteWithPrefixPath(
@@ -652,8 +701,8 @@ export const downloadFromRemote = async (
       downloadFile
     );
     let localContent = remoteContent;
-    if (password !== "") {
-      localContent = await decryptArrayBuffer(remoteContent, password);
+    if (!cipher.isPasswordEmpty()) {
+      localContent = await cipher.decryptContent(remoteContent);
     }
     if (!skipSaving) {
       await vault.adapter.writeBinary(fileOrFolderPath, localContent, {
@@ -675,14 +724,18 @@ export const deleteFromRemote = async (
   s3Client: S3Client,
   s3Config: S3Config,
   fileOrFolderPath: string,
-  password: string = "",
-  remoteEncryptedKey: string = ""
+  cipher: Cipher,
+  remoteEncryptedKey: string = "",
+  synthesizedFolder: boolean = false
 ) => {
   if (fileOrFolderPath === "/") {
     return;
   }
+  if (synthesizedFolder) {
+    return;
+  }
   let remoteFileName = fileOrFolderPath;
-  if (password !== "") {
+  if (!cipher.isPasswordEmpty()) {
     remoteFileName = remoteEncryptedKey;
   }
   remoteFileName = getRemoteWithPrefixPath(
@@ -696,9 +749,9 @@ export const deleteFromRemote = async (
     })
   );
 
-  if (fileOrFolderPath.endsWith("/") && password === "") {
+  if (fileOrFolderPath.endsWith("/") && cipher.isPasswordEmpty()) {
     const x = await listFromRemoteRaw(s3Client, s3Config, remoteFileName);
-    x.Contents.forEach(async (element) => {
+    x.forEach(async (element) => {
       await s3Client.send(
         new DeleteObjectCommand({
           Bucket: s3Config.s3BucketName,
@@ -706,7 +759,7 @@ export const deleteFromRemote = async (
         })
       );
     });
-  } else if (fileOrFolderPath.endsWith("/") && password !== "") {
+  } else if (fileOrFolderPath.endsWith("/") && !cipher.isPasswordEmpty()) {
     // TODO
   } else {
     // pass
@@ -731,6 +784,13 @@ export const checkConnectivity = async (
   callbackFunc?: any
 ) => {
   try {
+    // TODO: no universal way now, just check this in connectivity
+    if (Platform.isIosApp && s3Config.s3Endpoint.startsWith("http://")) {
+      throw Error(
+        `Your s3 endpoint could only be https, not http, because of the iOS restriction.`
+      );
+    }
+
     // const results = await s3Client.send(
     //   new HeadBucketCommand({ Bucket: s3Config.s3BucketName })
     // );
@@ -746,7 +806,7 @@ export const checkConnectivity = async (
       results.$metadata.httpStatusCode === undefined
     ) {
       const err = "results or $metadata or httStatusCode is undefined";
-      log.debug(err);
+      console.debug(err);
       if (callbackFunc !== undefined) {
         callbackFunc(err);
       }
@@ -754,7 +814,7 @@ export const checkConnectivity = async (
     }
     return results.$metadata.httpStatusCode === 200;
   } catch (err: any) {
-    log.debug(err);
+    console.debug(err);
     if (callbackFunc !== undefined) {
       if (s3Config.s3Endpoint.contains(s3Config.s3BucketName)) {
         const err2 = new AggregateError([

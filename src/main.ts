@@ -7,15 +7,13 @@ import {
   setIcon,
   FileSystemAdapter,
   Platform,
-  TFile,
-  TFolder,
   requestUrl,
   requireApiVersion,
+  Events,
 } from "obsidian";
 import cloneDeep from "lodash/cloneDeep";
 import { createElement, RotateCcw, RefreshCcw, FileText } from "lucide";
 import type {
-  FileOrFolderMixedState,
   RemotelySavePluginSettings,
   SyncTriggerSourceType,
 } from "./baseTypes";
@@ -24,22 +22,20 @@ import {
   COMMAND_CALLBACK_ONEDRIVE,
   COMMAND_CALLBACK_DROPBOX,
   COMMAND_URI,
-  REMOTELY_SAVE_VERSION_2024PREPARE,
   API_VER_ENSURE_REQURL_OK,
 } from "./baseTypes";
 import { importQrCodeUri } from "./importExport";
 import {
-  insertDeleteRecordByVault,
-  insertRenameRecordByVault,
   insertSyncPlanRecordByVault,
-  loadFileHistoryTableByVault,
   prepareDBs,
   InternalDBs,
   clearExpiredSyncPlanRecords,
-  upsertLastSuccessSyncByVault,
-  getLastSuccessSyncByVault,
   upsertPluginVersionByVault,
   clearAllLoggerOutputRecords,
+  upsertLastSuccessSyncTimeByVault,
+  getLastSuccessSyncTimeByVault,
+  getAllPrevSyncRecordsByVaultAndProfile,
+  insertProfilerResultByVault,
 } from "./localdb";
 import { RemoteClient } from "./remote";
 import {
@@ -57,21 +53,24 @@ import {
 import { DEFAULT_S3_CONFIG } from "./remoteForS3";
 import { DEFAULT_WEBDAV_CONFIG } from "./remoteForWebdav";
 import { RemotelySaveSettingTab } from "./settings";
-import { fetchMetadataFile, parseRemoteItems, SyncStatusType } from "./sync";
-import { doActualSync, getSyncPlan, isPasswordOk } from "./sync";
+import {
+  doActualSync,
+  ensembleMixedEnties,
+  getSyncPlanInplace,
+  isPasswordOk,
+  SyncStatusType,
+} from "./sync";
 import { messyConfigToNormal, normalConfigToMessy } from "./configPersist";
-import { ObsConfigDirFileType, listFilesInObsFolder } from "./obsFolderLister";
+import { getLocalEntityList } from "./local";
 import { I18n } from "./i18n";
 import type { LangType, LangTypeAndAuto, TransItemType } from "./i18n";
+import { SyncAlgoV3Modal } from "./syncAlgoV3Notice";
 
-import { DeletionOnRemote, MetadataOnRemote } from "./metadataOnRemote";
-import { SyncAlgoV2Modal } from "./syncAlgoV2Notice";
-
-import { applyLogWriterInplace, log } from "./moreOnLog";
 import AggregateError from "aggregate-error";
 import { exportVaultSyncPlansToFiles } from "./debugMode";
-import { SizesConflictModal } from "./syncSizesConflictNotice";
-import { compareVersion } from "./misc";
+import { changeMobileStatusBar, compareVersion } from "./misc";
+import { Cipher } from "./encryptUnified";
+import { Profiler } from "./profiler";
 
 const DEFAULT_SETTINGS: RemotelySavePluginSettings = {
   s3: DEFAULT_S3_CONFIG,
@@ -95,6 +94,14 @@ const DEFAULT_SETTINGS: RemotelySavePluginSettings = {
   ignorePaths: [],
   enableStatusBarInfo: true,
   deleteToWhere: "system",
+  agreeToUseSyncV3: false,
+  conflictAction: "keep_newer",
+  howToCleanEmptyFolder: "skip",
+  protectModifyPercentage: 50,
+  syncDirection: "bidirectional",
+  obfuscateSettingFile: true,
+  enableMobileStatusBar: false,
+  encryptionMethod: "unknown",
 };
 
 interface OAuth2Info {
@@ -145,11 +152,17 @@ export default class RemotelySavePlugin extends Plugin {
   i18n!: I18n;
   vaultRandomID!: string;
   debugServerTemp?: string;
+  syncEvent?: Events;
+  appContainerObserver?: MutationObserver;
 
   async syncRun(triggerSource: SyncTriggerSourceType = "manual") {
+    const profiler = new Profiler("start of syncRun");
+
     const t = (x: TransItemType, vars?: any) => {
       return this.i18n.t(x, vars);
     };
+
+    const profileID = this.getCurrProfileID();
 
     const getNotice = (x: string, timeout?: number) => {
       // only show notices in manual mode
@@ -159,15 +172,17 @@ export default class RemotelySavePlugin extends Plugin {
       }
     };
     if (this.syncStatus !== "idle") {
-      // here the notice is shown regardless of triggerSource
-      new Notice(
+      // really, users don't want to see this in auto mode
+      // so we use getNotice to avoid unnecessary show up
+      getNotice(
         t("syncrun_alreadyrunning", {
           pluginName: this.manifest.name,
           syncStatus: this.syncStatus,
+          newTriggerSource: triggerSource,
         })
       );
       if (this.currSyncMsg !== undefined && this.currSyncMsg !== "") {
-        new Notice(this.currSyncMsg);
+        getNotice(this.currSyncMsg);
       }
       return;
     }
@@ -178,7 +193,7 @@ export default class RemotelySavePlugin extends Plugin {
     }
 
     try {
-      log.info(
+      console.info(
         `${
           this.manifest.id
         }-${Date.now()}: start sync, triggerSource=${triggerSource}`
@@ -203,7 +218,11 @@ export default class RemotelySavePlugin extends Plugin {
         }
       }
 
-      //log.info(`huh ${this.settings.password}`)
+      // change status to "syncing..." on statusbar
+      if (this.statusBarElement !== undefined) {
+        this.updateLastSuccessSyncMsg(-1);
+      }
+      //console.info(`huh ${this.settings.password}`)
       if (this.settings.currLogLevel === "info") {
         getNotice(
           t("syncrun_shortstep1", {
@@ -219,6 +238,7 @@ export default class RemotelySavePlugin extends Plugin {
       }
 
       this.syncStatus = "preparing";
+      profiler.insert("finish step1");
 
       if (this.settings.currLogLevel === "info") {
         // pass
@@ -234,10 +254,14 @@ export default class RemotelySavePlugin extends Plugin {
         this.settings.dropbox,
         this.settings.onedrive,
         this.app.vault.getName(),
-        () => self.saveSettings()
+        () => self.saveSettings(),
+        profiler
       );
-      const remoteRsp = await client.listAllFromRemote();
-      // log.debug(remoteRsp);
+      const remoteEntityList = await client.listAllFromRemote();
+      console.debug("remoteEntityList:");
+      console.debug(remoteEntityList);
+
+      profiler.insert("finish step2 (listing remote)");
 
       if (this.settings.currLogLevel === "info") {
         // pass
@@ -245,57 +269,52 @@ export default class RemotelySavePlugin extends Plugin {
         getNotice(t("syncrun_step3"));
       }
       this.syncStatus = "checking_password";
-      const passwordCheckResult = await isPasswordOk(
-        remoteRsp.Contents,
-        this.settings.password
+
+      const cipher = new Cipher(
+        this.settings.password,
+        this.settings.encryptionMethod ?? "unknown"
       );
+      const passwordCheckResult = await isPasswordOk(remoteEntityList, cipher);
       if (!passwordCheckResult.ok) {
         getNotice(t("syncrun_passworderr"));
         throw Error(passwordCheckResult.reason);
       }
+
+      profiler.insert("finish step3 (checking password)");
 
       if (this.settings.currLogLevel === "info") {
         // pass
       } else {
         getNotice(t("syncrun_step4"));
       }
-      this.syncStatus = "getting_remote_extra_meta";
-      const { remoteStates, metadataFile } = await parseRemoteItems(
-        remoteRsp.Contents,
-        this.db,
-        this.vaultRandomID,
-        client.serviceType,
-        this.settings.password
-      );
-      const origMetadataOnRemote = await fetchMetadataFile(
-        metadataFile,
-        client,
+      this.syncStatus = "getting_local_meta";
+      const localEntityList = await getLocalEntityList(
         this.app.vault,
-        this.settings.password
+        this.settings.syncConfigDir ?? false,
+        this.app.vault.configDir,
+        this.manifest.id,
+        profiler
       );
+      console.debug("localEntityList:");
+      console.debug(localEntityList);
+
+      profiler.insert("finish step4 (local meta)");
 
       if (this.settings.currLogLevel === "info") {
         // pass
       } else {
         getNotice(t("syncrun_step5"));
       }
-      this.syncStatus = "getting_local_meta";
-      const local = this.app.vault.getAllLoadedFiles();
-      const localHistory = await loadFileHistoryTableByVault(
+      this.syncStatus = "getting_local_prev_sync";
+      const prevSyncEntityList = await getAllPrevSyncRecordsByVaultAndProfile(
         this.db,
-        this.vaultRandomID
+        this.vaultRandomID,
+        profileID
       );
-      let localConfigDirContents: ObsConfigDirFileType[] | undefined =
-        undefined;
-      if (this.settings.syncConfigDir) {
-        localConfigDirContents = await listFilesInObsFolder(
-          this.app.vault.configDir,
-          this.app.vault,
-          this.manifest.id
-        );
-      }
-      // log.info(local);
-      // log.info(localHistory);
+      console.debug("prevSyncEntityList:");
+      console.debug(prevSyncEntityList);
+
+      profiler.insert("finish step5 (prev sync)");
 
       if (this.settings.currLogLevel === "info") {
         // pass
@@ -303,24 +322,39 @@ export default class RemotelySavePlugin extends Plugin {
         getNotice(t("syncrun_step6"));
       }
       this.syncStatus = "generating_plan";
-      const { plan, sortedKeys, deletions, sizesGoWrong } = await getSyncPlan(
-        remoteStates,
-        local,
-        localConfigDirContents,
-        origMetadataOnRemote.deletions,
-        localHistory,
-        client.serviceType,
-        triggerSource,
-        this.app.vault,
+      let mixedEntityMappings = await ensembleMixedEnties(
+        localEntityList,
+        prevSyncEntityList,
+        remoteEntityList,
         this.settings.syncConfigDir ?? false,
         this.app.vault.configDir,
         this.settings.syncUnderscoreItems ?? false,
-        this.settings.skipSizeLargerThan ?? -1,
         this.settings.ignorePaths ?? [],
-        this.settings.password
+        cipher,
+        this.settings.serviceType,
+        profiler
       );
-      log.info(plan.mixedStates); // for debugging
-      await insertSyncPlanRecordByVault(this.db, plan, this.vaultRandomID);
+      profiler.insert("finish building partial mixedEntity");
+      mixedEntityMappings = await getSyncPlanInplace(
+        mixedEntityMappings,
+        this.settings.howToCleanEmptyFolder ?? "skip",
+        this.settings.skipSizeLargerThan ?? -1,
+        this.settings.conflictAction ?? "keep_newer",
+        this.settings.syncDirection ?? "bidirectional",
+        profiler
+      );
+      console.info(`mixedEntityMappings:`);
+      console.info(mixedEntityMappings); // for debugging
+      profiler.insert("finish building full sync plan");
+      await insertSyncPlanRecordByVault(
+        this.db,
+        mixedEntityMappings,
+        this.vaultRandomID,
+        client.serviceType
+      );
+
+      profiler.insert("finish writing sync plan");
+      profiler.insert("finish step6 (plan)");
 
       // The operations above are almost read only and kind of safe.
       // The operations below begins to write or delete (!!!) something.
@@ -333,30 +367,47 @@ export default class RemotelySavePlugin extends Plugin {
         }
         this.syncStatus = "syncing";
         await doActualSync(
+          mixedEntityMappings,
           client,
-          this.db,
           this.vaultRandomID,
+          profileID,
           this.app.vault,
-          plan,
-          sortedKeys,
-          metadataFile,
-          origMetadataOnRemote,
-          sizesGoWrong,
-          deletions,
+          cipher,
+          this.settings.concurrency ?? 5,
           (key: string) => self.trash(key),
-          this.settings.password,
-          this.settings.concurrency,
-          (ss: FileOrFolderMixedState[]) => {
-            new SizesConflictModal(
-              self.app,
-              self,
-              this.settings.skipSizeLargerThan ?? -1,
-              ss,
-              this.settings.password !== ""
-            ).open();
+          this.settings.protectModifyPercentage ?? 50,
+          (
+            protectModifyPercentage: number,
+            realModifyDeleteCount: number,
+            allFilesCount: number
+          ) => {
+            const percent = (
+              (100 * realModifyDeleteCount) /
+              allFilesCount
+            ).toFixed(1);
+            const res = t("syncrun_abort_protectmodifypercentage", {
+              protectModifyPercentage,
+              realModifyDeleteCount,
+              allFilesCount,
+              percent,
+            });
+            return res;
           },
-          (i: number, totalCount: number, pathName: string, decision: string) =>
-            self.setCurrSyncMsg(i, totalCount, pathName, decision)
+          (
+            realCounter: number,
+            realTotalCount: number,
+            pathName: string,
+            decision: string
+          ) =>
+            self.setCurrSyncMsg(
+              realCounter,
+              realTotalCount,
+              pathName,
+              decision,
+              triggerSource
+            ),
+          this.db,
+          profiler
         );
       } else {
         this.syncStatus = "syncing";
@@ -367,6 +418,10 @@ export default class RemotelySavePlugin extends Plugin {
         }
       }
 
+      cipher.closeResources();
+
+      profiler.insert("finish step7 (actual sync)");
+
       if (this.settings.currLogLevel === "info") {
         getNotice(t("syncrun_shortstep2"));
       } else {
@@ -376,8 +431,10 @@ export default class RemotelySavePlugin extends Plugin {
       this.syncStatus = "finish";
       this.syncStatus = "idle";
 
+      profiler.insert("finish step8");
+
       const lastSuccessSyncMillis = Date.now();
-      await upsertLastSuccessSyncByVault(
+      await upsertLastSuccessSyncTimeByVault(
         this.db,
         this.vaultRandomID,
         lastSuccessSyncMillis
@@ -392,20 +449,22 @@ export default class RemotelySavePlugin extends Plugin {
         this.updateLastSuccessSyncMsg(lastSuccessSyncMillis);
       }
 
-      log.info(
+      this.syncEvent?.trigger("SYNC_DONE");
+      console.info(
         `${
           this.manifest.id
         }-${Date.now()}: finish sync, triggerSource=${triggerSource}`
       );
     } catch (error: any) {
+      profiler.insert("start error branch");
       const msg = t("syncrun_abort", {
         manifestID: this.manifest.id,
         theDate: `${Date.now()}`,
         triggerSource: triggerSource,
         syncStatus: this.syncStatus,
       });
-      log.error(msg);
-      log.error(error);
+      console.error(msg);
+      console.error(error);
       getNotice(msg, 10 * 1000);
       if (error instanceof AggregateError) {
         for (const e of error.errors) {
@@ -419,11 +478,23 @@ export default class RemotelySavePlugin extends Plugin {
         setIcon(this.syncRibbon, iconNameSyncWait);
         this.syncRibbon.setAttribute("aria-label", originLabel);
       }
+
+      profiler.insert("finish error branch");
     }
+
+    profiler.insert("finish syncRun");
+    console.debug(profiler.toString());
+    insertProfilerResultByVault(
+      this.db,
+      profiler.toString(),
+      this.vaultRandomID,
+      this.settings.serviceType
+    );
+    profiler.clear();
   }
 
   async onload() {
-    log.info(`loading plugin ${this.manifest.id}`);
+    console.info(`loading plugin ${this.manifest.id}`);
 
     const { iconSvgSyncWait, iconSvgSyncRunning, iconSvgLogs } = getIconSvg();
 
@@ -441,7 +512,12 @@ export default class RemotelySavePlugin extends Plugin {
 
     this.currSyncMsg = "";
 
+    this.syncEvent = new Events();
+
     await this.loadSettings();
+
+    // MUST after loadSettings and before prepareDB
+    const profileID: string = this.getCurrProfileID();
 
     // lang should be load early, but after settings
     this.i18n = new I18n(this.settings.lang!, async (lang: LangTypeAndAuto) => {
@@ -451,10 +527,6 @@ export default class RemotelySavePlugin extends Plugin {
     const t = (x: TransItemType, vars?: any) => {
       return this.i18n.t(x, vars);
     };
-
-    if (this.settings.currLogLevel !== undefined) {
-      log.setLevel(this.settings.currLogLevel as any);
-    }
 
     await this.checkIfOauthExpires();
 
@@ -472,7 +544,8 @@ export default class RemotelySavePlugin extends Plugin {
     try {
       await this.prepareDBAndVaultRandomID(
         vaultBasePath,
-        vaultRandomIDFromOldConfigFile
+        vaultRandomIDFromOldConfigFile,
+        profileID
       );
     } catch (err: any) {
       new Notice(
@@ -483,7 +556,6 @@ export default class RemotelySavePlugin extends Plugin {
     }
 
     // must AFTER preparing DB
-    this.redirectLoggingOuputBasedOnSetting();
     this.enableAutoClearOutputToDBHistIfSet();
 
     // must AFTER preparing DB
@@ -491,53 +563,8 @@ export default class RemotelySavePlugin extends Plugin {
 
     this.syncStatus = "idle";
 
-    this.registerEvent(
-      this.app.vault.on("delete", async (fileOrFolder) => {
-        await insertDeleteRecordByVault(
-          this.db,
-          fileOrFolder,
-          this.vaultRandomID
-        );
-      })
-    );
-
-    this.registerEvent(
-      this.app.vault.on("rename", async (fileOrFolder, oldPath) => {
-        await insertRenameRecordByVault(
-          this.db,
-          fileOrFolder,
-          oldPath,
-          this.vaultRandomID
-        );
-      })
-    );
-
-    function getMethods(obj: any) {
-      var result = [];
-      for (var id in obj) {
-        try {
-          if (typeof obj[id] == "function") {
-            result.push(id + ": " + obj[id].toString());
-          }
-        } catch (err) {
-          result.push(id + ": inaccessible");
-        }
-      }
-      return result.join("\n");
-    }
-    this.registerEvent(
-      this.app.vault.on("raw" as any, async (fileOrFolder) => {
-        // special track on .obsidian folder
-        const name = `${fileOrFolder}`;
-        if (name.startsWith(this.app.vault.configDir)) {
-          if (!(await this.app.vault.adapter.exists(name))) {
-            await insertDeleteRecordByVault(this.db, name, this.vaultRandomID);
-          }
-        }
-      })
-    );
-
     this.registerObsidianProtocolHandler(COMMAND_URI, async (inputParams) => {
+      // console.debug(inputParams);
       const parsed = importQrCodeUri(inputParams, this.app.vault.getName());
       if (parsed.status === "error") {
         new Notice(parsed.message);
@@ -752,20 +779,26 @@ export default class RemotelySavePlugin extends Plugin {
       async () => this.syncRun("manual")
     );
 
-    // Create Status Bar Item (not supported on mobile)
-    if (!Platform.isMobileApp && this.settings.enableStatusBarInfo === true) {
+    this.enableMobileStatusBarIfSet();
+
+    // Create Status Bar Item
+    if (
+      (!Platform.isMobile ||
+        (Platform.isMobile && this.settings.enableMobileStatusBar)) &&
+      this.settings.enableStatusBarInfo === true
+    ) {
       const statusBarItem = this.addStatusBarItem();
       this.statusBarElement = statusBarItem.createEl("span");
       this.statusBarElement.setAttribute("data-tooltip-position", "top");
 
       this.updateLastSuccessSyncMsg(
-        await getLastSuccessSyncByVault(this.db, this.vaultRandomID)
+        await getLastSuccessSyncTimeByVault(this.db, this.vaultRandomID)
       );
       // update statusbar text every 30 seconds
       this.registerInterval(
         window.setInterval(async () => {
           this.updateLastSuccessSyncMsg(
-            await getLastSuccessSyncByVault(this.db, this.vaultRandomID)
+            await getLastSuccessSyncTimeByVault(this.db, this.vaultRandomID)
           );
         }, 1000 * 30)
       );
@@ -790,14 +823,45 @@ export default class RemotelySavePlugin extends Plugin {
     });
 
     this.addCommand({
-      id: "export-sync-plans-json",
-      name: t("command_exportsyncplans_json"),
+      id: "export-sync-plans-1",
+      name: t("command_exportsyncplans_1"),
       icon: iconNameLogs,
       callback: async () => {
         await exportVaultSyncPlansToFiles(
           this.db,
           this.app.vault,
-          this.vaultRandomID
+          this.vaultRandomID,
+          1
+        );
+        new Notice(t("settings_syncplans_notice"));
+      },
+    });
+
+    this.addCommand({
+      id: "export-sync-plans-5",
+      name: t("command_exportsyncplans_5"),
+      icon: iconNameLogs,
+      callback: async () => {
+        await exportVaultSyncPlansToFiles(
+          this.db,
+          this.app.vault,
+          this.vaultRandomID,
+          5
+        );
+        new Notice(t("settings_syncplans_notice"));
+      },
+    });
+
+    this.addCommand({
+      id: "export-sync-plans-all",
+      name: t("command_exportsyncplans_all"),
+      icon: iconNameLogs,
+      callback: async () => {
+        await exportVaultSyncPlansToFiles(
+          this.db,
+          this.app.vault,
+          this.vaultRandomID,
+          -1
         );
         new Notice(t("settings_syncplans_notice"));
       },
@@ -806,12 +870,12 @@ export default class RemotelySavePlugin extends Plugin {
     this.addSettingTab(new RemotelySaveSettingTab(this.app, this));
 
     // this.registerDomEvent(document, "click", (evt: MouseEvent) => {
-    //   log.info("click", evt);
+    //   console.info("click", evt);
     // });
 
-    if (!this.settings.agreeToUploadExtraMetadata) {
-      const syncAlgoV2Modal = new SyncAlgoV2Modal(this.app, this);
-      syncAlgoV2Modal.open();
+    if (!this.settings.agreeToUseSyncV3) {
+      const syncAlgoV3Modal = new SyncAlgoV3Modal(this.app, this);
+      syncAlgoV3Modal.open();
     } else {
       this.enableAutoSyncIfSet();
       this.enableInitSyncIfSet();
@@ -824,14 +888,15 @@ export default class RemotelySavePlugin extends Plugin {
       this.vaultRandomID,
       this.manifest.version
     );
-    if (compareVersion(REMOTELY_SAVE_VERSION_2024PREPARE, oldVersion) >= 0) {
-      new Notice(t("official_notice_2024_first_party"), 10 * 1000);
-    }
   }
 
   async onunload() {
-    log.info(`unloading plugin ${this.manifest.id}`);
+    console.info(`unloading plugin ${this.manifest.id}`);
     this.syncRibbon = undefined;
+    if (this.appContainerObserver !== undefined) {
+      this.appContainerObserver.disconnect();
+      this.appContainerObserver = undefined;
+    }
     if (this.oauth2Info !== undefined) {
       this.oauth2Info.helperModal = undefined;
       this.oauth2Info = {
@@ -913,11 +978,66 @@ export default class RemotelySavePlugin extends Plugin {
       this.settings.s3.bypassCorsLocally = true; // deprecated as of 20240113
     }
 
+    if (this.settings.agreeToUseSyncV3 === undefined) {
+      this.settings.agreeToUseSyncV3 = false;
+    }
+    if (this.settings.conflictAction === undefined) {
+      this.settings.conflictAction = "keep_newer";
+    }
+    if (this.settings.howToCleanEmptyFolder === undefined) {
+      this.settings.howToCleanEmptyFolder = "skip";
+    }
+    if (this.settings.protectModifyPercentage === undefined) {
+      this.settings.protectModifyPercentage = 50;
+    }
+    if (this.settings.syncDirection === undefined) {
+      this.settings.syncDirection = "bidirectional";
+    }
+
+    if (this.settings.obfuscateSettingFile === undefined) {
+      this.settings.obfuscateSettingFile = true;
+    }
+
+    if (this.settings.enableMobileStatusBar === undefined) {
+      this.settings.enableMobileStatusBar = false;
+    }
+
+    if (
+      this.settings.encryptionMethod === undefined ||
+      this.settings.encryptionMethod === "unknown"
+    ) {
+      if (
+        this.settings.password === undefined ||
+        this.settings.password === ""
+      ) {
+        // we have a preferred way
+        this.settings.encryptionMethod = "rclone-base64";
+      } else {
+        // likely to be inherited from the old version
+        this.settings.encryptionMethod = "openssl-base64";
+      }
+    }
+
     await this.saveSettings();
   }
 
   async saveSettings() {
-    await this.saveData(normalConfigToMessy(this.settings));
+    if (this.settings.obfuscateSettingFile) {
+      await this.saveData(normalConfigToMessy(this.settings));
+    } else {
+      await this.saveData(this.settings);
+    }
+  }
+
+  /**
+   * After 202403 the data should be of profile based.
+   */
+  getCurrProfileID() {
+    if (this.settings.serviceType !== undefined) {
+      return `${this.settings.serviceType}-default-1`;
+    } else {
+      throw Error("unknown serviceType in the setting!");
+    }
   }
 
   async checkIfOauthExpires() {
@@ -999,7 +1119,7 @@ export default class RemotelySavePlugin extends Plugin {
         // a real string was assigned before
         vaultRandomID = this.settings.vaultRandomID;
       }
-      log.debug("vaultRandomID is no longer saved in data.json");
+      console.debug("vaultRandomID is no longer saved in data.json");
       delete this.settings.vaultRandomID;
       await this.saveSettings();
     }
@@ -1029,11 +1149,13 @@ export default class RemotelySavePlugin extends Plugin {
 
   async prepareDBAndVaultRandomID(
     vaultBasePath: string,
-    vaultRandomIDFromOldConfigFile: string
+    vaultRandomIDFromOldConfigFile: string,
+    profileID: string
   ) {
     const { db, vaultRandomID } = await prepareDBs(
       vaultBasePath,
-      vaultRandomIDFromOldConfigFile
+      vaultRandomIDFromOldConfigFile,
+      profileID
     );
     this.db = db;
     this.vaultRandomID = vaultRandomID;
@@ -1063,7 +1185,7 @@ export default class RemotelySavePlugin extends Plugin {
     ) {
       this.app.workspace.onLayoutReady(() => {
         window.setTimeout(() => {
-          this.syncRun("autoOnceInit");
+          this.syncRun("auto_once_init");
         }, this.settings.initRunAfterMilliseconds);
       });
     }
@@ -1076,51 +1198,81 @@ export default class RemotelySavePlugin extends Plugin {
       this.settings.syncOnSaveAfterMilliseconds > 0
     ) {
       let runScheduled = false;
-      this.app.workspace.onLayoutReady(() => {
-        const intervalID = window.setInterval(() => {
-          const currentFile = this.app.workspace.getActiveFile();
+      let needToRunAgain = false;
 
-          if (currentFile) {
-            // get the last modified time of the current file
-            // if it has been modified within the last syncOnSaveAfterMilliseconds
-            // then schedule a run for syncOnSaveAfterMilliseconds after it was modified
-            const lastModified = currentFile.stat.mtime;
-            const currentTime = Date.now();
-            // log.debug(
-            //   `Checking if file was modified within last ${
-            //     this.settings.syncOnSaveAfterMilliseconds / 1000
-            //   } seconds, last modified: ${
-            //     (currentTime - lastModified) / 1000
-            //   } seconds ago`
-            // );
-            if (
-              currentTime - lastModified <
-              this.settings!.syncOnSaveAfterMilliseconds!
-            ) {
-              if (!runScheduled) {
-                const scheduleTimeFromNow =
-                  this.settings!.syncOnSaveAfterMilliseconds! -
-                  (currentTime - lastModified);
-                log.info(
-                  `schedule a run for ${scheduleTimeFromNow} milliseconds later`
-                );
-                runScheduled = true;
-                setTimeout(() => {
-                  this.syncRun("auto_sync_on_save");
-                  runScheduled = false;
-                }, scheduleTimeFromNow);
-              }
+      const scheduleSyncOnSave = (scheduleTimeFromNow: number) => {
+        console.info(
+          `schedule a run for ${scheduleTimeFromNow} milliseconds later`
+        );
+        runScheduled = true;
+        setTimeout(() => {
+          this.syncRun("auto_sync_on_save");
+          runScheduled = false;
+        }, scheduleTimeFromNow);
+      };
+
+      const checkCurrFileModified = async (caller: "SYNC" | "FILE_CHANGES") => {
+        const currentFile = this.app.workspace.getActiveFile();
+
+        if (currentFile) {
+          // get the last modified time of the current file
+          // if it has modified after lastSuccessSync
+          // then schedule a run for syncOnSaveAfterMilliseconds after it was modified
+          const lastModified = currentFile.stat.mtime;
+          const lastSuccessSyncMillis = await getLastSuccessSyncTimeByVault(
+            this.db,
+            this.vaultRandomID
+          );
+          if (
+            this.syncStatus === "idle" &&
+            lastModified > lastSuccessSyncMillis &&
+            !runScheduled
+          ) {
+            scheduleSyncOnSave(this.settings!.syncOnSaveAfterMilliseconds!);
+          } else if (
+            this.syncStatus === "idle" &&
+            needToRunAgain &&
+            !runScheduled
+          ) {
+            scheduleSyncOnSave(this.settings!.syncOnSaveAfterMilliseconds!);
+            needToRunAgain = false;
+          } else {
+            if (caller === "FILE_CHANGES") {
+              needToRunAgain = true;
             }
           }
-        }, this.settings.syncOnSaveAfterMilliseconds);
-        this.syncOnSaveIntervalID = intervalID;
-        this.registerInterval(intervalID);
+        }
+      };
+
+      this.app.workspace.onLayoutReady(() => {
+        // listen to sync done
+        this.registerEvent(
+          this.syncEvent?.on("SYNC_DONE", () => {
+            checkCurrFileModified("SYNC");
+          })!
+        );
+
+        // listen to current file save changes
+        this.registerEvent(
+          this.app.vault.on("modify", (x) => {
+            // console.debug(`event=modify! file=${x}`);
+            checkCurrFileModified("FILE_CHANGES");
+          })
+        );
       });
     }
   }
 
+  enableMobileStatusBarIfSet() {
+    this.app.workspace.onLayoutReady(() => {
+      if (Platform.isMobile && this.settings.enableMobileStatusBar) {
+        this.appContainerObserver = changeMobileStatusBar("enable");
+      }
+    });
+  }
+
   async saveAgreeToUseNewSyncAlgorithm() {
-    this.settings.agreeToUploadExtraMetadata = true;
+    this.settings.agreeToUseSyncV3 = true;
     await this.saveSettings();
   }
 
@@ -1128,9 +1280,10 @@ export default class RemotelySavePlugin extends Plugin {
     i: number,
     totalCount: number,
     pathName: string,
-    decision: string
+    decision: string,
+    triggerSource: SyncTriggerSourceType
   ) {
-    const msg = `syncing progress=${i}/${totalCount},decision=${decision},path=${pathName}`;
+    const msg = `syncing progress=${i}/${totalCount},decision=${decision},path=${pathName},source=${triggerSource}`;
     this.currSyncMsg = msg;
   }
 
@@ -1144,6 +1297,10 @@ export default class RemotelySavePlugin extends Plugin {
     let lastSyncMsg = t("statusbar_lastsync_never");
     let lastSyncLabelMsg = t("statusbar_lastsync_never_label");
 
+    if (lastSuccessSyncMillis !== undefined && lastSuccessSyncMillis === -1) {
+      lastSyncMsg = t("statusbar_syncing");
+    }
+
     if (lastSuccessSyncMillis !== undefined && lastSuccessSyncMillis > 0) {
       const deltaTime = Date.now() - lastSuccessSyncMillis;
 
@@ -1154,6 +1311,8 @@ export default class RemotelySavePlugin extends Plugin {
       const days = Math.floor(deltaTime / 86400000);
       const hours = Math.floor(deltaTime / 3600000);
       const minutes = Math.floor(deltaTime / 60000);
+      const seconds = Math.floor(deltaTime / 1000);
+
       let timeText = "";
 
       if (years > 0) {
@@ -1168,8 +1327,10 @@ export default class RemotelySavePlugin extends Plugin {
         timeText = t("statusbar_time_hours", { time: hours });
       } else if (minutes > 0) {
         timeText = t("statusbar_time_minutes", { time: minutes });
-      } else {
+      } else if (seconds > 30) {
         timeText = t("statusbar_time_lessminute");
+      } else {
+        timeText = t("statusbar_now");
       }
 
       let dateText = new Date(lastSuccessSyncMillis).toLocaleTimeString(
@@ -1182,7 +1343,7 @@ export default class RemotelySavePlugin extends Plugin {
         }
       );
 
-      lastSyncMsg = t("statusbar_lastsync", { time: timeText });
+      lastSyncMsg = timeText;
       lastSyncLabelMsg = t("statusbar_lastsync_label", { date: dateText });
     }
 
@@ -1221,31 +1382,6 @@ export default class RemotelySavePlugin extends Plugin {
     } catch (error) {
       // just skip
     }
-  }
-
-  redirectLoggingOuputBasedOnSetting() {
-    applyLogWriterInplace((...msg: any[]) => {
-      if (
-        this.debugServerTemp !== undefined &&
-        this.debugServerTemp.trim().startsWith("http")
-      ) {
-        try {
-          requestUrl({
-            url: this.debugServerTemp,
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              send_time: Date.now(),
-              log_text: msg,
-            }),
-          });
-        } catch (e) {
-          // pass
-        }
-      }
-    });
   }
 
   enableAutoClearOutputToDBHistIfSet() {

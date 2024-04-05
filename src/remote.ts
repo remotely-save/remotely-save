@@ -1,17 +1,19 @@
 import { Vault } from "obsidian";
 import type {
+  Entity,
   DropboxConfig,
   OnedriveConfig,
   S3Config,
   SUPPORTED_SERVICES_TYPE,
   WebdavConfig,
+  UploadedType,
 } from "./baseTypes";
 import * as dropbox from "./remoteForDropbox";
 import * as onedrive from "./remoteForOnedrive";
 import * as s3 from "./remoteForS3";
 import * as webdav from "./remoteForWebdav";
-
-import { log } from "./moreOnLog";
+import { Cipher } from "./encryptUnified";
+import { Profiler } from "./profiler";
 
 export class RemoteClient {
   readonly serviceType: SUPPORTED_SERVICES_TYPE;
@@ -30,7 +32,8 @@ export class RemoteClient {
     dropboxConfig?: DropboxConfig,
     onedriveConfig?: OnedriveConfig,
     vaultName?: string,
-    saveUpdatedConfigFunc?: () => Promise<any>
+    saveUpdatedConfigFunc?: () => Promise<any>,
+    profiler?: Profiler
   ) {
     this.serviceType = serviceType;
     // the client may modify the config inplace,
@@ -105,13 +108,13 @@ export class RemoteClient {
   uploadToRemote = async (
     fileOrFolderPath: string,
     vault: Vault | undefined,
-    isRecursively: boolean = false,
-    password: string = "",
+    isRecursively: boolean,
+    cipher: Cipher,
     remoteEncryptedKey: string = "",
     foldersCreatedBefore: Set<string> | undefined = undefined,
     uploadRaw: boolean = false,
     rawContent: string | ArrayBuffer = ""
-  ) => {
+  ): Promise<UploadedType> => {
     if (this.serviceType === "s3") {
       return await s3.uploadToRemote(
         s3.getS3Client(this.s3Config!),
@@ -119,7 +122,7 @@ export class RemoteClient {
         fileOrFolderPath,
         vault,
         isRecursively,
-        password,
+        cipher,
         remoteEncryptedKey,
         uploadRaw,
         rawContent
@@ -130,7 +133,7 @@ export class RemoteClient {
         fileOrFolderPath,
         vault,
         isRecursively,
-        password,
+        cipher,
         remoteEncryptedKey,
         uploadRaw,
         rawContent
@@ -141,7 +144,7 @@ export class RemoteClient {
         fileOrFolderPath,
         vault,
         isRecursively,
-        password,
+        cipher,
         remoteEncryptedKey,
         foldersCreatedBefore,
         uploadRaw,
@@ -153,7 +156,7 @@ export class RemoteClient {
         fileOrFolderPath,
         vault,
         isRecursively,
-        password,
+        cipher,
         remoteEncryptedKey,
         foldersCreatedBefore,
         uploadRaw,
@@ -164,7 +167,7 @@ export class RemoteClient {
     }
   };
 
-  listAllFromRemote = async () => {
+  listAllFromRemote = async (): Promise<Entity[]> => {
     if (this.serviceType === "s3") {
       return await s3.listAllFromRemote(
         s3.getS3Client(this.s3Config!),
@@ -185,7 +188,7 @@ export class RemoteClient {
     fileOrFolderPath: string,
     vault: Vault,
     mtime: number,
-    password: string = "",
+    cipher: Cipher,
     remoteEncryptedKey: string = "",
     skipSaving: boolean = false
   ) => {
@@ -196,7 +199,7 @@ export class RemoteClient {
         fileOrFolderPath,
         vault,
         mtime,
-        password,
+        cipher,
         remoteEncryptedKey,
         skipSaving
       );
@@ -206,7 +209,7 @@ export class RemoteClient {
         fileOrFolderPath,
         vault,
         mtime,
-        password,
+        cipher,
         remoteEncryptedKey,
         skipSaving
       );
@@ -216,7 +219,7 @@ export class RemoteClient {
         fileOrFolderPath,
         vault,
         mtime,
-        password,
+        cipher,
         remoteEncryptedKey,
         skipSaving
       );
@@ -226,7 +229,7 @@ export class RemoteClient {
         fileOrFolderPath,
         vault,
         mtime,
-        password,
+        cipher,
         remoteEncryptedKey,
         skipSaving
       );
@@ -237,36 +240,38 @@ export class RemoteClient {
 
   deleteFromRemote = async (
     fileOrFolderPath: string,
-    password: string = "",
-    remoteEncryptedKey: string = ""
+    cipher: Cipher,
+    remoteEncryptedKey: string = "",
+    synthesizedFolder: boolean = false
   ) => {
     if (this.serviceType === "s3") {
       return await s3.deleteFromRemote(
         s3.getS3Client(this.s3Config!),
         this.s3Config!,
         fileOrFolderPath,
-        password,
-        remoteEncryptedKey
+        cipher,
+        remoteEncryptedKey,
+        synthesizedFolder
       );
     } else if (this.serviceType === "webdav") {
       return await webdav.deleteFromRemote(
         this.webdavClient!,
         fileOrFolderPath,
-        password,
+        cipher,
         remoteEncryptedKey
       );
     } else if (this.serviceType === "dropbox") {
       return await dropbox.deleteFromRemote(
         this.dropboxClient!,
         fileOrFolderPath,
-        password,
+        cipher,
         remoteEncryptedKey
       );
     } else if (this.serviceType === "onedrive") {
       return await onedrive.deleteFromRemote(
         this.onedriveClient!,
         fileOrFolderPath,
-        password,
+        cipher,
         remoteEncryptedKey
       );
     } else {

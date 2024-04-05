@@ -1,11 +1,9 @@
-import { Vault } from "obsidian";
+import { Platform, Vault } from "obsidian";
 import * as path from "path";
 
 import { base32, base64url } from "rfc4648";
 import XRegExp from "xregexp";
 import emojiRegex from "emoji-regex";
-
-import { log } from "./moreOnLog";
 
 declare global {
   interface Window {
@@ -30,7 +28,7 @@ export const isHiddenPath = (
   }
   const k = path.posix.normalize(item); // TODO: only unix path now
   const k2 = k.split("/"); // TODO: only unix path now
-  // log.info(k2)
+  // console.info(k2)
   for (const singlePart of k2) {
     if (singlePart === "." || singlePart === ".." || singlePart === "") {
       continue;
@@ -75,14 +73,14 @@ export const getFolderLevels = (x: string, addEndingSlash: boolean = false) => {
 };
 
 export const mkdirpInVault = async (thePath: string, vault: Vault) => {
-  // log.info(thePath);
+  // console.info(thePath);
   const foldersToBuild = getFolderLevels(thePath);
-  // log.info(foldersToBuild);
+  // console.info(foldersToBuild);
   for (const folder of foldersToBuild) {
     const r = await vault.adapter.exists(folder);
-    // log.info(r);
+    // console.info(r);
     if (!r) {
-      log.info(`mkdir ${folder}`);
+      console.info(`mkdir ${folder}`);
       await vault.adapter.mkdir(folder);
     }
   }
@@ -118,6 +116,12 @@ export const arrayBufferToHex = (b: ArrayBuffer) => {
 
 export const base64ToArrayBuffer = (b64text: string) => {
   return bufferToArrayBuffer(Buffer.from(b64text, "base64"));
+};
+
+export const copyArrayBuffer = (src: ArrayBuffer) => {
+  var dst = new ArrayBuffer(src.byteLength);
+  new Uint8Array(dst).set(new Uint8Array(src));
+  return dst;
 };
 
 /**
@@ -161,6 +165,9 @@ export const base64ToBase64url = (a: string, pad: boolean = false) => {
  * @param a
  */
 export const isVaildText = (a: string) => {
+  if (a === undefined) {
+    return false;
+  }
   // If the regex matches, the string is invalid.
   return !XRegExp("\\p{Cc}|\\p{Cf}|\\p{Co}|\\p{Cn}|\\p{Zl}|\\p{Zp}", "A").test(
     a
@@ -435,7 +442,10 @@ export const statFix = async (vault: Vault, path: string) => {
   return s;
 };
 
-export const isFolderToSkip = (x: string, more: string[] | undefined) => {
+export const isSpecialFolderNameToSkip = (
+  x: string,
+  more: string[] | undefined
+) => {
   let specialFolders = [
     ".git",
     ".github",
@@ -489,4 +499,155 @@ export const compareVersion = (x: string | null, y: string | null) => {
     return 1;
   }
   return -1;
+};
+
+/**
+ * https://stackoverflow.com/questions/19929641/how-to-append-an-html-string-to-a-documentfragment
+ * To introduce some advanced html fragments.
+ * @param string
+ * @returns
+ */
+export const stringToFragment = (string: string) => {
+  const wrapper = document.createElement("template");
+  wrapper.innerHTML = string;
+  return wrapper.content;
+};
+
+/**
+ * https://stackoverflow.com/questions/39538473/using-settimeout-on-promise-chain
+ * @param ms
+ * @returns
+ */
+export const delay = (ms: number) =>
+  new Promise((resolve) => setTimeout(resolve, ms));
+
+/**
+ * https://forum.obsidian.md/t/css-to-show-status-bar-on-mobile-devices/77185
+ * @param op
+ */
+export const changeMobileStatusBar = (
+  op: "enable" | "disable",
+  oldAppContainerObserver?: MutationObserver
+) => {
+  const appContainer = document.getElementsByClassName("app-container")[0] as
+    | HTMLElement
+    | undefined;
+
+  const statusbar = document.querySelector(
+    ".is-mobile .app-container .status-bar"
+  ) as HTMLElement | undefined;
+
+  if (appContainer === undefined || statusbar === undefined) {
+    // give up, exit
+    console.warn(`give up watching appContainer for statusbar`);
+    console.warn(`appContainer=${appContainer}, statusbar=${statusbar}`);
+    return undefined;
+  }
+
+  if (op === "enable") {
+    const callback = async (
+      mutationList: MutationRecord[],
+      observer: MutationObserver
+    ) => {
+      for (const mutation of mutationList) {
+        // console.debug(mutation);
+        if (mutation.type === "childList" && mutation.addedNodes.length > 0) {
+          const k = mutation.addedNodes[0] as Element;
+          if (
+            k.className.contains("mobile-navbar") ||
+            k.className.contains("mobile-toolbar")
+          ) {
+            // have to wait, otherwise the height is not correct??
+            await delay(300);
+            const height = window
+              .getComputedStyle(k as Element)
+              .getPropertyValue("height");
+
+            statusbar.style.setProperty("display", "flex");
+            statusbar.style.setProperty("margin-bottom", height);
+          }
+        }
+      }
+    };
+    const observer = new MutationObserver(callback);
+    observer.observe(appContainer, {
+      attributes: false,
+      childList: true,
+      characterData: false,
+      subtree: false,
+    });
+
+    try {
+      // init, manual call
+      const navBar = document.getElementsByClassName(
+        "mobile-navbar"
+      )[0] as HTMLElement;
+      // thanks to community's solution
+      const height = window.getComputedStyle(navBar).getPropertyValue("height");
+      statusbar.style.setProperty("display", "flex");
+      statusbar.style.setProperty("margin-bottom", height);
+    } catch (e) {
+      // skip
+    }
+
+    return observer;
+  } else {
+    if (oldAppContainerObserver !== undefined) {
+      console.debug(`disconnect oldAppContainerObserver`);
+      oldAppContainerObserver.disconnect();
+      oldAppContainerObserver = undefined;
+    }
+    statusbar.style.removeProperty("display");
+    statusbar.style.removeProperty("margin-bottom");
+    return undefined;
+  }
+};
+
+/**
+ * https://github.com/remotely-save/remotely-save/issues/567
+ * https://www.dropboxforum.com/t5/Dropbox-API-Support-Feedback/Case-Sensitivity-in-API-2/td-p/191279
+ * @param entities
+ */
+export const fixEntityListCasesInplace = (entities: { keyRaw: string }[]) => {
+  entities.sort((a, b) => a.keyRaw.length - b.keyRaw.length);
+  // console.log(JSON.stringify(entities,null,2));
+
+  const caseMapping: Record<string, string> = { "": "" };
+  for (const e of entities) {
+    // console.log(`looking for: ${JSON.stringify(e, null, 2)}`);
+
+    let parentFolder = getParentFolder(e.keyRaw);
+    if (parentFolder === "/") {
+      parentFolder = "";
+    }
+    const parentFolderLower = parentFolder.toLocaleLowerCase();
+    const segs = e.keyRaw.split("/");
+    if (e.keyRaw.endsWith("/")) {
+      // folder
+      if (caseMapping.hasOwnProperty(parentFolderLower)) {
+        const newKeyRaw = `${caseMapping[parentFolderLower]}${segs
+          .slice(-2)
+          .join("/")}`;
+        caseMapping[newKeyRaw.toLocaleLowerCase()] = newKeyRaw;
+        e.keyRaw = newKeyRaw;
+        // console.log(JSON.stringify(caseMapping,null,2));
+        continue;
+      } else {
+        throw Error(`${parentFolder} doesn't have cases record??`);
+      }
+    } else {
+      // file
+      if (caseMapping.hasOwnProperty(parentFolderLower)) {
+        const newKeyRaw = `${caseMapping[parentFolderLower]}${segs
+          .slice(-1)
+          .join("/")}`;
+        e.keyRaw = newKeyRaw;
+        continue;
+      } else {
+        throw Error(`${parentFolder} doesn't have cases record??`);
+      }
+    }
+  }
+
+  return entities;
 };

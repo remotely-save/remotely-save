@@ -1,6 +1,6 @@
 {
   "name": "remotely-save",
-  "version": "0.3.38",
+  "version": "0.4.16",
   "description": "This is yet another sync plugin for Obsidian app.",
   "scripts": {
     "dev2": "node esbuild.config.mjs --watch",
@@ -24,7 +24,7 @@
   "license": "Apache-2.0",
   "devDependencies": {
     "@microsoft/microsoft-graph-types": "^2.40.0",
-    "@types/chai": "^4.3.11",
+    "@types/chai": "^4.3.14",
     "@types/chai-as-promised": "^7.1.8",
     "@types/jsdom": "^21.1.6",
     "@types/lodash": "^4.14.202",
@@ -34,13 +34,14 @@
     "@types/node": "^20.10.4",
     "@types/qrcode": "^1.5.5",
     "builtin-modules": "^3.3.0",
-    "chai": "^4.3.10",
+    "chai": "^4.4.1",
     "chai-as-promised": "^7.1.1",
     "cross-env": "^7.0.3",
     "dotenv": "^16.3.1",
     "esbuild": "^0.19.9",
+    "esbuild-plugin-inline-worker": "^0.1.1",
     "jsdom": "^23.0.1",
-    "mocha": "^10.2.0",
+    "mocha": "^10.4.0",
     "npm-check-updates": "^16.14.12",
     "obsidian": "^1.4.11",
     "prettier": "^3.1.1",
@@ -50,7 +51,8 @@
     "typescript": "^5.3.3",
     "webdav-server": "^2.6.2",
     "webpack": "^5.89.0",
-    "webpack-cli": "^5.1.4"
+    "webpack-cli": "^5.1.4",
+    "worker-loader": "^3.0.8"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.474.0",
@@ -58,6 +60,7 @@
     "@aws-sdk/signature-v4-crt": "^3.474.0",
     "@aws-sdk/types": "^3.468.0",
     "@azure/msal-node": "^2.6.0",
+    "@fyears/rclone-crypt": "^0.0.7",
     "@fyears/tsqueue": "^1.0.1",
     "@microsoft/microsoft-graph-client": "^3.0.7",
     "@smithy/fetch-http-handler": "^2.3.1",
@@ -69,13 +72,12 @@
     "aws-crt": "^1.20.0",
     "buffer": "^6.0.3",
     "crypto-browserify": "^3.12.0",
-    "delay": "^6.0.0",
     "dropbox": "^10.34.0",
     "emoji-regex": "^10.3.0",
     "http-status-codes": "^2.3.0",
     "localforage": "^1.10.0",
+    "localforage-getitems": "^1.4.2",
     "lodash": "^4.17.21",
-    "loglevel": "^1.8.1",
     "lucide": "^0.298.0",
     "mime-types": "^2.1.35",
     "mustache": "^4.2.0",
@@ -90,7 +92,6 @@
     "url": "^0.11.3",
     "util": "^0.12.5",
     "webdav": "^5.3.1",
-    "webdav-fs": "^4.0.1",
     "xregexp": "^5.1.1"
   }
 }

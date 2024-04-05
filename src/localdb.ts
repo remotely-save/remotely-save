@@ -1,37 +1,39 @@
 import localforage from "localforage";
+import { extendPrototype } from "localforage-getitems";
+extendPrototype(localforage);
 export type LocalForage = typeof localforage;
 import { nanoid } from "nanoid";
 import { requireApiVersion, TAbstractFile, TFile, TFolder } from "obsidian";
 
-import { API_VER_STAT_FOLDER, SUPPORTED_SERVICES_TYPE } from "./baseTypes";
+import { API_VER_STAT_FOLDER } from "./baseTypes";
+import type { Entity, MixedEntity, SUPPORTED_SERVICES_TYPE } from "./baseTypes";
 import type { SyncPlanType } from "./sync";
 import { statFix, toText, unixTimeToStr } from "./misc";
 
-import { log } from "./moreOnLog";
-
-const DB_VERSION_NUMBER_IN_HISTORY = [20211114, 20220108, 20220326];
-export const DEFAULT_DB_VERSION_NUMBER: number = 20220326;
+const DB_VERSION_NUMBER_IN_HISTORY = [20211114, 20220108, 20220326, 20240220];
+export const DEFAULT_DB_VERSION_NUMBER: number = 20240220;
 export const DEFAULT_DB_NAME = "remotelysavedb";
 export const DEFAULT_TBL_VERSION = "schemaversion";
-export const DEFAULT_TBL_FILE_HISTORY = "filefolderoperationhistory";
-export const DEFAULT_TBL_SYNC_MAPPING = "syncmetadatahistory";
 export const DEFAULT_SYNC_PLANS_HISTORY = "syncplanshistory";
 export const DEFAULT_TBL_VAULT_RANDOM_ID_MAPPING = "vaultrandomidmapping";
 export const DEFAULT_TBL_LOGGER_OUTPUT = "loggeroutput";
 export const DEFAULT_TBL_SIMPLE_KV_FOR_MISC = "simplekvformisc";
+export const DEFAULT_TBL_PREV_SYNC_RECORDS = "prevsyncrecords";
+export const DEFAULT_TBL_PROFILER_RESULTS = "profilerresults";
 
-export interface FileFolderHistoryRecord {
-  key: string;
-  ctime: number;
-  mtime: number;
-  size: number;
-  actionWhen: number;
-  actionType: "delete" | "rename" | "renameDestination";
-  keyType: "folder" | "file";
-  renameTo: string;
-  vaultRandomID: string;
-}
+/**
+ * @deprecated
+ */
+export const DEFAULT_TBL_FILE_HISTORY = "filefolderoperationhistory";
+/**
+ * @deprecated
+ */
+export const DEFAULT_TBL_SYNC_MAPPING = "syncmetadatahistory";
 
+/**
+ * @deprecated
+ * But we cannot remove it. Because we want to migrate the old data.
+ */
 interface SyncMetaMappingRecord {
   localKey: string;
   remoteKey: string;
@@ -54,132 +56,119 @@ interface SyncPlanRecord {
 
 export interface InternalDBs {
   versionTbl: LocalForage;
-  fileHistoryTbl: LocalForage;
-  syncMappingTbl: LocalForage;
   syncPlansTbl: LocalForage;
   vaultRandomIDMappingTbl: LocalForage;
   loggerOutputTbl: LocalForage;
   simpleKVForMiscTbl: LocalForage;
+  prevSyncRecordsTbl: LocalForage;
+  profilerResultsTbl: LocalForage;
+
+  /**
+   * @deprecated
+   * But we cannot remove it. Because we want to migrate the old data.
+   */
+  fileHistoryTbl: LocalForage;
+
+  /**
+   * @deprecated
+   * But we cannot remove it. Because we want to migrate the old data.
+   */
+  syncMappingTbl: LocalForage;
 }
 
 /**
- * This migration mainly aims to assign vault name or vault id into all tables.
- * @param db
- * @param vaultRandomID
+ * TODO
+ * @param syncMappings
+ * @returns
  */
-const migrateDBsFrom20211114To20220108 = async (
-  db: InternalDBs,
-  vaultRandomID: string
-) => {
-  const oldVer = 20211114;
-  const newVer = 20220108;
-  log.debug(`start upgrading internal db from ${oldVer} to ${newVer}`);
+const fromSyncMappingsToPrevSyncRecords = (
+  oldSyncMappings: SyncMetaMappingRecord[]
+): Entity[] => {
+  const res: Entity[] = [];
+  for (const oldMapping of oldSyncMappings) {
+    const newEntity: Entity = {
+      key: oldMapping.localKey,
+      keyEnc: oldMapping.remoteKey,
+      keyRaw:
+        oldMapping.remoteKey !== undefined && oldMapping.remoteKey !== ""
+          ? oldMapping.remoteKey
+          : oldMapping.localKey,
+      mtimeCli: oldMapping.localMtime,
+      mtimeSvr: oldMapping.remoteMtime,
+      size: oldMapping.localSize,
+      sizeEnc: oldMapping.remoteSize,
+      sizeRaw:
+        oldMapping.remoteKey !== undefined && oldMapping.remoteKey !== ""
+          ? oldMapping.remoteSize
+          : oldMapping.localSize,
+      etag: oldMapping.remoteExtraKey,
+    };
 
-  const allPromisesToWait: Promise<any>[] = [];
-
-  log.debug("assign vault id to any delete history");
-  const keysInDeleteHistoryTbl = await db.fileHistoryTbl.keys();
-  for (const key of keysInDeleteHistoryTbl) {
-    if (key.startsWith(vaultRandomID)) {
-      continue;
-    }
-    const value = (await db.fileHistoryTbl.getItem(
-      key
-    )) as FileFolderHistoryRecord;
-    if (value === null || value === undefined) {
-      continue;
-    }
-    if (value.vaultRandomID === undefined || value.vaultRandomID === "") {
-      value.vaultRandomID = vaultRandomID;
-    }
-    const newKey = `${vaultRandomID}\t${key}`;
-    allPromisesToWait.push(db.fileHistoryTbl.setItem(newKey, value));
-    allPromisesToWait.push(db.fileHistoryTbl.removeItem(key));
+    res.push(newEntity);
   }
-
-  log.debug("assign vault id to any sync mapping");
-  const keysInSyncMappingTbl = await db.syncMappingTbl.keys();
-  for (const key of keysInSyncMappingTbl) {
-    if (key.startsWith(vaultRandomID)) {
-      continue;
-    }
-    const value = (await db.syncMappingTbl.getItem(
-      key
-    )) as SyncMetaMappingRecord;
-    if (value === null || value === undefined) {
-      continue;
-    }
-    if (value.vaultRandomID === undefined || value.vaultRandomID === "") {
-      value.vaultRandomID = vaultRandomID;
-    }
-    const newKey = `${vaultRandomID}\t${key}`;
-    allPromisesToWait.push(db.syncMappingTbl.setItem(newKey, value));
-    allPromisesToWait.push(db.syncMappingTbl.removeItem(key));
-  }
-
-  log.debug("assign vault id to any sync plan records");
-  const keysInSyncPlansTbl = await db.syncPlansTbl.keys();
-  for (const key of keysInSyncPlansTbl) {
-    if (key.startsWith(vaultRandomID)) {
-      continue;
-    }
-    const value = (await db.syncPlansTbl.getItem(key)) as SyncPlanRecord;
-    if (value === null || value === undefined) {
-      continue;
-    }
-    if (value.vaultRandomID === undefined || value.vaultRandomID === "") {
-      value.vaultRandomID = vaultRandomID;
-    }
-    const newKey = `${vaultRandomID}\t${key}`;
-    allPromisesToWait.push(db.syncPlansTbl.setItem(newKey, value));
-    allPromisesToWait.push(db.syncPlansTbl.removeItem(key));
-  }
-
-  log.debug("finally update version if everything is ok");
-  await Promise.all(allPromisesToWait);
-  await db.versionTbl.setItem("version", newVer);
-
-  log.debug(`finish upgrading internal db from ${oldVer} to ${newVer}`);
+  return res;
 };
 
 /**
- * no need to do anything except changing version
- * we just add more file operations in db, and no schema is changed.
+ *
  * @param db
  * @param vaultRandomID
+ * Migrate the sync mapping record to sync Entity.
  */
-const migrateDBsFrom20220108To20220326 = async (
+const migrateDBsFrom20220326To20240220 = async (
   db: InternalDBs,
-  vaultRandomID: string
+  vaultRandomID: string,
+  profileID: string
 ) => {
-  const oldVer = 20220108;
-  const newVer = 20220326;
-  log.debug(`start upgrading internal db from ${oldVer} to ${newVer}`);
-  await db.versionTbl.setItem("version", newVer);
-  log.debug(`finish upgrading internal db from ${oldVer} to ${newVer}`);
+  const oldVer = 20220326;
+  const newVer = 20240220;
+  console.debug(`start upgrading internal db from ${oldVer} to ${newVer}`);
+
+  // from sync mapping to prev sync
+  const syncMappings = await getAllSyncMetaMappingByVault(db, vaultRandomID);
+  const prevSyncRecords = fromSyncMappingsToPrevSyncRecords(syncMappings);
+  for (const prevSyncRecord of prevSyncRecords) {
+    await upsertPrevSyncRecordByVaultAndProfile(
+      db,
+      vaultRandomID,
+      profileID,
+      prevSyncRecord
+    );
+  }
+
+  // // clear not used data
+  // // as of 20240220, we don't call them,
+  // // for the opportunity for users to downgrade
+  // await clearFileHistoryOfEverythingByVault(db, vaultRandomID);
+  // await clearAllSyncMetaMappingByVault(db, vaultRandomID);
+
+  await db.versionTbl.setItem(`${vaultRandomID}\tversion`, newVer);
+  console.debug(`finish upgrading internal db from ${oldVer} to ${newVer}`);
 };
 
 const migrateDBs = async (
   db: InternalDBs,
   oldVer: number,
   newVer: number,
-  vaultRandomID: string
+  vaultRandomID: string,
+  profileID: string
 ) => {
   if (oldVer === newVer) {
     return;
   }
-  if (oldVer === 20211114 && newVer === 20220108) {
-    return await migrateDBsFrom20211114To20220108(db, vaultRandomID);
+
+  // as of 20240220, we assume everyone is using 20220326 already
+  // drop any old code to reduce the verbose
+  if (oldVer < 20220326) {
+    throw Error(
+      "You are using a very old version of Remotely Save. No way to auto update internal DB. Please install and enable 0.3.40 firstly, then install a later version."
+    );
   }
-  if (oldVer === 20220108 && newVer === 20220326) {
-    return await migrateDBsFrom20220108To20220326(db, vaultRandomID);
+
+  if (oldVer === 20220326 && newVer === 20240220) {
+    return await migrateDBsFrom20220326To20240220(db, vaultRandomID, profileID);
   }
-  if (oldVer === 20211114 && newVer === 20220326) {
-    // TODO: more steps with more versions in the future
-    await migrateDBsFrom20211114To20220108(db, vaultRandomID);
-    await migrateDBsFrom20220108To20220326(db, vaultRandomID);
-    return;
-  }
+
   if (newVer < oldVer) {
     throw Error(
       "You've installed a new version, but then downgrade to an old version. Stop working!"
@@ -191,20 +180,13 @@ const migrateDBs = async (
 
 export const prepareDBs = async (
   vaultBasePath: string,
-  vaultRandomIDFromOldConfigFile: string
+  vaultRandomIDFromOldConfigFile: string,
+  profileID: string
 ) => {
   const db = {
     versionTbl: localforage.createInstance({
       name: DEFAULT_DB_NAME,
       storeName: DEFAULT_TBL_VERSION,
-    }),
-    fileHistoryTbl: localforage.createInstance({
-      name: DEFAULT_DB_NAME,
-      storeName: DEFAULT_TBL_FILE_HISTORY,
-    }),
-    syncMappingTbl: localforage.createInstance({
-      name: DEFAULT_DB_NAME,
-      storeName: DEFAULT_TBL_SYNC_MAPPING,
     }),
     syncPlansTbl: localforage.createInstance({
       name: DEFAULT_DB_NAME,
@@ -221,6 +203,23 @@ export const prepareDBs = async (
     simpleKVForMiscTbl: localforage.createInstance({
       name: DEFAULT_DB_NAME,
       storeName: DEFAULT_TBL_SIMPLE_KV_FOR_MISC,
+    }),
+    prevSyncRecordsTbl: localforage.createInstance({
+      name: DEFAULT_DB_NAME,
+      storeName: DEFAULT_TBL_PREV_SYNC_RECORDS,
+    }),
+    profilerResultsTbl: localforage.createInstance({
+      name: DEFAULT_DB_NAME,
+      storeName: DEFAULT_TBL_PROFILER_RESULTS,
+    }),
+
+    fileHistoryTbl: localforage.createInstance({
+      name: DEFAULT_DB_NAME,
+      storeName: DEFAULT_TBL_FILE_HISTORY,
+    }),
+    syncMappingTbl: localforage.createInstance({
+      name: DEFAULT_DB_NAME,
+      storeName: DEFAULT_TBL_SYNC_MAPPING,
     }),
   } as InternalDBs;
 
@@ -253,27 +252,35 @@ export const prepareDBs = async (
     throw Error("no vaultRandomID found or generated");
   }
 
-  const originalVersion: number | null = await db.versionTbl.getItem("version");
+  // as of 20240220, we set the version per vault, instead of global "version"
+  const originalVersion: number | null =
+    (await db.versionTbl.getItem(`${vaultRandomID}\tversion`)) ??
+    (await db.versionTbl.getItem("version"));
   if (originalVersion === null) {
-    log.debug(
+    console.debug(
       `no internal db version, setting it to ${DEFAULT_DB_VERSION_NUMBER}`
     );
-    await db.versionTbl.setItem("version", DEFAULT_DB_VERSION_NUMBER);
+    // as of 20240220, we set the version per vault, instead of global "version"
+    await db.versionTbl.setItem(
+      `${vaultRandomID}\tversion`,
+      DEFAULT_DB_VERSION_NUMBER
+    );
   } else if (originalVersion === DEFAULT_DB_VERSION_NUMBER) {
     // do nothing
   } else {
-    log.debug(
+    console.debug(
       `trying to upgrade db version from ${originalVersion} to ${DEFAULT_DB_VERSION_NUMBER}`
     );
     await migrateDBs(
       db,
       originalVersion,
       DEFAULT_DB_VERSION_NUMBER,
-      vaultRandomID
+      vaultRandomID,
+      profileID
     );
   }
 
-  log.info("db connected");
+  console.info("db connected");
   return {
     db: db,
     vaultRandomID: vaultRandomID,
@@ -284,306 +291,79 @@ export const destroyDBs = async () => {
   // await localforage.dropInstance({
   //   name: DEFAULT_DB_NAME,
   // });
-  // log.info("db deleted");
+  // console.info("db deleted");
   const req = indexedDB.deleteDatabase(DEFAULT_DB_NAME);
   req.onsuccess = (event) => {
-    log.info("db deleted");
+    console.info("db deleted");
   };
   req.onblocked = (event) => {
-    log.warn("trying to delete db but it was blocked");
+    console.warn("trying to delete db but it was blocked");
   };
   req.onerror = (event) => {
-    log.error("tried to delete db but something goes wrong!");
-    log.error(event);
+    console.error("tried to delete db but something goes wrong!");
+    console.error(event);
   };
 };
 
-export const loadFileHistoryTableByVault = async (
+export const clearFileHistoryOfEverythingByVault = async (
   db: InternalDBs,
   vaultRandomID: string
 ) => {
-  const records = [] as FileFolderHistoryRecord[];
-  await db.fileHistoryTbl.iterate((value, key, iterationNumber) => {
+  const keys = await db.fileHistoryTbl.keys();
+  for (const key of keys) {
     if (key.startsWith(`${vaultRandomID}\t`)) {
-      records.push(value as FileFolderHistoryRecord);
+      await db.fileHistoryTbl.removeItem(key);
     }
-  });
-  records.sort((a, b) => a.actionWhen - b.actionWhen); // ascending
-  return records;
-};
-
-export const clearDeleteRenameHistoryOfKeyAndVault = async (
-  db: InternalDBs,
-  key: string,
-  vaultRandomID: string
-) => {
-  const fullKey = `${vaultRandomID}\t${key}`;
-  const item: FileFolderHistoryRecord | null =
-    await db.fileHistoryTbl.getItem(fullKey);
-  if (
-    item !== null &&
-    (item.actionType === "delete" || item.actionType === "rename")
-  ) {
-    await db.fileHistoryTbl.removeItem(fullKey);
-  }
-};
-
-export const insertDeleteRecordByVault = async (
-  db: InternalDBs,
-  fileOrFolder: TAbstractFile | string,
-  vaultRandomID: string
-) => {
-  // log.info(fileOrFolder);
-  let k: FileFolderHistoryRecord;
-  if (fileOrFolder instanceof TFile) {
-    k = {
-      key: fileOrFolder.path,
-      ctime: fileOrFolder.stat.ctime,
-      mtime: fileOrFolder.stat.mtime,
-      size: fileOrFolder.stat.size,
-      actionWhen: Date.now(),
-      actionType: "delete",
-      keyType: "file",
-      renameTo: "",
-      vaultRandomID: vaultRandomID,
-    };
-    await db.fileHistoryTbl.setItem(`${vaultRandomID}\t${k.key}`, k);
-  } else if (fileOrFolder instanceof TFolder) {
-    // key should endswith "/"
-    const key = fileOrFolder.path.endsWith("/")
-      ? fileOrFolder.path
-      : `${fileOrFolder.path}/`;
-    const ctime = 0; // they are deleted, so no way to get ctime, mtime
-    const mtime = 0; // they are deleted, so no way to get ctime, mtime
-    k = {
-      key: key,
-      ctime: ctime,
-      mtime: mtime,
-      size: 0,
-      actionWhen: Date.now(),
-      actionType: "delete",
-      keyType: "folder",
-      renameTo: "",
-      vaultRandomID: vaultRandomID,
-    };
-    await db.fileHistoryTbl.setItem(`${vaultRandomID}\t${k.key}`, k);
-  } else if (typeof fileOrFolder === "string") {
-    // always the deletions in .obsidian folder
-    // so annoying that the path doesn't exists
-    // and we have to guess whether the path is folder or file
-    k = {
-      key: fileOrFolder,
-      ctime: 0,
-      mtime: 0,
-      size: 0,
-      actionWhen: Date.now(),
-      actionType: "delete",
-      keyType: "file",
-      renameTo: "",
-      vaultRandomID: vaultRandomID,
-    };
-    await db.fileHistoryTbl.setItem(`${vaultRandomID}\t${k.key}`, k);
-    for (const ext of [
-      "json",
-      "js",
-      "mjs",
-      "ts",
-      "md",
-      "txt",
-      "css",
-      "png",
-      "gif",
-      "jpg",
-      "jpeg",
-      "gitignore",
-      "gitkeep",
-    ]) {
-      if (fileOrFolder.endsWith(`.${ext}`)) {
-        // stop here, no more need to insert the folder record later
-        return;
-      }
-    }
-    // also add a deletion record as folder if not ending with special exts
-    k = {
-      key: `${fileOrFolder}/`,
-      ctime: 0,
-      mtime: 0,
-      size: 0,
-      actionWhen: Date.now(),
-      actionType: "delete",
-      keyType: "folder",
-      renameTo: "",
-      vaultRandomID: vaultRandomID,
-    };
-    await db.fileHistoryTbl.setItem(`${vaultRandomID}\t${k.key}`, k);
   }
 };
 
 /**
- * A file/folder is renamed from A to B
- * We insert two records:
- * A with actionType="rename"
- * B with actionType="renameDestination"
+ * @deprecated But we cannot remove it. Because we want to migrate the old data.
  * @param db
- * @param fileOrFolder
- * @param oldPath
  * @param vaultRandomID
+ * @returns
  */
-export const insertRenameRecordByVault = async (
+export const getAllSyncMetaMappingByVault = async (
   db: InternalDBs,
-  fileOrFolder: TAbstractFile,
-  oldPath: string,
   vaultRandomID: string
 ) => {
-  // log.info(fileOrFolder);
-  let k1: FileFolderHistoryRecord | undefined;
-  let k2: FileFolderHistoryRecord | undefined;
-  const actionWhen = Date.now();
-  if (fileOrFolder instanceof TFile) {
-    k1 = {
-      key: oldPath,
-      ctime: fileOrFolder.stat.ctime,
-      mtime: fileOrFolder.stat.mtime,
-      size: fileOrFolder.stat.size,
-      actionWhen: actionWhen,
-      actionType: "rename",
-      keyType: "file",
-      renameTo: fileOrFolder.path,
-      vaultRandomID: vaultRandomID,
-    };
-    k2 = {
-      key: fileOrFolder.path,
-      ctime: fileOrFolder.stat.ctime,
-      mtime: fileOrFolder.stat.mtime,
-      size: fileOrFolder.stat.size,
-      actionWhen: actionWhen,
-      actionType: "renameDestination",
-      keyType: "file",
-      renameTo: "", // itself is the destination, so no need to set this field
-      vaultRandomID: vaultRandomID,
-    };
-  } else if (fileOrFolder instanceof TFolder) {
-    const key = oldPath.endsWith("/") ? oldPath : `${oldPath}/`;
-    const renameTo = fileOrFolder.path.endsWith("/")
-      ? fileOrFolder.path
-      : `${fileOrFolder.path}/`;
-    let ctime = 0;
-    let mtime = 0;
-    if (requireApiVersion(API_VER_STAT_FOLDER)) {
-      // TAbstractFile does not contain these info
-      // but from API_VER_STAT_FOLDER we can manually stat them by path.
-      const s = await statFix(fileOrFolder.vault, fileOrFolder.path);
-      if (s !== undefined && s !== null) {
-        ctime = s.ctime;
-        mtime = s.mtime;
-      }
-    }
-    k1 = {
-      key: key,
-      ctime: ctime,
-      mtime: mtime,
-      size: 0,
-      actionWhen: actionWhen,
-      actionType: "rename",
-      keyType: "folder",
-      renameTo: renameTo,
-      vaultRandomID: vaultRandomID,
-    };
-    k2 = {
-      key: renameTo,
-      ctime: ctime,
-      mtime: mtime,
-      size: 0,
-      actionWhen: actionWhen,
-      actionType: "renameDestination",
-      keyType: "folder",
-      renameTo: "", // itself is the destination, so no need to set this field
-      vaultRandomID: vaultRandomID,
-    };
-  }
-  await Promise.all([
-    db.fileHistoryTbl.setItem(`${vaultRandomID}\t${k1!.key}`, k1),
-    db.fileHistoryTbl.setItem(`${vaultRandomID}\t${k2!.key}`, k2),
-  ]);
-};
-
-export const upsertSyncMetaMappingDataByVault = async (
-  serviceType: SUPPORTED_SERVICES_TYPE,
-  db: InternalDBs,
-  localKey: string,
-  localMTime: number,
-  localSize: number,
-  remoteKey: string,
-  remoteMTime: number,
-  remoteSize: number,
-  remoteExtraKey: string,
-  vaultRandomID: string
-) => {
-  const aggregratedInfo: SyncMetaMappingRecord = {
-    localKey: localKey,
-    localMtime: localMTime,
-    localSize: localSize,
-    remoteKey: remoteKey,
-    remoteMtime: remoteMTime,
-    remoteSize: remoteSize,
-    remoteExtraKey: remoteExtraKey,
-    remoteType: serviceType,
-    keyType: localKey.endsWith("/") ? "folder" : "file",
-    vaultRandomID: vaultRandomID,
-  };
-  await db.syncMappingTbl.setItem(
-    `${vaultRandomID}\t${remoteKey}`,
-    aggregratedInfo
+  return await Promise.all(
+    ((await db.syncMappingTbl.keys()) ?? [])
+      .filter((key) => key.startsWith(`${vaultRandomID}\t`))
+      .map(
+        async (key) =>
+          (await db.syncMappingTbl.getItem(key)) as SyncMetaMappingRecord
+      )
   );
 };
 
-export const getSyncMetaMappingByRemoteKeyAndVault = async (
-  serviceType: SUPPORTED_SERVICES_TYPE,
+export const clearAllSyncMetaMappingByVault = async (
   db: InternalDBs,
-  remoteKey: string,
-  remoteMTime: number,
-  remoteExtraKey: string,
   vaultRandomID: string
 ) => {
-  const potentialItem = (await db.syncMappingTbl.getItem(
-    `${vaultRandomID}\t${remoteKey}`
-  )) as SyncMetaMappingRecord;
-
-  if (potentialItem === null) {
-    // no result was found
-    return undefined;
+  const keys = await db.syncMappingTbl.keys();
+  for (const key of keys) {
+    if (key.startsWith(`${vaultRandomID}\t`)) {
+      await db.syncMappingTbl.removeItem(key);
+    }
   }
-
-  if (
-    potentialItem.remoteKey === remoteKey &&
-    potentialItem.remoteMtime === remoteMTime &&
-    potentialItem.remoteExtraKey === remoteExtraKey &&
-    potentialItem.remoteType === serviceType
-  ) {
-    // the result was found
-    return potentialItem;
-  } else {
-    return undefined;
-  }
-};
-
-export const clearAllSyncMetaMapping = async (db: InternalDBs) => {
-  await db.syncMappingTbl.clear();
 };
 
 export const insertSyncPlanRecordByVault = async (
   db: InternalDBs,
   syncPlan: SyncPlanType,
-  vaultRandomID: string
+  vaultRandomID: string,
+  remoteType: SUPPORTED_SERVICES_TYPE
 ) => {
+  const now = Date.now();
   const record = {
-    ts: syncPlan.ts,
-    tsFmt: syncPlan.tsFmt,
+    ts: now,
+    tsFmt: unixTimeToStr(now),
     vaultRandomID: vaultRandomID,
-    remoteType: syncPlan.remoteType,
+    remoteType: remoteType,
     syncPlan: JSON.stringify(syncPlan /* directly stringify */, null, 2),
   } as SyncPlanRecord;
-  await db.syncPlansTbl.setItem(`${vaultRandomID}\t${syncPlan.ts}`, record);
+  await db.syncPlansTbl.setItem(`${vaultRandomID}\t${now}`, record);
 };
 
 export const clearAllSyncPlanRecords = async (db: InternalDBs) => {
@@ -610,13 +390,13 @@ export const readAllSyncPlanRecordTextsByVault = async (
 };
 
 /**
- * We remove records that are older than 3 days or 100 records.
+ * We remove records that are older than 1 days or 20 records.
  * It's a heavy operation, so we shall not place it in the start up.
  * @param db
  */
 export const clearExpiredSyncPlanRecords = async (db: InternalDBs) => {
-  const MILLISECONDS_OLD = 1000 * 60 * 60 * 24 * 3; // 3 days
-  const COUNT_TO_MANY = 100;
+  const MILLISECONDS_OLD = 1000 * 60 * 60 * 24 * 1; // 1 days
+  const COUNT_TO_MANY = 20;
 
   const currTs = Date.now();
   const expiredTs = currTs - MILLISECONDS_OLD;
@@ -651,12 +431,66 @@ export const clearExpiredSyncPlanRecords = async (db: InternalDBs) => {
   await Promise.all(ps);
 };
 
-export const clearAllLoggerOutputRecords = async (db: InternalDBs) => {
-  await db.loggerOutputTbl.clear();
-  log.debug(`successfully clearAllLoggerOutputRecords`);
+export const getAllPrevSyncRecordsByVaultAndProfile = async (
+  db: InternalDBs,
+  vaultRandomID: string,
+  profileID: string
+) => {
+  const res: Entity[] = [];
+  const kv: Record<string, Entity | null> =
+    await db.prevSyncRecordsTbl.getItems();
+  for (const key of Object.getOwnPropertyNames(kv)) {
+    if (key.startsWith(`${vaultRandomID}\t${profileID}\t`)) {
+      const val = kv[key];
+      if (val !== null) {
+        res.push(val);
+      }
+    }
+  }
+  return res;
 };
 
-export const upsertLastSuccessSyncByVault = async (
+export const upsertPrevSyncRecordByVaultAndProfile = async (
+  db: InternalDBs,
+  vaultRandomID: string,
+  profileID: string,
+  prevSync: Entity
+) => {
+  await db.prevSyncRecordsTbl.setItem(
+    `${vaultRandomID}\t${profileID}\t${prevSync.key}`,
+    prevSync
+  );
+};
+
+export const clearPrevSyncRecordByVaultAndProfile = async (
+  db: InternalDBs,
+  vaultRandomID: string,
+  profileID: string,
+  key: string
+) => {
+  await db.prevSyncRecordsTbl.removeItem(
+    `${vaultRandomID}\t${profileID}\t${key}`
+  );
+};
+
+export const clearAllPrevSyncRecordByVault = async (
+  db: InternalDBs,
+  vaultRandomID: string
+) => {
+  const keys = await db.prevSyncRecordsTbl.keys();
+  for (const key of keys) {
+    if (key.startsWith(`${vaultRandomID}\t`)) {
+      await db.prevSyncRecordsTbl.removeItem(key);
+    }
+  }
+};
+
+export const clearAllLoggerOutputRecords = async (db: InternalDBs) => {
+  await db.loggerOutputTbl.clear();
+  console.debug(`successfully clearAllLoggerOutputRecords`);
+};
+
+export const upsertLastSuccessSyncTimeByVault = async (
   db: InternalDBs,
   vaultRandomID: string,
   millis: number
@@ -667,7 +501,7 @@ export const upsertLastSuccessSyncByVault = async (
   );
 };
 
-export const getLastSuccessSyncByVault = async (
+export const getLastSuccessSyncTimeByVault = async (
   db: InternalDBs,
   vaultRandomID: string
 ) => {
@@ -696,4 +530,46 @@ export const upsertPluginVersionByVault = async (
     oldVersion: oldVersion,
     newVersion: newVersion,
   };
+};
+
+export const insertProfilerResultByVault = async (
+  db: InternalDBs,
+  profilerStr: string,
+  vaultRandomID: string,
+  remoteType: SUPPORTED_SERVICES_TYPE
+) => {
+  const now = Date.now();
+  await db.profilerResultsTbl.setItem(`${vaultRandomID}\t${now}`, profilerStr);
+
+  // clear older one while writing
+  const records = (await db.profilerResultsTbl.keys())
+    .filter((x) => x.startsWith(`${vaultRandomID}\t`))
+    .map((x) => parseInt(x.split("\t")[1]));
+  records.sort((a, b) => -(a - b)); // descending
+  while (records.length > 5) {
+    const ts = records.pop()!;
+    await db.profilerResultsTbl.removeItem(`${vaultRandomID}\t${ts}`);
+  }
+};
+
+export const readAllProfilerResultsByVault = async (
+  db: InternalDBs,
+  vaultRandomID: string
+) => {
+  const records = [] as { val: string; ts: number }[];
+  await db.profilerResultsTbl.iterate((value, key, iterationNumber) => {
+    if (key.startsWith(`${vaultRandomID}\t`)) {
+      records.push({
+        val: value as string,
+        ts: parseInt(key.split("\t")[1]),
+      });
+    }
+  });
+  records.sort((a, b) => -(a.ts - b.ts)); // descending
+
+  if (records === undefined) {
+    return [] as string[];
+  } else {
+    return records.map((x) => x.val);
+  }
 };

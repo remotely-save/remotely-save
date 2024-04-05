@@ -1,15 +1,14 @@
 import { Buffer } from "buffer";
-import { Vault, requestUrl } from "obsidian";
+import { Platform, Vault, requestUrl } from "obsidian";
 
 import { Queue } from "@fyears/tsqueue";
 import chunk from "lodash/chunk";
 import flatten from "lodash/flatten";
+import cloneDeep from "lodash/cloneDeep";
 import { getReasonPhrase } from "http-status-codes";
-import { RemoteItem, VALID_REQURL, WebdavConfig } from "./baseTypes";
-import { decryptArrayBuffer, encryptArrayBuffer } from "./encrypt";
+import { Entity, UploadedType, VALID_REQURL, WebdavConfig } from "./baseTypes";
 import { bufferToArrayBuffer, getPathFolder, mkdirpInVault } from "./misc";
-
-import { log } from "./moreOnLog";
+import { Cipher } from "./encryptUnified";
 
 import type {
   FileStat,
@@ -28,43 +27,75 @@ function onlyAscii(str: string) {
   return !/[^\u0000-\u00ff]/g.test(str);
 }
 
+/**
+ * https://stackoverflow.com/questions/12539574/
+ * @param obj
+ * @returns
+ */
+function objKeyToLower(obj: Record<string, string>) {
+  return Object.fromEntries(
+    Object.entries(obj).map(([k, v]) => [k.toLowerCase(), v])
+  );
+}
+
 // @ts-ignore
 import { getPatcher } from "webdav/dist/web/index.js";
 if (VALID_REQURL) {
   getPatcher().patch(
     "request",
     async (options: RequestOptionsWithState): Promise<Response> => {
-      const transformedHeaders = { ...options.headers };
+      const transformedHeaders = objKeyToLower({ ...options.headers });
       delete transformedHeaders["host"];
-      delete transformedHeaders["Host"];
       delete transformedHeaders["content-length"];
-      delete transformedHeaders["Content-Length"];
 
-      const r = await requestUrl({
+      const reqContentType =
+        transformedHeaders["accept"] ?? transformedHeaders["content-type"];
+
+      const retractedHeaders = { ...transformedHeaders };
+      if (retractedHeaders.hasOwnProperty("authorization")) {
+        retractedHeaders["authorization"] = "<retracted>";
+      }
+
+      console.debug(`before request:`);
+      console.debug(`url: ${options.url}`);
+      console.debug(`method: ${options.method}`);
+      console.debug(`headers: ${JSON.stringify(retractedHeaders, null, 2)}`);
+      console.debug(`reqContentType: ${reqContentType}`);
+
+      let r = await requestUrl({
         url: options.url,
         method: options.method,
         body: options.data as string | ArrayBuffer,
         headers: transformedHeaders,
+        contentType: reqContentType,
         throw: false,
       });
 
-      let contentType: string | undefined =
-        r.headers["Content-Type"] || r.headers["content-type"];
-      if (options.headers !== undefined) {
-        contentType =
-          contentType ||
-          options.headers["Content-Type"] ||
-          options.headers["content-type"] ||
-          options.headers["Accept"] ||
-          options.headers["accept"];
+      if (
+        r.status === 401 &&
+        Platform.isIosApp &&
+        !options.url.endsWith("/") &&
+        !options.url.endsWith(".md") &&
+        options.method.toUpperCase() === "PROPFIND"
+      ) {
+        // don't ask me why,
+        // some webdav servers have some mysterious behaviours,
+        // if a folder doesn't exist without slash, the servers return 401 instead of 404
+        // here is a dirty hack that works
+        console.debug(`so we have 401, try appending request url with slash`);
+        r = await requestUrl({
+          url: `${options.url}/`,
+          method: options.method,
+          body: options.data as string | ArrayBuffer,
+          headers: transformedHeaders,
+          contentType: reqContentType,
+          throw: false,
+        });
       }
 
-      if (contentType !== undefined) {
-        contentType = contentType.toLowerCase();
-      }
-      const rspHeaders = { ...r.headers };
-      console.log("rspHeaders");
-      console.log(rspHeaders);
+      console.debug(`after request:`);
+      const rspHeaders = objKeyToLower({ ...r.headers });
+      console.debug(`rspHeaders: ${JSON.stringify(rspHeaders, null, 2)}`);
       for (let key in rspHeaders) {
         if (rspHeaders.hasOwnProperty(key)) {
           // avoid the error:
@@ -81,74 +112,28 @@ if (VALID_REQURL) {
           //   }
           // }
           if (!onlyAscii(rspHeaders[key])) {
+            console.debug(`rspHeaders[key] needs encode: ${key}`);
             rspHeaders[key] = encodeURIComponent(rspHeaders[key]);
           }
         }
       }
-      // log.info(`requesting url=${options.url}`);
-      // log.info(`contentType=${contentType}`);
-      // log.info(`rspHeaders=${JSON.stringify(rspHeaders)}`)
-
-      // let r2: Response = undefined;
-      // if (contentType.includes("xml")) {
-      //   r2 = new Response(r.text, {
-      //     status: r.status,
-      //     statusText: getReasonPhrase(r.status),
-      //     headers: rspHeaders,
-      //   });
-      // } else if (
-      //   contentType.includes("json") ||
-      //   contentType.includes("javascript")
-      // ) {
-      //   log.info('inside json branch');
-      //   // const j = r.json;
-      //   // log.info(j);
-      //   r2 = new Response(
-      //     r.text,  // yea, here is the text because Response constructor expects a text
-      //     {
-      //     status: r.status,
-      //     statusText: getReasonPhrase(r.status),
-      //     headers: rspHeaders,
-      //   });
-      // } else if (contentType.includes("text")) {
-      //   // avoid text/json,
-      //   // so we split this out from the above xml or json branch
-      //   r2 = new Response(r.text, {
-      //     status: r.status,
-      //     statusText: getReasonPhrase(r.status),
-      //     headers: rspHeaders,
-      //   });
-      // } else if (
-      //   contentType.includes("octet-stream") ||
-      //   contentType.includes("binary") ||
-      //   contentType.includes("buffer")
-      // ) {
-      //   // application/octet-stream
-      //   r2 = new Response(r.arrayBuffer, {
-      //     status: r.status,
-      //     statusText: getReasonPhrase(r.status),
-      //     headers: rspHeaders,
-      //   });
-      // } else {
-      //   throw Error(
-      //     `do not know how to deal with requested content type = ${contentType}`
-      //   );
-      // }
 
       let r2: Response | undefined = undefined;
+      const statusText = getReasonPhrase(r.status);
+      console.debug(`statusText: ${statusText}`);
       if ([101, 103, 204, 205, 304].includes(r.status)) {
         // A null body status is a status that is 101, 103, 204, 205, or 304.
         // https://fetch.spec.whatwg.org/#statuses
         // fix this: Failed to construct 'Response': Response with null body status cannot have body
         r2 = new Response(null, {
           status: r.status,
-          statusText: getReasonPhrase(r.status),
+          statusText: statusText,
           headers: rspHeaders,
         });
       } else {
         r2 = new Response(r.arrayBuffer, {
           status: r.status,
-          statusText: getReasonPhrase(r.status),
+          statusText: statusText,
           headers: rspHeaders,
         });
       }
@@ -178,7 +163,7 @@ const getWebdavPath = (fileOrFolderPath: string, remoteBaseDir: string) => {
     // special
     key = `/${remoteBaseDir}/`;
   } else if (fileOrFolderPath.startsWith("/")) {
-    log.warn(
+    console.warn(
       `why the path ${fileOrFolderPath} starts with '/'? but we just go on.`
     );
     key = `/${remoteBaseDir}${fileOrFolderPath}`;
@@ -205,18 +190,19 @@ const getNormPath = (fileOrFolderPath: string, remoteBaseDir: string) => {
   return fileOrFolderPath.slice(`/${remoteBaseDir}/`.length);
 };
 
-const fromWebdavItemToRemoteItem = (x: FileStat, remoteBaseDir: string) => {
+const fromWebdavItemToEntity = (x: FileStat, remoteBaseDir: string) => {
   let key = getNormPath(x.filename, remoteBaseDir);
   if (x.type === "directory" && !key.endsWith("/")) {
     key = `${key}/`;
   }
+  const mtimeSvr = Date.parse(x.lastmod).valueOf();
   return {
-    key: key,
-    lastModified: Date.parse(x.lastmod).valueOf(),
-    size: x.size,
-    remoteType: "webdav",
-    etag: x.etag || undefined,
-  } as RemoteItem;
+    keyRaw: key,
+    mtimeSvr: mtimeSvr,
+    mtimeCli: mtimeSvr, // no universal way to set mtime in webdav
+    sizeRaw: x.size,
+    etag: x.etag,
+  } as Entity;
 };
 
 export class WrappedWebdavClient {
@@ -230,7 +216,8 @@ export class WrappedWebdavClient {
     remoteBaseDir: string,
     saveUpdatedConfigFunc: () => Promise<any>
   ) {
-    this.webdavConfig = webdavConfig;
+    this.webdavConfig = cloneDeep(webdavConfig);
+    this.webdavConfig.address = encodeURI(this.webdavConfig.address);
     this.remoteBaseDir = remoteBaseDir;
     this.vaultFolderExists = false;
     this.saveUpdatedConfigFunc = saveUpdatedConfigFunc;
@@ -241,6 +228,13 @@ export class WrappedWebdavClient {
     if (this.client !== undefined) {
       return;
     }
+
+    if (Platform.isIosApp && !this.webdavConfig.address.startsWith("https")) {
+      throw Error(
+        `Your webdav address could only be https, not http, because of the iOS restriction.`
+      );
+    }
+
     const headers = {
       "Cache-Control": "no-cache",
     };
@@ -258,7 +252,7 @@ export class WrappedWebdavClient {
             : AuthType.Password,
       });
     } else {
-      log.info("no password");
+      console.info("no password");
       this.client = createClient(this.webdavConfig.address, {
         headers: headers,
       });
@@ -270,12 +264,12 @@ export class WrappedWebdavClient {
     } else {
       const res = await this.client.exists(`/${this.remoteBaseDir}/`);
       if (res) {
-        // log.info("remote vault folder exits!");
+        // console.info("remote vault folder exits!");
         this.vaultFolderExists = true;
       } else {
-        log.info("remote vault folder not exists, creating");
+        console.info("remote vault folder not exists, creating");
         await this.client.createDirectory(`/${this.remoteBaseDir}/`);
-        log.info("remote vault folder created!");
+        console.info("remote vault folder created!");
         this.vaultFolderExists = true;
       }
     }
@@ -291,7 +285,7 @@ export class WrappedWebdavClient {
       this.webdavConfig.manualRecursive = true;
       if (this.saveUpdatedConfigFunc !== undefined) {
         await this.saveUpdatedConfigFunc();
-        log.info(
+        console.info(
           `webdav depth="auto_???" is changed to ${this.webdavConfig.depth}`
         );
       }
@@ -322,27 +316,32 @@ export const getRemoteMeta = async (
   remotePath: string
 ) => {
   await client.init();
-  log.debug(`getRemoteMeta remotePath = ${remotePath}`);
+  console.debug(`getRemoteMeta remotePath = ${remotePath}`);
   const res = (await client.client.stat(remotePath, {
     details: false,
   })) as FileStat;
-  log.debug(`getRemoteMeta res=${JSON.stringify(res)}`);
-  return fromWebdavItemToRemoteItem(res, client.remoteBaseDir);
+  console.debug(`getRemoteMeta res=${JSON.stringify(res)}`);
+  return fromWebdavItemToEntity(res, client.remoteBaseDir);
 };
 
 export const uploadToRemote = async (
   client: WrappedWebdavClient,
   fileOrFolderPath: string,
   vault: Vault | undefined,
-  isRecursively: boolean = false,
-  password: string = "",
+  isRecursively: boolean,
+  cipher: Cipher,
   remoteEncryptedKey: string = "",
   uploadRaw: boolean = false,
   rawContent: string | ArrayBuffer = ""
-) => {
+): Promise<UploadedType> => {
   await client.init();
   let uploadFile = fileOrFolderPath;
-  if (password !== "") {
+  if (!cipher.isPasswordEmpty()) {
+    if (remoteEncryptedKey === undefined || remoteEncryptedKey === "") {
+      throw Error(
+        `uploadToRemote(webdav) you have password but remoteEncryptedKey is empty!`
+      );
+    }
     uploadFile = remoteEncryptedKey;
   }
   uploadFile = getWebdavPath(uploadFile, client.remoteBaseDir);
@@ -356,28 +355,34 @@ export const uploadToRemote = async (
       throw Error(`you specify uploadRaw, but you also provide a folder key!`);
     }
     // folder
-    if (password === "") {
-      // if not encrypted, mkdir a remote folder
+    if (cipher.isPasswordEmpty() || cipher.isFolderAware()) {
+      // if not encrypted, || encrypted isFolderAware, mkdir a remote folder
       await client.client.createDirectory(uploadFile, {
-        recursive: false, // the sync algo should guarantee no need to recursive
+        recursive: true,
       });
       const res = await getRemoteMeta(client, uploadFile);
-      return res;
+      return {
+        entity: res,
+      };
     } else {
-      // if encrypted, upload a fake file with the encrypted file name
+      // if encrypted && !isFolderAware(),
+      // upload a fake file with the encrypted file name
       await client.client.putFileContents(uploadFile, "", {
         overwrite: true,
         onUploadProgress: (progress: any) => {
-          // log.info(`Uploaded ${progress.loaded} bytes of ${progress.total}`);
+          // console.info(`Uploaded ${progress.loaded} bytes of ${progress.total}`);
         },
       });
 
-      return await getRemoteMeta(client, uploadFile);
+      return {
+        entity: await getRemoteMeta(client, uploadFile),
+      };
     }
   } else {
     // file
     // we ignore isRecursively parameter here
-    let localContent = undefined;
+    let localContent: ArrayBuffer | undefined = undefined;
+    let mtimeCli: number | undefined = undefined;
     if (uploadRaw) {
       if (typeof rawContent === "string") {
         localContent = new TextEncoder().encode(rawContent).buffer;
@@ -391,25 +396,29 @@ export const uploadToRemote = async (
         );
       }
       localContent = await vault.adapter.readBinary(fileOrFolderPath);
+      mtimeCli = (await vault.adapter.stat(fileOrFolderPath))?.mtime;
     }
     let remoteContent = localContent;
-    if (password !== "") {
-      remoteContent = await encryptArrayBuffer(localContent, password);
+    if (!cipher.isPasswordEmpty()) {
+      remoteContent = await cipher.encryptContent(localContent);
     }
     // updated 20220326: the algorithm guarantee this
     // // we need to create folders before uploading
     // const dir = getPathFolder(uploadFile);
     // if (dir !== "/" && dir !== "") {
-    //   await client.client.createDirectory(dir, { recursive: false });
+    //   await client.client.createDirectory(dir, { recursive: true });
     // }
     await client.client.putFileContents(uploadFile, remoteContent, {
       overwrite: true,
       onUploadProgress: (progress: any) => {
-        log.info(`Uploaded ${progress.loaded} bytes of ${progress.total}`);
+        console.info(`Uploaded ${progress.loaded} bytes of ${progress.total}`);
       },
     });
 
-    return await getRemoteMeta(client, uploadFile);
+    return {
+      entity: await getRemoteMeta(client, uploadFile),
+      mtimeCli: mtimeCli,
+    };
   }
 };
 
@@ -434,7 +443,7 @@ export const listAllFromRemote = async (client: WrappedWebdavClient) => {
         itemsToFetch.push(q.pop()!);
       }
       const itemsToFetchChunks = chunk(itemsToFetch, CHUNK_SIZE);
-      // log.debug(itemsToFetchChunks);
+      // console.debug(itemsToFetchChunks);
       const subContents = [] as FileStat[];
       for (const singleChunk of itemsToFetchChunks) {
         const r = singleChunk.map((x) => {
@@ -472,11 +481,7 @@ export const listAllFromRemote = async (client: WrappedWebdavClient) => {
       }
     )) as FileStat[];
   }
-  return {
-    Contents: contents.map((x) =>
-      fromWebdavItemToRemoteItem(x, client.remoteBaseDir)
-    ),
-  };
+  return contents.map((x) => fromWebdavItemToEntity(x, client.remoteBaseDir));
 };
 
 const downloadFromRemoteRaw = async (
@@ -484,7 +489,7 @@ const downloadFromRemoteRaw = async (
   remotePath: string
 ) => {
   await client.init();
-  // log.info(`getWebdavPath=${remotePath}`);
+  // console.info(`getWebdavPath=${remotePath}`);
   const buff = (await client.client.getFileContents(remotePath)) as BufferLike;
   if (buff instanceof ArrayBuffer) {
     return buff;
@@ -499,7 +504,7 @@ export const downloadFromRemote = async (
   fileOrFolderPath: string,
   vault: Vault,
   mtime: number,
-  password: string = "",
+  cipher: Cipher,
   remoteEncryptedKey: string = "",
   skipSaving: boolean = false
 ) => {
@@ -520,15 +525,15 @@ export const downloadFromRemote = async (
     return new ArrayBuffer(0);
   } else {
     let downloadFile = fileOrFolderPath;
-    if (password !== "") {
+    if (!cipher.isPasswordEmpty()) {
       downloadFile = remoteEncryptedKey;
     }
     downloadFile = getWebdavPath(downloadFile, client.remoteBaseDir);
-    // log.info(`downloadFile=${downloadFile}`);
+    // console.info(`downloadFile=${downloadFile}`);
     const remoteContent = await downloadFromRemoteRaw(client, downloadFile);
     let localContent = remoteContent;
-    if (password !== "") {
-      localContent = await decryptArrayBuffer(remoteContent, password);
+    if (!cipher.isPasswordEmpty()) {
+      localContent = await cipher.decryptContent(remoteContent);
     }
     if (!skipSaving) {
       await vault.adapter.writeBinary(fileOrFolderPath, localContent, {
@@ -542,14 +547,14 @@ export const downloadFromRemote = async (
 export const deleteFromRemote = async (
   client: WrappedWebdavClient,
   fileOrFolderPath: string,
-  password: string = "",
+  cipher: Cipher,
   remoteEncryptedKey: string = ""
 ) => {
   if (fileOrFolderPath === "/") {
     return;
   }
   let remoteFileName = fileOrFolderPath;
-  if (password !== "") {
+  if (!cipher.isPasswordEmpty()) {
     remoteFileName = remoteEncryptedKey;
   }
   remoteFileName = getWebdavPath(remoteFileName, client.remoteBaseDir);
@@ -557,10 +562,10 @@ export const deleteFromRemote = async (
   await client.init();
   try {
     await client.client.deleteFile(remoteFileName);
-    // log.info(`delete ${remoteFileName} succeeded`);
+    // console.info(`delete ${remoteFileName} succeeded`);
   } catch (err) {
-    log.error("some error while deleting");
-    log.error(err);
+    console.error("some error while deleting");
+    console.error(err);
   }
 };
 
@@ -575,7 +580,7 @@ export const checkConnectivity = async (
     )
   ) {
     const err = "Error: the url should start with http(s):// but it does not!";
-    log.error(err);
+    console.error(err);
     if (callbackFunc !== undefined) {
       callbackFunc(err);
     }
@@ -586,7 +591,7 @@ export const checkConnectivity = async (
     const results = await getRemoteMeta(client, `/${client.remoteBaseDir}/`);
     if (results === undefined) {
       const err = "results is undefined";
-      log.error(err);
+      console.error(err);
       if (callbackFunc !== undefined) {
         callbackFunc(err);
       }
@@ -594,7 +599,7 @@ export const checkConnectivity = async (
     }
     return true;
   } catch (err) {
-    log.error(err);
+    console.error(err);
     if (callbackFunc !== undefined) {
       callbackFunc(err);
     }

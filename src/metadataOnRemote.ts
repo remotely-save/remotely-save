@@ -1,7 +1,6 @@
 import isEqual from "lodash/isEqual";
 import { base64url } from "rfc4648";
 import { reverseString } from "./misc";
-import { log } from "./moreOnLog";
 
 const DEFAULT_README_FOR_METADATAONREMOTE =
   "Do NOT edit or delete the file manually. This file is for the plugin remotely-save to store some necessary meta data on the remote services. Its content is slightly obfuscated.";
