@@ -173,6 +173,52 @@ const getWebdavPath = (fileOrFolderPath: string, remoteBaseDir: string) => {
   return key;
 };
 
+function extractPrefix(path: string) {
+  let startsWithSlash = false;
+  if (path.startsWith("/")) {
+    startsWithSlash = true;
+    path = path.slice(1);
+  }
+
+  let endsWithSlash = false;
+  if (path.endsWith("/")) {
+    endsWithSlash = true;
+    path = path.slice(0, -1);
+  }
+
+  const segments = path.split("/");
+
+  const prefix: string[] = [];
+  let pathString = "/";
+
+  let level = 0;
+  for (let i = 0; i < segments.length; i++) {
+    const segment = segments[i];
+    if (segment === ".") {
+      continue;
+    } else if (segment === "..") {
+      level--;
+      prefix.push(segment);
+    } else if (level < 0) {
+      level++;
+      prefix.push(segment);
+    } else {
+      const pathSegments = segments.slice(i);
+      pathString += pathSegments.join("/");
+      if (endsWithSlash && pathSegments.length > 0) {
+        pathString += "/";
+      }
+      break;
+    }
+  }
+
+  const prefixString = (startsWithSlash ? "/" : "") + prefix.join("/");
+  return {
+    path: pathString,
+    prefix: prefixString,
+  };
+}
+
 const getNormPath = (fileOrFolderPath: string, remoteBaseDir: string) => {
   if (
     !(
@@ -184,14 +230,13 @@ const getNormPath = (fileOrFolderPath: string, remoteBaseDir: string) => {
       `"${fileOrFolderPath}" doesn't starts with "/${remoteBaseDir}/"`
     );
   }
-  // if (fileOrFolderPath.startsWith("/")) {
-  //   return fileOrFolderPath.slice(1);
-  // }
+
   return fileOrFolderPath.slice(`/${remoteBaseDir}/`.length);
 };
 
 const fromWebdavItemToEntity = (x: FileStat, remoteBaseDir: string) => {
-  let key = getNormPath(x.filename, remoteBaseDir);
+  const { shortPath, prefix } = extractPrefix(x.filename);
+  let key = getNormPath(shortPath, remoteBaseDir);
   if (x.type === "directory" && !key.endsWith("/")) {
     key = `${key}/`;
   }
