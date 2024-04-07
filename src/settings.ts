@@ -811,6 +811,7 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
 
   display(): void {
     let { containerEl } = this;
+    containerEl.style.setProperty("overflow-wrap", "break-word");
 
     containerEl.empty();
 
