@@ -260,7 +260,7 @@
   "settings_conflictaction_keep_newer": "保留最后修改的版本（默认）",
   "settings_conflictaction_keep_larger": "保留文件体积较大的版本",
   "settings_cleanemptyfolder": "处理空文件夹",
-  "settings_cleanemptyfolder_desc": "同步算法主要是针对文件处理的，您要要手动指定空文件夹如何处理。",
+  "settings_cleanemptyfolder_desc": "同步算法主要是针对文件处理的，您需要手动指定空文件夹如何处理。",
   "settings_cleanemptyfolder_skip": "跳过处理空文件夹（默认）",
   "settings_cleanemptyfolder_clean_both": "删除本地和服务器的空文件夹",
   "settings_protectmodifypercentage": "如果修改超过百分比则中止同步",
