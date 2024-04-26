@@ -1,157 +1,38 @@
-import PQueue from "p-queue";
 import XRegExp from "xregexp";
-import type {
-  CipherMethodType,
+import {
   ConflictActionType,
   EmptyFolderCleanType,
   Entity,
   MixedEntity,
+  RemotelySavePluginSettings,
   SUPPORTED_SERVICES_TYPE,
   SyncDirectionType,
+  SyncTriggerSourceType,
 } from "./baseTypes";
-import { isInsideObsFolder } from "./obsFolderLister";
+import { FakeFs } from "./fsAll";
+import { FakeFsEncrypt } from "./fsEncrypt";
 import {
-  isSpecialFolderNameToSkip,
-  isHiddenPath,
-  unixTimeToStr,
-  getParentFolder,
-  isVaildText,
+  InternalDBs,
+  clearPrevSyncRecordByVaultAndProfile,
+  getAllPrevSyncRecordsByVaultAndProfile,
+  insertSyncPlanRecordByVault,
+  upsertPrevSyncRecordByVaultAndProfile,
+} from "./localdb";
+import {
   atWhichLevel,
-  mkdirpInVault,
   getFolderLevels,
+  getParentFolder,
+  isHiddenPath,
+  isSpecialFolderNameToSkip,
+  unixTimeToStr,
 } from "./misc";
+import { Profiler } from "./profiler";
 import {
   DEFAULT_FILE_NAME_FOR_METADATAONREMOTE,
   DEFAULT_FILE_NAME_FOR_METADATAONREMOTE2,
 } from "./metadataOnRemote";
-import { RemoteClient } from "./remote";
-import { Vault } from "obsidian";
-
 import AggregateError from "aggregate-error";
-import {
-  InternalDBs,
-  clearPrevSyncRecordByVaultAndProfile,
-  upsertPrevSyncRecordByVaultAndProfile,
-} from "./localdb";
-import { Cipher } from "./encryptUnified";
-import { Profiler } from "./profiler";
-
-export type SyncStatusType =
-  | "idle"
-  | "preparing"
-  | "getting_remote_files_list"
-  | "getting_local_meta"
-  | "getting_local_prev_sync"
-  | "checking_password"
-  | "generating_plan"
-  | "syncing"
-  | "cleaning"
-  | "finish";
-
-export interface PasswordCheckType {
-  ok: boolean;
-  reason:
-    | "empty_remote"
-    | "unknown_encryption_method"
-    | "remote_encrypted_local_no_password"
-    | "password_matched"
-    | "password_or_method_not_matched_or_remote_not_encrypted"
-    | "likely_no_password_both_sides"
-    | "encryption_method_not_matched";
-}
-
-export const isPasswordOk = async (
-  remote: Entity[],
-  cipher: Cipher
-): Promise<PasswordCheckType> => {
-  if (remote === undefined || remote.length === 0) {
-    // remote empty
-    return {
-      ok: true,
-      reason: "empty_remote",
-    };
-  }
-  const santyCheckKey = remote[0].keyRaw;
-
-  if (cipher.isPasswordEmpty()) {
-    // TODO: no way to distinguish remote rclone encrypted
-    //       if local has no password??
-    if (Cipher.isLikelyEncryptedName(santyCheckKey)) {
-      return {
-        ok: false,
-        reason: "remote_encrypted_local_no_password",
-      };
-    } else {
-      return {
-        ok: true,
-        reason: "likely_no_password_both_sides",
-      };
-    }
-  } else {
-    if (cipher.method === "unknown") {
-      return {
-        ok: false,
-        reason: "unknown_encryption_method",
-      };
-    }
-    if (
-      Cipher.isLikelyEncryptedNameNotMatchMethod(santyCheckKey, cipher.method)
-    ) {
-      return {
-        ok: false,
-        reason: "encryption_method_not_matched",
-      };
-    }
-    try {
-      const k = await cipher.decryptName(santyCheckKey);
-      if (k === undefined) {
-        throw Error(`decryption failed`);
-      }
-      return {
-        ok: true,
-        reason: "password_matched",
-      };
-    } catch (error) {
-      return {
-        ok: false,
-        reason: "password_or_method_not_matched_or_remote_not_encrypted",
-      };
-    }
-  }
-};
-
-const isSkipItemByName = (
-  key: string,
-  syncConfigDir: boolean,
-  syncUnderscoreItems: boolean,
-  configDir: string,
-  ignorePaths: string[]
-) => {
-  if (key === undefined) {
-    throw Error(`isSkipItemByName meets undefinded key!`);
-  }
-  if (ignorePaths !== undefined && ignorePaths.length > 0) {
-    for (const r of ignorePaths) {
-      if (XRegExp(r, "A").test(key)) {
-        return true;
-      }
-    }
-  }
-  if (syncConfigDir && isInsideObsFolder(key, configDir)) {
-    return false;
-  }
-  if (isSpecialFolderNameToSkip(key, [])) {
-    // some special dirs and files are always skipped
-    return true;
-  }
-  return (
-    isHiddenPath(key, true, false) ||
-    (!syncUnderscoreItems && isHiddenPath(key, false, true)) ||
-    key === "/" ||
-    key === DEFAULT_FILE_NAME_FOR_METADATAONREMOTE ||
-    key === DEFAULT_FILE_NAME_FOR_METADATAONREMOTE2
-  );
-};
+import PQueue from "p-queue";
 
 const copyEntityAndFixTimeFormat = (
   src: Entity,
@@ -196,52 +77,6 @@ const copyEntityAndFixTimeFormat = (
 };
 
 /**
- * Inplace, no copy again.
- */
-const decryptRemoteEntityInplace = async (remote: Entity, cipher: Cipher) => {
-  if (cipher?.isPasswordEmpty()) {
-    remote.key = remote.keyRaw;
-    remote.keyEnc = remote.keyRaw;
-    remote.size = remote.sizeRaw;
-    remote.sizeEnc = remote.sizeRaw;
-    return remote;
-  }
-
-  remote.keyEnc = remote.keyRaw;
-  remote.key = await cipher.decryptName(remote.keyEnc);
-  remote.sizeEnc = remote.sizeRaw;
-
-  // TODO
-  // remote.size = getSizeFromEncToOrig(remote.sizeEnc, password);
-  // but we don't have deterministic way to get a number because the encryption has padding...
-
-  return remote;
-};
-
-const fullfillMTimeOfRemoteEntityInplace = (
-  remote: Entity,
-  mtimeCli?: number
-) => {
-  // TODO:
-  // on 20240405, we find that dropbox's mtimeCli is not updated
-  // if the content is not updated even the time is updated...
-  // so we do not check remote.mtimeCli for now..
-  if (
-    mtimeCli !== undefined &&
-    mtimeCli > 0 /* &&
-    (remote.mtimeCli === undefined ||
-      remote.mtimeCli <= 0 ||
-      (remote.mtimeSvr !== undefined &&
-        remote.mtimeSvr > 0 &&
-        remote.mtimeCli >= remote.mtimeSvr))
-    */
-  ) {
-    remote.mtimeCli = mtimeCli;
-  }
-  return remote;
-};
-
-/**
  * Directly throw error here.
  * We can only defer the checking now, because before decryption we don't know whether it's a file or folder.
  * @param remote
@@ -265,62 +100,49 @@ const ensureMTimeOfRemoteEntityValid = (remote: Entity) => {
   return remote;
 };
 
-/**
- * Inplace, no copy again.
- */
-const encryptLocalEntityInplace = async (
-  local: Entity,
-  cipher: Cipher,
-  remoteKeyEnc: string | undefined
+const isInsideObsFolder = (x: string, configDir: string) => {
+  if (!configDir.startsWith(".")) {
+    throw Error(`configDir should starts with . but we get ${configDir}`);
+  }
+  return x === configDir || x.startsWith(`${configDir}/`);
+};
+
+const isSkipItemByName = (
+  key: string,
+  syncConfigDir: boolean,
+  syncUnderscoreItems: boolean,
+  configDir: string,
+  ignorePaths: string[]
 ) => {
-  // console.debug(
-  //   `encryptLocalEntityInplace: local=${JSON.stringify(
-  //     local,
-  //     null,
-  //     2
-  //   )}, password=${
-  //     password === undefined || password === "" ? "[empty]" : "[not empty]"
-  //   }, remoteKeyEnc=${remoteKeyEnc}`
-  // );
-
-  if (local.key === undefined) {
-    // local.key should always have value
-    throw Error(`local ${local.keyRaw} is abnormal without key`);
+  if (key === undefined) {
+    throw Error(`isSkipItemByName meets undefinded key!`);
   }
-
-  if (cipher.isPasswordEmpty()) {
-    local.sizeEnc = local.sizeRaw; // if no enc, the remote file has the same size
-    local.keyEnc = local.keyRaw;
-    return local;
-  }
-
-  // below is for having password
-  if (local.sizeEnc === undefined && local.size !== undefined) {
-    // it's not filled yet, we fill it
-    // local.size is possibly undefined if it's "prevSync" Entity
-    // but local.key should always have value
-    local.sizeEnc = cipher.getSizeFromOrigToEnc(local.size);
-  }
-
-  if (local.keyEnc === undefined || local.keyEnc === "") {
-    if (
-      remoteKeyEnc !== undefined &&
-      remoteKeyEnc !== "" &&
-      remoteKeyEnc !== local.key
-    ) {
-      // we can reuse remote encrypted key if any
-      local.keyEnc = remoteKeyEnc;
-    } else {
-      // we assign a new encrypted key because of no remote
-      local.keyEnc = await cipher.encryptName(local.key);
+  if (ignorePaths !== undefined && ignorePaths.length > 0) {
+    for (const r of ignorePaths) {
+      if (XRegExp(r, "A").test(key)) {
+        return true;
+      }
     }
   }
-  return local;
+  if (syncConfigDir && isInsideObsFolder(key, configDir)) {
+    return false;
+  }
+  if (isSpecialFolderNameToSkip(key, [])) {
+    // some special dirs and files are always skipped
+    return true;
+  }
+  return (
+    isHiddenPath(key, true, false) ||
+    (!syncUnderscoreItems && isHiddenPath(key, false, true)) ||
+    key === "/" ||
+    key === DEFAULT_FILE_NAME_FOR_METADATAONREMOTE ||
+    key === DEFAULT_FILE_NAME_FOR_METADATAONREMOTE2
+  );
 };
 
 export type SyncPlanType = Record<string, MixedEntity>;
 
-export const ensembleMixedEnties = async (
+const ensembleMixedEnties = async (
   localEntityList: Entity[],
   prevSyncEntityList: Entity[],
   remoteEntityList: Entity[],
@@ -329,7 +151,7 @@ export const ensembleMixedEnties = async (
   configDir: string,
   syncUnderscoreItems: boolean,
   ignorePaths: string[],
-  cipher: Cipher,
+  fsEncrypt: FakeFsEncrypt,
   serviceType: SUPPORTED_SERVICES_TYPE,
 
   profiler: Profiler
@@ -345,10 +167,7 @@ export const ensembleMixedEnties = async (
   // we also have to synthesize folders here
   for (const remote of remoteEntityList) {
     const remoteCopied = ensureMTimeOfRemoteEntityValid(
-      await decryptRemoteEntityInplace(
-        copyEntityAndFixTimeFormat(remote, serviceType),
-        cipher
-      )
+      copyEntityAndFixTimeFormat(remote, serviceType)
     );
 
     const key = remoteCopied.key!;
@@ -433,19 +252,13 @@ export const ensembleMixedEnties = async (
         continue;
       }
 
+      // TODO: abstraction leaking?
+      const prevSyncCopied = await fsEncrypt.encryptEntity(
+        copyEntityAndFixTimeFormat(prevSync, serviceType)
+      );
       if (finalMappings.hasOwnProperty(key)) {
-        const prevSyncCopied = await encryptLocalEntityInplace(
-          copyEntityAndFixTimeFormat(prevSync, serviceType),
-          cipher,
-          finalMappings[key].remote?.keyEnc
-        );
         finalMappings[key].prevSync = prevSyncCopied;
       } else {
-        const prevSyncCopied = await encryptLocalEntityInplace(
-          copyEntityAndFixTimeFormat(prevSync, serviceType),
-          cipher,
-          undefined
-        );
         finalMappings[key] = {
           key: key,
           prevSync: prevSyncCopied,
@@ -473,19 +286,13 @@ export const ensembleMixedEnties = async (
       continue;
     }
 
+    // TODO: abstraction leaking?
+    const localCopied = await fsEncrypt.encryptEntity(
+      copyEntityAndFixTimeFormat(local, serviceType)
+    );
     if (finalMappings.hasOwnProperty(key)) {
-      const localCopied = await encryptLocalEntityInplace(
-        copyEntityAndFixTimeFormat(local, serviceType),
-        cipher,
-        finalMappings[key].remote?.keyEnc
-      );
       finalMappings[key].local = localCopied;
     } else {
-      const localCopied = await encryptLocalEntityInplace(
-        copyEntityAndFixTimeFormat(local, serviceType),
-        cipher,
-        undefined
-      );
       finalMappings[key] = {
         key: key,
         local: localCopied,
@@ -508,7 +315,7 @@ export const ensembleMixedEnties = async (
  * Basically follow the sync algorithm of https://github.com/Jwink3101/syncrclone
  * Also deal with syncDirection which makes it more complicated
  */
-export const getSyncPlanInplace = async (
+const getSyncPlanInplace = async (
   mixedEntityMappings: Record<string, MixedEntity>,
   howToCleanEmptyFolder: EmptyFolderCleanType,
   skipSizeLargerThan: number,
@@ -940,6 +747,7 @@ export const getSyncPlanInplace = async (
   mixedEntityMappings["/$@meta"] = {
     key: "/$@meta", // don't mess up with the types
     sideNotes: {
+      version: "2024047 fs version",
       generateTime: currTime,
       generateTimeFmt: currTimeFmt,
     },
@@ -1093,16 +901,96 @@ const splitFourStepsOnEntityMappings = (
   };
 };
 
+const fullfillMTimeOfRemoteEntityInplace = (
+  remote: Entity,
+  mtimeCli?: number
+) => {
+  // TODO:
+  // on 20240405, we find that dropbox's mtimeCli is not updated
+  // if the content is not updated even the time is updated...
+  // so we do not check remote.mtimeCli for now..
+  if (
+    mtimeCli !== undefined &&
+    mtimeCli > 0 /* &&
+    (remote.mtimeCli === undefined ||
+      remote.mtimeCli <= 0 ||
+      (remote.mtimeSvr !== undefined &&
+        remote.mtimeSvr > 0 &&
+        remote.mtimeCli >= remote.mtimeSvr))
+    */
+  ) {
+    remote.mtimeCli = mtimeCli;
+  }
+  return remote;
+};
+
+async function copyFolder(
+  key: string,
+  left: FakeFs,
+  right: FakeFs
+): Promise<Entity> {
+  if (!key.endsWith("/")) {
+    throw Error(`should not call ${key} in copyFolder`);
+  }
+  const statsLeft = await left.stat(key);
+  return await right.mkdir(key, statsLeft.mtimeCli);
+}
+
+async function copyFile(
+  key: string,
+  left: FakeFs,
+  right: FakeFs
+): Promise<Entity> {
+  // console.debug(`copyFile: key=${key}, left=${left.kind}, right=${right.kind}`);
+  if (key.endsWith("/")) {
+    throw Error(`should not call ${key} in copyFile`);
+  }
+  const statsLeft = await left.stat(key);
+  const content = await left.readFile(key);
+
+  if (statsLeft.size === undefined) {
+    statsLeft.size = content.byteLength;
+  } else {
+    if (statsLeft.size !== content.byteLength) {
+      throw Error(
+        `error copying ${left.kind}=>${right.kind}: size not matched`
+      );
+    }
+  }
+
+  if (statsLeft.mtimeCli === undefined) {
+    throw Error(`error copying ${left.kind}=>${right.kind}, no mtimeCli`);
+  }
+
+  // console.debug(`copyFile: about to start right.writeFile`);
+  return await right.writeFile(
+    key,
+    content,
+    statsLeft.mtimeCli,
+    statsLeft.mtimeCli /* TODO */
+  );
+}
+
+async function copyFileOrFolder(
+  key: string,
+  left: FakeFs,
+  right: FakeFs
+): Promise<Entity> {
+  if (key.endsWith("/")) {
+    return await copyFolder(key, left, right);
+  } else {
+    return await copyFile(key, left, right);
+  }
+}
+
 const dispatchOperationToActualV3 = async (
   key: string,
   vaultRandomID: string,
   profileID: string,
   r: MixedEntity,
-  client: RemoteClient,
-  db: InternalDBs,
-  vault: Vault,
-  localDeleteFunc: any,
-  cipher: Cipher
+  fsLocal: FakeFs,
+  fsEncrypt: FakeFsEncrypt,
+  db: InternalDBs
 ) => {
   // console.debug(
   //   `inside dispatchOperationToActualV3, key=${key}, r=${JSON.stringify(
@@ -1136,11 +1024,8 @@ const dispatchOperationToActualV3 = async (
       // if we don't have prevSync, we use remote entity AND local mtime
       // as if it is "uploaded"
       if (r.remote !== undefined) {
-        let entity = await decryptRemoteEntityInplace(r.remote, cipher);
-        entity = await fullfillMTimeOfRemoteEntityInplace(
-          entity,
-          r.local?.mtimeCli
-        );
+        let entity = r.remote;
+        entity = fullfillMTimeOfRemoteEntityInplace(entity, r.local?.mtimeCli);
 
         if (entity !== undefined) {
           await upsertPrevSyncRecordByVaultAndProfile(
@@ -1159,38 +1044,17 @@ const dispatchOperationToActualV3 = async (
     r.decision === "conflict_created_then_keep_local" ||
     r.decision === "conflict_modified_then_keep_local"
   ) {
-    if (
-      client.serviceType === "onedrive" &&
-      r.local!.size === 0 &&
-      cipher.isPasswordEmpty()
-    ) {
-      // special treatment for empty files for OneDrive
-      // TODO: it's ugly, any other way?
-      // special treatment for OneDrive: do nothing, skip empty file without encryption
-      // if it's empty folder, or it's encrypted file/folder, it continues to be uploaded.
-    } else {
-      // console.debug(`before upload in sync, r=${JSON.stringify(r, null, 2)}`);
-      const { entity, mtimeCli } = await client.uploadToRemote(
-        r.key,
-        vault,
-        false,
-        cipher,
-        r.local!.keyEnc
-      );
-      // console.debug(`after uploadToRemote`);
-      // console.debug(`entity=${JSON.stringify(entity,null,2)}`)
-      // console.debug(`mtimeCli=${mtimeCli}`)
-      await decryptRemoteEntityInplace(entity, cipher);
-      // console.debug(`after dec, entity=${JSON.stringify(entity,null,2)}`)
-      await fullfillMTimeOfRemoteEntityInplace(entity, mtimeCli);
-      // console.debug(`after fullfill, entity=${JSON.stringify(entity,null,2)}`)
-      await upsertPrevSyncRecordByVaultAndProfile(
-        db,
-        vaultRandomID,
-        profileID,
-        entity
-      );
-    }
+    // console.debug(`before upload in sync, r=${JSON.stringify(r, null, 2)}`);
+    const mtimeCli = (await fsLocal.stat(r.key)).mtimeCli!;
+    const entity = await copyFileOrFolder(r.key, fsLocal, fsEncrypt);
+    fullfillMTimeOfRemoteEntityInplace(entity, mtimeCli);
+    // console.debug(`after fullfill, entity=${JSON.stringify(entity,null,2)}`)
+    await upsertPrevSyncRecordByVaultAndProfile(
+      db,
+      vaultRandomID,
+      profileID,
+      entity
+    );
   } else if (
     r.decision === "remote_is_modified_then_pull" ||
     r.decision === "remote_is_created_then_pull" ||
@@ -1198,14 +1062,11 @@ const dispatchOperationToActualV3 = async (
     r.decision === "conflict_modified_then_keep_remote" ||
     r.decision === "folder_existed_remote_then_also_create_local"
   ) {
-    await mkdirpInVault(r.key, vault);
-    await client.downloadFromRemote(
-      r.key,
-      vault,
-      r.remote!.mtimeCli!,
-      cipher,
-      r.remote!.keyEnc
-    );
+    if (r.key.endsWith("/")) {
+      await fsLocal.mkdir(r.key);
+    } else {
+      await copyFile(r.key, fsEncrypt, fsLocal);
+    }
     await upsertPrevSyncRecordByVaultAndProfile(
       db,
       vaultRandomID,
@@ -1214,12 +1075,7 @@ const dispatchOperationToActualV3 = async (
     );
   } else if (r.decision === "local_is_deleted_thus_also_delete_remote") {
     // local is deleted, we need to delete remote now
-    await client.deleteFromRemote(
-      r.key,
-      cipher,
-      r.remote!.keyEnc,
-      r.remote!.synthesizedFolder
-    );
+    await fsEncrypt.rm(r.key);
     await clearPrevSyncRecordByVaultAndProfile(
       db,
       vaultRandomID,
@@ -1228,7 +1084,7 @@ const dispatchOperationToActualV3 = async (
     );
   } else if (r.decision === "remote_is_deleted_thus_also_delete_local") {
     // remote is deleted, we need to delete local now
-    await localDeleteFunc(r.key);
+    await fsLocal.rm(r.key);
     await clearPrevSyncRecordByVaultAndProfile(
       db,
       vaultRandomID,
@@ -1241,17 +1097,8 @@ const dispatchOperationToActualV3 = async (
   ) {
     throw Error(`${r.decision} not implemented yet: ${JSON.stringify(r)}`);
   } else if (r.decision === "folder_to_be_created") {
-    await mkdirpInVault(r.key, vault);
-    const { entity, mtimeCli } = await client.uploadToRemote(
-      r.key,
-      vault,
-      false,
-      cipher,
-      r.local!.keyEnc
-    );
-    // we need to decrypt the key!!!
-    await decryptRemoteEntityInplace(entity, cipher);
-    await fullfillMTimeOfRemoteEntityInplace(entity, mtimeCli);
+    await fsLocal.mkdir(r.key);
+    const entity = await copyFolder(r.key, fsLocal, fsEncrypt);
     await upsertPrevSyncRecordByVaultAndProfile(
       db,
       vaultRandomID,
@@ -1267,18 +1114,13 @@ const dispatchOperationToActualV3 = async (
       r.decision === "folder_to_be_deleted_on_both" ||
       r.decision === "folder_to_be_deleted_on_local"
     ) {
-      await localDeleteFunc(r.key);
+      await fsLocal.rm(r.key);
     }
     if (
       r.decision === "folder_to_be_deleted_on_both" ||
       r.decision === "folder_to_be_deleted_on_remote"
     ) {
-      await client.deleteFromRemote(
-        r.key,
-        cipher,
-        r.remote!.keyEnc,
-        r.remote!.synthesizedFolder
-      );
+      await fsEncrypt.rm(r.key);
     }
     await clearPrevSyncRecordByVaultAndProfile(
       db,
@@ -1293,18 +1135,16 @@ const dispatchOperationToActualV3 = async (
 
 export const doActualSync = async (
   mixedEntityMappings: Record<string, MixedEntity>,
-  client: RemoteClient,
+  fsLocal: FakeFs,
+  fsEncrypt: FakeFsEncrypt,
   vaultRandomID: string,
   profileID: string,
-  vault: Vault,
-  cipher: Cipher,
   concurrency: number,
-  localDeleteFunc: any,
   protectModifyPercentage: number,
   getProtectModifyPercentageErrorStrFunc: any,
-  callbackSyncProcess: any,
   db: InternalDBs,
-  profiler: Profiler
+  profiler: Profiler,
+  callbackSyncProcess?: any
 ) => {
   profiler.addIndent();
   profiler.insert("doActualSync: enter");
@@ -1400,27 +1240,23 @@ export const doActualSync = async (
           //   `start syncing "${key}" with plan ${JSON.stringify(val)}`
           // );
 
-          if (callbackSyncProcess !== undefined) {
-            await callbackSyncProcess(
-              realCounter,
-              realTotalCount,
-              key,
-              val.decision
-            );
+          await callbackSyncProcess?.(
+            realCounter,
+            realTotalCount,
+            key,
+            val.decision
+          );
 
-            realCounter += 1;
-          }
+          realCounter += 1;
 
           await dispatchOperationToActualV3(
             key,
             vaultRandomID,
             profileID,
             val,
-            client,
-            db,
-            vault,
-            localDeleteFunc,
-            cipher
+            fsLocal,
+            fsEncrypt,
+            db
           );
 
           // console.debug(`finished ${key}`);
@@ -1456,3 +1292,191 @@ export const doActualSync = async (
   profiler.insert(`doActualSync: exit`);
   profiler.removeIndent();
 };
+
+export type SyncStatusType =
+  | "idle"
+  | "preparing"
+  | "getting_remote_files_list"
+  | "getting_local_meta"
+  | "getting_local_prev_sync"
+  | "checking_password"
+  | "generating_plan"
+  | "syncing"
+  | "cleaning"
+  | "finish";
+
+/**
+ * Every input variable should be mockable, so that testable.
+ */
+export async function syncer(
+  fsLocal: FakeFs,
+  fsRemote: FakeFs,
+  fsEncrypt: FakeFsEncrypt,
+  profiler: Profiler,
+  db: InternalDBs,
+  triggerSource: SyncTriggerSourceType,
+  profileID: string,
+  vaultRandomID: string,
+  configDir: string,
+  settings: RemotelySavePluginSettings,
+  getProtectModifyPercentageErrorStrFunc: any,
+  markIsSyncingFunc: (isSyncing: boolean) => void,
+  notifyFunc?: (s: SyncTriggerSourceType, step: number) => Promise<any>,
+  errNotifyFunc?: (s: SyncTriggerSourceType, error: Error) => Promise<any>,
+  ribboonFunc?: (s: SyncTriggerSourceType, step: number) => Promise<any>,
+  statusBarFunc?: (s: SyncTriggerSourceType, step: number) => any,
+  callbackSyncProcess?: any
+) {
+  markIsSyncingFunc(true);
+
+  let step = 0; // dry mode only
+  await notifyFunc?.(triggerSource, step);
+
+  step = 1;
+  await notifyFunc?.(triggerSource, step);
+  await ribboonFunc?.(triggerSource, step);
+  await statusBarFunc?.(triggerSource, step);
+  profiler.insert("start big sync func");
+
+  try {
+    if (fsEncrypt.innerFs !== fsRemote) {
+      throw Error(`your enc should has inner of the remote`);
+    }
+
+    const passwordCheckResult = await fsEncrypt.isPasswordOk();
+    if (!passwordCheckResult.ok) {
+      throw Error(passwordCheckResult.reason);
+    }
+    await notifyFunc?.(triggerSource, step);
+    await ribboonFunc?.(triggerSource, step);
+    await statusBarFunc?.(triggerSource, step);
+    profiler.insert(
+      `finish step${step} (list partial remote and check password)`
+    );
+
+    step = 2;
+    const remoteEntityList = await fsEncrypt.walk();
+    console.debug(`remoteEntityList:`);
+    console.debug(remoteEntityList);
+    await notifyFunc?.(triggerSource, step);
+    await ribboonFunc?.(triggerSource, step);
+    await statusBarFunc?.(triggerSource, step);
+    profiler.insert(`finish step${step} (list remote)`);
+
+    step = 3;
+    const localEntityList = await fsLocal.walk();
+    console.debug(`localEntityList:`);
+    console.debug(localEntityList);
+    await notifyFunc?.(triggerSource, step);
+    await ribboonFunc?.(triggerSource, step);
+    await statusBarFunc?.(triggerSource, step);
+    profiler.insert(`finish step${step} (list local)`);
+
+    step = 4;
+    const prevSyncEntityList = await getAllPrevSyncRecordsByVaultAndProfile(
+      db,
+      vaultRandomID,
+      profileID
+    );
+    console.debug(`prevSyncEntityList:`);
+    console.debug(prevSyncEntityList);
+    await notifyFunc?.(triggerSource, step);
+    await ribboonFunc?.(triggerSource, step);
+    await statusBarFunc?.(triggerSource, step);
+    profiler.insert(`finish step${step} (prev sync)`);
+
+    step = 5;
+    let mixedEntityMappings = await ensembleMixedEnties(
+      localEntityList,
+      prevSyncEntityList,
+      remoteEntityList,
+      settings.syncConfigDir ?? false,
+      configDir,
+      settings.syncUnderscoreItems ?? false,
+      settings.ignorePaths ?? [],
+      fsEncrypt,
+      settings.serviceType,
+      profiler
+    );
+    await notifyFunc?.(triggerSource, step);
+    await ribboonFunc?.(triggerSource, step);
+    await statusBarFunc?.(triggerSource, step);
+    profiler.insert(`finish step${step} (build partial mixedEntity)`);
+
+    step = 6;
+    mixedEntityMappings = await getSyncPlanInplace(
+      mixedEntityMappings,
+      settings.howToCleanEmptyFolder ?? "skip",
+      settings.skipSizeLargerThan ?? -1,
+      settings.conflictAction ?? "keep_newer",
+      settings.syncDirection ?? "bidirectional",
+      profiler
+    );
+    console.info(`mixedEntityMappings:`);
+    console.info(mixedEntityMappings); // for debugging
+    await notifyFunc?.(triggerSource, step);
+    await ribboonFunc?.(triggerSource, step);
+    await statusBarFunc?.(triggerSource, step);
+    profiler.insert("finish building full sync plan");
+
+    await insertSyncPlanRecordByVault(
+      db,
+      mixedEntityMappings,
+      vaultRandomID,
+      settings.serviceType
+    );
+    await notifyFunc?.(triggerSource, step);
+    await ribboonFunc?.(triggerSource, step);
+    await statusBarFunc?.(triggerSource, step);
+    profiler.insert("finish writing sync plan");
+    profiler.insert(`finish step${step} (make plan)`);
+
+    // The operations above are almost read only and kind of safe.
+    // The operations below begins to write or delete (!!!) something.
+
+    step = 7;
+    if (triggerSource !== "dry") {
+      await doActualSync(
+        mixedEntityMappings,
+        fsLocal,
+        fsEncrypt,
+        vaultRandomID,
+        profileID,
+        settings.concurrency ?? 5,
+        settings.protectModifyPercentage ?? 50,
+        getProtectModifyPercentageErrorStrFunc,
+        db,
+        profiler,
+        callbackSyncProcess
+      );
+      await notifyFunc?.(triggerSource, step);
+      await ribboonFunc?.(triggerSource, step);
+      await statusBarFunc?.(triggerSource, step);
+      profiler.insert(`finish step${step} (actual sync)`);
+    } else {
+      await notifyFunc?.(triggerSource, step);
+      await ribboonFunc?.(triggerSource, step);
+      await statusBarFunc?.(triggerSource, step);
+      profiler.insert(
+        `finish step${step} (skip actual sync because of dry run)`
+      );
+    }
+  } catch (error: any) {
+    profiler.insert("start error branch");
+    await errNotifyFunc?.(triggerSource, error as Error);
+
+    profiler.insert("finish error branch");
+  } finally {
+  }
+
+  profiler.insert("finish syncRun");
+  console.debug(profiler.toString());
+  await profiler.save(db, vaultRandomID, settings.serviceType);
+
+  step = 8;
+  await notifyFunc?.(triggerSource, step);
+  await ribboonFunc?.(triggerSource, step);
+  await statusBarFunc?.(triggerSource, step);
+
+  markIsSyncingFunc(false);
+}

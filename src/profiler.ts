@@ -1,3 +1,5 @@
+import { SUPPORTED_SERVICES_TYPE } from "./baseTypes";
+import { InternalDBs, insertProfilerResultByVault } from "./localdb";
 import { unixTimeToStr } from "./misc";
 
 interface BreakPoint {
@@ -78,5 +80,18 @@ export class Profiler {
     }
 
     return res;
+  }
+
+  async save(
+    db: InternalDBs,
+    vaultRandomID: string,
+    remoteType: SUPPORTED_SERVICES_TYPE
+  ) {
+    await insertProfilerResultByVault(
+      db,
+      this.toString(),
+      vaultRandomID,
+      remoteType
+    );
   }
 }

@@ -3,12 +3,10 @@ import { extendPrototype } from "localforage-getitems";
 extendPrototype(localforage);
 export type LocalForage = typeof localforage;
 import { nanoid } from "nanoid";
-import { requireApiVersion, TAbstractFile, TFile, TFolder } from "obsidian";
 
-import { API_VER_STAT_FOLDER } from "./baseTypes";
 import type { Entity, MixedEntity, SUPPORTED_SERVICES_TYPE } from "./baseTypes";
 import type { SyncPlanType } from "./sync";
-import { statFix, toText, unixTimeToStr } from "./misc";
+import { unixTimeToStr } from "./misc";
 
 const DB_VERSION_NUMBER_IN_HISTORY = [20211114, 20220108, 20220326, 20240220];
 export const DEFAULT_DB_VERSION_NUMBER: number = 20240220;

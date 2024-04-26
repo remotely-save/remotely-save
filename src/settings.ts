@@ -41,17 +41,17 @@ import {
   upsertLastSuccessSyncTimeByVault,
 } from "./localdb";
 import type RemotelySavePlugin from "./main"; // unavoidable
-import { RemoteClient } from "./remote";
+import { FakeFs } from "./fsAll";
 import {
   DEFAULT_DROPBOX_CONFIG,
   getAuthUrlAndVerifier as getAuthUrlAndVerifierDropbox,
   sendAuthReq as sendAuthReqDropbox,
   setConfigBySuccessfullAuthInplace,
-} from "./remoteForDropbox";
+} from "./fsDropbox";
 import {
   DEFAULT_ONEDRIVE_CONFIG,
   getAuthUrlAndVerifier as getAuthUrlAndVerifierOnedrive,
-} from "./remoteForOnedrive";
+} from "./fsOnedrive";
 import { messyConfigToNormal } from "./configPersist";
 import type { TransItemType } from "./i18n";
 import {
@@ -59,8 +59,9 @@ import {
   checkHasSpecialCharForDir,
   stringToFragment,
 } from "./misc";
-import { simpleTransRemotePrefix } from "./remoteForS3";
+import { simpleTransRemotePrefix } from "./fsS3";
 import cloneDeep from "lodash/cloneDeep";
+import { getClient } from "./fsGetter";
 
 class PasswordModal extends Modal {
   plugin: RemotelySavePlugin;
@@ -468,16 +469,12 @@ class DropboxAuthModal extends Modal {
                 authRes!,
                 () => self.plugin.saveSettings()
               );
-              const client = new RemoteClient(
-                "dropbox",
-                undefined,
-                undefined,
-                this.plugin.settings.dropbox,
-                undefined,
+              const client = getClient(
+                this.plugin.settings,
                 this.app.vault.getName(),
-                () => self.plugin.saveSettings()
+                () => this.plugin.saveSettings()
               );
-              const username = await client.getUser();
+              const username = await client.getUserDisplayName();
               this.plugin.settings.dropbox.username = username;
               await this.plugin.saveSettings();
               new Notice(
@@ -1077,9 +1074,13 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
         button.setButtonText(t("settings_checkonnectivity_button"));
         button.onClick(async () => {
           new Notice(t("settings_checkonnectivity_checking"));
-          const client = new RemoteClient("s3", this.plugin.settings.s3);
+          const client = getClient(
+            this.plugin.settings,
+            this.app.vault.getName(),
+            () => this.plugin.saveSettings()
+          );
           const errors = { msg: "" };
-          const res = await client.checkConnectivity((err: any) => {
+          const res = await client.checkConnect((err: any) => {
             errors.msg = err;
           });
           if (res) {
@@ -1143,14 +1144,10 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
         button.onClick(async () => {
           try {
             const self = this;
-            const client = new RemoteClient(
-              "dropbox",
-              undefined,
-              undefined,
-              this.plugin.settings.dropbox,
-              undefined,
+            const client = getClient(
+              this.plugin.settings,
               this.app.vault.getName(),
-              () => self.plugin.saveSettings()
+              () => this.plugin.saveSettings()
             );
             await client.revokeAuth();
             this.plugin.settings.dropbox = JSON.parse(
@@ -1258,18 +1255,14 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
         button.onClick(async () => {
           new Notice(t("settings_checkonnectivity_checking"));
           const self = this;
-          const client = new RemoteClient(
-            "dropbox",
-            undefined,
-            undefined,
-            this.plugin.settings.dropbox,
-            undefined,
+          const client = getClient(
+            this.plugin.settings,
             this.app.vault.getName(),
-            () => self.plugin.saveSettings()
+            () => this.plugin.saveSettings()
           );
 
           const errors = { msg: "" };
-          const res = await client.checkConnectivity((err: any) => {
+          const res = await client.checkConnect((err: any) => {
             errors.msg = `${err}`;
           });
           if (res) {
@@ -1407,18 +1400,13 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
         button.onClick(async () => {
           new Notice(t("settings_checkonnectivity_checking"));
           const self = this;
-          const client = new RemoteClient(
-            "onedrive",
-            undefined,
-            undefined,
-            undefined,
-            this.plugin.settings.onedrive,
+          const client = getClient(
+            this.plugin.settings,
             this.app.vault.getName(),
-            () => self.plugin.saveSettings()
+            () => this.plugin.saveSettings()
           );
-
           const errors = { msg: "" };
-          const res = await client.checkConnectivity((err: any) => {
+          const res = await client.checkConnect((err: any) => {
             errors.msg = `${err}`;
           });
           if (res) {
@@ -1617,17 +1605,13 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
         button.onClick(async () => {
           new Notice(t("settings_checkonnectivity_checking"));
           const self = this;
-          const client = new RemoteClient(
-            "webdav",
-            undefined,
-            this.plugin.settings.webdav,
-            undefined,
-            undefined,
+          const client = getClient(
+            this.plugin.settings,
             this.app.vault.getName(),
-            () => self.plugin.saveSettings()
+            () => this.plugin.saveSettings()
           );
           const errors = { msg: "" };
-          const res = await client.checkConnectivity((err: any) => {
+          const res = await client.checkConnect((err: any) => {
             errors.msg = `${err}`;
           });
           if (res) {
@@ -1790,72 +1774,22 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
       });
 
     new Setting(basicDiv)
-      .setName(t("settings_saverun"))
-      .setDesc(t("settings_saverun_desc"))
+      .setName(t("settings_synconsave"))
+      .setDesc(t("settings_synconsave_desc"))
       .addDropdown((dropdown) => {
-        dropdown.addOption("-1", t("settings_saverun_notset"));
-        dropdown.addOption(`${1000 * 1}`, t("settings_saverun_1sec"));
-        dropdown.addOption(`${1000 * 5}`, t("settings_saverun_5sec"));
-        dropdown.addOption(`${1000 * 10}`, t("settings_saverun_10sec"));
-        dropdown.addOption(`${1000 * 60}`, t("settings_saverun_1min"));
-        let runScheduled = false;
+        dropdown.addOption("-1", t("settings_synconsave_disable"));
+        dropdown.addOption("1000", t("settings_synconsave_enable"));
+        // for backward compatibility, we need to use a number representing seconds
+        let syncOnSaveEnabled = false;
+        if ((this.plugin.settings.syncOnSaveAfterMilliseconds ?? -1) > 0) {
+          syncOnSaveEnabled = true;
+        }
         dropdown
-          .setValue(`${this.plugin.settings.syncOnSaveAfterMilliseconds}`)
+          .setValue(`${syncOnSaveEnabled ? "1000" : "-1"}`)
           .onChange(async (val: string) => {
-            const realVal = parseInt(val);
-            this.plugin.settings.syncOnSaveAfterMilliseconds = realVal;
+            this.plugin.settings.syncOnSaveAfterMilliseconds = parseInt(val);
             await this.plugin.saveSettings();
-            if (
-              (realVal === undefined || realVal === null || realVal <= 0) &&
-              this.plugin.syncOnSaveIntervalID !== undefined
-            ) {
-              // clear
-              window.clearInterval(this.plugin.syncOnSaveIntervalID);
-              this.plugin.syncOnSaveIntervalID = undefined;
-            } else if (
-              realVal !== undefined &&
-              realVal !== null &&
-              realVal > 0
-            ) {
-              const intervalID = window.setInterval(() => {
-                const currentFile = this.app.workspace.getActiveFile();
-
-                if (currentFile) {
-                  // get the last modified time of the current file
-                  // if it has been modified within the last syncOnSaveAfterMilliseconds
-                  // then schedule a run for syncOnSaveAfterMilliseconds after it was modified
-                  const lastModified = currentFile.stat.mtime;
-                  const currentTime = Date.now();
-                  // console.debug(
-                  //   `Checking if file was modified within last ${
-                  //     this.plugin.settings.syncOnSaveAfterMilliseconds / 1000
-                  //   } seconds, last modified: ${
-                  //     (currentTime - lastModified) / 1000
-                  //   } seconds ago`
-                  // );
-                  if (
-                    currentTime - lastModified <
-                    this.plugin.settings.syncOnSaveAfterMilliseconds!
-                  ) {
-                    if (!runScheduled) {
-                      const scheduleTimeFromNow =
-                        this.plugin.settings.syncOnSaveAfterMilliseconds! -
-                        (currentTime - lastModified);
-                      console.info(
-                        `schedule a run for ${scheduleTimeFromNow} milliseconds later`
-                      );
-                      runScheduled = true;
-                      setTimeout(() => {
-                        this.plugin.syncRun("auto_sync_on_save");
-                        runScheduled = false;
-                      }, scheduleTimeFromNow);
-                    }
-                  }
-                }
-              }, realVal);
-              this.plugin.syncOnSaveIntervalID = intervalID;
-              this.plugin.registerInterval(intervalID);
-            }
+            this.plugin.toggleSyncOnSaveIfSet();
           });
       });
 

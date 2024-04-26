@@ -7,7 +7,7 @@ import {
   RemotelySavePluginSettings,
   QRExportType,
 } from "./baseTypes";
-import { getShrinkedSettings } from "./remoteForOnedrive";
+import { getShrinkedSettings } from "./fsOnedrive";
 
 export const exportQrCodeUri = async (
   settings: RemotelySavePluginSettings,

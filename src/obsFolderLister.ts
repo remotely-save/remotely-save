@@ -31,13 +31,6 @@ const isLikelyPluginSubFiles = (x: string) => {
   return false;
 };
 
-export const isInsideObsFolder = (x: string, configDir: string) => {
-  if (!configDir.startsWith(".")) {
-    throw Error(`configDir should starts with . but we get ${configDir}`);
-  }
-  return x === configDir || x.startsWith(`${configDir}/`);
-};
-
 export const listFilesInObsFolder = async (
   configDir: string,
   vault: Vault,

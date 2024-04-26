@@ -7,7 +7,6 @@ import {
   setIcon,
   FileSystemAdapter,
   Platform,
-  requestUrl,
   requireApiVersion,
   Events,
 } from "obsidian";
@@ -26,7 +25,6 @@ import {
 } from "./baseTypes";
 import { importQrCodeUri } from "./importExport";
 import {
-  insertSyncPlanRecordByVault,
   prepareDBs,
   InternalDBs,
   clearExpiredSyncPlanRecords,
@@ -34,43 +32,35 @@ import {
   clearAllLoggerOutputRecords,
   upsertLastSuccessSyncTimeByVault,
   getLastSuccessSyncTimeByVault,
-  getAllPrevSyncRecordsByVaultAndProfile,
-  insertProfilerResultByVault,
 } from "./localdb";
-import { RemoteClient } from "./remote";
 import {
   DEFAULT_DROPBOX_CONFIG,
-  getAuthUrlAndVerifier as getAuthUrlAndVerifierDropbox,
   sendAuthReq as sendAuthReqDropbox,
   setConfigBySuccessfullAuthInplace as setConfigBySuccessfullAuthInplaceDropbox,
-} from "./remoteForDropbox";
+} from "./fsDropbox";
 import {
   AccessCodeResponseSuccessfulType,
   DEFAULT_ONEDRIVE_CONFIG,
   sendAuthReq as sendAuthReqOnedrive,
   setConfigBySuccessfullAuthInplace as setConfigBySuccessfullAuthInplaceOnedrive,
-} from "./remoteForOnedrive";
-import { DEFAULT_S3_CONFIG } from "./remoteForS3";
-import { DEFAULT_WEBDAV_CONFIG } from "./remoteForWebdav";
+} from "./fsOnedrive";
+import { DEFAULT_S3_CONFIG } from "./fsS3";
+import { DEFAULT_WEBDAV_CONFIG } from "./fsWebdav";
 import { RemotelySaveSettingTab } from "./settings";
-import {
-  doActualSync,
-  ensembleMixedEnties,
-  getSyncPlanInplace,
-  isPasswordOk,
-  SyncStatusType,
-} from "./sync";
 import { messyConfigToNormal, normalConfigToMessy } from "./configPersist";
-import { getLocalEntityList } from "./local";
 import { I18n } from "./i18n";
-import type { LangType, LangTypeAndAuto, TransItemType } from "./i18n";
+import type { LangTypeAndAuto, TransItemType } from "./i18n";
 import { SyncAlgoV3Modal } from "./syncAlgoV3Notice";
 
 import AggregateError from "aggregate-error";
 import { exportVaultSyncPlansToFiles } from "./debugMode";
-import { changeMobileStatusBar, compareVersion } from "./misc";
-import { Cipher } from "./encryptUnified";
+import { changeMobileStatusBar } from "./misc";
 import { Profiler } from "./profiler";
+import { FakeFsLocal } from "./fsLocal";
+import { FakeFsEncrypt } from "./fsEncrypt";
+import { syncer } from "./sync";
+import { getClient } from "./fsGetter";
+import throttle from "lodash/throttle";
 
 const DEFAULT_SETTINGS: RemotelySavePluginSettings = {
   s3: DEFAULT_S3_CONFIG,
@@ -141,7 +131,8 @@ const getIconSvg = () => {
 export default class RemotelySavePlugin extends Plugin {
   settings!: RemotelySavePluginSettings;
   db!: InternalDBs;
-  syncStatus!: SyncStatusType;
+  isSyncing!: boolean;
+  hasPendingSyncOnSave!: boolean;
   statusBarElement!: HTMLSpanElement;
   oauth2Info!: OAuth2Info;
   currLogLevel!: string;
@@ -156,7 +147,25 @@ export default class RemotelySavePlugin extends Plugin {
   appContainerObserver?: MutationObserver;
 
   async syncRun(triggerSource: SyncTriggerSourceType = "manual") {
-    const profiler = new Profiler("start of syncRun");
+    const profiler = new Profiler();
+    const fsLocal = new FakeFsLocal(
+      this.app.vault,
+      this.settings.syncConfigDir ?? false,
+      this.app.vault.configDir,
+      this.manifest.id,
+      profiler,
+      this.settings.deleteToWhere ?? "system"
+    );
+    const fsRemote = getClient(
+      this.settings,
+      this.app.vault.getName(),
+      async () => await this.saveSettings()
+    );
+    const fsEncrypt = new FakeFsEncrypt(
+      fsRemote,
+      this.settings.password ?? "",
+      this.settings.encryptionMethod ?? "rclone-base64"
+    );
 
     const t = (x: TransItemType, vars?: any) => {
       return this.i18n.t(x, vars);
@@ -164,333 +173,241 @@ export default class RemotelySavePlugin extends Plugin {
 
     const profileID = this.getCurrProfileID();
 
-    const getNotice = (x: string, timeout?: number) => {
-      // only show notices in manual mode
-      // no notice in auto mode
-      if (triggerSource === "manual" || triggerSource === "dry") {
-        new Notice(x, timeout);
+    const getProtectError = (
+      protectModifyPercentage: number,
+      realModifyDeleteCount: number,
+      allFilesCount: number
+    ) => {
+      const percent = ((100 * realModifyDeleteCount) / allFilesCount).toFixed(
+        1
+      );
+      const res = t("syncrun_abort_protectmodifypercentage", {
+        protectModifyPercentage,
+        realModifyDeleteCount,
+        allFilesCount,
+        percent,
+      });
+      return res;
+    };
+
+    const getNotice = (
+      s: SyncTriggerSourceType,
+      msg: string,
+      timeout?: number
+    ) => {
+      if (s === "manual" || s === "dry") {
+        new Notice(msg, timeout);
       }
     };
-    if (this.syncStatus !== "idle") {
-      // really, users don't want to see this in auto mode
-      // so we use getNotice to avoid unnecessary show up
+
+    const notifyFunc = async (s: SyncTriggerSourceType, step: number) => {
+      switch (step) {
+        case 0:
+          if (s === "dry") {
+            if (this.settings.currLogLevel === "info") {
+              getNotice(s, t("syncrun_shortstep0"));
+            } else {
+              getNotice(s, t("syncrun_step0"));
+            }
+          }
+
+          break;
+
+        case 1:
+          if (this.settings.currLogLevel === "info") {
+            getNotice(
+              s,
+              t("syncrun_shortstep1", {
+                serviceType: this.settings.serviceType,
+              })
+            );
+          } else {
+            getNotice(
+              s,
+              t("syncrun_step1", {
+                serviceType: this.settings.serviceType,
+              })
+            );
+          }
+          break;
+
+        case 2:
+          if (this.settings.currLogLevel === "info") {
+            // pass
+          } else {
+            getNotice(s, t("syncrun_step2"));
+          }
+          break;
+
+        case 3:
+          if (this.settings.currLogLevel === "info") {
+            // pass
+          } else {
+            getNotice(s, t("syncrun_step3"));
+          }
+          break;
+
+        case 4:
+          if (this.settings.currLogLevel === "info") {
+            // pass
+          } else {
+            getNotice(s, t("syncrun_step4"));
+          }
+          break;
+
+        case 5:
+          if (this.settings.currLogLevel === "info") {
+            // pass
+          } else {
+            getNotice(s, t("syncrun_step5"));
+          }
+          break;
+
+        case 6:
+          if (this.settings.currLogLevel === "info") {
+            // pass
+          } else {
+            getNotice(s, t("syncrun_step6"));
+          }
+          break;
+
+        case 7:
+          if (s === "dry") {
+            if (this.settings.currLogLevel === "info") {
+              getNotice(s, t("syncrun_shortstep2skip"));
+            } else {
+              getNotice(s, t("syncrun_step7skip"));
+            }
+          } else {
+            if (this.settings.currLogLevel === "info") {
+              // pass
+            } else {
+              getNotice(s, t("syncrun_step7"));
+            }
+          }
+          break;
+
+        case 8:
+          if (this.settings.currLogLevel === "info") {
+            getNotice(s, t("syncrun_shortstep2"));
+          } else {
+            getNotice(s, t("syncrun_step8"));
+          }
+          break;
+
+        default:
+          throw Error(`unknown step=${step} for showing notice`);
+          break;
+      }
+    };
+
+    const errNotifyFunc = async (s: SyncTriggerSourceType, error: Error) => {
+      console.error(error);
+      if (error instanceof AggregateError) {
+        for (const e of error.errors) {
+          getNotice(s, e.message, 10 * 1000);
+        }
+      } else {
+        getNotice(s, error?.message ?? "error while sync", 10 * 1000);
+      }
+    };
+
+    const ribboonFunc = async (s: SyncTriggerSourceType, step: number) => {
+      if (step === 1) {
+        if (this.syncRibbon !== undefined) {
+          setIcon(this.syncRibbon, iconNameSyncRunning);
+          this.syncRibbon.setAttribute(
+            "aria-label",
+            t("syncrun_syncingribbon", {
+              pluginName: this.manifest.name,
+              triggerSource: s,
+            })
+          );
+        }
+      } else if (step === 8) {
+        // last step
+        if (this.syncRibbon !== undefined) {
+          setIcon(this.syncRibbon, iconNameSyncWait);
+          let originLabel = `${this.manifest.name}`;
+          this.syncRibbon.setAttribute("aria-label", originLabel);
+        }
+      }
+    };
+
+    const statusBarFunc = async (s: SyncTriggerSourceType, step: number) => {
+      if (step === 1) {
+        // change status to "syncing..." on statusbar
+        this.updateLastSuccessSyncMsg(-1);
+      } else if (step === 8) {
+        const lastSuccessSyncMillis = Date.now();
+        await upsertLastSuccessSyncTimeByVault(
+          this.db,
+          this.vaultRandomID,
+          lastSuccessSyncMillis
+        );
+        this.updateLastSuccessSyncMsg(lastSuccessSyncMillis);
+      }
+    };
+
+    const markIsSyncingFunc = async (isSyncing: boolean) => {
+      this.isSyncing = isSyncing;
+    };
+
+    const callbackSyncProcess = async (
+      realCounter: number,
+      realTotalCount: number,
+      pathName: string,
+      decision: string
+    ) => {
+      this.setCurrSyncMsg(
+        realCounter,
+        realTotalCount,
+        pathName,
+        decision,
+        triggerSource
+      );
+    };
+
+    if (this.isSyncing) {
       getNotice(
+        triggerSource,
         t("syncrun_alreadyrunning", {
           pluginName: this.manifest.name,
-          syncStatus: this.syncStatus,
+          syncStatus: "running",
           newTriggerSource: triggerSource,
         })
       );
+
       if (this.currSyncMsg !== undefined && this.currSyncMsg !== "") {
-        getNotice(this.currSyncMsg);
+        getNotice(triggerSource, this.currSyncMsg);
       }
       return;
     }
 
-    let originLabel = `${this.manifest.name}`;
-    if (this.syncRibbon !== undefined) {
-      originLabel = this.syncRibbon.getAttribute("aria-label") as string;
-    }
-
-    try {
-      console.info(
-        `${
-          this.manifest.id
-        }-${Date.now()}: start sync, triggerSource=${triggerSource}`
-      );
-
-      if (this.syncRibbon !== undefined) {
-        setIcon(this.syncRibbon, iconNameSyncRunning);
-        this.syncRibbon.setAttribute(
-          "aria-label",
-          t("syncrun_syncingribbon", {
-            pluginName: this.manifest.name,
-            triggerSource: triggerSource,
-          })
-        );
-      }
-
-      if (triggerSource === "dry") {
-        if (this.settings.currLogLevel === "info") {
-          getNotice(t("syncrun_shortstep0"));
-        } else {
-          getNotice(t("syncrun_step0"));
-        }
-      }
-
-      // change status to "syncing..." on statusbar
-      if (this.statusBarElement !== undefined) {
-        this.updateLastSuccessSyncMsg(-1);
-      }
-      //console.info(`huh ${this.settings.password}`)
-      if (this.settings.currLogLevel === "info") {
-        getNotice(
-          t("syncrun_shortstep1", {
-            serviceType: this.settings.serviceType,
-          })
-        );
-      } else {
-        getNotice(
-          t("syncrun_step1", {
-            serviceType: this.settings.serviceType,
-          })
-        );
-      }
-
-      this.syncStatus = "preparing";
-      profiler.insert("finish step1");
-
-      if (this.settings.currLogLevel === "info") {
-        // pass
-      } else {
-        getNotice(t("syncrun_step2"));
-      }
-      this.syncStatus = "getting_remote_files_list";
-      const self = this;
-      const client = new RemoteClient(
-        this.settings.serviceType,
-        this.settings.s3,
-        this.settings.webdav,
-        this.settings.dropbox,
-        this.settings.onedrive,
-        this.app.vault.getName(),
-        () => self.saveSettings(),
-        profiler
-      );
-      const remoteEntityList = await client.listAllFromRemote();
-      console.debug("remoteEntityList:");
-      console.debug(remoteEntityList);
-
-      profiler.insert("finish step2 (listing remote)");
-
-      if (this.settings.currLogLevel === "info") {
-        // pass
-      } else {
-        getNotice(t("syncrun_step3"));
-      }
-      this.syncStatus = "checking_password";
-
-      const cipher = new Cipher(
-        this.settings.password,
-        this.settings.encryptionMethod ?? "unknown"
-      );
-      const passwordCheckResult = await isPasswordOk(remoteEntityList, cipher);
-      if (!passwordCheckResult.ok) {
-        getNotice(t("syncrun_passworderr"));
-        throw Error(passwordCheckResult.reason);
-      }
-
-      profiler.insert("finish step3 (checking password)");
-
-      if (this.settings.currLogLevel === "info") {
-        // pass
-      } else {
-        getNotice(t("syncrun_step4"));
-      }
-      this.syncStatus = "getting_local_meta";
-      const localEntityList = await getLocalEntityList(
-        this.app.vault,
-        this.settings.syncConfigDir ?? false,
-        this.app.vault.configDir,
-        this.manifest.id,
-        profiler
-      );
-      console.debug("localEntityList:");
-      console.debug(localEntityList);
-
-      profiler.insert("finish step4 (local meta)");
-
-      if (this.settings.currLogLevel === "info") {
-        // pass
-      } else {
-        getNotice(t("syncrun_step5"));
-      }
-      this.syncStatus = "getting_local_prev_sync";
-      const prevSyncEntityList = await getAllPrevSyncRecordsByVaultAndProfile(
-        this.db,
-        this.vaultRandomID,
-        profileID
-      );
-      console.debug("prevSyncEntityList:");
-      console.debug(prevSyncEntityList);
-
-      profiler.insert("finish step5 (prev sync)");
-
-      if (this.settings.currLogLevel === "info") {
-        // pass
-      } else {
-        getNotice(t("syncrun_step6"));
-      }
-      this.syncStatus = "generating_plan";
-      let mixedEntityMappings = await ensembleMixedEnties(
-        localEntityList,
-        prevSyncEntityList,
-        remoteEntityList,
-        this.settings.syncConfigDir ?? false,
-        this.app.vault.configDir,
-        this.settings.syncUnderscoreItems ?? false,
-        this.settings.ignorePaths ?? [],
-        cipher,
-        this.settings.serviceType,
-        profiler
-      );
-      profiler.insert("finish building partial mixedEntity");
-      mixedEntityMappings = await getSyncPlanInplace(
-        mixedEntityMappings,
-        this.settings.howToCleanEmptyFolder ?? "skip",
-        this.settings.skipSizeLargerThan ?? -1,
-        this.settings.conflictAction ?? "keep_newer",
-        this.settings.syncDirection ?? "bidirectional",
-        profiler
-      );
-      console.info(`mixedEntityMappings:`);
-      console.info(mixedEntityMappings); // for debugging
-      profiler.insert("finish building full sync plan");
-      await insertSyncPlanRecordByVault(
-        this.db,
-        mixedEntityMappings,
-        this.vaultRandomID,
-        client.serviceType
-      );
-
-      profiler.insert("finish writing sync plan");
-      profiler.insert("finish step6 (plan)");
-
-      // The operations above are almost read only and kind of safe.
-      // The operations below begins to write or delete (!!!) something.
-
-      if (triggerSource !== "dry") {
-        if (this.settings.currLogLevel === "info") {
-          // pass
-        } else {
-          getNotice(t("syncrun_step7"));
-        }
-        this.syncStatus = "syncing";
-        await doActualSync(
-          mixedEntityMappings,
-          client,
-          this.vaultRandomID,
-          profileID,
-          this.app.vault,
-          cipher,
-          this.settings.concurrency ?? 5,
-          (key: string) => self.trash(key),
-          this.settings.protectModifyPercentage ?? 50,
-          (
-            protectModifyPercentage: number,
-            realModifyDeleteCount: number,
-            allFilesCount: number
-          ) => {
-            const percent = (
-              (100 * realModifyDeleteCount) /
-              allFilesCount
-            ).toFixed(1);
-            const res = t("syncrun_abort_protectmodifypercentage", {
-              protectModifyPercentage,
-              realModifyDeleteCount,
-              allFilesCount,
-              percent,
-            });
-            return res;
-          },
-          (
-            realCounter: number,
-            realTotalCount: number,
-            pathName: string,
-            decision: string
-          ) =>
-            self.setCurrSyncMsg(
-              realCounter,
-              realTotalCount,
-              pathName,
-              decision,
-              triggerSource
-            ),
-          this.db,
-          profiler
-        );
-      } else {
-        this.syncStatus = "syncing";
-        if (this.settings.currLogLevel === "info") {
-          getNotice(t("syncrun_shortstep2skip"));
-        } else {
-          getNotice(t("syncrun_step7skip"));
-        }
-      }
-
-      cipher.closeResources();
-
-      profiler.insert("finish step7 (actual sync)");
-
-      if (this.settings.currLogLevel === "info") {
-        getNotice(t("syncrun_shortstep2"));
-      } else {
-        getNotice(t("syncrun_step8"));
-      }
-
-      this.syncStatus = "finish";
-      this.syncStatus = "idle";
-
-      profiler.insert("finish step8");
-
-      const lastSuccessSyncMillis = Date.now();
-      await upsertLastSuccessSyncTimeByVault(
-        this.db,
-        this.vaultRandomID,
-        lastSuccessSyncMillis
-      );
-
-      if (this.syncRibbon !== undefined) {
-        setIcon(this.syncRibbon, iconNameSyncWait);
-        this.syncRibbon.setAttribute("aria-label", originLabel);
-      }
-
-      if (this.statusBarElement !== undefined) {
-        this.updateLastSuccessSyncMsg(lastSuccessSyncMillis);
-      }
-
-      this.syncEvent?.trigger("SYNC_DONE");
-      console.info(
-        `${
-          this.manifest.id
-        }-${Date.now()}: finish sync, triggerSource=${triggerSource}`
-      );
-    } catch (error: any) {
-      profiler.insert("start error branch");
-      const msg = t("syncrun_abort", {
-        manifestID: this.manifest.id,
-        theDate: `${Date.now()}`,
-        triggerSource: triggerSource,
-        syncStatus: this.syncStatus,
-      });
-      console.error(msg);
-      console.error(error);
-      getNotice(msg, 10 * 1000);
-      if (error instanceof AggregateError) {
-        for (const e of error.errors) {
-          getNotice(e.message, 10 * 1000);
-        }
-      } else {
-        getNotice(error?.message ?? "error while sync", 10 * 1000);
-      }
-      this.syncStatus = "idle";
-      if (this.syncRibbon !== undefined) {
-        setIcon(this.syncRibbon, iconNameSyncWait);
-        this.syncRibbon.setAttribute("aria-label", originLabel);
-      }
-
-      profiler.insert("finish error branch");
-    }
-
-    profiler.insert("finish syncRun");
-    console.debug(profiler.toString());
-    insertProfilerResultByVault(
+    await syncer(
+      fsLocal,
+      fsRemote,
+      fsEncrypt,
+      profiler,
       this.db,
-      profiler.toString(),
+      triggerSource,
+      profileID,
       this.vaultRandomID,
-      this.settings.serviceType
+      this.app.vault.configDir,
+      this.settings,
+      getProtectError,
+      markIsSyncingFunc,
+      notifyFunc,
+      errNotifyFunc,
+      ribboonFunc,
+      statusBarFunc,
+      callbackSyncProcess
     );
+
+    fsEncrypt.closeResources();
     profiler.clear();
+
+    this.syncEvent?.trigger("SYNC_DONE");
   }
 
   async onload() {
@@ -511,6 +428,8 @@ export default class RemotelySavePlugin extends Plugin {
     }; // init
 
     this.currSyncMsg = "";
+    this.isSyncing = false;
+    this.hasPendingSyncOnSave = false;
 
     this.syncEvent = new Events();
 
@@ -560,8 +479,6 @@ export default class RemotelySavePlugin extends Plugin {
 
     // must AFTER preparing DB
     this.enableAutoClearSyncPlanHist();
-
-    this.syncStatus = "idle";
 
     this.registerObsidianProtocolHandler(COMMAND_URI, async (inputParams) => {
       // console.debug(inputParams);
@@ -633,17 +550,12 @@ export default class RemotelySavePlugin extends Plugin {
             () => self.saveSettings()
           );
 
-          const client = new RemoteClient(
-            "dropbox",
-            undefined,
-            undefined,
-            this.settings.dropbox,
-            undefined,
+          const client = getClient(
+            this.settings,
             this.app.vault.getName(),
             () => self.saveSettings()
           );
-
-          const username = await client.getUser();
+          const username = await client.getUserDisplayName();
           this.settings.dropbox.username = username;
           await this.saveSettings();
 
@@ -729,16 +641,12 @@ export default class RemotelySavePlugin extends Plugin {
             () => self.saveSettings()
           );
 
-          const client = new RemoteClient(
-            "onedrive",
-            undefined,
-            undefined,
-            undefined,
-            this.settings.onedrive,
+          const client = getClient(
+            this.settings,
             this.app.vault.getName(),
             () => self.saveSettings()
           );
-          this.settings.onedrive.username = await client.getUser();
+          this.settings.onedrive.username = await client.getUserDisplayName();
           await this.saveSettings();
 
           this.oauth2Info.verifier = ""; // reset it
@@ -879,7 +787,7 @@ export default class RemotelySavePlugin extends Plugin {
     } else {
       this.enableAutoSyncIfSet();
       this.enableInitSyncIfSet();
-      this.enableSyncOnSaveIfSet();
+      this.toggleSyncOnSaveIfSet();
     }
 
     // compare versions and read new versions
@@ -1191,75 +1099,89 @@ export default class RemotelySavePlugin extends Plugin {
     }
   }
 
-  enableSyncOnSaveIfSet() {
+  async _checkCurrFileModified(caller: "SYNC" | "FILE_CHANGES") {
+    console.debug(`inside checkCurrFileModified`);
+    const currentFile = this.app.workspace.getActiveFile();
+
+    if (currentFile) {
+      console.debug(`we have currentFile=${currentFile.path}`);
+      // get the last modified time of the current file
+      // if it has modified after lastSuccessSync
+      // then schedule a run for syncOnSaveAfterMilliseconds after it was modified
+      const lastModified = currentFile.stat.mtime;
+      const lastSuccessSyncMillis = await getLastSuccessSyncTimeByVault(
+        this.db,
+        this.vaultRandomID
+      );
+
+      console.debug(
+        `lastModified=${lastModified}, lastSuccessSyncMillis=${lastSuccessSyncMillis}`
+      );
+
+      if (
+        caller === "SYNC" ||
+        (caller === "FILE_CHANGES" && lastModified > lastSuccessSyncMillis)
+      ) {
+        console.debug(
+          `so lastModified > lastSuccessSyncMillis or it's called while syncing before`
+        );
+        console.debug(
+          `caller=${caller}, isSyncing=${this.isSyncing}, hasPendingSyncOnSave=${this.hasPendingSyncOnSave}`
+        );
+        if (this.isSyncing) {
+          this.hasPendingSyncOnSave = true;
+          // wait for next event
+          return;
+        } else {
+          if (this.hasPendingSyncOnSave || caller === "FILE_CHANGES") {
+            this.hasPendingSyncOnSave = false;
+            await this.syncRun("auto_sync_on_save");
+          }
+          return;
+        }
+      }
+    } else {
+      console.debug(`no currentFile here`);
+    }
+  }
+
+  _syncOnSaveEvent1 = () => {
+    this._checkCurrFileModified("SYNC");
+  };
+
+  _syncOnSaveEvent2 = throttle(
+    async () => {
+      await this._checkCurrFileModified("FILE_CHANGES");
+    },
+    1000 * 3,
+    {
+      leading: false,
+      trailing: true,
+    }
+  );
+
+  toggleSyncOnSaveIfSet() {
     if (
       this.settings.syncOnSaveAfterMilliseconds !== undefined &&
       this.settings.syncOnSaveAfterMilliseconds !== null &&
       this.settings.syncOnSaveAfterMilliseconds > 0
     ) {
-      let runScheduled = false;
-      let needToRunAgain = false;
-
-      const scheduleSyncOnSave = (scheduleTimeFromNow: number) => {
-        console.info(
-          `schedule a run for ${scheduleTimeFromNow} milliseconds later`
-        );
-        runScheduled = true;
-        setTimeout(() => {
-          this.syncRun("auto_sync_on_save");
-          runScheduled = false;
-        }, scheduleTimeFromNow);
-      };
-
-      const checkCurrFileModified = async (caller: "SYNC" | "FILE_CHANGES") => {
-        const currentFile = this.app.workspace.getActiveFile();
-
-        if (currentFile) {
-          // get the last modified time of the current file
-          // if it has modified after lastSuccessSync
-          // then schedule a run for syncOnSaveAfterMilliseconds after it was modified
-          const lastModified = currentFile.stat.mtime;
-          const lastSuccessSyncMillis = await getLastSuccessSyncTimeByVault(
-            this.db,
-            this.vaultRandomID
-          );
-          if (
-            this.syncStatus === "idle" &&
-            lastModified > lastSuccessSyncMillis &&
-            !runScheduled
-          ) {
-            scheduleSyncOnSave(this.settings!.syncOnSaveAfterMilliseconds!);
-          } else if (
-            this.syncStatus === "idle" &&
-            needToRunAgain &&
-            !runScheduled
-          ) {
-            scheduleSyncOnSave(this.settings!.syncOnSaveAfterMilliseconds!);
-            needToRunAgain = false;
-          } else {
-            if (caller === "FILE_CHANGES") {
-              needToRunAgain = true;
-            }
-          }
-        }
-      };
-
       this.app.workspace.onLayoutReady(() => {
         // listen to sync done
         this.registerEvent(
-          this.syncEvent?.on("SYNC_DONE", () => {
-            checkCurrFileModified("SYNC");
-          })!
+          this.syncEvent?.on("SYNC_DONE", this._syncOnSaveEvent1)!
         );
 
         // listen to current file save changes
-        this.registerEvent(
-          this.app.vault.on("modify", (x) => {
-            // console.debug(`event=modify! file=${x}`);
-            checkCurrFileModified("FILE_CHANGES");
-          })
-        );
+        this.registerEvent(this.app.vault.on("modify", this._syncOnSaveEvent2));
+        this.registerEvent(this.app.vault.on("create", this._syncOnSaveEvent2));
+        this.registerEvent(this.app.vault.on("delete", this._syncOnSaveEvent2));
       });
+    } else {
+      this.syncEvent?.off("SYNC_DONE", this._syncOnSaveEvent1);
+      this.app.vault.off("modify", this._syncOnSaveEvent2);
+      this.app.vault.off("create", this._syncOnSaveEvent2);
+      this.app.vault.off("delete", this._syncOnSaveEvent2);
     }
   }
 
@@ -1276,7 +1198,7 @@ export default class RemotelySavePlugin extends Plugin {
     await this.saveSettings();
   }
 
-  async setCurrSyncMsg(
+  setCurrSyncMsg(
     i: number,
     totalCount: number,
     pathName: string,

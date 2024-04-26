@@ -16,7 +16,9 @@
     "process": "process/browser",
     "stream": "stream-browserify",
     "crypto": "crypto-browserify",
-    "url": "url/"
+    "url": "url/",
+    "fs": false,
+    "vm": false
   },
   "source": "main.ts",
   "keywords": [],
@@ -59,7 +61,7 @@
     "@aws-sdk/lib-storage": "^3.474.0",
     "@aws-sdk/signature-v4-crt": "^3.474.0",
     "@aws-sdk/types": "^3.468.0",
-    "@azure/msal-node": "^2.6.0",
+    "@azure/msal-node": "^2.7.0",
     "@fyears/rclone-crypt": "^0.0.7",
     "@fyears/tsqueue": "^1.0.1",
     "@microsoft/microsoft-graph-client": "^3.0.7",

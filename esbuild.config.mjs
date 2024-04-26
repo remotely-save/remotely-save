@@ -36,6 +36,7 @@ esbuild
       "net",
       "http",
       "https",
+      "vm",
       // ...builtins
     ],
     inject: ["./esbuild.injecthelper.mjs"],
