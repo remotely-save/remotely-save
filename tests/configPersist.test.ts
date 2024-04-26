@@ -1,11 +1,7 @@
-import * as chai from "chai";
-import chaiAsPromised from "chai-as-promised";
+import { strict as assert } from "assert";
 
 import { RemotelySavePluginSettings } from "../src/baseTypes";
 import { messyConfigToNormal, normalConfigToMessy } from "../src/configPersist";
-
-chai.use(chaiAsPromised);
-const expect = chai.expect;
 
 const DEFAULT_SETTINGS: RemotelySavePluginSettings = {
   s3: {
@@ -32,6 +28,6 @@ describe("Config Persist tests", () => {
     const k = DEFAULT_SETTINGS;
     const k2 = normalConfigToMessy(k);
     const k3 = messyConfigToNormal(k2);
-    expect(k3).to.deep.equal(k);
+    assert.deepEqual(k3, k);
   });
 });

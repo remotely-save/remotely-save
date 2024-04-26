@@ -36,8 +36,6 @@
     "@types/node": "^20.12.7",
     "@types/qrcode": "^1.5.5",
     "builtin-modules": "^3.3.0",
-    "chai": "^4.4.1",
-    "chai-as-promised": "^7.1.1",
     "cross-env": "^7.0.3",
     "dotenv": "^16.4.5",
     "esbuild": "^0.20.2",
