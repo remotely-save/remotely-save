@@ -260,8 +260,8 @@ const ensembleMixedEnties = async (
 
   profiler.insert("ensembleMixedEnties: finish local");
 
-  console.debug("in the end of ensembleMixedEnties, finalMappings is:");
-  console.debug(finalMappings);
+  // console.debug("in the end of ensembleMixedEnties, finalMappings is:");
+  // console.debug(finalMappings);
 
   profiler.insert("ensembleMixedEnties: exit");
   profiler.removeIndent();
@@ -1285,6 +1285,7 @@ export async function syncer(
   statusBarFunc?: (s: SyncTriggerSourceType, step: number) => any,
   callbackSyncProcess?: any
 ) {
+  console.info(`startting sync.`);
   markIsSyncingFunc(true);
 
   let step = 0; // dry mode only
@@ -1297,53 +1298,56 @@ export async function syncer(
   profiler.insert("start big sync func");
 
   try {
+    step = 2;
+    await notifyFunc?.(triggerSource, step);
+    await ribboonFunc?.(triggerSource, step);
+    await statusBarFunc?.(triggerSource, step);
     if (fsEncrypt.innerFs !== fsRemote) {
       throw Error(`your enc should has inner of the remote`);
     }
-
     const passwordCheckResult = await fsEncrypt.isPasswordOk();
     if (!passwordCheckResult.ok) {
       throw Error(passwordCheckResult.reason);
     }
-    await notifyFunc?.(triggerSource, step);
-    await ribboonFunc?.(triggerSource, step);
-    await statusBarFunc?.(triggerSource, step);
     profiler.insert(
       `finish step${step} (list partial remote and check password)`
     );
 
-    step = 2;
-    const remoteEntityList = await fsEncrypt.walk();
-    console.debug(`remoteEntityList:`);
-    console.debug(remoteEntityList);
+    step = 3;
     await notifyFunc?.(triggerSource, step);
     await ribboonFunc?.(triggerSource, step);
     await statusBarFunc?.(triggerSource, step);
+    const remoteEntityList = await fsEncrypt.walk();
+    // console.debug(`remoteEntityList:`);
+    // console.debug(remoteEntityList);
     profiler.insert(`finish step${step} (list remote)`);
 
-    step = 3;
-    const localEntityList = await fsLocal.walk();
-    console.debug(`localEntityList:`);
-    console.debug(localEntityList);
+    step = 4;
     await notifyFunc?.(triggerSource, step);
     await ribboonFunc?.(triggerSource, step);
     await statusBarFunc?.(triggerSource, step);
+    const localEntityList = await fsLocal.walk();
+    // console.debug(`localEntityList:`);
+    // console.debug(localEntityList);
     profiler.insert(`finish step${step} (list local)`);
 
-    step = 4;
+    step = 5;
+    await notifyFunc?.(triggerSource, step);
+    await ribboonFunc?.(triggerSource, step);
+    await statusBarFunc?.(triggerSource, step);
     const prevSyncEntityList = await getAllPrevSyncRecordsByVaultAndProfile(
       db,
       vaultRandomID,
       profileID
     );
-    console.debug(`prevSyncEntityList:`);
-    console.debug(prevSyncEntityList);
+    // console.debug(`prevSyncEntityList:`);
+    // console.debug(prevSyncEntityList);
+    profiler.insert(`finish step${step} (prev sync)`);
+
+    step = 6;
     await notifyFunc?.(triggerSource, step);
     await ribboonFunc?.(triggerSource, step);
     await statusBarFunc?.(triggerSource, step);
-    profiler.insert(`finish step${step} (prev sync)`);
-
-    step = 5;
     let mixedEntityMappings = await ensembleMixedEnties(
       localEntityList,
       prevSyncEntityList,
@@ -1356,12 +1360,8 @@ export async function syncer(
       settings.serviceType,
       profiler
     );
-    await notifyFunc?.(triggerSource, step);
-    await ribboonFunc?.(triggerSource, step);
-    await statusBarFunc?.(triggerSource, step);
     profiler.insert(`finish step${step} (build partial mixedEntity)`);
 
-    step = 6;
     mixedEntityMappings = await getSyncPlanInplace(
       mixedEntityMappings,
       settings.howToCleanEmptyFolder ?? "clean_both",
@@ -1372,9 +1372,6 @@ export async function syncer(
     );
     console.info(`mixedEntityMappings:`);
     console.info(mixedEntityMappings); // for debugging
-    await notifyFunc?.(triggerSource, step);
-    await ribboonFunc?.(triggerSource, step);
-    await statusBarFunc?.(triggerSource, step);
     profiler.insert("finish building full sync plan");
 
     await insertSyncPlanRecordByVault(
@@ -1383,9 +1380,6 @@ export async function syncer(
       vaultRandomID,
       settings.serviceType
     );
-    await notifyFunc?.(triggerSource, step);
-    await ribboonFunc?.(triggerSource, step);
-    await statusBarFunc?.(triggerSource, step);
     profiler.insert("finish writing sync plan");
     profiler.insert(`finish step${step} (make plan)`);
 
@@ -1394,6 +1388,9 @@ export async function syncer(
 
     step = 7;
     if (triggerSource !== "dry") {
+      await notifyFunc?.(triggerSource, step);
+      await ribboonFunc?.(triggerSource, step);
+      await statusBarFunc?.(triggerSource, step);
       await doActualSync(
         mixedEntityMappings,
         fsLocal,
@@ -1407,9 +1404,6 @@ export async function syncer(
         profiler,
         callbackSyncProcess
       );
-      await notifyFunc?.(triggerSource, step);
-      await ribboonFunc?.(triggerSource, step);
-      await statusBarFunc?.(triggerSource, step);
       profiler.insert(`finish step${step} (actual sync)`);
     } else {
       await notifyFunc?.(triggerSource, step);
@@ -1428,7 +1422,7 @@ export async function syncer(
   }
 
   profiler.insert("finish syncRun");
-  console.debug(profiler.toString());
+  // console.debug(profiler.toString());
   await profiler.save(db, vaultRandomID, settings.serviceType);
 
   step = 8;
@@ -1436,5 +1430,6 @@ export async function syncer(
   await ribboonFunc?.(triggerSource, step);
   await statusBarFunc?.(triggerSource, step);
 
+  console.info(`endding sync.`);
   markIsSyncingFunc(false);
 }
