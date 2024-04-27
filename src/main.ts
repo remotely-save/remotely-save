@@ -86,7 +86,7 @@ const DEFAULT_SETTINGS: RemotelySavePluginSettings = {
   deleteToWhere: "system",
   agreeToUseSyncV3: false,
   conflictAction: "keep_newer",
-  howToCleanEmptyFolder: "skip",
+  howToCleanEmptyFolder: "clean_both",
   protectModifyPercentage: 50,
   syncDirection: "bidirectional",
   obfuscateSettingFile: true,
@@ -896,7 +896,7 @@ export default class RemotelySavePlugin extends Plugin {
       this.settings.conflictAction = "keep_newer";
     }
     if (this.settings.howToCleanEmptyFolder === undefined) {
-      this.settings.howToCleanEmptyFolder = "skip";
+      this.settings.howToCleanEmptyFolder = "clean_both";
     }
     if (this.settings.protectModifyPercentage === undefined) {
       this.settings.protectModifyPercentage = 50;

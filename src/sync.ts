@@ -1364,7 +1364,7 @@ export async function syncer(
     step = 6;
     mixedEntityMappings = await getSyncPlanInplace(
       mixedEntityMappings,
-      settings.howToCleanEmptyFolder ?? "skip",
+      settings.howToCleanEmptyFolder ?? "clean_both",
       settings.skipSizeLargerThan ?? -1,
       settings.conflictAction ?? "keep_newer",
       settings.syncDirection ?? "bidirectional",

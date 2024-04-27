@@ -2018,7 +2018,7 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
           t("settings_cleanemptyfolder_clean_both")
         );
         dropdown
-          .setValue(this.plugin.settings.howToCleanEmptyFolder ?? "skip")
+          .setValue(this.plugin.settings.howToCleanEmptyFolder ?? "clean_both")
           .onChange(async (val) => {
             this.plugin.settings.howToCleanEmptyFolder =
               val as EmptyFolderCleanType;
