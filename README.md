@@ -66,6 +66,7 @@ Additionally, the plugin author may occasionally visit Obsidian official forum a
   - [Storj](./docs/remote_services/s3_storj_io/README.md)
   - [腾讯云 COS](./docs/remote_services/s3_tencent_cloud_cos/README.zh-cn.md) | [Tencent Cloud COS](./docs/remote_services/s3_tencent_cloud_cos/README.md)
   - [MinIO](./docs/remote_services/s3_minio/README.md)
+  - [又拍云](./docs/remote_services/s3_upyun/README.zh-cn.md)
 - Prepare your S3 (-compatible) service information: [endpoint, region](https://docs.aws.amazon.com/general/latest/gr/s3.html), [access key id, secret access key](https://docs.aws.amazon.com/sdk-for-javascript/v3/developer-guide/getting-your-credentials.html), bucket name. The bucket should be empty and solely for syncing a vault.
 - If you are using AWS S3, create [policy and user](./docs/remote_services/s3_general/s3_user_policy.md).
 - Very old version of Obsidian needs [configuring CORS](./docs/remote_services/s3_general/s3_cors_configure.md).
