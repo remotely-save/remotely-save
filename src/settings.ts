@@ -1068,6 +1068,34 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
       );
 
     new Setting(s3Div)
+      .setName(t("settings_s3_generatefolderobject"))
+      .setDesc(t("settings_s3_generatefolderobject_desc"))
+      .addDropdown((dropdown) => {
+        dropdown
+          .addOption(
+            "notgenerate",
+            t("settings_s3_generatefolderobject_notgenerate")
+          )
+          .addOption(
+            "generate",
+            t("settings_s3_generatefolderobject_generate")
+          );
+
+        dropdown
+          .setValue(
+            `${this.plugin.settings.s3.generateFolderObject ? "generate" : "notgenerate"}`
+          )
+          .onChange(async (val) => {
+            if (val === "generate") {
+              this.plugin.settings.s3.generateFolderObject = true;
+            } else {
+              this.plugin.settings.s3.generateFolderObject = false;
+            }
+            await this.plugin.saveSettings();
+          });
+      });
+
+    new Setting(s3Div)
       .setName(t("settings_checkonnectivity"))
       .setDesc(t("settings_checkonnectivity_desc"))
       .addButton(async (button) => {

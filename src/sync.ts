@@ -20,7 +20,6 @@ import {
 } from "./localdb";
 import {
   atWhichLevel,
-  getFolderLevels,
   getParentFolder,
   isHiddenPath,
   isSpecialFolderNameToSkip,
@@ -161,10 +160,7 @@ const ensembleMixedEnties = async (
 
   const finalMappings: SyncPlanType = {};
 
-  const synthFolders: Record<string, Entity> = {};
-
   // remote has to be first
-  // we also have to synthesize folders here
   for (const remote of remoteEntityList) {
     const remoteCopied = ensureMTimeOfRemoteEntityValid(
       copyEntityAndFixTimeFormat(remote, serviceType)
@@ -187,47 +183,9 @@ const ensembleMixedEnties = async (
       key: key,
       remote: remoteCopied,
     };
-
-    for (const f of getFolderLevels(key, true)) {
-      if (finalMappings.hasOwnProperty(f)) {
-        delete synthFolders[f];
-        continue;
-      }
-      if (
-        !synthFolders.hasOwnProperty(f) ||
-        remoteCopied.mtimeSvr! >= synthFolders[f].mtimeSvr!
-      ) {
-        synthFolders[f] = {
-          key: f,
-          keyRaw: `<synth: ${f}>`,
-          keyEnc: `<enc synth: ${f}>`,
-          size: 0,
-          sizeRaw: 0,
-          sizeEnc: 0,
-          mtimeSvr: remoteCopied.mtimeSvr,
-          mtimeSvrFmt: remoteCopied.mtimeSvrFmt,
-          mtimeCli: remoteCopied.mtimeCli,
-          mtimeCliFmt: remoteCopied.mtimeCliFmt,
-          synthesizedFolder: true,
-        };
-      }
-    }
   }
 
   profiler.insert("ensembleMixedEnties: finish remote");
-
-  console.debug(`synthFolders:`);
-  console.debug(synthFolders);
-
-  // special: add synth folders
-  for (const key of Object.keys(synthFolders)) {
-    finalMappings[key] = {
-      key: key,
-      remote: synthFolders[key],
-    };
-  }
-
-  profiler.insert("ensembleMixedEnties: finish synth");
 
   if (Object.keys(finalMappings).length === 0 || localEntityList.length === 0) {
     // Special checking:

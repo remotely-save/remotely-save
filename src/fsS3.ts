@@ -26,7 +26,7 @@ import { Readable } from "stream";
 import * as path from "path";
 import AggregateError from "aggregate-error";
 import { DEFAULT_CONTENT_TYPE, S3Config, VALID_REQURL } from "./baseTypes";
-import { bufferToArrayBuffer } from "./misc";
+import { bufferToArrayBuffer, getFolderLevels } from "./misc";
 import PQueue from "p-queue";
 
 import { Entity } from "./baseTypes";
@@ -186,6 +186,7 @@ export const DEFAULT_S3_CONFIG: S3Config = {
   remotePrefix: "",
   useAccurateMTime: false, // it causes money, disable by default
   reverseProxyNoSignUrl: "",
+  generateFolderObject: false, // new version, by default not generate folders
 };
 
 /**
@@ -385,11 +386,13 @@ export class FakeFsS3 extends FakeFs {
   s3Config: S3Config;
   s3Client: S3Client;
   kind: "s3";
+  synthFoldersCache: Record<string, Entity>;
   constructor(s3Config: S3Config) {
     super();
     this.s3Config = s3Config;
     this.s3Client = getS3Client(s3Config);
     this.kind = "s3";
+    this.synthFoldersCache = {};
   }
 
   async walk(): Promise<Entity[]> {
@@ -484,17 +487,52 @@ export class FakeFsS3 extends FakeFs {
     // ensemble fake rsp
     // in the end, we need to transform the response list
     // back to the local contents-alike list
-    return contents.map((x) =>
-      fromS3ObjectToEntity(
-        x,
+    const res: Entity[] = [];
+    const realEnrities = new Set<string>();
+    for (const remoteObj of contents) {
+      const remoteEntity = fromS3ObjectToEntity(
+        remoteObj,
         this.s3Config.remotePrefix ?? "",
         mtimeRecords,
         ctimeRecords
-      )
-    );
+      );
+      realEnrities.add(remoteEntity.key!);
+      res.push(remoteEntity);
+
+      for (const f of getFolderLevels(remoteEntity.key!, true)) {
+        if (realEnrities.has(f)) {
+          delete this.synthFoldersCache[f];
+          continue;
+        }
+        if (
+          !this.synthFoldersCache.hasOwnProperty(f) ||
+          remoteEntity.mtimeSvr! >= this.synthFoldersCache[f].mtimeSvr!
+        ) {
+          this.synthFoldersCache[f] = {
+            key: f,
+            keyRaw: f,
+            size: 0,
+            sizeRaw: 0,
+            sizeEnc: 0,
+            mtimeSvr: remoteEntity.mtimeSvr,
+            mtimeSvrFmt: remoteEntity.mtimeSvrFmt,
+            mtimeCli: remoteEntity.mtimeCli,
+            mtimeCliFmt: remoteEntity.mtimeCliFmt,
+            synthesizedFolder: true,
+          };
+        }
+      }
+    }
+    for (const key of Object.keys(this.synthFoldersCache)) {
+      res.push(this.synthFoldersCache[key]);
+    }
+    return res;
   }
 
   async stat(key: string): Promise<Entity> {
+    if (this.synthFoldersCache.hasOwnProperty(key)) {
+      return this.synthFoldersCache[key];
+    }
     let keyFullPath = key;
     keyFullPath = getRemoteWithPrefixPath(
       keyFullPath,
@@ -529,6 +567,23 @@ export class FakeFsS3 extends FakeFs {
     if (!key.endsWith("/")) {
       throw new Error(`You should not call mkdir on ${key}!`);
     }
+
+    const generateFolderObject = this.s3Config.generateFolderObject ?? false;
+    if (!generateFolderObject) {
+      const synth = {
+        key: key,
+        keyRaw: key,
+        size: 0,
+        sizeRaw: 0,
+        sizeEnc: 0,
+        mtimeSvr: mtime,
+        mtimeCli: mtime,
+        synthesizedFolder: true,
+      };
+      this.synthFoldersCache[key] = synth;
+      return synth;
+    }
+
     const uploadFile = getRemoteWithPrefixPath(
       key,
       this.s3Config.remotePrefix ?? ""
@@ -670,6 +725,12 @@ export class FakeFsS3 extends FakeFs {
     if (key === "/") {
       return;
     }
+
+    if (this.synthFoldersCache.hasOwnProperty(key)) {
+      delete this.synthFoldersCache[key];
+      return;
+    }
+
     const remoteFileName = getRemoteWithPrefixPath(
       key,
       this.s3Config.remotePrefix ?? ""

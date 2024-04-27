@@ -211,6 +211,7 @@ export class FakeFsEncrypt extends FakeFs {
           sizeEnc: innerEntity.size!,
           sizeRaw: innerEntity.sizeRaw,
           hash: undefined,
+          synthesizedFolder: innerEntity.synthesizedFolder,
         });
 
         this.cacheMapOrigToEnc[key] = innerEntity.keyRaw;
@@ -243,6 +244,7 @@ export class FakeFsEncrypt extends FakeFs {
         sizeEnc: innerEntity.size!,
         sizeRaw: innerEntity.sizeRaw,
         hash: undefined,
+        synthesizedFolder: innerEntity.synthesizedFolder,
       };
     }
   }
@@ -287,6 +289,7 @@ export class FakeFsEncrypt extends FakeFs {
         sizeEnc: innerEntity.size!,
         sizeRaw: innerEntity.sizeRaw,
         hash: undefined,
+        synthesizedFolder: innerEntity.synthesizedFolder,
       };
     }
   }
@@ -336,6 +339,7 @@ export class FakeFsEncrypt extends FakeFs {
         sizeEnc: innerEntity.size!,
         sizeRaw: innerEntity.sizeRaw,
         hash: undefined,
+        synthesizedFolder: innerEntity.synthesizedFolder,
       };
     }
   }

@@ -29,6 +29,8 @@ export interface S3Config {
   useAccurateMTime?: boolean;
   reverseProxyNoSignUrl?: string;
 
+  generateFolderObject?: boolean;
+
   /**
    * @deprecated
    */

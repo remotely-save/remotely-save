@@ -868,6 +868,9 @@ export default class RemotelySavePlugin extends Plugin {
       // it causes money, so disable it by default
       this.settings.s3.useAccurateMTime = false;
     }
+    if (this.settings.s3.generateFolderObject === undefined) {
+      this.settings.s3.generateFolderObject = false;
+    }
     if (this.settings.ignorePaths === undefined) {
       this.settings.ignorePaths = [];
     }
