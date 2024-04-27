@@ -1370,8 +1370,8 @@ export async function syncer(
       settings.syncDirection ?? "bidirectional",
       profiler
     );
-    console.info(`mixedEntityMappings:`);
-    console.info(mixedEntityMappings); // for debugging
+    console.debug(`mixedEntityMappings:`);
+    console.debug(mixedEntityMappings); // for debugging
     profiler.insert("finish building full sync plan");
 
     await insertSyncPlanRecordByVault(
