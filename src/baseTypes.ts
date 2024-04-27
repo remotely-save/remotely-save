@@ -3,17 +3,22 @@
  * To avoid circular dependency.
  */
 
-import { Platform, requireApiVersion } from "obsidian";
 import type { LangType, LangTypeAndAuto } from "./i18n";
 
 export const DEFAULT_CONTENT_TYPE = "application/octet-stream";
 
-export type SUPPORTED_SERVICES_TYPE = "s3" | "webdav" | "dropbox" | "onedrive";
+export type SUPPORTED_SERVICES_TYPE =
+  | "s3"
+  | "webdav"
+  | "dropbox"
+  | "onedrive"
+  | "webdis";
 
 export type SUPPORTED_SERVICES_TYPE_WITH_REMOTE_BASE_DIR =
   | "webdav"
   | "dropbox"
-  | "onedrive";
+  | "onedrive"
+  | "webdis";
 
 export interface S3Config {
   s3Endpoint: string;
@@ -86,6 +91,13 @@ export interface OnedriveConfig {
   remoteBaseDir?: string;
 }
 
+export interface WebdisConfig {
+  address: string;
+  username?: string;
+  password?: string;
+  remoteBaseDir?: string;
+}
+
 export type SyncDirectionType =
   | "bidirectional"
   | "incremental_pull_only"
@@ -100,6 +112,7 @@ export interface RemotelySavePluginSettings {
   webdav: WebdavConfig;
   dropbox: DropboxConfig;
   onedrive: OnedriveConfig;
+  webdis: WebdisConfig;
   password: string;
   serviceType: SUPPORTED_SERVICES_TYPE;
   currLogLevel?: string;
@@ -260,15 +273,6 @@ export interface FileOrFolderMixedState {
   deltimeLocalFmt?: string;
   deltimeRemoteFmt?: string;
 }
-
-export const API_VER_STAT_FOLDER = "0.13.27";
-export const API_VER_REQURL = "0.13.26"; // desktop ver 0.13.26, iOS ver 1.1.1
-export const API_VER_REQURL_ANDROID = "0.14.6"; // Android ver 1.2.1
-export const API_VER_ENSURE_REQURL_OK = "1.0.0"; // always bypass CORS here
-
-export const VALID_REQURL =
-  (!Platform.isAndroidApp && requireApiVersion(API_VER_REQURL)) ||
-  (Platform.isAndroidApp && requireApiVersion(API_VER_REQURL_ANDROID));
 
 export const DEFAULT_DEBUG_FOLDER = "_debug_remotely_save/";
 export const DEFAULT_SYNC_PLANS_HISTORY_FILE_PREFIX =

@@ -108,6 +108,13 @@ Additionally, the plugin author may occasionally visit Obsidian official forum a
 - Password-based end-to-end encryption is also supported. But please be aware that **the vault name itself is not encrypted**.
 - If you want to sync the files across multiple devices, **your vault name should be the same** while using default settings.
 
+### Webdis
+
+- Tutorials:
+  - [Webdis](./docs/remote_services/webdis/README.md)
+- Mostly experimental.
+- You have to setup and protect your web server by yourself.
+
 ## Scheduled Auto Sync
 
 - You can configure auto syncing every N minutes in settings.

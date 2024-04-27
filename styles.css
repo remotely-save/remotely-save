@@ -61,6 +61,13 @@
   display: none;
 }
 
+.webdis-disclaimer {
+  font-weight: bold;
+}
+.webdis-hide {
+  display: none;
+}
+
 .qrcode-img {
   width: 350px;
   height: 350px;

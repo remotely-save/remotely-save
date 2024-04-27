@@ -21,8 +21,8 @@ import {
   COMMAND_CALLBACK_ONEDRIVE,
   COMMAND_CALLBACK_DROPBOX,
   COMMAND_URI,
-  API_VER_ENSURE_REQURL_OK,
 } from "./baseTypes";
+import { API_VER_ENSURE_REQURL_OK } from "./baseTypesObs";
 import { importQrCodeUri } from "./importExport";
 import {
   prepareDBs,
@@ -61,12 +61,14 @@ import { FakeFsEncrypt } from "./fsEncrypt";
 import { syncer } from "./sync";
 import { getClient } from "./fsGetter";
 import throttle from "lodash/throttle";
+import { DEFAULT_WEBDIS_CONFIG } from "./fsWebdis";
 
 const DEFAULT_SETTINGS: RemotelySavePluginSettings = {
   s3: DEFAULT_S3_CONFIG,
   webdav: DEFAULT_WEBDAV_CONFIG,
   dropbox: DEFAULT_DROPBOX_CONFIG,
   onedrive: DEFAULT_ONEDRIVE_CONFIG,
+  webdis: DEFAULT_WEBDIS_CONFIG,
   password: "",
   serviceType: "s3",
   currLogLevel: "info",

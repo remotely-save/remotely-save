@@ -11,20 +11,23 @@ import {
 import type { TextComponent } from "obsidian";
 import { createElement, Eye, EyeOff } from "lucide";
 import {
-  API_VER_ENSURE_REQURL_OK,
-  API_VER_REQURL,
   ConflictActionType,
   DEFAULT_DEBUG_FOLDER,
   EmptyFolderCleanType,
   SUPPORTED_SERVICES_TYPE,
   SUPPORTED_SERVICES_TYPE_WITH_REMOTE_BASE_DIR,
   SyncDirectionType,
-  VALID_REQURL,
   WebdavAuthType,
   WebdavDepthType,
   CipherMethodType,
   QRExportType,
 } from "./baseTypes";
+
+import {
+  API_VER_ENSURE_REQURL_OK,
+  API_VER_REQURL,
+  VALID_REQURL,
+} from "./baseTypesObs";
 import {
   exportVaultProfilerResultsToFiles,
   exportVaultSyncPlansToFiles,
@@ -1656,6 +1659,132 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
       });
 
     //////////////////////////////////////////////////
+    // below for webdis
+    //////////////////////////////////////////////////
+
+    const webdisDiv = containerEl.createEl("div", { cls: "webdis-hide" });
+    webdisDiv.toggleClass(
+      "webdis-hide",
+      this.plugin.settings.serviceType !== "webdis"
+    );
+
+    webdisDiv.createEl("h2", { text: t("settings_webdis") });
+
+    const webdisLongDescDiv = webdisDiv.createEl("div", {
+      cls: "settings-long-desc",
+    });
+
+    for (const c of [
+      t("settings_webdis_disclaimer1"),
+      t("settings_webdis_disclaimer2"),
+    ]) {
+      webdisLongDescDiv.createEl("p", {
+        text: c,
+        cls: "webdis-disclaimer",
+      });
+    }
+
+    webdisLongDescDiv.createEl("p", {
+      text: t("settings_webdis_folder", {
+        remoteBaseDir:
+          this.plugin.settings.webdis.remoteBaseDir || this.app.vault.getName(),
+      }),
+    });
+
+    new Setting(webdisDiv)
+      .setName(t("settings_webdis_addr"))
+      .setDesc(t("settings_webdis_addr_desc"))
+      .addText((text) =>
+        text
+          .setPlaceholder("https://")
+          .setValue(this.plugin.settings.webdis.address)
+          .onChange(async (value) => {
+            this.plugin.settings.webdis.address = value.trim();
+            // normally saved
+            await this.plugin.saveSettings();
+          })
+      );
+
+    new Setting(webdisDiv)
+      .setName(t("settings_webdis_user"))
+      .setDesc(t("settings_webdis_user_desc"))
+      .addText((text) => {
+        wrapTextWithPasswordHide(text);
+        text
+          .setPlaceholder("")
+          .setValue(this.plugin.settings.webdis.username ?? "")
+          .onChange(async (value) => {
+            this.plugin.settings.webdis.username = (value ?? "").trim();
+            await this.plugin.saveSettings();
+          });
+      });
+
+    new Setting(webdisDiv)
+      .setName(t("settings_webdis_password"))
+      .setDesc(t("settings_webdis_password_desc"))
+      .addText((text) => {
+        wrapTextWithPasswordHide(text);
+        text
+          .setPlaceholder("")
+          .setValue(this.plugin.settings.webdis.password ?? "")
+          .onChange(async (value) => {
+            this.plugin.settings.webdis.password = (value ?? "").trim();
+            await this.plugin.saveSettings();
+          });
+      });
+
+    let newWebdisRemoteBaseDir =
+      this.plugin.settings.webdis.remoteBaseDir || "";
+    new Setting(webdisDiv)
+      .setName(t("settings_remotebasedir"))
+      .setDesc(t("settings_remotebasedir_desc"))
+      .addText((text) =>
+        text
+          .setPlaceholder(this.app.vault.getName())
+          .setValue(newWebdisRemoteBaseDir)
+          .onChange((value) => {
+            newWebdisRemoteBaseDir = value.trim();
+          })
+      )
+      .addButton((button) => {
+        button.setButtonText(t("confirm"));
+        button.onClick(() => {
+          new ChangeRemoteBaseDirModal(
+            this.app,
+            this.plugin,
+            newWebdisRemoteBaseDir,
+            "webdis"
+          ).open();
+        });
+      });
+
+    new Setting(webdisDiv)
+      .setName(t("settings_checkonnectivity"))
+      .setDesc(t("settings_checkonnectivity_desc"))
+      .addButton(async (button) => {
+        button.setButtonText(t("settings_checkonnectivity_button"));
+        button.onClick(async () => {
+          new Notice(t("settings_checkonnectivity_checking"));
+          const self = this;
+          const client = getClient(
+            this.plugin.settings,
+            this.app.vault.getName(),
+            () => this.plugin.saveSettings()
+          );
+          const errors = { msg: "" };
+          const res = await client.checkConnect((err: any) => {
+            errors.msg = `${err}`;
+          });
+          if (res) {
+            new Notice(t("settings_webdis_connect_succ"));
+          } else {
+            new Notice(t("settings_webdis_connect_fail"));
+            new Notice(errors.msg);
+          }
+        });
+      });
+
+    //////////////////////////////////////////////////
     // below for general chooser (part 2/2)
     //////////////////////////////////////////////////
 
@@ -1669,6 +1798,8 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
         dropdown.addOption("dropbox", t("settings_chooseservice_dropbox"));
         dropdown.addOption("webdav", t("settings_chooseservice_webdav"));
         dropdown.addOption("onedrive", t("settings_chooseservice_onedrive"));
+        dropdown.addOption("webdis", t("settings_chooseservice_webdis"));
+
         dropdown
           .setValue(this.plugin.settings.serviceType)
           .onChange(async (val) => {
@@ -1688,6 +1819,10 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
             webdavDiv.toggleClass(
               "webdav-hide",
               this.plugin.settings.serviceType !== "webdav"
+            );
+            webdisDiv.toggleClass(
+              "webdis-hide",
+              this.plugin.settings.serviceType !== "webdis"
             );
             await this.plugin.saveSettings();
           });

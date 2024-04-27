@@ -14,8 +14,8 @@ import {
   Entity,
   OAUTH2_FORCE_EXPIRE_MILLISECONDS,
   OnedriveConfig,
-  VALID_REQURL,
 } from "./baseTypes";
+import { VALID_REQURL } from "./baseTypesObs";
 import { FakeFs } from "./fsAll";
 import { bufferToArrayBuffer } from "./misc";
 

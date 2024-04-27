@@ -4,6 +4,7 @@ import { FakeFsDropbox } from "./fsDropbox";
 import { FakeFsOnedrive } from "./fsOnedrive";
 import { FakeFsS3 } from "./fsS3";
 import { FakeFsWebdav } from "./fsWebdav";
+import { FakeFsWebdis } from "./fsWebdis";
 
 /**
  * To avoid circular dependency, we need a new file here.
@@ -34,6 +35,13 @@ export function getClient(
     case "onedrive":
       return new FakeFsOnedrive(
         settings.onedrive,
+        vaultName,
+        saveUpdatedConfigFunc
+      );
+      break;
+    case "webdis":
+      return new FakeFsWebdis(
+        settings.webdis,
         vaultName,
         saveUpdatedConfigFunc
       );

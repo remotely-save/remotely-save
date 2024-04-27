@@ -7,7 +7,8 @@ import flatten from "lodash/flatten";
 import { Platform, requestUrl } from "obsidian";
 import { FakeFs } from "./fsAll";
 import { bufferToArrayBuffer } from "./misc";
-import { Entity, VALID_REQURL, WebdavConfig } from "./baseTypes";
+import { Entity, WebdavConfig } from "./baseTypes";
+import { VALID_REQURL } from "./baseTypesObs";
 import type {
   FileStat,
   WebDAVClient,

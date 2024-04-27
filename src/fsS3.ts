@@ -25,7 +25,8 @@ import { Platform, requestUrl, RequestUrlParam } from "obsidian";
 import { Readable } from "stream";
 import * as path from "path";
 import AggregateError from "aggregate-error";
-import { DEFAULT_CONTENT_TYPE, S3Config, VALID_REQURL } from "./baseTypes";
+import { DEFAULT_CONTENT_TYPE, S3Config } from "./baseTypes";
+import { VALID_REQURL } from "./baseTypesObs";
 import { bufferToArrayBuffer, getFolderLevels } from "./misc";
 import PQueue from "p-queue";
 
