@@ -68,11 +68,12 @@ Additionally, the plugin author may occasionally visit Obsidian official forum a
   - [腾讯云 COS](./docs/remote_services/s3_tencent_cloud_cos/README.zh-cn.md) | [Tencent Cloud COS](./docs/remote_services/s3_tencent_cloud_cos/README.md)
   - [MinIO](./docs/remote_services/s3_minio/README.md)
   - [又拍云](./docs/remote_services/s3_upyun/README.zh-cn.md)
-- Prepare your S3 (-compatible) service information: [endpoint, region](https://docs.aws.amazon.com/general/latest/gr/s3.html), [access key id, secret access key](https://docs.aws.amazon.com/sdk-for-javascript/v3/developer-guide/getting-your-credentials.html), bucket name. The bucket should be empty and solely for syncing a vault.
+- Prepare your S3 (-compatible) service information: [endpoint, region](https://docs.aws.amazon.com/general/latest/gr/s3.html), [access key id, secret access key](https://docs.aws.amazon.com/sdk-for-javascript/v3/developer-guide/getting-your-credentials.html), bucket name.
 - If you are using AWS S3, create [policy and user](./docs/remote_services/s3_general/s3_user_policy.md).
 - Very old version of Obsidian needs [configuring CORS](./docs/remote_services/s3_general/s3_cors_configure.md).
 - Download and enable this plugin.
 - Enter your information to the settings of this plugin.
+- If you do not set the prefix in the settings, the bucket should be empty and solely for syncing a vault. You can set the prefix in the settings so that the same bucket can store multiple vaults.
 - If you want to enable end-to-end encryption, also set a password in settings. If you do not specify a password, the files and folders are synced in plain, original content to the cloud.
 - Click the new "circle arrow" icon on the ribbon (the left sidebar), **every time** you want to sync your vault between local and remote. (Or, you could configure auto sync in the settings panel (See next chapter).) While syncing, the icon becomes "two half-circle arrows". Besides clicking the icon on the sidebar ribbon, you can also activate the corresponding command in the command palette.
 - **Be patient while syncing.** Especially in the first-time sync.
