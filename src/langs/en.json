@@ -50,7 +50,7 @@
   "statusbar_time_days": "Synced {{time}} days ago",
   "statusbar_time_hours": "Synced {{time}} hours ago",
   "statusbar_time_minutes": "Synced {{time}} minutes ago",
-  "statusbar_time_lessminute": "Synced less than a minute ago",
+  "statusbar_time_lessminute": "Synced last minute ago",
   "statusbar_lastsync": "Synced {{time}} ago",
   "statusbar_syncing": "Syncing...",
   "statusbar_now": "Synced just now",
