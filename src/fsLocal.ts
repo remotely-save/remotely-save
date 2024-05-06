@@ -4,14 +4,14 @@ import { FakeFs } from "./fsAll";
 import { TFile, TFolder, type Vault } from "obsidian";
 import { listFilesInObsFolder } from "./obsFolderLister";
 import { Profiler } from "./profiler";
-import { getFolderLevels, mkdirpInVault, statFix } from "./misc";
+import { getFolderLevels, mkdirpInVault, statFix, unixTimeToStr } from "./misc";
 
 export class FakeFsLocal extends FakeFs {
   vault: Vault;
   syncConfigDir: boolean;
   configDir: string;
   pluginID: string;
-  profiler: Profiler;
+  profiler: Profiler | undefined;
   deleteToWhere: "obsidian" | "system";
   kind: "local";
   constructor(
@@ -19,7 +19,7 @@ export class FakeFsLocal extends FakeFs {
     syncConfigDir: boolean,
     configDir: string,
     pluginID: string,
-    profiler: Profiler,
+    profiler: Profiler | undefined,
     deleteToWhere: "obsidian" | "system"
   ) {
     super();
@@ -34,12 +34,12 @@ export class FakeFsLocal extends FakeFs {
   }
 
   async walk(): Promise<Entity[]> {
-    this.profiler.addIndent();
-    this.profiler.insert("enter walk for local");
+    this.profiler?.addIndent();
+    this.profiler?.insert("enter walk for local");
     const local: Entity[] = [];
 
     const localTAbstractFiles = this.vault.getAllLoadedFiles();
-    this.profiler.insert("finish getting walk for local");
+    this.profiler?.insert("finish getting walk for local");
     for (const entry of localTAbstractFiles) {
       let r: Entity | undefined = undefined;
       let key = entry.path;
@@ -89,10 +89,10 @@ export class FakeFsLocal extends FakeFs {
       }
     }
 
-    this.profiler.insert("finish transforming walk for local");
+    this.profiler?.insert("finish transforming walk for local");
 
     if (this.syncConfigDir) {
-      this.profiler.insert("into syncConfigDir");
+      this.profiler?.insert("into syncConfigDir");
       const syncFiles = await listFilesInObsFolder(
         this.configDir,
         this.vault,
@@ -101,11 +101,11 @@ export class FakeFsLocal extends FakeFs {
       for (const f of syncFiles) {
         local.push(f);
       }
-      this.profiler.insert("finish syncConfigDir");
+      this.profiler?.insert("finish syncConfigDir");
     }
 
-    this.profiler.insert("finish walk for local");
-    this.profiler.removeIndent();
+    this.profiler?.insert("finish walk for local");
+    this.profiler?.removeIndent();
     return local;
   }
 
@@ -120,6 +120,8 @@ export class FakeFsLocal extends FakeFs {
       keyRaw: isFolder ? `${key}/` : key,
       mtimeCli: statRes.mtime,
       mtimeSvr: statRes.mtime,
+      mtimeCliFmt: unixTimeToStr(statRes.mtime),
+      mtimeSvrFmt: unixTimeToStr(statRes.mtime),
       size: statRes.size, // local always unencrypted
       sizeRaw: statRes.size,
     };

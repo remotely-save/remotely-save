@@ -341,5 +341,7 @@
   "syncalgov3_checkbox_manual_backup": "我将会首先手动备份我的库（Vault）。",
   "syncalgov3_checkbox_requiremultidevupdate": "我理解，我需要在所有设备上都更新此插件使之正常运行。",
   "syncalgov3_button_agree": "同意",
-  "syncalgov3_button_disagree": "不同意"
+  "syncalgov3_button_disagree": "不同意",
+
+  "menu_check_file_stat": "查看文件属性"
 }

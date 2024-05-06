@@ -9,6 +9,7 @@ import {
   Platform,
   requireApiVersion,
   Events,
+  TFolder,
 } from "obsidian";
 import cloneDeep from "lodash/cloneDeep";
 import { createElement, RotateCcw, RefreshCcw, FileText } from "lucide";
@@ -783,6 +784,8 @@ export default class RemotelySavePlugin extends Plugin {
     //   console.info("click", evt);
     // });
 
+    this.enableCheckingFileStat();
+
     if (!this.settings.agreeToUseSyncV3) {
       const syncAlgoV3Modal = new SyncAlgoV3Modal(this.app, this);
       syncAlgoV3Modal.open();
@@ -1195,6 +1198,41 @@ export default class RemotelySavePlugin extends Plugin {
       if (Platform.isMobile && this.settings.enableMobileStatusBar) {
         this.appContainerObserver = changeMobileStatusBar("enable");
       }
+    });
+  }
+
+  enableCheckingFileStat() {
+    this.app.workspace.onLayoutReady(() => {
+      const t = (x: TransItemType, vars?: any) => {
+        return this.i18n.t(x, vars);
+      };
+      this.registerEvent(
+        this.app.workspace.on("file-menu", (menu, file) => {
+          if (file instanceof TFolder) {
+            // folder not supported yet
+            return;
+          }
+
+          menu.addItem((item) => {
+            item
+              .setTitle(t("menu_check_file_stat"))
+              .setIcon("file-cog")
+              .onClick(async () => {
+                const filePath = file.path;
+                const fsLocal = new FakeFsLocal(
+                  this.app.vault,
+                  this.settings.syncConfigDir ?? false,
+                  this.app.vault.configDir,
+                  this.manifest.id,
+                  undefined,
+                  this.settings.deleteToWhere ?? "system"
+                );
+                const s = await fsLocal.stat(filePath);
+                new Notice(JSON.stringify(s, null, 2), 10000);
+              });
+          });
+        })
+      );
     });
   }
 

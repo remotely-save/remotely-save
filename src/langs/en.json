@@ -342,5 +342,7 @@
   "syncalgov3_checkbox_manual_backup": "I will backup my vault manually firstly.",
   "syncalgov3_checkbox_requiremultidevupdate": "I understand I need to update the plugin ACROSS ALL DEVICES to make them work properly.",
   "syncalgov3_button_agree": "Agree",
-  "syncalgov3_button_disagree": "Do Not Agree"
+  "syncalgov3_button_disagree": "Do Not Agree",
+
+  "menu_check_file_stat": "Check file stats"
 }
