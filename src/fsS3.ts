@@ -340,13 +340,14 @@ const fromS3ObjectToEntity = (
 const fromS3HeadObjectToEntity = (
   fileOrFolderPathWithRemotePrefix: string,
   x: HeadObjectCommandOutput,
-  remotePrefix: string
+  remotePrefix: string,
+  useAccurateMTime: boolean
 ) => {
   // console.debug(`fromS3HeadObjectToEntity: ${fileOrFolderPathWithRemotePrefix}: ${JSON.stringify(x,null,2)}`);
   // S3 officially only supports seconds precision!!!!!
   const mtimeSvr = Math.floor(x.LastModified!.valueOf() / 1000.0) * 1000;
   let mtimeCli = mtimeSvr;
-  if (x.Metadata !== undefined) {
+  if (useAccurateMTime && x.Metadata !== undefined) {
     const m2 = Math.floor(
       parseFloat(x.Metadata.mtime || x.Metadata.MTime || "0")
     );
@@ -561,7 +562,12 @@ export class FakeFsS3 extends FakeFs {
       })
     );
 
-    return fromS3HeadObjectToEntity(key, res, this.s3Config.remotePrefix ?? "");
+    return fromS3HeadObjectToEntity(
+      key,
+      res,
+      this.s3Config.remotePrefix ?? "",
+      this.s3Config.useAccurateMTime ?? false
+    );
   }
 
   async mkdir(key: string, mtime?: number, ctime?: number): Promise<Entity> {
