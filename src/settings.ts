@@ -1086,7 +1086,11 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
 
         dropdown
           .setValue(
-            `${this.plugin.settings.s3.generateFolderObject ? "generate" : "notgenerate"}`
+            `${
+              this.plugin.settings.s3.generateFolderObject
+                ? "generate"
+                : "notgenerate"
+            }`
           )
           .onChange(async (val) => {
             if (val === "generate") {
