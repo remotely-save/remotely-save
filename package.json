@@ -7,7 +7,7 @@
     "build2": "tsc -noEmit -skipLibCheck && node esbuild.config.mjs production",
     "build": "webpack --mode production",
     "dev": "webpack --mode development --watch",
-    "format": "npx prettier --trailing-comma es5 --write .",
+    "format": "npx @biomejs/biome format --write .",
     "clean": "npx rimraf main.js",
     "test": "cross-env TS_NODE_COMPILER_OPTIONS={\\\"module\\\":\\\"commonjs\\\"} mocha -r ts-node/register 'tests/**/*.ts'"
   },
@@ -25,6 +25,7 @@
   "author": "",
   "license": "Apache-2.0",
   "devDependencies": {
+    "@biomejs/biome": "1.7.3",
     "@microsoft/microsoft-graph-types": "^2.40.0",
     "@types/chai": "^4.3.14",
     "@types/chai-as-promised": "^7.1.8",
@@ -44,7 +45,6 @@
     "mocha": "^10.4.0",
     "npm-check-updates": "^16.14.20",
     "obsidian": "^1.5.7",
-    "prettier": "^3.2.5",
     "ts-loader": "^9.5.1",
     "ts-node": "^10.9.2",
     "tslib": "^2.6.2",
