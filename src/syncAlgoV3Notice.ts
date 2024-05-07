@@ -1,6 +1,6 @@
-import { App, Modal, Notice, PluginSettingTab, Setting } from "obsidian";
-import type RemotelySavePlugin from "./main"; // unavoidable
+import { type App, Modal } from "obsidian";
 import type { TransItemType } from "./i18n";
+import type RemotelySavePlugin from "./main"; // unavoidable
 
 import { stringToFragment } from "./misc";
 
@@ -17,7 +17,7 @@ export class SyncAlgoV3Modal extends Modal {
     this.requireUpdateAllDev = false;
   }
   onOpen() {
-    let { contentEl } = this;
+    const { contentEl } = this;
     const t = (x: TransItemType, vars?: any) => {
       return this.plugin.i18n.t(x, vars);
     };
@@ -112,7 +112,7 @@ export class SyncAlgoV3Modal extends Modal {
   }
 
   onClose() {
-    let { contentEl } = this;
+    const { contentEl } = this;
     contentEl.empty();
     if (this.agree) {
       console.info("agree to use the new algorithm");

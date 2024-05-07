@@ -1,36 +1,36 @@
-import type { _Object, PutObjectCommandInput } from "@aws-sdk/client-s3";
+import { Buffer } from "buffer";
+import * as path from "path";
+import { Readable } from "stream";
+import type { PutObjectCommandInput, _Object } from "@aws-sdk/client-s3";
 import {
   DeleteObjectCommand,
   GetObjectCommand,
   HeadObjectCommand,
-  HeadObjectCommandOutput,
+  type HeadObjectCommandOutput,
   ListObjectsV2Command,
-  ListObjectsV2CommandInput,
+  type ListObjectsV2CommandInput,
   PutObjectCommand,
   S3Client,
 } from "@aws-sdk/client-s3";
 import { Upload } from "@aws-sdk/lib-storage";
-import { HttpRequest, HttpResponse } from "@smithy/protocol-http";
+import type { HttpHandlerOptions } from "@aws-sdk/types";
 import {
   FetchHttpHandler,
-  FetchHttpHandlerOptions,
+  type FetchHttpHandlerOptions,
 } from "@smithy/fetch-http-handler";
 // @ts-ignore
 import { requestTimeout } from "@smithy/fetch-http-handler/dist-es/request-timeout";
+import { type HttpRequest, HttpResponse } from "@smithy/protocol-http";
 import { buildQueryString } from "@smithy/querystring-builder";
-import { HttpHandlerOptions } from "@aws-sdk/types";
-import { Buffer } from "buffer";
-import * as mime from "mime-types";
-import { Platform, requestUrl, RequestUrlParam } from "obsidian";
-import { Readable } from "stream";
-import * as path from "path";
 import AggregateError from "aggregate-error";
-import { DEFAULT_CONTENT_TYPE, S3Config } from "./baseTypes";
+import * as mime from "mime-types";
+import { Platform, type RequestUrlParam, requestUrl } from "obsidian";
+import PQueue from "p-queue";
+import { DEFAULT_CONTENT_TYPE, type S3Config } from "./baseTypes";
 import { VALID_REQURL } from "./baseTypesObs";
 import { bufferToArrayBuffer, getFolderLevels } from "./misc";
-import PQueue from "p-queue";
 
-import { Entity } from "./baseTypes";
+import type { Entity } from "./baseTypes";
 import { FakeFs } from "./fsAll";
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -349,7 +349,7 @@ const fromS3HeadObjectToEntity = (
   let mtimeCli = mtimeSvr;
   if (useAccurateMTime && x.Metadata !== undefined) {
     const m2 = Math.floor(
-      parseFloat(x.Metadata.mtime || x.Metadata.MTime || "0")
+      Number.parseFloat(x.Metadata.mtime || x.Metadata.MTime || "0")
     );
     if (m2 !== 0) {
       // to be compatible with RClone, we read and store the time in seconds in new version!
@@ -458,12 +458,12 @@ export class FakeFsS3 extends FakeFs {
               // pass
             } else {
               mtimeRecords[content.Key!] = Math.floor(
-                parseFloat(
+                Number.parseFloat(
                   rspHead.Metadata.mtime || rspHead.Metadata.MTime || "0"
                 )
               );
               ctimeRecords[content.Key!] = Math.floor(
-                parseFloat(
+                Number.parseFloat(
                   rspHead.Metadata.ctime || rspHead.Metadata.CTime || "0"
                 )
               );

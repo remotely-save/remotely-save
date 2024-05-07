@@ -1,4 +1,4 @@
-import { Entity } from "./baseTypes";
+import type { Entity } from "./baseTypes";
 
 export abstract class FakeFs {
   abstract kind: string;

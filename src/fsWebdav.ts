@@ -1,21 +1,21 @@
-import { getReasonPhrase } from "http-status-codes/build/cjs/utils-functions";
 import { Buffer } from "buffer";
-import cloneDeep from "lodash/cloneDeep";
 import { Queue } from "@fyears/tsqueue";
+import { getReasonPhrase } from "http-status-codes/build/cjs/utils-functions";
 import chunk from "lodash/chunk";
+import cloneDeep from "lodash/cloneDeep";
 import flatten from "lodash/flatten";
 import { Platform, requestUrl } from "obsidian";
-import { FakeFs } from "./fsAll";
-import { bufferToArrayBuffer } from "./misc";
-import { Entity, WebdavConfig } from "./baseTypes";
-import { VALID_REQURL } from "./baseTypesObs";
 import type {
   FileStat,
-  WebDAVClient,
   RequestOptionsWithState,
+  WebDAVClient,
   // Response,
   // ResponseDataDetailed,
 } from "webdav";
+import type { Entity, WebdavConfig } from "./baseTypes";
+import { VALID_REQURL } from "./baseTypesObs";
+import { FakeFs } from "./fsAll";
+import { bufferToArrayBuffer } from "./misc";
 
 /**
  * https://stackoverflow.com/questions/32850898/how-to-check-if-a-string-has-any-non-iso-8859-1-characters-with-javascript
@@ -95,7 +95,7 @@ if (VALID_REQURL) {
       console.debug(`after request:`);
       const rspHeaders = objKeyToLower({ ...r.headers });
       console.debug(`rspHeaders: ${JSON.stringify(rspHeaders, null, 2)}`);
-      for (let key in rspHeaders) {
+      for (const key in rspHeaders) {
         if (rspHeaders.hasOwnProperty(key)) {
           // avoid the error:
           // Failed to read the 'headers' property from 'ResponseInit': String contains non ISO-8859-1 code point.
@@ -143,6 +143,7 @@ if (VALID_REQURL) {
 }
 
 // @ts-ignore
+// biome-ignore lint: we want to ts-ignore the next line
 import { AuthType, BufferLike, createClient } from "webdav/dist/web/index.js";
 
 export const DEFAULT_WEBDAV_CONFIG = {

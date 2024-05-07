@@ -1,7 +1,7 @@
 import { strict as assert } from "assert";
 import {
+  type MetadataOnRemote,
   isEqualMetadataOnRemote,
-  MetadataOnRemote,
 } from "../src/metadataOnRemote";
 
 describe("Metadata operations tests", () => {

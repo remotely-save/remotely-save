@@ -1,10 +1,10 @@
-import { CipherMethodType, Entity } from "./baseTypes";
+import type { CipherMethodType, Entity } from "./baseTypes";
 import * as openssl from "./encryptOpenSSL";
 import * as rclone from "./encryptRClone";
 import { isVaildText } from "./misc";
 
-import { FakeFs } from "./fsAll";
 import cloneDeep from "lodash/cloneDeep";
+import { FakeFs } from "./fsAll";
 
 /**
  * quick guess, no actual decryption here

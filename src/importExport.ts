@@ -1,11 +1,11 @@
-import QRCode from "qrcode";
 import cloneDeep from "lodash/cloneDeep";
+import QRCode from "qrcode";
 
 import {
   COMMAND_URI,
-  UriParams,
-  RemotelySavePluginSettings,
-  QRExportType,
+  type QRExportType,
+  type RemotelySavePluginSettings,
+  type UriParams,
 } from "./baseTypes";
 import { getShrinkedSettings } from "./fsOnedrive";
 
@@ -64,7 +64,7 @@ export const importQrCodeUri = (
   inputParams: any,
   currentVaultName: string
 ): ProcessQrCodeResultType => {
-  let params = inputParams as UriParams;
+  const params = inputParams as UriParams;
   if (
     params.func === undefined ||
     params.func !== "settings" ||

@@ -1,5 +1,9 @@
-import { cloneDeep, isEqual } from "lodash";
-import { DEFAULT_CONTENT_TYPE, Entity, WebdisConfig } from "./baseTypes";
+import { isEqual } from "lodash";
+import {
+  DEFAULT_CONTENT_TYPE,
+  type Entity,
+  type WebdisConfig,
+} from "./baseTypes";
 import { FakeFs } from "./fsAll";
 
 export const DEFAULT_WEBDIS_CONFIG: WebdisConfig = {
@@ -149,10 +153,10 @@ export class FakeFsWebdis extends FakeFs {
     return {
       key: realKey,
       keyRaw: realKey,
-      mtimeCli: parseInt(rsp["mtime"]),
-      mtimeSvr: parseInt(rsp["mtime"]),
-      size: parseInt(rsp["size"]),
-      sizeRaw: parseInt(rsp["size"]),
+      mtimeCli: Number.parseInt(rsp["mtime"]),
+      mtimeSvr: Number.parseInt(rsp["mtime"]),
+      size: Number.parseInt(rsp["size"]),
+      sizeRaw: Number.parseInt(rsp["size"]),
     };
   }
 

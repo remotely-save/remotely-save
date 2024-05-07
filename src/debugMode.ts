@@ -1,16 +1,16 @@
-import { TAbstractFile, TFolder, TFile, Vault } from "obsidian";
+import type { Vault } from "obsidian";
 
-import {
-  readAllProfilerResultsByVault,
-  readAllSyncPlanRecordTextsByVault,
-} from "./localdb";
-import type { InternalDBs } from "./localdb";
-import { mkdirpInVault, unixTimeToStr } from "./misc";
 import {
   DEFAULT_DEBUG_FOLDER,
   DEFAULT_PROFILER_RESULT_FILE_PREFIX,
   DEFAULT_SYNC_PLANS_HISTORY_FILE_PREFIX,
 } from "./baseTypes";
+import {
+  readAllProfilerResultsByVault,
+  readAllSyncPlanRecordTextsByVault,
+} from "./localdb";
+import type { InternalDBs } from "./localdb";
+import { mkdirpInVault } from "./misc";
 
 export const exportVaultSyncPlansToFiles = async (
   db: InternalDBs,

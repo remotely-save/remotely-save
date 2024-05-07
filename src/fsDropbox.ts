@@ -1,13 +1,13 @@
-import { FakeFs } from "./fsAll";
 import { Dropbox, DropboxAuth } from "dropbox";
-import type { files, DropboxResponseError, DropboxResponse } from "dropbox";
-import {
-  DropboxConfig,
-  COMMAND_CALLBACK_DROPBOX,
-  OAUTH2_FORCE_EXPIRE_MILLISECONDS,
-  Entity,
-} from "./baseTypes";
+import type { DropboxResponse, DropboxResponseError, files } from "dropbox";
 import random from "lodash/random";
+import {
+  COMMAND_CALLBACK_DROPBOX,
+  type DropboxConfig,
+  type Entity,
+  OAUTH2_FORCE_EXPIRE_MILLISECONDS,
+} from "./baseTypes";
+import { FakeFs } from "./fsAll";
 import {
   bufferToArrayBuffer,
   delay,
@@ -167,7 +167,7 @@ interface ErrSubType {
 
 async function retryReq<T>(
   reqFunc: () => Promise<DropboxResponse<T>>,
-  extraHint: string = ""
+  extraHint = ""
 ): Promise<DropboxResponse<T> | undefined> {
   const waitSeconds = [1, 2, 4, 8]; // hard code exponential backoff
   for (let idx = 0; idx < waitSeconds.length; ++idx) {
@@ -205,7 +205,7 @@ async function retryReq<T>(
       const headers = headersToRecord(err.headers);
       const svrSec =
         err.error.error.retry_after ||
-        parseInt(headers["retry-after"] || "1") ||
+        Number.parseInt(headers["retry-after"] || "1") ||
         1;
       const fallbackSec = waitSeconds[idx];
       const secMin = Math.max(svrSec, fallbackSec);
@@ -233,7 +233,7 @@ async function retryReq<T>(
 
 export const getAuthUrlAndVerifier = async (
   appKey: string,
-  needManualPatse: boolean = false
+  needManualPatse = false
 ) => {
   const auth = new DropboxAuth({
     clientId: appKey,
@@ -328,9 +328,9 @@ export const setConfigBySuccessfullAuthInplace = async (
   console.info("start updating local info of Dropbox token");
 
   config.accessToken = authRes.access_token;
-  config.accessTokenExpiresInSeconds = parseInt(authRes.expires_in);
+  config.accessTokenExpiresInSeconds = Number.parseInt(authRes.expires_in);
   config.accessTokenExpiresAtTime =
-    Date.now() + parseInt(authRes.expires_in) * 1000 - 10 * 1000;
+    Date.now() + Number.parseInt(authRes.expires_in) * 1000 - 10 * 1000;
 
   // manually set it expired after 80 days;
   config.credentialsShouldBeDeletedAtTime =

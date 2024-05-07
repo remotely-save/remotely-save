@@ -179,7 +179,7 @@ describe("Misc: get dirname", () => {
 });
 
 describe("Misc: extract svg", () => {
-  beforeEach(function () {
+  beforeEach(() => {
     const fakeBrowser = new JSDOM("");
     global.window = fakeBrowser.window as any;
   });

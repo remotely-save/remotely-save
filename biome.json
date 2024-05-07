@@ -3,10 +3,13 @@
   "organizeImports": {
     "enabled": true
   },
+  "files": {
+    "ignore": ["main.js"]
+  },
   "formatter": {
     "enabled": true,
     "formatWithErrors": false,
-    "ignore": ["main.js"],
+    "ignore": [],
     "attributePosition": "auto",
     "indentStyle": "space",
     "indentWidth": 2,
@@ -27,7 +30,14 @@
   "linter": {
     "enabled": true,
     "rules": {
-      "recommended": true
+      "recommended": true,
+      "suspicious": {
+        "noExplicitAny": "off"
+      },
+      "style": {
+        "noUselessElse": "off",
+        "useNodejsImportProtocol": "off"
+      }
     }
   }
 }

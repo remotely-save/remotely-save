@@ -1,6 +1,6 @@
 import { strict as assert } from "assert";
 
-import { RemotelySavePluginSettings } from "../src/baseTypes";
+import type { RemotelySavePluginSettings } from "../src/baseTypes";
 import { messyConfigToNormal, normalConfigToMessy } from "../src/configPersist";
 
 const DEFAULT_SETTINGS: RemotelySavePluginSettings = {

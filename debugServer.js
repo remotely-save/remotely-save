@@ -2,7 +2,7 @@
 const http = require("http");
 
 const requestHandler = (req, res) => {
-  let body = [];
+  const body = [];
   req
     .on("data", (chunk) => {
       body.push(chunk);

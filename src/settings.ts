@@ -1,37 +1,45 @@
+import { Eye, EyeOff, createElement } from "lucide";
 import {
-  App,
+  type App,
   Modal,
   Notice,
+  Platform,
   PluginSettingTab,
   Setting,
-  Platform,
   requireApiVersion,
-  requestUrl,
 } from "obsidian";
 import type { TextComponent } from "obsidian";
-import { createElement, Eye, EyeOff } from "lucide";
-import {
+import type {
+  CipherMethodType,
   ConflictActionType,
-  DEFAULT_DEBUG_FOLDER,
   EmptyFolderCleanType,
+  QRExportType,
   SUPPORTED_SERVICES_TYPE,
   SUPPORTED_SERVICES_TYPE_WITH_REMOTE_BASE_DIR,
   SyncDirectionType,
   WebdavAuthType,
-  WebdavDepthType,
-  CipherMethodType,
-  QRExportType,
 } from "./baseTypes";
 
-import {
-  API_VER_ENSURE_REQURL_OK,
-  API_VER_REQURL,
-  VALID_REQURL,
-} from "./baseTypesObs";
+import cloneDeep from "lodash/cloneDeep";
+import { API_VER_ENSURE_REQURL_OK, VALID_REQURL } from "./baseTypesObs";
+import { messyConfigToNormal } from "./configPersist";
 import {
   exportVaultProfilerResultsToFiles,
   exportVaultSyncPlansToFiles,
 } from "./debugMode";
+import {
+  DEFAULT_DROPBOX_CONFIG,
+  getAuthUrlAndVerifier as getAuthUrlAndVerifierDropbox,
+  sendAuthReq as sendAuthReqDropbox,
+  setConfigBySuccessfullAuthInplace,
+} from "./fsDropbox";
+import { getClient } from "./fsGetter";
+import {
+  DEFAULT_ONEDRIVE_CONFIG,
+  getAuthUrlAndVerifier as getAuthUrlAndVerifierOnedrive,
+} from "./fsOnedrive";
+import { simpleTransRemotePrefix } from "./fsS3";
+import type { TransItemType } from "./i18n";
 import {
   exportQrCodeUri,
   importQrCodeUri,
@@ -44,27 +52,11 @@ import {
   upsertLastSuccessSyncTimeByVault,
 } from "./localdb";
 import type RemotelySavePlugin from "./main"; // unavoidable
-import { FakeFs } from "./fsAll";
-import {
-  DEFAULT_DROPBOX_CONFIG,
-  getAuthUrlAndVerifier as getAuthUrlAndVerifierDropbox,
-  sendAuthReq as sendAuthReqDropbox,
-  setConfigBySuccessfullAuthInplace,
-} from "./fsDropbox";
-import {
-  DEFAULT_ONEDRIVE_CONFIG,
-  getAuthUrlAndVerifier as getAuthUrlAndVerifierOnedrive,
-} from "./fsOnedrive";
-import { messyConfigToNormal } from "./configPersist";
-import type { TransItemType } from "./i18n";
 import {
   changeMobileStatusBar,
   checkHasSpecialCharForDir,
   stringToFragment,
 } from "./misc";
-import { simpleTransRemotePrefix } from "./fsS3";
-import cloneDeep from "lodash/cloneDeep";
-import { getClient } from "./fsGetter";
 
 class PasswordModal extends Modal {
   plugin: RemotelySavePlugin;
@@ -76,7 +68,7 @@ class PasswordModal extends Modal {
   }
 
   onOpen() {
-    let { contentEl } = this;
+    const { contentEl } = this;
 
     const t = (x: TransItemType, vars?: any) => {
       return this.plugin.i18n.t(x, vars);
@@ -131,7 +123,7 @@ class PasswordModal extends Modal {
   }
 
   onClose() {
-    let { contentEl } = this;
+    const { contentEl } = this;
     contentEl.empty();
   }
 }
@@ -144,7 +136,7 @@ class EncryptionMethodModal extends Modal {
   }
 
   onOpen() {
-    let { contentEl } = this;
+    const { contentEl } = this;
 
     const t = (x: TransItemType, vars?: any) => {
       return this.plugin.i18n.t(x, vars);
@@ -170,7 +162,7 @@ class EncryptionMethodModal extends Modal {
   }
 
   onClose() {
-    let { contentEl } = this;
+    const { contentEl } = this;
     contentEl.empty();
   }
 }
@@ -192,7 +184,7 @@ class ChangeRemoteBaseDirModal extends Modal {
   }
 
   onOpen() {
-    let { contentEl } = this;
+    const { contentEl } = this;
 
     const t = (x: TransItemType, vars?: any) => {
       return this.plugin.i18n.t(x, vars);
@@ -264,7 +256,7 @@ class ChangeRemoteBaseDirModal extends Modal {
   }
 
   onClose() {
-    let { contentEl } = this;
+    const { contentEl } = this;
     contentEl.empty();
   }
 }
@@ -283,7 +275,7 @@ class ChangeRemotePrefixModal extends Modal {
   }
 
   onOpen() {
-    let { contentEl } = this;
+    const { contentEl } = this;
 
     const t = (x: TransItemType, vars?: any) => {
       return this.plugin.i18n.t(x, vars);
@@ -346,7 +338,7 @@ class ChangeRemotePrefixModal extends Modal {
   }
 
   onClose() {
-    let { contentEl } = this;
+    const { contentEl } = this;
     contentEl.empty();
   }
 }
@@ -371,7 +363,7 @@ class DropboxAuthModal extends Modal {
   }
 
   async onOpen() {
-    let { contentEl } = this;
+    const { contentEl } = this;
 
     const t = (x: TransItemType, vars?: any) => {
       return this.plugin.i18n.t(x, vars);
@@ -509,7 +501,7 @@ class DropboxAuthModal extends Modal {
   }
 
   onClose() {
-    let { contentEl } = this;
+    const { contentEl } = this;
     contentEl.empty();
   }
 }
@@ -534,7 +526,7 @@ export class OnedriveAuthModal extends Modal {
   }
 
   async onOpen() {
-    let { contentEl } = this;
+    const { contentEl } = this;
 
     const { authUrl, verifier } = await getAuthUrlAndVerifierOnedrive(
       this.plugin.settings.onedrive.clientID,
@@ -583,7 +575,7 @@ export class OnedriveAuthModal extends Modal {
   }
 
   onClose() {
-    let { contentEl } = this;
+    const { contentEl } = this;
     contentEl.empty();
   }
 }
@@ -605,7 +597,7 @@ export class OnedriveRevokeAuthModal extends Modal {
   }
 
   async onOpen() {
-    let { contentEl } = this;
+    const { contentEl } = this;
     const t = (x: TransItemType, vars?: any) => {
       return this.plugin.i18n.t(x, vars);
     };
@@ -653,7 +645,7 @@ export class OnedriveRevokeAuthModal extends Modal {
   }
 
   onClose() {
-    let { contentEl } = this;
+    const { contentEl } = this;
     contentEl.empty();
   }
 }
@@ -672,7 +664,7 @@ class SyncConfigDirModal extends Modal {
   }
 
   async onOpen() {
-    let { contentEl } = this;
+    const { contentEl } = this;
 
     const t = (x: TransItemType, vars?: any) => {
       return this.plugin.i18n.t(x, vars);
@@ -706,7 +698,7 @@ class SyncConfigDirModal extends Modal {
   }
 
   onClose() {
-    let { contentEl } = this;
+    const { contentEl } = this;
     contentEl.empty();
   }
 }
@@ -721,7 +713,7 @@ class ExportSettingsQrCodeModal extends Modal {
   }
 
   async onOpen() {
-    let { contentEl } = this;
+    const { contentEl } = this;
 
     const t = (x: TransItemType, vars?: any) => {
       return this.plugin.i18n.t(x, vars);
@@ -770,7 +762,7 @@ class ExportSettingsQrCodeModal extends Modal {
   }
 
   onClose() {
-    let { contentEl } = this;
+    const { contentEl } = this;
     contentEl.empty();
   }
 }
@@ -810,7 +802,7 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
   }
 
   display(): void {
-    let { containerEl } = this;
+    const { containerEl } = this;
     containerEl.style.setProperty("overflow-wrap", "break-word");
 
     containerEl.empty();
@@ -1007,7 +999,7 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
         dropdown
           .setValue(`${this.plugin.settings.s3.partsConcurrency}`)
           .onChange(async (val) => {
-            const realVal = parseInt(val);
+            const realVal = Number.parseInt(val);
             this.plugin.settings.s3.partsConcurrency = realVal;
             await this.plugin.saveSettings();
           });
@@ -1178,7 +1170,6 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
         button.setButtonText(t("settings_dropbox_revoke_button"));
         button.onClick(async () => {
           try {
-            const self = this;
             const client = getClient(
               this.plugin.settings,
               this.app.vault.getName(),
@@ -1289,7 +1280,6 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
         button.setButtonText(t("settings_checkonnectivity_button"));
         button.onClick(async () => {
           new Notice(t("settings_checkonnectivity_checking"));
-          const self = this;
           const client = getClient(
             this.plugin.settings,
             this.app.vault.getName(),
@@ -1434,7 +1424,6 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
         button.setButtonText(t("settings_checkonnectivity_button"));
         button.onClick(async () => {
           new Notice(t("settings_checkonnectivity_checking"));
-          const self = this;
           const client = getClient(
             this.plugin.settings,
             this.app.vault.getName(),
@@ -1639,7 +1628,6 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
         button.setButtonText(t("settings_checkonnectivity_button"));
         button.onClick(async () => {
           new Notice(t("settings_checkonnectivity_checking"));
-          const self = this;
           const client = getClient(
             this.plugin.settings,
             this.app.vault.getName(),
@@ -1769,7 +1757,6 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
         button.setButtonText(t("settings_checkonnectivity_button"));
         button.onClick(async () => {
           new Notice(t("settings_checkonnectivity_checking"));
-          const self = this;
           const client = getClient(
             this.plugin.settings,
             this.app.vault.getName(),
@@ -1889,7 +1876,7 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
         dropdown
           .setValue(`${this.plugin.settings.autoRunEveryMilliseconds}`)
           .onChange(async (val: string) => {
-            const realVal = parseInt(val);
+            const realVal = Number.parseInt(val);
             this.plugin.settings.autoRunEveryMilliseconds = realVal;
             await this.plugin.saveSettings();
             if (
@@ -1934,7 +1921,7 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
         dropdown
           .setValue(`${this.plugin.settings.initRunAfterMilliseconds}`)
           .onChange(async (val: string) => {
-            const realVal = parseInt(val);
+            const realVal = Number.parseInt(val);
             this.plugin.settings.initRunAfterMilliseconds = realVal;
             await this.plugin.saveSettings();
           });
@@ -1954,7 +1941,8 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
         dropdown
           .setValue(`${syncOnSaveEnabled ? "1000" : "-1"}`)
           .onChange(async (val: string) => {
-            this.plugin.settings.syncOnSaveAfterMilliseconds = parseInt(val);
+            this.plugin.settings.syncOnSaveAfterMilliseconds =
+              Number.parseInt(val);
             await this.plugin.saveSettings();
             this.plugin.toggleSyncOnSaveIfSet();
           });
@@ -1973,7 +1961,7 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
         dropdown
           .setValue(`${this.plugin.settings.skipSizeLargerThan}`)
           .onChange(async (val) => {
-            this.plugin.settings.skipSizeLargerThan = parseInt(val);
+            this.plugin.settings.skipSizeLargerThan = Number.parseInt(val);
             await this.plugin.saveSettings();
           });
       });
@@ -2055,7 +2043,7 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
         dropdown
           .setValue(`${this.plugin.settings.concurrency}`)
           .onChange(async (val) => {
-            const realVal = parseInt(val);
+            const realVal = Number.parseInt(val);
             this.plugin.settings.concurrency = realVal;
             await this.plugin.saveSettings();
           });
@@ -2183,7 +2171,7 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
         dropdown
           .setValue(`${this.plugin.settings.protectModifyPercentage ?? 50}`)
           .onChange(async (val) => {
-            this.plugin.settings.protectModifyPercentage = parseInt(val);
+            this.plugin.settings.protectModifyPercentage = Number.parseInt(val);
             await this.plugin.saveSettings();
           });
       });
@@ -2515,7 +2503,7 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
   }
 
   hide() {
-    let { containerEl } = this;
+    const { containerEl } = this;
     containerEl.empty();
     super.hide();
   }

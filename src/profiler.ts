@@ -1,5 +1,5 @@
-import { SUPPORTED_SERVICES_TYPE } from "./baseTypes";
-import { InternalDBs, insertProfilerResultByVault } from "./localdb";
+import type { SUPPORTED_SERVICES_TYPE } from "./baseTypes";
+import { type InternalDBs, insertProfilerResultByVault } from "./localdb";
 import { unixTimeToStr } from "./misc";
 
 interface BreakPoint {

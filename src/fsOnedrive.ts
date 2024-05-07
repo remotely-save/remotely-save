@@ -1,19 +1,19 @@
+import { CryptoProvider, PublicClientApplication } from "@azure/msal-node";
+import type { AuthenticationProvider } from "@microsoft/microsoft-graph-client";
 import type {
   DriveItem,
   FileSystemInfo,
   UploadSession,
   User,
 } from "@microsoft/microsoft-graph-types";
-import { CryptoProvider, PublicClientApplication } from "@azure/msal-node";
-import { AuthenticationProvider } from "@microsoft/microsoft-graph-client";
 import cloneDeep from "lodash/cloneDeep";
 import { request, requestUrl } from "obsidian";
 import {
   COMMAND_CALLBACK_ONEDRIVE,
   DEFAULT_CONTENT_TYPE,
-  Entity,
+  type Entity,
   OAUTH2_FORCE_EXPIRE_MILLISECONDS,
-  OnedriveConfig,
+  type OnedriveConfig,
 } from "./baseTypes";
 import { VALID_REQURL } from "./baseTypesObs";
 import { FakeFs } from "./fsAll";
@@ -658,7 +658,7 @@ export class FakeFsOnedrive extends FakeFs {
     let res = await this._getJson(
       `/drive/special/approot:/${this.remoteBaseDir}:/delta`
     );
-    let driveItems = res.value as DriveItem[];
+    const driveItems = res.value as DriveItem[];
     // console.debug(driveItems);
 
     while (NEXT_LINK_KEY in res) {
@@ -719,7 +719,7 @@ export class FakeFsOnedrive extends FakeFs {
     } else {
       // https://stackoverflow.com/questions/56479865/creating-nested-folders-in-one-go-onedrive-api
       // use PATCH to create folder recursively!!!
-      let playload: any = {
+      const playload: any = {
         folder: {},
         "@microsoft.graph.conflictBehavior": "replace",
       };

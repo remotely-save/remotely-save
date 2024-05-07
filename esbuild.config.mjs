@@ -1,7 +1,6 @@
-import dotenv from "dotenv/config";
 import esbuild from "esbuild";
-import process from "process";
 import inlineWorkerPlugin from "esbuild-plugin-inline-worker";
+import process from "process";
 // import builtins from 'builtin-modules'
 
 const banner = `/*

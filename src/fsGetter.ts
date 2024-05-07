@@ -1,5 +1,5 @@
-import { RemotelySavePluginSettings } from "./baseTypes";
-import { FakeFs } from "./fsAll";
+import type { RemotelySavePluginSettings } from "./baseTypes";
+import type { FakeFs } from "./fsAll";
 import { FakeFsDropbox } from "./fsDropbox";
 import { FakeFsOnedrive } from "./fsOnedrive";
 import { FakeFsS3 } from "./fsS3";

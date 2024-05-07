@@ -7,7 +7,7 @@
     "build2": "tsc -noEmit -skipLibCheck && node esbuild.config.mjs production",
     "build": "webpack --mode production",
     "dev": "webpack --mode development --watch",
-    "format": "npx @biomejs/biome format --write .",
+    "format": "npx @biomejs/biome check --apply .",
     "clean": "npx rimraf main.js",
     "test": "cross-env TS_NODE_COMPILER_OPTIONS={\\\"module\\\":\\\"commonjs\\\"} mocha -r ts-node/register 'tests/**/*.ts'"
   },

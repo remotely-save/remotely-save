@@ -13,7 +13,7 @@ import {
 import { base64ToBase64url, bufferToArrayBuffer } from "../src/misc";
 
 describe("Encryption OpenSSL tests", () => {
-  beforeEach(function () {
+  beforeEach(() => {
     global.window = {
       crypto: require("crypto").webcrypto,
     } as any;
@@ -157,7 +157,7 @@ describe("Encryption OpenSSL tests", () => {
 
     assert.throws(() => getSizeFromEncToOrig(14787231));
 
-    let { minSize, maxSize } = getSizeFromEncToOrig(14787232);
+    const { minSize, maxSize } = getSizeFromEncToOrig(14787232);
     assert.ok(minSize <= 14787203 && 14787203 <= maxSize);
   });
 });

@@ -1,2 +1,2 @@
-export let Buffer = require("buffer").Buffer;
-export let process = require("process/browser");
+export const Buffer = require("buffer").Buffer;
+export const process = require("process/browser");

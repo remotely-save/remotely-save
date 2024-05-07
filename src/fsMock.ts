@@ -1,4 +1,4 @@
-import { Entity } from "./baseTypes";
+import type { Entity } from "./baseTypes";
 import { FakeFs } from "./fsAll";
 
 export class FakeFsMock extends FakeFs {

@@ -1,9 +1,9 @@
-import { Platform, Vault } from "obsidian";
 import * as path from "path";
+import type { Vault } from "obsidian";
 
-import { base32, base64url } from "rfc4648";
-import XRegExp from "xregexp";
 import emojiRegex from "emoji-regex";
+import { base32 } from "rfc4648";
+import XRegExp from "xregexp";
 
 declare global {
   interface Window {
@@ -18,11 +18,7 @@ declare global {
  * @param underscore
  * @returns
  */
-export const isHiddenPath = (
-  item: string,
-  dot: boolean = true,
-  underscore: boolean = true
-) => {
+export const isHiddenPath = (item: string, dot = true, underscore = true) => {
   if (!(dot || underscore)) {
     throw Error("parameter error for isHiddenPath");
   }
@@ -50,7 +46,7 @@ export const isHiddenPath = (
  * @param x string
  * @returns string[] might be empty
  */
-export const getFolderLevels = (x: string, addEndingSlash: boolean = false) => {
+export const getFolderLevels = (x: string, addEndingSlash = false) => {
   const res: string[] = [];
 
   if (x === "" || x === "/") {
@@ -58,7 +54,7 @@ export const getFolderLevels = (x: string, addEndingSlash: boolean = false) => {
   }
 
   const y1 = x.split("/");
-  let i = 0;
+  const i = 0;
   for (let index = 0; index + 1 < y1.length; index++) {
     let k = y1.slice(0, index + 1).join("/");
     if (k === "" || k === "/") {
@@ -134,18 +130,14 @@ export const hexStringToTypedArray = (hex: string) => {
   if (f === null) {
     throw Error(`input ${hex} is not hex, no way to transform`);
   }
-  return new Uint8Array(
-    f.map(function (h) {
-      return parseInt(h, 16);
-    })
-  );
+  return new Uint8Array(f.map((h) => Number.parseInt(h, 16)));
 };
 
 export const base64ToBase32 = (a: string) => {
   return base32.stringify(Buffer.from(a, "base64"));
 };
 
-export const base64ToBase64url = (a: string, pad: boolean = false) => {
+export const base64ToBase64url = (a: string, pad = false) => {
   let b = a.replace(/\+/g, "-").replace(/\//g, "_");
   if (!pad) {
     b = b.replace(/=/g, "");
@@ -190,7 +182,7 @@ export const hasEmojiInText = (a: string) => {
  * @param toLower
  * @returns
  */
-export const headersToRecord = (h: Headers, toLower: boolean = true) => {
+export const headersToRecord = (h: Headers, toLower = true) => {
   const res: Record<string, string> = {};
   h.forEach((v, k) => {
     if (toLower) {
@@ -240,11 +232,11 @@ export const getParentFolder = (a: string) => {
  * @param delimiter
  * @returns
  */
-export const setToString = (a: Set<string>, delimiter: string = ",") => {
+export const setToString = (a: Set<string>, delimiter = ",") => {
   return [...a].join(delimiter);
 };
 
-export const extractSvgSub = (x: string, subEl: string = "rect") => {
+export const extractSvgSub = (x: string, subEl = "rect") => {
   const parser = new window.DOMParser();
   const dom = parser.parseFromString(x, "image/svg+xml");
   const svg = dom.querySelector("svg")!;
@@ -261,7 +253,7 @@ export const extractSvgSub = (x: string, subEl: string = "rect") => {
 export const getRandomIntInclusive = (min: number, max: number) => {
   const randomBuffer = new Uint32Array(1);
   window.crypto.getRandomValues(randomBuffer);
-  let randomNumber = randomBuffer[0] / (0xffffffff + 1);
+  const randomNumber = randomBuffer[0] / (0xffffffff + 1);
   min = Math.ceil(min);
   max = Math.floor(max);
   return Math.floor(randomNumber * (max - min + 1)) + min;
@@ -446,7 +438,7 @@ export const isSpecialFolderNameToSkip = (
   x: string,
   more: string[] | undefined
 ) => {
-  let specialFolders = [
+  const specialFolders = [
     ".git",
     ".github",
     ".gitlab",

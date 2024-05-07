@@ -1,68 +1,68 @@
-import {
-  Modal,
-  Notice,
-  Plugin,
-  Setting,
-  addIcon,
-  setIcon,
-  FileSystemAdapter,
-  Platform,
-  requireApiVersion,
-  Events,
-  TFolder,
-} from "obsidian";
 import cloneDeep from "lodash/cloneDeep";
-import { createElement, RotateCcw, RefreshCcw, FileText } from "lucide";
+import { FileText, RefreshCcw, RotateCcw, createElement } from "lucide";
+import {
+  Events,
+  FileSystemAdapter,
+  type Modal,
+  Notice,
+  Platform,
+  Plugin,
+  type Setting,
+  TFolder,
+  addIcon,
+  requireApiVersion,
+  setIcon,
+} from "obsidian";
 import type {
   RemotelySavePluginSettings,
   SyncTriggerSourceType,
 } from "./baseTypes";
 import {
   COMMAND_CALLBACK,
-  COMMAND_CALLBACK_ONEDRIVE,
   COMMAND_CALLBACK_DROPBOX,
+  COMMAND_CALLBACK_ONEDRIVE,
   COMMAND_URI,
 } from "./baseTypes";
 import { API_VER_ENSURE_REQURL_OK } from "./baseTypesObs";
-import { importQrCodeUri } from "./importExport";
-import {
-  prepareDBs,
-  InternalDBs,
-  clearExpiredSyncPlanRecords,
-  upsertPluginVersionByVault,
-  clearAllLoggerOutputRecords,
-  upsertLastSuccessSyncTimeByVault,
-  getLastSuccessSyncTimeByVault,
-} from "./localdb";
+import { messyConfigToNormal, normalConfigToMessy } from "./configPersist";
 import {
   DEFAULT_DROPBOX_CONFIG,
   sendAuthReq as sendAuthReqDropbox,
   setConfigBySuccessfullAuthInplace as setConfigBySuccessfullAuthInplaceDropbox,
 } from "./fsDropbox";
 import {
-  AccessCodeResponseSuccessfulType,
+  type AccessCodeResponseSuccessfulType,
   DEFAULT_ONEDRIVE_CONFIG,
   sendAuthReq as sendAuthReqOnedrive,
   setConfigBySuccessfullAuthInplace as setConfigBySuccessfullAuthInplaceOnedrive,
 } from "./fsOnedrive";
 import { DEFAULT_S3_CONFIG } from "./fsS3";
 import { DEFAULT_WEBDAV_CONFIG } from "./fsWebdav";
-import { RemotelySaveSettingTab } from "./settings";
-import { messyConfigToNormal, normalConfigToMessy } from "./configPersist";
 import { I18n } from "./i18n";
 import type { LangTypeAndAuto, TransItemType } from "./i18n";
+import { importQrCodeUri } from "./importExport";
+import {
+  type InternalDBs,
+  clearAllLoggerOutputRecords,
+  clearExpiredSyncPlanRecords,
+  getLastSuccessSyncTimeByVault,
+  prepareDBs,
+  upsertLastSuccessSyncTimeByVault,
+  upsertPluginVersionByVault,
+} from "./localdb";
+import { RemotelySaveSettingTab } from "./settings";
 import { SyncAlgoV3Modal } from "./syncAlgoV3Notice";
 
 import AggregateError from "aggregate-error";
+import throttle from "lodash/throttle";
 import { exportVaultSyncPlansToFiles } from "./debugMode";
+import { FakeFsEncrypt } from "./fsEncrypt";
+import { getClient } from "./fsGetter";
+import { FakeFsLocal } from "./fsLocal";
+import { DEFAULT_WEBDIS_CONFIG } from "./fsWebdis";
 import { changeMobileStatusBar } from "./misc";
 import { Profiler } from "./profiler";
-import { FakeFsLocal } from "./fsLocal";
-import { FakeFsEncrypt } from "./fsEncrypt";
 import { syncer } from "./sync";
-import { getClient } from "./fsGetter";
-import throttle from "lodash/throttle";
-import { DEFAULT_WEBDIS_CONFIG } from "./fsWebdis";
 
 const DEFAULT_SETTINGS: RemotelySavePluginSettings = {
   s3: DEFAULT_S3_CONFIG,
@@ -331,7 +331,7 @@ export default class RemotelySavePlugin extends Plugin {
         // last step
         if (this.syncRibbon !== undefined) {
           setIcon(this.syncRibbon, iconNameSyncWait);
-          let originLabel = `${this.manifest.name}`;
+          const originLabel = `${this.manifest.name}`;
           this.syncRibbon.setAttribute("aria-label", originLabel);
         }
       }
@@ -535,7 +535,7 @@ export default class RemotelySavePlugin extends Plugin {
             return;
           }
 
-          let authRes = await sendAuthReqDropbox(
+          const authRes = await sendAuthReqDropbox(
             this.settings.dropbox.clientID,
             this.oauth2Info.verifier,
             inputParams.code,
@@ -620,7 +620,7 @@ export default class RemotelySavePlugin extends Plugin {
               });
           }
 
-          let rsp = await sendAuthReqOnedrive(
+          const rsp = await sendAuthReqOnedrive(
             this.settings.onedrive.clientID,
             this.settings.onedrive.authority,
             inputParams.code,
@@ -957,7 +957,7 @@ export default class RemotelySavePlugin extends Plugin {
   }
 
   async checkIfOauthExpires() {
-    let needSave: boolean = false;
+    let needSave = false;
     const current = Date.now();
 
     // fullfill old version settings
@@ -1298,7 +1298,7 @@ export default class RemotelySavePlugin extends Plugin {
         timeText = t("statusbar_now");
       }
 
-      let dateText = new Date(lastSuccessSyncMillis).toLocaleTimeString(
+      const dateText = new Date(lastSuccessSyncMillis).toLocaleTimeString(
         navigator.language,
         {
           weekday: "long",

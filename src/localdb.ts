@@ -4,9 +4,9 @@ extendPrototype(localforage);
 export type LocalForage = typeof localforage;
 import { nanoid } from "nanoid";
 
-import type { Entity, MixedEntity, SUPPORTED_SERVICES_TYPE } from "./baseTypes";
-import type { SyncPlanType } from "./sync";
+import type { Entity, SUPPORTED_SERVICES_TYPE } from "./baseTypes";
 import { unixTimeToStr } from "./misc";
+import type { SyncPlanType } from "./sync";
 
 const DB_VERSION_NUMBER_IN_HISTORY = [20211114, 20220108, 20220326, 20240220];
 export const DEFAULT_DB_VERSION_NUMBER: number = 20240220;
@@ -400,7 +400,7 @@ export const clearExpiredSyncPlanRecords = async (db: InternalDBs) => {
   const expiredTs = currTs - MILLISECONDS_OLD;
 
   let records = (await db.syncPlansTbl.keys()).map((key) => {
-    const ts = parseInt(key.split("\t")[1]);
+    const ts = Number.parseInt(key.split("\t")[1]);
     const expired = ts <= expiredTs;
     return {
       ts: ts,
@@ -542,7 +542,7 @@ export const insertProfilerResultByVault = async (
   // clear older one while writing
   const records = (await db.profilerResultsTbl.keys())
     .filter((x) => x.startsWith(`${vaultRandomID}\t`))
-    .map((x) => parseInt(x.split("\t")[1]));
+    .map((x) => Number.parseInt(x.split("\t")[1]));
   records.sort((a, b) => -(a - b)); // descending
   while (records.length > 5) {
     const ts = records.pop()!;
@@ -559,7 +559,7 @@ export const readAllProfilerResultsByVault = async (
     if (key.startsWith(`${vaultRandomID}\t`)) {
       records.push({
         val: value as string,
-        ts: parseInt(key.split("\t")[1]),
+        ts: Number.parseInt(key.split("\t")[1]),
       });
     }
   });

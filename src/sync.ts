@@ -1,5 +1,7 @@
+import AggregateError from "aggregate-error";
+import PQueue from "p-queue";
 import XRegExp from "xregexp";
-import {
+import type {
   ConflictActionType,
   EmptyFolderCleanType,
   Entity,
@@ -9,15 +11,19 @@ import {
   SyncDirectionType,
   SyncTriggerSourceType,
 } from "./baseTypes";
-import { FakeFs } from "./fsAll";
-import { FakeFsEncrypt } from "./fsEncrypt";
+import type { FakeFs } from "./fsAll";
+import type { FakeFsEncrypt } from "./fsEncrypt";
 import {
-  InternalDBs,
+  type InternalDBs,
   clearPrevSyncRecordByVaultAndProfile,
   getAllPrevSyncRecordsByVaultAndProfile,
   insertSyncPlanRecordByVault,
   upsertPrevSyncRecordByVaultAndProfile,
 } from "./localdb";
+import {
+  DEFAULT_FILE_NAME_FOR_METADATAONREMOTE,
+  DEFAULT_FILE_NAME_FOR_METADATAONREMOTE2,
+} from "./metadataOnRemote";
 import {
   atWhichLevel,
   getParentFolder,
@@ -25,13 +31,7 @@ import {
   isSpecialFolderNameToSkip,
   unixTimeToStr,
 } from "./misc";
-import { Profiler } from "./profiler";
-import {
-  DEFAULT_FILE_NAME_FOR_METADATAONREMOTE,
-  DEFAULT_FILE_NAME_FOR_METADATAONREMOTE2,
-} from "./metadataOnRemote";
-import AggregateError from "aggregate-error";
-import PQueue from "p-queue";
+import type { Profiler } from "./profiler";
 
 const copyEntityAndFixTimeFormat = (
   src: Entity,
