@@ -107,6 +107,11 @@ export type CipherMethodType = "rclone-base64" | "openssl-base64" | "unknown";
 
 export type QRExportType = "all_but_oauth2" | "dropbox" | "onedrive";
 
+export interface ProfilerConfig {
+  enablePrinting?: boolean;
+  recordSize?: boolean;
+}
+
 export interface RemotelySavePluginSettings {
   s3: S3Config;
   webdav: WebdavConfig;
@@ -140,6 +145,8 @@ export interface RemotelySavePluginSettings {
   enableMobileStatusBar?: boolean;
 
   encryptionMethod?: CipherMethodType;
+
+  profiler?: ProfilerConfig;
 
   /**
    * @deprecated

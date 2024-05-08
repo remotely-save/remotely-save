@@ -57,6 +57,7 @@ import {
   checkHasSpecialCharForDir,
   stringToFragment,
 } from "./misc";
+import { DEFAULT_PROFILER_CONFIG } from "./profiler";
 
 class PasswordModal extends Modal {
   plugin: RemotelySavePlugin;
@@ -2476,6 +2477,44 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
           );
           new Notice(t("settings_profiler_results_notice"));
         });
+      });
+
+    new Setting(debugDiv)
+      .setName(t("settings_profiler_enabledebugprint"))
+      .setDesc(t("settings_profiler_enabledebugprint_desc"))
+      .addDropdown((dropdown) => {
+        dropdown.addOption("enable", t("enable"));
+        dropdown.addOption("disable", t("disable"));
+        dropdown
+          .setValue(
+            this.plugin.settings.profiler?.enablePrinting ? "enable" : "disable"
+          )
+          .onChange(async (val: string) => {
+            if (this.plugin.settings.profiler === undefined) {
+              this.plugin.settings.profiler = DEFAULT_PROFILER_CONFIG;
+            }
+            this.plugin.settings.profiler.enablePrinting = val === "enable";
+            await this.plugin.saveSettings();
+          });
+      });
+
+    new Setting(debugDiv)
+      .setName(t("settings_profiler_recordsize"))
+      .setDesc(t("settings_profiler_recordsize_desc"))
+      .addDropdown((dropdown) => {
+        dropdown.addOption("enable", t("enable"));
+        dropdown.addOption("disable", t("disable"));
+        dropdown
+          .setValue(
+            this.plugin.settings.profiler?.recordSize ? "enable" : "disable"
+          )
+          .onChange(async (val: string) => {
+            if (this.plugin.settings.profiler === undefined) {
+              this.plugin.settings.profiler = DEFAULT_PROFILER_CONFIG;
+            }
+            this.plugin.settings.profiler.recordSize = val === "enable";
+            await this.plugin.saveSettings();
+          });
       });
 
     new Setting(debugDiv)

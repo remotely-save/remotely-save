@@ -62,7 +62,7 @@ import { getClient } from "./fsGetter";
 import { FakeFsLocal } from "./fsLocal";
 import { DEFAULT_WEBDIS_CONFIG } from "./fsWebdis";
 import { changeMobileStatusBar } from "./misc";
-import { Profiler } from "./profiler";
+import { DEFAULT_PROFILER_CONFIG, Profiler } from "./profiler";
 import { syncer } from "./sync";
 
 const DEFAULT_SETTINGS: RemotelySavePluginSettings = {
@@ -96,6 +96,7 @@ const DEFAULT_SETTINGS: RemotelySavePluginSettings = {
   obfuscateSettingFile: true,
   enableMobileStatusBar: false,
   encryptionMethod: "unknown",
+  profiler: DEFAULT_PROFILER_CONFIG,
 };
 
 interface OAuth2Info {
@@ -151,7 +152,11 @@ export default class RemotelySavePlugin extends Plugin {
   appContainerObserver?: MutationObserver;
 
   async syncRun(triggerSource: SyncTriggerSourceType = "manual") {
-    const profiler = new Profiler();
+    const profiler = new Profiler(
+      undefined,
+      this.settings.profiler?.enablePrinting ?? false,
+      this.settings.profiler?.recordSize ?? false
+    );
     const fsLocal = new FakeFsLocal(
       this.app.vault,
       this.settings.syncConfigDir ?? false,
@@ -938,6 +943,16 @@ export default class RemotelySavePlugin extends Plugin {
         // likely to be inherited from the old version
         this.settings.encryptionMethod = "openssl-base64";
       }
+    }
+
+    if (this.settings.profiler === undefined) {
+      this.settings.profiler = DEFAULT_PROFILER_CONFIG;
+    }
+    if (this.settings.profiler.enablePrinting === undefined) {
+      this.settings.profiler.enablePrinting = false;
+    }
+    if (this.settings.profiler.recordSize === undefined) {
+      this.settings.profiler.recordSize = false;
     }
 
     await this.saveSettings();

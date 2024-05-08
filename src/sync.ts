@@ -30,6 +30,7 @@ import {
   getParentFolder,
   isHiddenPath,
   isSpecialFolderNameToSkip,
+  roughSizeOfObject,
   unixTimeToStr,
 } from "./misc";
 import type { Profiler } from "./profiler";
@@ -158,6 +159,9 @@ const ensembleMixedEnties = async (
 ): Promise<SyncPlanType> => {
   profiler.addIndent();
   profiler.insert("ensembleMixedEnties: enter");
+  profiler.insertSize("sizeof localEntityList", localEntityList);
+  profiler.insertSize("sizeof prevSyncEntityList", prevSyncEntityList);
+  profiler.insertSize("sizeof remoteEntityList", remoteEntityList);
 
   const finalMappings: SyncPlanType = {};
 
@@ -187,6 +191,7 @@ const ensembleMixedEnties = async (
   }
 
   profiler.insert("ensembleMixedEnties: finish remote");
+  profiler.insertSize("sizeof finalMappings", finalMappings);
 
   if (Object.keys(finalMappings).length === 0 || localEntityList.length === 0) {
     // Special checking:
@@ -227,6 +232,7 @@ const ensembleMixedEnties = async (
   }
 
   profiler.insert("ensembleMixedEnties: finish prevSync");
+  profiler.insertSize("sizeof finalMappings", finalMappings);
 
   // local has to be last
   // because we want to get keyEnc based on the remote
@@ -260,6 +266,7 @@ const ensembleMixedEnties = async (
   }
 
   profiler.insert("ensembleMixedEnties: finish local");
+  profiler.insertSize("sizeof finalMappings", finalMappings);
 
   // console.debug("in the end of ensembleMixedEnties, finalMappings is:");
   // console.debug(finalMappings);
@@ -280,7 +287,9 @@ const getSyncPlanInplace = async (
   skipSizeLargerThan: number,
   conflictAction: ConflictActionType,
   syncDirection: SyncDirectionType,
-  profiler: Profiler
+  profiler: Profiler,
+  settings: RemotelySavePluginSettings,
+  triggerSource: SyncTriggerSourceType
 ) => {
   profiler.addIndent();
   profiler.insert("getSyncPlanInplace: enter");
@@ -289,10 +298,17 @@ const getSyncPlanInplace = async (
     (k1, k2) => k2.length - k1.length
   );
   profiler.insert("getSyncPlanInplace: finish sorting");
+  profiler.insertSize("sizeof sortedKeys", sortedKeys);
 
   const keptFolder = new Set<string>();
 
   for (let i = 0; i < sortedKeys.length; ++i) {
+    if (i % 100 === 0) {
+      profiler.insertSize(
+        `sizeof sortedKeys in the beginning of i=${i}`,
+        mixedEntityMappings
+      );
+    }
     const key = sortedKeys[i];
     const mixedEntry = mixedEntityMappings[key];
     const { local, prevSync, remote } = mixedEntry;
@@ -703,16 +719,28 @@ const getSyncPlanInplace = async (
   const currTimeFmt = unixTimeToStr(currTime);
   // because the path should not as / in the beginning,
   // we should be safe to add these keys:
+  const sizeofmixedEntityMappings = roughSizeOfObject(mixedEntityMappings);
   mixedEntityMappings["/$@meta"] = {
     key: "/$@meta", // don't mess up with the types
     sideNotes: {
-      version: "2024047 fs version",
+      version: "20240508 fs version",
       generateTime: currTime,
       generateTimeFmt: currTimeFmt,
+      service: settings.serviceType,
+      hasPassword: settings.password !== "",
+      syncConfigDir: settings.syncConfigDir,
+      conflictAction: conflictAction,
+      syncDirection: syncDirection,
+      triggerSource: triggerSource,
+      sizeof: sizeofmixedEntityMappings
     },
   };
 
   profiler.insert("getSyncPlanInplace: exit");
+  profiler.insertSize(
+    "sizeof mixedEntityMappings in the end of getSyncPlanInplace",
+    mixedEntityMappings
+  );
   profiler.removeIndent();
 
   return mixedEntityMappings;
@@ -1126,6 +1154,16 @@ export const doActualSync = async (
   console.debug(`realTotalCount: ${realTotalCount}`);
   profiler.insert("doActualSync: finish splitting steps");
 
+  profiler.insertSize(
+    "doActualSync: sizeof onlyMarkSyncedOps",
+    onlyMarkSyncedOps
+  );
+  profiler.insertSize(
+    "doActualSync: sizeof folderCreationOps",
+    folderCreationOps
+  );
+  profiler.insertSize("doActualSync: sizeof realTotalCount", deletionOps);
+
   console.debug(`protectModifyPercentage: ${protectModifyPercentage}`);
 
   if (
@@ -1375,7 +1413,9 @@ export async function syncer(
       settings.skipSizeLargerThan ?? -1,
       settings.conflictAction ?? "keep_newer",
       settings.syncDirection ?? "bidirectional",
-      profiler
+      profiler,
+      settings,
+      triggerSource
     );
     console.debug(`mixedEntityMappings:`);
     console.debug(mixedEntityMappings); // for debugging
