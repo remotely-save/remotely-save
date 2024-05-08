@@ -53,6 +53,7 @@
   "statusbar_time_lessminute": "一分钟之内同步",
   "statusbar_lastsync": "上一次同步于：{{time}}",
   "statusbar_syncing": "正在同步",
+  "statusbar_failed": "上次同步失败了",
   "statusbar_now": "刚同步完",
   "statusbar_lastsync_label": "上一次同步于：{{date}}",
   "statusbar_lastsync_never": "没触发过同步",

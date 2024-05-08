@@ -1283,11 +1283,17 @@ export async function syncer(
   notifyFunc?: (s: SyncTriggerSourceType, step: number) => Promise<any>,
   errNotifyFunc?: (s: SyncTriggerSourceType, error: Error) => Promise<any>,
   ribboonFunc?: (s: SyncTriggerSourceType, step: number) => Promise<any>,
-  statusBarFunc?: (s: SyncTriggerSourceType, step: number) => any,
+  statusBarFunc?: (
+    s: SyncTriggerSourceType,
+    step: number,
+    everythingOk: boolean
+  ) => any,
   callbackSyncProcess?: any
 ) {
   console.info(`startting sync.`);
   markIsSyncingFunc(true);
+
+  let everythingOk = true;
 
   let step = 0; // dry mode only
   await notifyFunc?.(triggerSource, step);
@@ -1295,14 +1301,14 @@ export async function syncer(
   step = 1;
   await notifyFunc?.(triggerSource, step);
   await ribboonFunc?.(triggerSource, step);
-  await statusBarFunc?.(triggerSource, step);
+  await statusBarFunc?.(triggerSource, step, everythingOk);
   profiler.insert("start big sync func");
 
   try {
     step = 2;
     await notifyFunc?.(triggerSource, step);
     await ribboonFunc?.(triggerSource, step);
-    await statusBarFunc?.(triggerSource, step);
+    await statusBarFunc?.(triggerSource, step, everythingOk);
     if (fsEncrypt.innerFs !== fsRemote) {
       throw Error(`your enc should has inner of the remote`);
     }
@@ -1317,7 +1323,7 @@ export async function syncer(
     step = 3;
     await notifyFunc?.(triggerSource, step);
     await ribboonFunc?.(triggerSource, step);
-    await statusBarFunc?.(triggerSource, step);
+    await statusBarFunc?.(triggerSource, step, everythingOk);
     const remoteEntityList = await fsEncrypt.walk();
     // console.debug(`remoteEntityList:`);
     // console.debug(remoteEntityList);
@@ -1326,7 +1332,7 @@ export async function syncer(
     step = 4;
     await notifyFunc?.(triggerSource, step);
     await ribboonFunc?.(triggerSource, step);
-    await statusBarFunc?.(triggerSource, step);
+    await statusBarFunc?.(triggerSource, step, everythingOk);
     const localEntityList = await fsLocal.walk();
     // console.debug(`localEntityList:`);
     // console.debug(localEntityList);
@@ -1335,7 +1341,7 @@ export async function syncer(
     step = 5;
     await notifyFunc?.(triggerSource, step);
     await ribboonFunc?.(triggerSource, step);
-    await statusBarFunc?.(triggerSource, step);
+    await statusBarFunc?.(triggerSource, step, everythingOk);
     const prevSyncEntityList = await getAllPrevSyncRecordsByVaultAndProfile(
       db,
       vaultRandomID,
@@ -1348,7 +1354,7 @@ export async function syncer(
     step = 6;
     await notifyFunc?.(triggerSource, step);
     await ribboonFunc?.(triggerSource, step);
-    await statusBarFunc?.(triggerSource, step);
+    await statusBarFunc?.(triggerSource, step, everythingOk);
     let mixedEntityMappings = await ensembleMixedEnties(
       localEntityList,
       prevSyncEntityList,
@@ -1391,7 +1397,7 @@ export async function syncer(
     if (triggerSource !== "dry") {
       await notifyFunc?.(triggerSource, step);
       await ribboonFunc?.(triggerSource, step);
-      await statusBarFunc?.(triggerSource, step);
+      await statusBarFunc?.(triggerSource, step, everythingOk);
       await doActualSync(
         mixedEntityMappings,
         fsLocal,
@@ -1409,13 +1415,14 @@ export async function syncer(
     } else {
       await notifyFunc?.(triggerSource, step);
       await ribboonFunc?.(triggerSource, step);
-      await statusBarFunc?.(triggerSource, step);
+      await statusBarFunc?.(triggerSource, step, everythingOk);
       profiler.insert(
         `finish step${step} (skip actual sync because of dry run)`
       );
     }
   } catch (error: any) {
     profiler.insert("start error branch");
+    everythingOk = false;
     await errNotifyFunc?.(triggerSource, error as Error);
 
     profiler.insert("finish error branch");
@@ -1429,7 +1436,7 @@ export async function syncer(
   step = 8;
   await notifyFunc?.(triggerSource, step);
   await ribboonFunc?.(triggerSource, step);
-  await statusBarFunc?.(triggerSource, step);
+  await statusBarFunc?.(triggerSource, step, everythingOk);
 
   console.info(`endding sync.`);
   markIsSyncingFunc(false);

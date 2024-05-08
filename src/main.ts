@@ -337,11 +337,15 @@ export default class RemotelySavePlugin extends Plugin {
       }
     };
 
-    const statusBarFunc = async (s: SyncTriggerSourceType, step: number) => {
+    const statusBarFunc = async (
+      s: SyncTriggerSourceType,
+      step: number,
+      everythingOk: boolean
+    ) => {
       if (step === 1) {
         // change status to "syncing..." on statusbar
         this.updateLastSuccessSyncMsg(-1);
-      } else if (step === 8) {
+      } else if (step === 8 && everythingOk) {
         const lastSuccessSyncMillis = Date.now();
         await upsertLastSuccessSyncTimeByVault(
           this.db,
@@ -349,6 +353,8 @@ export default class RemotelySavePlugin extends Plugin {
           lastSuccessSyncMillis
         );
         this.updateLastSuccessSyncMsg(lastSuccessSyncMillis);
+      } else if (!everythingOk) {
+        this.updateLastSuccessSyncMsg(-2); // magic number
       }
     };
 
@@ -1264,6 +1270,11 @@ export default class RemotelySavePlugin extends Plugin {
 
     if (lastSuccessSyncMillis !== undefined && lastSuccessSyncMillis === -1) {
       lastSyncMsg = t("statusbar_syncing");
+    }
+
+    if (lastSuccessSyncMillis !== undefined && lastSuccessSyncMillis === -2) {
+      lastSyncMsg = t("statusbar_failed");
+      lastSyncLabelMsg = t("statusbar_failed");
     }
 
     if (lastSuccessSyncMillis !== undefined && lastSuccessSyncMillis > 0) {

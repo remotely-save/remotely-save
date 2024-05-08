@@ -53,6 +53,7 @@
   "statusbar_time_lessminute": "Synced last minute ago",
   "statusbar_lastsync": "Synced {{time}} ago",
   "statusbar_syncing": "Syncing...",
+  "statusbar_failed": "Last sync failed",
   "statusbar_now": "Synced just now",
   "statusbar_lastsync_label": "Last successful Sync on {{date}}",
   "statusbar_lastsync_never": "Never Synced",
