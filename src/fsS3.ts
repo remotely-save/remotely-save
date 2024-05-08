@@ -22,6 +22,7 @@ import {
 import { requestTimeout } from "@smithy/fetch-http-handler/dist-es/request-timeout";
 import { type HttpRequest, HttpResponse } from "@smithy/protocol-http";
 import { buildQueryString } from "@smithy/querystring-builder";
+// biome-ignore lint/suspicious/noShadowRestrictedNames: <explanation>
 import AggregateError from "aggregate-error";
 import * as mime from "mime-types";
 import { Platform, type RequestUrlParam, requestUrl } from "obsidian";

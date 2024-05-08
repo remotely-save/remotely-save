@@ -134,7 +134,7 @@ export const fixEntityListCasesInplace = (entities: { key?: string }[]) => {
         caseMapping[newKey.toLocaleLowerCase()] = newKey;
         e.key = newKey;
         // console.log(JSON.stringify(caseMapping,null,2));
-        continue;
+        // continue;
       } else {
         throw Error(`${parentFolder} doesn't have cases record??`);
       }
@@ -145,7 +145,7 @@ export const fixEntityListCasesInplace = (entities: { key?: string }[]) => {
           .slice(-1)
           .join("/")}`;
         e.key = newKey;
-        continue;
+        // continue;
       } else {
         throw Error(`${parentFolder} doesn't have cases record??`);
       }

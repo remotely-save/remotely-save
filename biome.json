@@ -32,11 +32,23 @@
     "rules": {
       "recommended": true,
       "suspicious": {
-        "noExplicitAny": "off"
+        "noExplicitAny": "off",
+        "noPrototypeBuiltins": "off",
+        "noControlCharactersInRegex": "off"
       },
       "style": {
         "noUselessElse": "off",
-        "useNodejsImportProtocol": "off"
+        "useNodejsImportProtocol": "off",
+        "noUnusedTemplateLiteral": "off",
+        "useTemplate": "off",
+        "noNonNullAssertion": "off"
+      },
+      "performance": {
+        "noDelete": "off"
+      },
+      "complexity": {
+        "noForEach": "off",
+        "useLiteralKeys": "off"
       }
     }
   }

@@ -115,7 +115,7 @@ export const base64ToArrayBuffer = (b64text: string) => {
 };
 
 export const copyArrayBuffer = (src: ArrayBuffer) => {
-  var dst = new ArrayBuffer(src.byteLength);
+  const dst = new ArrayBuffer(src.byteLength);
   new Uint8Array(dst).set(new Uint8Array(src));
   return dst;
 };
@@ -254,9 +254,9 @@ export const getRandomIntInclusive = (min: number, max: number) => {
   const randomBuffer = new Uint32Array(1);
   window.crypto.getRandomValues(randomBuffer);
   const randomNumber = randomBuffer[0] / (0xffffffff + 1);
-  min = Math.ceil(min);
-  max = Math.floor(max);
-  return Math.floor(randomNumber * (max - min + 1)) + min;
+  const min2 = Math.ceil(min);
+  const max2 = Math.floor(max);
+  return Math.floor(randomNumber * (max2 - min2 + 1)) + min2;
 };
 
 /**
@@ -389,9 +389,8 @@ export const toText = (x: any) => {
 
   if (
     x instanceof Error ||
-    (x &&
-      x.stack &&
-      x.message &&
+    (x?.stack &&
+      x?.message &&
       typeof x.stack === "string" &&
       typeof x.message === "string")
   ) {
@@ -587,6 +586,7 @@ export const changeMobileStatusBar = (
     if (oldAppContainerObserver !== undefined) {
       console.debug(`disconnect oldAppContainerObserver`);
       oldAppContainerObserver.disconnect();
+      // biome-ignore lint/style/noParameterAssign: we want gc
       oldAppContainerObserver = undefined;
     }
     statusbar.style.removeProperty("display");
@@ -623,7 +623,6 @@ export const fixEntityListCasesInplace = (entities: { keyRaw: string }[]) => {
         caseMapping[newKeyRaw.toLocaleLowerCase()] = newKeyRaw;
         e.keyRaw = newKeyRaw;
         // console.log(JSON.stringify(caseMapping,null,2));
-        continue;
       } else {
         throw Error(`${parentFolder} doesn't have cases record??`);
       }
@@ -634,7 +633,6 @@ export const fixEntityListCasesInplace = (entities: { keyRaw: string }[]) => {
           .slice(-1)
           .join("/")}`;
         e.keyRaw = newKeyRaw;
-        continue;
       } else {
         throw Error(`${parentFolder} doesn't have cases record??`);
       }

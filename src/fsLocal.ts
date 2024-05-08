@@ -83,7 +83,7 @@ export class FakeFsLocal extends FakeFs {
       if (r.keyRaw.startsWith(DEFAULT_DEBUG_FOLDER)) {
         // skip listing the debug folder,
         // which should always not involved in sync
-        continue;
+        // continue;
       } else {
         local.push(r);
       }

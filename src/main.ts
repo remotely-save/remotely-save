@@ -53,6 +53,7 @@ import {
 import { RemotelySaveSettingTab } from "./settings";
 import { SyncAlgoV3Modal } from "./syncAlgoV3Notice";
 
+// biome-ignore lint/suspicious/noShadowRestrictedNames: <explanation>
 import AggregateError from "aggregate-error";
 import throttle from "lodash/throttle";
 import { exportVaultSyncPlansToFiles } from "./debugMode";
@@ -300,7 +301,6 @@ export default class RemotelySavePlugin extends Plugin {
 
         default:
           throw Error(`unknown step=${step} for showing notice`);
-          break;
       }
     };
 

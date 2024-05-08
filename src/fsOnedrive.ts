@@ -567,6 +567,7 @@ export class FakeFsOnedrive extends FakeFs {
     // TODO:
     // 20220401: On Android, requestUrl has issue that text becomes base64.
     // Use fetch everywhere instead!
+    // biome-ignore lint/correctness/noConstantCondition: hard code
     if (false /*VALID_REQURL*/) {
       const res = await requestUrl({
         url: theUrl,
@@ -617,6 +618,7 @@ export class FakeFsOnedrive extends FakeFs {
     // TODO:
     // 20220401: On Android, requestUrl has issue that text becomes base64.
     // Use fetch everywhere instead!
+    // biome-ignore lint/correctness/noConstantCondition: hard code
     if (false /*VALID_REQURL*/) {
       const res = await requestUrl({
         url: theUrl,

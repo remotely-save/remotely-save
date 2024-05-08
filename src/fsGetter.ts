@@ -17,37 +17,31 @@ export function getClient(
   switch (settings.serviceType) {
     case "s3":
       return new FakeFsS3(settings.s3);
-      break;
     case "webdav":
       return new FakeFsWebdav(
         settings.webdav,
         vaultName,
         saveUpdatedConfigFunc
       );
-      break;
     case "dropbox":
       return new FakeFsDropbox(
         settings.dropbox,
         vaultName,
         saveUpdatedConfigFunc
       );
-      break;
     case "onedrive":
       return new FakeFsOnedrive(
         settings.onedrive,
         vaultName,
         saveUpdatedConfigFunc
       );
-      break;
     case "webdis":
       return new FakeFsWebdis(
         settings.webdis,
         vaultName,
         saveUpdatedConfigFunc
       );
-      break;
     default:
       throw Error(`cannot init client for serviceType=${settings.serviceType}`);
-      break;
   }
 }
