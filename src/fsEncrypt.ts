@@ -273,9 +273,13 @@ export class FakeFsEncrypt extends FakeFs {
       return copyEntityAndCopyKeyEncSizeEnc(innerEntity);
     } else {
       const now = Date.now();
+      let content = new ArrayBuffer(0);
+      if (!this.innerFs.allowEmptyFile()) {
+        content = new ArrayBuffer(1);
+      }
       const innerEntity = await this.innerFs.writeFile(
         keyEnc,
-        new ArrayBuffer(0),
+        content,
         mtime ?? now,
         ctime ?? now
       );
@@ -553,5 +557,9 @@ export class FakeFsEncrypt extends FakeFs {
 
   async revokeAuth(): Promise<any> {
     return await this.innerFs.revokeAuth();
+  }
+
+  allowEmptyFile(): boolean {
+    return true;
   }
 }

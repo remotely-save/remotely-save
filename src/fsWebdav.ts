@@ -493,4 +493,8 @@ export class FakeFsWebdav extends FakeFs {
   async revokeAuth() {
     throw new Error("Method not implemented.");
   }
+
+  allowEmptyFile(): boolean {
+    return true;
+  }
 }

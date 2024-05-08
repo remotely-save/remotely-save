@@ -49,4 +49,8 @@ export class FakeFsMock extends FakeFs {
   async revokeAuth(): Promise<any> {
     throw new Error("Method not implemented.");
   }
+
+  allowEmptyFile(): boolean {
+    throw new Error("Method not implemented.");
+  }
 }

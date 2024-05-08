@@ -736,4 +736,8 @@ export class FakeFsDropbox extends FakeFs {
       return false;
     }
   }
+
+  allowEmptyFile(): boolean {
+    return true;
+  }
 }

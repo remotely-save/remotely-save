@@ -928,4 +928,8 @@ export class FakeFsOnedrive extends FakeFs {
   async getRevokeAddr() {
     return "https://account.live.com/consent/Manage";
   }
+
+  allowEmptyFile(): boolean {
+    return false;
+  }
 }

@@ -16,4 +16,5 @@ export abstract class FakeFs {
   abstract checkConnect(callbackFunc?: any): Promise<boolean>;
   abstract getUserDisplayName(): Promise<string>;
   abstract revokeAuth(): Promise<any>;
+  abstract allowEmptyFile(): boolean;
 }

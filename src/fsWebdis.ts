@@ -239,4 +239,8 @@ export class FakeFsWebdis extends FakeFs {
   async revokeAuth(): Promise<any> {
     throw new Error("Method not implemented.");
   }
+
+  allowEmptyFile(): boolean {
+    return true;
+  }
 }
