@@ -117,7 +117,7 @@
   "settings_password": "Encryption Password",
   "settings_password_desc": "Password for E2E encryption. Empty for no password. You need to click \"Confirm\". Attention: The password and other info are saved locally. After changing the password, you need to manually delete all files from the remote location and re-sync to upload the encrypted files again.",
   "settings_encryptionmethod": "Encryption Method",
-  "settings_encryptionmethod_desc": "Encryption method for E2E encryption. The RClone Crypt format is recommended,  although it does not encrypt the path structure. OpenSSL enc is the legacy format of this plugin. <b>Both are not affliated with the official RClone and OpenSSL products or communities.</b> Attention: After switching encryption methods, you need to manually delete all original files from the remote location and re-sync to upload the encrypted files again. More info is available in the <a href='https://github.com/remotely-save/remotely-save/tree/master/docs/encryption'>online doc</a>.",
+  "settings_encryptionmethod_desc": "Encryption method for E2E encryption. The RClone Crypt format is recommended, although it does not encrypt the path structure. OpenSSL enc is the legacy format of this plugin. <b>Both are not affliated with the official RClone and OpenSSL products or communities.</b> Attention: After switching encryption methods, you need to manually delete all original files from the remote location and re-sync to upload the encrypted files again. More info is available in the <a href='https://github.com/remotely-save/remotely-save/tree/master/docs/encryption'>online doc</a>.",
   "settings_encryptionmethod_rclone": "RClone Crypt (recommended)",
   "settings_encryptionmethod_openssl": "OpenSSL enc (legacy)",
 
