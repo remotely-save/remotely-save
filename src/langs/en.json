@@ -233,7 +233,7 @@
   "settings_webdav_password": "Password",
   "settings_webdav_password_desc": "Password. Attention: the password and other info are saved locally.",
   "settings_webdav_auth": "Auth Type",
-  "settings_webdav_auth_desc": "If no password is provided, this option will be ignored."
+  "settings_webdav_auth_desc": "If no password is provided, this option will be ignored.",
   "settings_webdav_depth": "Depth Header Sent To Servers",
   "settings_webdav_depth_desc": "Webdav servers should be configured to allow requests with header Depth being '1' or 'Infinity'. If you are not sure what's this, choose \"depth='1'\". If you are sure your server supports depth='infinity', please choose that to get way better performance.",
   "settings_webdav_depth_1": "only supports depth='1'",
