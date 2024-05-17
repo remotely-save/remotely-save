@@ -155,13 +155,13 @@ const ensembleMixedEnties = async (
   fsEncrypt: FakeFsEncrypt,
   serviceType: SUPPORTED_SERVICES_TYPE,
 
-  profiler: Profiler
+  profiler: Profiler | undefined
 ): Promise<SyncPlanType> => {
-  profiler.addIndent();
-  profiler.insert("ensembleMixedEnties: enter");
-  profiler.insertSize("sizeof localEntityList", localEntityList);
-  profiler.insertSize("sizeof prevSyncEntityList", prevSyncEntityList);
-  profiler.insertSize("sizeof remoteEntityList", remoteEntityList);
+  profiler?.addIndent();
+  profiler?.insert("ensembleMixedEnties: enter");
+  profiler?.insertSize("sizeof localEntityList", localEntityList);
+  profiler?.insertSize("sizeof prevSyncEntityList", prevSyncEntityList);
+  profiler?.insertSize("sizeof remoteEntityList", remoteEntityList);
 
   const finalMappings: SyncPlanType = {};
 
@@ -190,8 +190,8 @@ const ensembleMixedEnties = async (
     };
   }
 
-  profiler.insert("ensembleMixedEnties: finish remote");
-  profiler.insertSize("sizeof finalMappings", finalMappings);
+  profiler?.insert("ensembleMixedEnties: finish remote");
+  profiler?.insertSize("sizeof finalMappings", finalMappings);
 
   if (Object.keys(finalMappings).length === 0 || localEntityList.length === 0) {
     // Special checking:
@@ -231,8 +231,8 @@ const ensembleMixedEnties = async (
     }
   }
 
-  profiler.insert("ensembleMixedEnties: finish prevSync");
-  profiler.insertSize("sizeof finalMappings", finalMappings);
+  profiler?.insert("ensembleMixedEnties: finish prevSync");
+  profiler?.insertSize("sizeof finalMappings", finalMappings);
 
   // local has to be last
   // because we want to get keyEnc based on the remote
@@ -265,14 +265,14 @@ const ensembleMixedEnties = async (
     }
   }
 
-  profiler.insert("ensembleMixedEnties: finish local");
-  profiler.insertSize("sizeof finalMappings", finalMappings);
+  profiler?.insert("ensembleMixedEnties: finish local");
+  profiler?.insertSize("sizeof finalMappings", finalMappings);
 
   // console.debug("in the end of ensembleMixedEnties, finalMappings is:");
   // console.debug(finalMappings);
 
-  profiler.insert("ensembleMixedEnties: exit");
-  profiler.removeIndent();
+  profiler?.insert("ensembleMixedEnties: exit");
+  profiler?.removeIndent();
   return finalMappings;
 };
 
@@ -287,24 +287,24 @@ const getSyncPlanInplace = async (
   skipSizeLargerThan: number,
   conflictAction: ConflictActionType,
   syncDirection: SyncDirectionType,
-  profiler: Profiler,
+  profiler: Profiler | undefined,
   settings: RemotelySavePluginSettings,
   triggerSource: SyncTriggerSourceType
 ) => {
-  profiler.addIndent();
-  profiler.insert("getSyncPlanInplace: enter");
+  profiler?.addIndent();
+  profiler?.insert("getSyncPlanInplace: enter");
   // from long(deep) to short(shadow)
   const sortedKeys = Object.keys(mixedEntityMappings).sort(
     (k1, k2) => k2.length - k1.length
   );
-  profiler.insert("getSyncPlanInplace: finish sorting");
-  profiler.insertSize("sizeof sortedKeys", sortedKeys);
+  profiler?.insert("getSyncPlanInplace: finish sorting");
+  profiler?.insertSize("sizeof sortedKeys", sortedKeys);
 
   const keptFolder = new Set<string>();
 
   for (let i = 0; i < sortedKeys.length; ++i) {
     if (i % 100 === 0) {
-      profiler.insertSize(
+      profiler?.insertSize(
         `sizeof sortedKeys in the beginning of i=${i}`,
         mixedEntityMappings
       );
@@ -706,7 +706,7 @@ const getSyncPlanInplace = async (
     }
   }
 
-  profiler.insert("getSyncPlanInplace: finish looping");
+  profiler?.insert("getSyncPlanInplace: finish looping");
 
   keptFolder.delete("/");
   keptFolder.delete("");
@@ -736,12 +736,12 @@ const getSyncPlanInplace = async (
     },
   };
 
-  profiler.insert("getSyncPlanInplace: exit");
-  profiler.insertSize(
+  profiler?.insert("getSyncPlanInplace: exit");
+  profiler?.insertSize(
     "sizeof mixedEntityMappings in the end of getSyncPlanInplace",
     mixedEntityMappings
   );
-  profiler.removeIndent();
+  profiler?.removeIndent();
 
   return mixedEntityMappings;
 };
@@ -1130,11 +1130,11 @@ export const doActualSync = async (
   protectModifyPercentage: number,
   getProtectModifyPercentageErrorStrFunc: any,
   db: InternalDBs,
-  profiler: Profiler,
+  profiler: Profiler | undefined,
   callbackSyncProcess?: any
 ) => {
-  profiler.addIndent();
-  profiler.insert("doActualSync: enter");
+  profiler?.addIndent();
+  profiler?.insert("doActualSync: enter");
   console.debug(`concurrency === ${concurrency}`);
   const {
     onlyMarkSyncedOps,
@@ -1152,17 +1152,17 @@ export const doActualSync = async (
   console.debug(`allFilesCount: ${allFilesCount}`);
   console.debug(`realModifyDeleteCount: ${realModifyDeleteCount}`);
   console.debug(`realTotalCount: ${realTotalCount}`);
-  profiler.insert("doActualSync: finish splitting steps");
+  profiler?.insert("doActualSync: finish splitting steps");
 
-  profiler.insertSize(
+  profiler?.insertSize(
     "doActualSync: sizeof onlyMarkSyncedOps",
     onlyMarkSyncedOps
   );
-  profiler.insertSize(
+  profiler?.insertSize(
     "doActualSync: sizeof folderCreationOps",
     folderCreationOps
   );
-  profiler.insertSize("doActualSync: sizeof realTotalCount", deletionOps);
+  profiler?.insertSize("doActualSync: sizeof realTotalCount", deletionOps);
 
   console.debug(`protectModifyPercentage: ${protectModifyPercentage}`);
 
@@ -1187,8 +1187,8 @@ export const doActualSync = async (
         allFilesCount
       );
 
-      profiler.insert("doActualSync: error branch");
-      profiler.removeIndent();
+      profiler?.insert("doActualSync: error branch");
+      profiler?.removeIndent();
       throw Error(errorStr);
     }
   }
@@ -1208,8 +1208,8 @@ export const doActualSync = async (
 
   let realCounter = 0;
   for (let i = 0; i < nested.length; ++i) {
-    profiler.addIndent();
-    profiler.insert(`doActualSync: step ${i} start`);
+    profiler?.addIndent();
+    profiler?.insert(`doActualSync: step ${i} start`);
     console.debug(logTexts[i]);
 
     const operations = nested[i];
@@ -1282,12 +1282,12 @@ export const doActualSync = async (
       }
     }
 
-    profiler.insert(`doActualSync: step ${i} end`);
-    profiler.removeIndent();
+    profiler?.insert(`doActualSync: step ${i} end`);
+    profiler?.removeIndent();
   }
 
-  profiler.insert(`doActualSync: exit`);
-  profiler.removeIndent();
+  profiler?.insert(`doActualSync: exit`);
+  profiler?.removeIndent();
 };
 
 export type SyncStatusType =
@@ -1309,7 +1309,7 @@ export async function syncer(
   fsLocal: FakeFs,
   fsRemote: FakeFs,
   fsEncrypt: FakeFsEncrypt,
-  profiler: Profiler,
+  profiler: Profiler | undefined,
   db: InternalDBs,
   triggerSource: SyncTriggerSourceType,
   profileID: string,
@@ -1340,7 +1340,7 @@ export async function syncer(
   await notifyFunc?.(triggerSource, step);
   await ribboonFunc?.(triggerSource, step);
   await statusBarFunc?.(triggerSource, step, everythingOk);
-  profiler.insert("start big sync func");
+  profiler?.insert("start big sync func");
 
   try {
     step = 2;
@@ -1354,7 +1354,7 @@ export async function syncer(
     if (!passwordCheckResult.ok) {
       throw Error(passwordCheckResult.reason);
     }
-    profiler.insert(
+    profiler?.insert(
       `finish step${step} (list partial remote and check password)`
     );
 
@@ -1365,7 +1365,7 @@ export async function syncer(
     const remoteEntityList = await fsEncrypt.walk();
     // console.debug(`remoteEntityList:`);
     // console.debug(remoteEntityList);
-    profiler.insert(`finish step${step} (list remote)`);
+    profiler?.insert(`finish step${step} (list remote)`);
 
     step = 4;
     await notifyFunc?.(triggerSource, step);
@@ -1374,7 +1374,7 @@ export async function syncer(
     const localEntityList = await fsLocal.walk();
     // console.debug(`localEntityList:`);
     // console.debug(localEntityList);
-    profiler.insert(`finish step${step} (list local)`);
+    profiler?.insert(`finish step${step} (list local)`);
 
     step = 5;
     await notifyFunc?.(triggerSource, step);
@@ -1387,7 +1387,7 @@ export async function syncer(
     );
     // console.debug(`prevSyncEntityList:`);
     // console.debug(prevSyncEntityList);
-    profiler.insert(`finish step${step} (prev sync)`);
+    profiler?.insert(`finish step${step} (prev sync)`);
 
     step = 6;
     await notifyFunc?.(triggerSource, step);
@@ -1405,7 +1405,7 @@ export async function syncer(
       settings.serviceType,
       profiler
     );
-    profiler.insert(`finish step${step} (build partial mixedEntity)`);
+    profiler?.insert(`finish step${step} (build partial mixedEntity)`);
 
     mixedEntityMappings = await getSyncPlanInplace(
       mixedEntityMappings,
@@ -1419,7 +1419,7 @@ export async function syncer(
     );
     console.debug(`mixedEntityMappings:`);
     console.debug(mixedEntityMappings); // for debugging
-    profiler.insert("finish building full sync plan");
+    profiler?.insert("finish building full sync plan");
 
     await insertSyncPlanRecordByVault(
       db,
@@ -1427,8 +1427,8 @@ export async function syncer(
       vaultRandomID,
       settings.serviceType
     );
-    profiler.insert("finish writing sync plan");
-    profiler.insert(`finish step${step} (make plan)`);
+    profiler?.insert("finish writing sync plan");
+    profiler?.insert(`finish step${step} (make plan)`);
 
     // The operations above are almost read only and kind of safe.
     // The operations below begins to write or delete (!!!) something.
@@ -1451,27 +1451,27 @@ export async function syncer(
         profiler,
         callbackSyncProcess
       );
-      profiler.insert(`finish step${step} (actual sync)`);
+      profiler?.insert(`finish step${step} (actual sync)`);
     } else {
       await notifyFunc?.(triggerSource, step);
       await ribboonFunc?.(triggerSource, step);
       await statusBarFunc?.(triggerSource, step, everythingOk);
-      profiler.insert(
+      profiler?.insert(
         `finish step${step} (skip actual sync because of dry run)`
       );
     }
   } catch (error: any) {
-    profiler.insert("start error branch");
+    profiler?.insert("start error branch");
     everythingOk = false;
     await errNotifyFunc?.(triggerSource, error as Error);
 
-    profiler.insert("finish error branch");
+    profiler?.insert("finish error branch");
   } finally {
   }
 
-  profiler.insert("finish syncRun");
-  // console.debug(profiler.toString());
-  await profiler.save(db, vaultRandomID, settings.serviceType);
+  profiler?.insert("finish syncRun");
+  // console.debug(profiler?.toString());
+  await profiler?.save(db, vaultRandomID, settings.serviceType);
 
   step = 8;
   await notifyFunc?.(triggerSource, step);

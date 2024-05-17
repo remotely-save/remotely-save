@@ -62,7 +62,7 @@ import { getClient } from "./fsGetter";
 import { FakeFsLocal } from "./fsLocal";
 import { DEFAULT_WEBDIS_CONFIG } from "./fsWebdis";
 import { changeMobileStatusBar } from "./misc";
-import { DEFAULT_PROFILER_CONFIG, Profiler } from "./profiler";
+import { DEFAULT_PROFILER_CONFIG, type Profiler } from "./profiler";
 import { syncer } from "./sync";
 
 const DEFAULT_SETTINGS: RemotelySavePluginSettings = {
@@ -152,11 +152,12 @@ export default class RemotelySavePlugin extends Plugin {
   appContainerObserver?: MutationObserver;
 
   async syncRun(triggerSource: SyncTriggerSourceType = "manual") {
-    const profiler = new Profiler(
-      undefined,
-      this.settings.profiler?.enablePrinting ?? false,
-      this.settings.profiler?.recordSize ?? false
-    );
+    // const profiler = new Profiler(
+    //   undefined,
+    //   this.settings.profiler?.enablePrinting ?? false,
+    //   this.settings.profiler?.recordSize ?? false
+    // );
+    const profiler: Profiler | undefined = undefined;
     const fsLocal = new FakeFsLocal(
       this.app.vault,
       this.settings.syncConfigDir ?? false,
@@ -419,7 +420,7 @@ export default class RemotelySavePlugin extends Plugin {
     );
 
     fsEncrypt.closeResources();
-    profiler.clear();
+    (profiler as Profiler | undefined)?.clear();
 
     this.syncEvent?.trigger("SYNC_DONE");
   }
