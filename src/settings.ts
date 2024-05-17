@@ -1955,7 +1955,7 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
       .addDropdown((dropdown) => {
         dropdown.addOption("-1", t("settings_skiplargefiles_notset"));
 
-        const mbs = [1, 5, 10, 50, 100, 500, 1000];
+        const mbs = [1, 5, 10, 20, 50, 100, 200, 500, 1000];
         for (const mb of mbs) {
           dropdown.addOption(`${mb * 1000 * 1000}`, `${mb} MB`);
         }
