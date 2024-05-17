@@ -1,6 +1,8 @@
 import localforage from "localforage";
-import { extendPrototype } from "localforage-getitems";
-extendPrototype(localforage);
+import { extendPrototype as ep1 } from "localforage-getitems";
+import { extendPrototype as ep2 } from "localforage-removeitems";
+ep1(localforage);
+ep2(localforage);
 export type LocalForage = typeof localforage;
 import { nanoid } from "nanoid";
 
@@ -307,12 +309,15 @@ export const clearFileHistoryOfEverythingByVault = async (
   db: InternalDBs,
   vaultRandomID: string
 ) => {
-  const keys = await db.fileHistoryTbl.keys();
-  for (const key of keys) {
-    if (key.startsWith(`${vaultRandomID}\t`)) {
-      await db.fileHistoryTbl.removeItem(key);
-    }
-  }
+  const keys = (await db.fileHistoryTbl.keys()).filter((x) =>
+    x.startsWith(`${vaultRandomID}\t`)
+  );
+  await db.fileHistoryTbl.removeItems(keys);
+  // for (const key of keys) {
+  //   if (key.startsWith(`${vaultRandomID}\t`)) {
+  //     await db.fileHistoryTbl.removeItem(key);
+  //   }
+  // }
 };
 
 /**
@@ -339,12 +344,15 @@ export const clearAllSyncMetaMappingByVault = async (
   db: InternalDBs,
   vaultRandomID: string
 ) => {
-  const keys = await db.syncMappingTbl.keys();
-  for (const key of keys) {
-    if (key.startsWith(`${vaultRandomID}\t`)) {
-      await db.syncMappingTbl.removeItem(key);
-    }
-  }
+  const keys = (await db.syncMappingTbl.keys()).filter((x) =>
+    x.startsWith(`${vaultRandomID}\t`)
+  );
+  await db.syncMappingTbl.removeItems(keys);
+  // for (const key of keys) {
+  //   if (key.startsWith(`${vaultRandomID}\t`)) {
+  //     await db.syncMappingTbl.removeItem(key);
+  //   }
+  // }
 };
 
 export const insertSyncPlanRecordByVault = async (
@@ -422,11 +430,12 @@ export const clearExpiredSyncPlanRecords = async (db: InternalDBs) => {
     });
   }
 
-  const ps = [] as Promise<void>[];
-  keysToRemove.forEach((element) => {
-    ps.push(db.syncPlansTbl.removeItem(element));
-  });
-  await Promise.all(ps);
+  // const ps = [] as Promise<void>[];
+  // keysToRemove.forEach((element) => {
+  //   ps.push(db.syncPlansTbl.removeItem(element));
+  // });
+  // await Promise.all(ps);
+  await db.syncPlansTbl.removeItems(Array.from(keysToRemove));
 };
 
 export const getAllPrevSyncRecordsByVaultAndProfile = async (
@@ -475,12 +484,10 @@ export const clearAllPrevSyncRecordByVault = async (
   db: InternalDBs,
   vaultRandomID: string
 ) => {
-  const keys = await db.prevSyncRecordsTbl.keys();
-  for (const key of keys) {
-    if (key.startsWith(`${vaultRandomID}\t`)) {
-      await db.prevSyncRecordsTbl.removeItem(key);
-    }
-  }
+  const keys = (await db.prevSyncRecordsTbl.keys()).filter((x) =>
+    x.startsWith(`${vaultRandomID}\t`)
+  );
+  await db.prevSyncRecordsTbl.removeItems(keys);
 };
 
 export const clearAllLoggerOutputRecords = async (db: InternalDBs) => {
