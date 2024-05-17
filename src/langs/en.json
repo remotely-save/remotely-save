@@ -11,7 +11,7 @@
   "syncrun_step1": "1/8 Remotely Save is preparing ({{serviceType}})",
   "syncrun_step2": "2/8 Starting to fetch remote meta data and check password.",
   "syncrun_passworderr": "Something goes wrong while checking password.",
-  "syncrun_step3": "3/8 Startting to process remote data.",
+  "syncrun_step3": "3/8 Starting to process remote data.",
   "syncrun_step4": "4/8 Starting to fetch local meta data.",
   "syncrun_step5": "5/8 Starting to fetch local prev sync data.",
   "syncrun_step6": "6/8 Starting to generate sync plan.",
