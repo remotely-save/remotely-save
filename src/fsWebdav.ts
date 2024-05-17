@@ -55,11 +55,11 @@ if (VALID_REQURL) {
         retractedHeaders["authorization"] = "<retracted>";
       }
 
-      console.debug(`before request:`);
-      console.debug(`url: ${options.url}`);
-      console.debug(`method: ${options.method}`);
-      console.debug(`headers: ${JSON.stringify(retractedHeaders, null, 2)}`);
-      console.debug(`reqContentType: ${reqContentType}`);
+      // console.debug(`before request:`);
+      // console.debug(`url: ${options.url}`);
+      // console.debug(`method: ${options.method}`);
+      // console.debug(`headers: ${JSON.stringify(retractedHeaders, null, 2)}`);
+      // console.debug(`reqContentType: ${reqContentType}`);
 
       let r = await requestUrl({
         url: options.url,
@@ -92,9 +92,9 @@ if (VALID_REQURL) {
         });
       }
 
-      console.debug(`after request:`);
+      // console.debug(`after request:`);
       const rspHeaders = objKeyToLower({ ...r.headers });
-      console.debug(`rspHeaders: ${JSON.stringify(rspHeaders, null, 2)}`);
+      // console.debug(`rspHeaders: ${JSON.stringify(rspHeaders, null, 2)}`);
       for (const key in rspHeaders) {
         if (rspHeaders.hasOwnProperty(key)) {
           // avoid the error:
@@ -111,7 +111,7 @@ if (VALID_REQURL) {
           //   }
           // }
           if (!onlyAscii(rspHeaders[key])) {
-            console.debug(`rspHeaders[key] needs encode: ${key}`);
+            // console.debug(`rspHeaders[key] needs encode: ${key}`);
             rspHeaders[key] = encodeURIComponent(rspHeaders[key]);
           }
         }
@@ -119,7 +119,7 @@ if (VALID_REQURL) {
 
       let r2: Response | undefined = undefined;
       const statusText = getReasonPhrase(r.status);
-      console.debug(`statusText: ${statusText}`);
+      // console.debug(`statusText: ${statusText}`);
       if ([101, 103, 204, 205, 304].includes(r.status)) {
         // A null body status is a status that is 101, 103, 204, 205, or 304.
         // https://fetch.spec.whatwg.org/#statuses
