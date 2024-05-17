@@ -732,7 +732,7 @@ const getSyncPlanInplace = async (
       conflictAction: conflictAction,
       syncDirection: syncDirection,
       triggerSource: triggerSource,
-      sizeof: sizeofmixedEntityMappings
+      sizeof: sizeofmixedEntityMappings,
     },
   };
 
