@@ -109,6 +109,10 @@ export class FakeFsLocal extends FakeFs {
     return local;
   }
 
+  async walkPartial(): Promise<Entity[]> {
+    return await this.walk();
+  }
+
   async stat(key: string): Promise<Entity> {
     const statRes = await statFix(this.vault, key);
     if (statRes === undefined || statRes === null) {

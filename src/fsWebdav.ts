@@ -357,6 +357,19 @@ export class FakeFsWebdav extends FakeFs {
     return contents.map((x) => fromWebdavItemToEntity(x, this.remoteBaseDir));
   }
 
+  async walkPartial(): Promise<Entity[]> {
+    await this._init();
+
+    const contents = (await this.client.getDirectoryContents(
+      `/${this.remoteBaseDir}`,
+      {
+        deep: false, // partial, no need to recursive here
+        details: false /* no need for verbose details here */,
+      }
+    )) as FileStat[];
+    return contents.map((x) => fromWebdavItemToEntity(x, this.remoteBaseDir));
+  }
+
   async stat(key: string): Promise<Entity> {
     await this._init();
     const fullPath = getWebdavPath(key, this.remoteBaseDir);

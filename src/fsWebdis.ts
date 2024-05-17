@@ -133,6 +133,25 @@ export class FakeFsWebdis extends FakeFs {
     return res;
   }
 
+  async walkPartial(): Promise<Entity[]> {
+    let cursor = "0";
+    const res: Entity[] = [];
+    const command = `SCAN/${cursor}/MATCH/rs:fs:v1:*:meta/COUNT/10`; // fewer keys
+    const rsp = (await (await this._fetchCommand("GET", command)).json())[
+      "SCAN"
+    ];
+    // console.debug(rsp);
+    cursor = rsp[0];
+    for (const fullKeyWithMeta of rsp[1]) {
+      const realKey = getOrigPath(fullKeyWithMeta, this.remoteBaseDir);
+      res.push(await this.stat(realKey));
+    }
+    // no need to loop over cursor
+    // console.debug(`walk res:`);
+    // console.debug(res);
+    return res;
+  }
+
   async stat(key: string): Promise<Entity> {
     const fullKey = getWebdisPath(key, this.remoteBaseDir);
     return await this._statFromRaw(fullKey);

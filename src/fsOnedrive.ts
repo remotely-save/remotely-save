@@ -682,6 +682,31 @@ export class FakeFsOnedrive extends FakeFs {
     return unifiedContents;
   }
 
+  async walkPartial(): Promise<Entity[]> {
+    await this._init();
+
+    const DELTA_LINK_KEY = "@odata.deltaLink";
+
+    const res = await this._getJson(
+      `/drive/special/approot:/${this.remoteBaseDir}:/delta`
+    );
+    const driveItems = res.value as DriveItem[];
+    // console.debug(driveItems);
+
+    // lastly we should have delta link?
+    if (DELTA_LINK_KEY in res) {
+      this.onedriveConfig.deltaLink = res[DELTA_LINK_KEY];
+      await this.saveUpdatedConfigFunc();
+    }
+
+    // unify everything to Entity
+    const unifiedContents = driveItems
+      .map((x) => fromDriveItemToEntity(x, this.remoteBaseDir))
+      .filter((x) => x.key !== "/");
+
+    return unifiedContents;
+  }
+
   async stat(key: string): Promise<Entity> {
     await this._init();
     return await this._statFromRoot(getOnedrivePath(key, this.remoteBaseDir));

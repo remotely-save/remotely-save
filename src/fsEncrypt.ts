@@ -78,8 +78,6 @@ export class FakeFsEncrypt extends FakeFs {
   cacheMapOrigToEnc: Record<string, string>;
   hasCacheMap: boolean;
   kind: string;
-  innerWalkResultCache?: Entity[];
-  innerWalkResultCacheTime?: number;
 
   constructor(innerFs: FakeFs, password: string, method: CipherMethodType) {
     super();
@@ -110,26 +108,8 @@ export class FakeFsEncrypt extends FakeFs {
     throw Error(`no idea about isFolderAware for method=${this.method}`);
   }
 
-  /**
-   * we want a little caching here.
-   */
-  async _getInnerWalkResult(): Promise<Entity[]> {
-    let innerWalkResult: Entity[] | undefined = undefined;
-    if (
-      this.innerWalkResultCacheTime !== undefined &&
-      this.innerWalkResultCacheTime >= Date.now() - 1000
-    ) {
-      innerWalkResult = this.innerWalkResultCache!;
-    } else {
-      innerWalkResult = await this.innerFs.walk();
-      this.innerWalkResultCache = innerWalkResult;
-      this.innerWalkResultCacheTime = Date.now();
-    }
-    return innerWalkResult;
-  }
-
   async isPasswordOk(): Promise<PasswordCheckType> {
-    const innerWalkResult = await this._getInnerWalkResult();
+    const innerWalkResult = await this.walkPartial();
 
     if (innerWalkResult === undefined || innerWalkResult.length === 0) {
       // remote empty
@@ -186,8 +166,16 @@ export class FakeFsEncrypt extends FakeFs {
   }
 
   async walk(): Promise<Entity[]> {
-    const innerWalkResult = await this._getInnerWalkResult();
+    const innerWalkResult = await this.innerFs.walk();
+    return await this._dealWithWalk(innerWalkResult);
+  }
 
+  async walkPartial(): Promise<Entity[]> {
+    const innerWalkResult = await this.innerFs.walkPartial();
+    return await this._dealWithWalk(innerWalkResult);
+  }
+
+  async _dealWithWalk(innerWalkResult: Entity[]): Promise<Entity[]> {
     const res: Entity[] = [];
 
     if (this.isPasswordEmpty()) {

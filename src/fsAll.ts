@@ -3,6 +3,7 @@ import type { Entity } from "./baseTypes";
 export abstract class FakeFs {
   abstract kind: string;
   abstract walk(): Promise<Entity[]>;
+  abstract walkPartial(): Promise<Entity[]>;
   abstract stat(key: string): Promise<Entity>;
   abstract mkdir(key: string, mtime?: number, ctime?: number): Promise<Entity>;
   abstract writeFile(

@@ -399,9 +399,16 @@ export class FakeFsS3 extends FakeFs {
   }
 
   async walk(): Promise<Entity[]> {
-    const res = (await this._walkFromRoot(this.s3Config.remotePrefix)).filter(
-      (x) => x.key !== "" && x.key !== "/"
-    );
+    const res = (
+      await this._walkFromRoot(this.s3Config.remotePrefix, false)
+    ).filter((x) => x.key !== "" && x.key !== "/");
+    return res;
+  }
+
+  async walkPartial(): Promise<Entity[]> {
+    const res = (
+      await this._walkFromRoot(this.s3Config.remotePrefix, true)
+    ).filter((x) => x.key !== "" && x.key !== "/");
     return res;
   }
 
@@ -409,19 +416,23 @@ export class FakeFsS3 extends FakeFs {
    * the input key contains basedir (prefix),
    * but the result doesn't contain it.
    */
-  async _walkFromRoot(prefixOfRawKeys: string | undefined) {
+  async _walkFromRoot(prefixOfRawKeys: string | undefined, partial: boolean) {
     const confCmd = {
       Bucket: this.s3Config.s3BucketName,
     } as ListObjectsV2CommandInput;
     if (prefixOfRawKeys !== undefined && prefixOfRawKeys !== "") {
       confCmd.Prefix = prefixOfRawKeys;
     }
+    if (partial) {
+      confCmd.MaxKeys = 10; // no need to list more!
+    }
 
     const contents = [] as _Object[];
     const mtimeRecords: Record<string, number> = {};
     const ctimeRecords: Record<string, number> = {};
+    const partsConcurrency = partial ? 1 : this.s3Config.partsConcurrency;
     const queueHead = new PQueue({
-      concurrency: this.s3Config.partsConcurrency,
+      concurrency: partsConcurrency,
       autoStart: true,
     });
     queueHead.on("error", (error) => {
@@ -473,14 +484,20 @@ export class FakeFsS3 extends FakeFs {
         }
       }
 
-      isTruncated = rsp.IsTruncated ?? false;
-      confCmd.ContinuationToken = rsp.NextContinuationToken;
-      if (
-        isTruncated &&
-        (confCmd.ContinuationToken === undefined ||
-          confCmd.ContinuationToken === "")
-      ) {
-        throw Error("isTruncated is true but no continuationToken provided");
+      if (partial) {
+        // do not loop over
+        isTruncated = false;
+      } else {
+        // loop over
+        isTruncated = rsp.IsTruncated ?? false;
+        confCmd.ContinuationToken = rsp.NextContinuationToken;
+        if (
+          isTruncated &&
+          (confCmd.ContinuationToken === undefined ||
+            confCmd.ContinuationToken === "")
+        ) {
+          throw Error("isTruncated is true but no continuationToken provided");
+        }
       }
     } while (isTruncated);
 

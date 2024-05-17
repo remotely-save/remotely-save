@@ -13,6 +13,10 @@ export class FakeFsMock extends FakeFs {
     throw new Error("Method not implemented.");
   }
 
+  async walkPartial(): Promise<Entity[]> {
+    return await this.walk();
+  }
+
   async stat(key: string): Promise<Entity> {
     throw new Error("Method not implemented.");
   }

@@ -452,13 +452,21 @@ export class FakeFsDropbox extends FakeFs {
   }
 
   async walk(): Promise<Entity[]> {
+    return await this._walk(false);
+  }
+
+  async walkPartial(): Promise<Entity[]> {
+    return await this._walk(true);
+  }
+
+  async _walk(partial: boolean): Promise<Entity[]> {
     await this._init();
 
     let res = await this.dropbox.filesListFolder({
       path: `/${this.remoteBaseDir}`,
-      recursive: true,
+      recursive: !partial,
       include_deleted: false,
-      limit: 1000,
+      limit: partial ? 10 : 1000,
     });
     if (res.status !== 200) {
       throw Error(JSON.stringify(res));
@@ -471,20 +479,22 @@ export class FakeFsDropbox extends FakeFs {
       .filter((x) => x.path_display !== `/${this.remoteBaseDir}`)
       .map((x) => fromDropboxItemToEntity(x, this.remoteBaseDir));
 
-    while (res.result.has_more) {
-      res = await this.dropbox.filesListFolderContinue({
-        cursor: res.result.cursor,
-      });
-      if (res.status !== 200) {
-        throw Error(JSON.stringify(res));
-      }
+    if (!partial) {
+      while (res.result.has_more) {
+        res = await this.dropbox.filesListFolderContinue({
+          cursor: res.result.cursor,
+        });
+        if (res.status !== 200) {
+          throw Error(JSON.stringify(res));
+        }
 
-      const contents2 = res.result.entries;
-      const unifiedContents2 = contents2
-        .filter((x) => x[".tag"] !== "deleted")
-        .filter((x) => x.path_display !== `/${this.remoteBaseDir}`)
-        .map((x) => fromDropboxItemToEntity(x, this.remoteBaseDir));
-      unifiedContents.push(...unifiedContents2);
+        const contents2 = res.result.entries;
+        const unifiedContents2 = contents2
+          .filter((x) => x[".tag"] !== "deleted")
+          .filter((x) => x.path_display !== `/${this.remoteBaseDir}`)
+          .map((x) => fromDropboxItemToEntity(x, this.remoteBaseDir));
+        unifiedContents.push(...unifiedContents2);
+      }
     }
 
     fixEntityListCasesInplace(unifiedContents);
