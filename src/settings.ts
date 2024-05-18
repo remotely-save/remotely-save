@@ -1419,6 +1419,20 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
       });
 
     new Setting(onedriveDiv)
+      .setName(t("settings_onedrive_emptyfile"))
+      .setDesc(t("settings_onedrive_emptyfile_desc"))
+      .addDropdown(async (dropdown) => {
+        dropdown
+          .addOption("skip", t("settings_onedrive_emptyfile_skip"))
+          .addOption("error", t("settings_onedrive_emptyfile_error"))
+          .setValue(this.plugin.settings.onedrive.emptyFile)
+          .onChange(async (val) => {
+            this.plugin.settings.onedrive.emptyFile = val as any;
+            await this.plugin.saveSettings();
+          });
+      });
+
+    new Setting(onedriveDiv)
       .setName(t("settings_checkonnectivity"))
       .setDesc(t("settings_checkonnectivity_desc"))
       .addButton(async (button) => {

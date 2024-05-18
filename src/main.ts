@@ -855,6 +855,9 @@ export default class RemotelySavePlugin extends Plugin {
     if (this.settings.onedrive.remoteBaseDir === undefined) {
       this.settings.onedrive.remoteBaseDir = "";
     }
+    if (this.settings.onedrive.emptyFile === undefined) {
+      this.settings.onedrive.emptyFile = "skip";
+    }
     if (this.settings.webdav.manualRecursive === undefined) {
       this.settings.webdav.manualRecursive = true;
     }

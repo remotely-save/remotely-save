@@ -89,6 +89,7 @@ export interface OnedriveConfig {
   username: string;
   credentialsShouldBeDeletedAtTime?: number;
   remoteBaseDir?: string;
+  emptyFile: "skip" | "error";
 }
 
 export interface WebdisConfig {
@@ -230,6 +231,7 @@ export interface Entity {
   hash?: string;
   etag?: string;
   synthesizedFolder?: boolean;
+  synthesizedFile?: boolean;
 }
 
 export interface UploadedType {

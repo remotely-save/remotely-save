@@ -32,6 +32,7 @@ export const DEFAULT_ONEDRIVE_CONFIG: OnedriveConfig = {
   deltaLink: "",
   username: "",
   credentialsShouldBeDeletedAtTime: 0,
+  emptyFile: "skip",
 };
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -344,6 +345,7 @@ const fromDriveItemToEntity = (x: DriveItem, remoteBaseDir: string): Entity => {
     mtimeCli: mtimeCli,
     size: isFolder ? 0 : x.size!,
     sizeRaw: isFolder ? 0 : x.size!,
+    synthesizedFile: false,
     // hash: ?? // TODO
   };
 };
@@ -785,7 +787,8 @@ export class FakeFsOnedrive extends FakeFs {
       content,
       mtime,
       ctime,
-      key
+      key,
+      this.onedriveConfig.emptyFile
     );
   }
 
@@ -794,12 +797,26 @@ export class FakeFsOnedrive extends FakeFs {
     content: ArrayBuffer,
     mtime: number,
     ctime: number,
-    origKey: string
+    origKey: string,
+    emptyFile: "skip" | "error"
   ): Promise<Entity> {
     if (content.byteLength === 0) {
-      throw Error(
-        `${origKey}: Empty file is not allowed in OneDrive, and please write something in it.`
-      );
+      if (emptyFile === "error") {
+        throw Error(
+          `${origKey}: Empty file is not allowed in OneDrive, and please write something in it.`
+        );
+      } else {
+        return {
+          key: origKey,
+          keyRaw: origKey,
+          mtimeSvr: mtime,
+          mtimeCli: mtime,
+          size: 0,
+          sizeRaw: 0,
+          synthesizedFile: true,
+          // hash: ?? // TODO
+        };
+      }
     }
 
     const ctimeStr = new Date(ctime).toISOString();
