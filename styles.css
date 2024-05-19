@@ -82,6 +82,7 @@
   font-weight: bolder;
 }
 
-.setting-need-wrapping-mobile .setting-item-control {
-  flex-wrap: wrap;
+.setting-need-wrapping .setting-item-control {
+  /* flex-wrap: wrap; */
+  display: grid;
 }

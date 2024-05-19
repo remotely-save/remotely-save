@@ -2261,13 +2261,12 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
     importExportDiv.createEl("h2", {
       text: t("settings_importexport"),
     });
-    if (Platform.isMobile) {
-      importExportDiv.addClass("setting-need-wrapping-mobile");
-    }
 
-    new Setting(importExportDiv)
+    const importExportDivSetting1 = new Setting(importExportDiv)
       .setName(t("settings_export"))
-      .setDesc(t("settings_export_desc"))
+      .setDesc(t("settings_export_desc"));
+    importExportDivSetting1.settingEl.addClass("setting-need-wrapping");
+    importExportDivSetting1
       .addButton(async (button) => {
         button.setButtonText(t("settings_export_all_but_oauth2_button"));
         button.onClick(async () => {
@@ -2413,9 +2412,11 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
       .setName(t("settings_viewconsolelog"))
       .setDesc(stringToFragment(t("settings_viewconsolelog_desc")));
 
-    new Setting(debugDiv)
+    const debugDivExportSyncPlans = new Setting(debugDiv)
       .setName(t("settings_syncplans"))
-      .setDesc(t("settings_syncplans_desc"))
+      .setDesc(t("settings_syncplans_desc"));
+    debugDivExportSyncPlans.settingEl.addClass("setting-need-wrapping");
+    debugDivExportSyncPlans
       .addButton(async (button) => {
         button.setButtonText(t("settings_syncplans_button_1_only_change"));
         button.onClick(async () => {
