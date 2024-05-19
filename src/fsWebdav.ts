@@ -773,8 +773,6 @@ export class FakeFsWebdav extends FakeFs {
 
     try {
       await this._init();
-      const c = await this.client.getDAVCompliance(`/${this.remoteBaseDir}/`);
-      console.debug(c);
       const results = await this._statFromRoot(`/${this.remoteBaseDir}/`);
       if (results === undefined) {
         const err = "results is undefined";
