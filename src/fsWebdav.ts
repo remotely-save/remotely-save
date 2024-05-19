@@ -563,10 +563,10 @@ export class FakeFsWebdav extends FakeFs {
     console.debug(`finish creating folder`);
 
     // upload by chunks
-    const size_6mb = 6 * 1024 * 1024;
+    const size_5mb = 5 * 1024 * 1024;
     let tmpFileIdx = 1; // a number between 1 and 10000
     let startInclusive = 0;
-    let endInclusive = Math.min(size_6mb, content.byteLength);
+    let endInclusive = Math.min(size_5mb, content.byteLength);
     do {
       const tmpFileName = `${tmpFileIdx}`.padStart(5, "0");
       const tmpFileNameWithFolder = `${tmpFolder}/${tmpFileName}`;
@@ -584,8 +584,8 @@ export class FakeFsWebdav extends FakeFs {
         }
       );
       tmpFileIdx += 1;
-      startInclusive = Math.min(startInclusive + size_6mb, content.byteLength);
-      endInclusive = Math.min(endInclusive + size_6mb, content.byteLength);
+      startInclusive = Math.min(startInclusive + size_5mb, content.byteLength);
+      endInclusive = Math.min(endInclusive + size_5mb, content.byteLength);
     } while (startInclusive < content.byteLength);
     console.debug(`finish upload all chunks`);
 
@@ -663,9 +663,9 @@ export class FakeFsWebdav extends FakeFs {
     await this._writeFileFromRootFull(key, new ArrayBuffer(0), mtime, ctime);
 
     // then "update" by chunks
-    const size_6mb = 6 * 1024 * 1024;
+    const size_5mb = 5 * 1024 * 1024;
     let startInclusive = 0;
-    let endInclusive = Math.min(size_6mb, content.byteLength);
+    let endInclusive = Math.min(size_5mb, content.byteLength);
     do {
       await this.client.partialUpdateFileContents(
         key,
@@ -674,8 +674,8 @@ export class FakeFsWebdav extends FakeFs {
         content.slice(startInclusive, endInclusive - 1)
       );
 
-      startInclusive = Math.min(startInclusive + size_6mb, content.byteLength);
-      endInclusive = Math.min(endInclusive + size_6mb, content.byteLength);
+      startInclusive = Math.min(startInclusive + size_5mb, content.byteLength);
+      endInclusive = Math.min(endInclusive + size_5mb, content.byteLength);
     } while (startInclusive < content.byteLength);
 
     // lastly return
