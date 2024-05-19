@@ -459,8 +459,10 @@ export class FakeFsWebdav extends FakeFs {
     mtime?: number,
     ctime?: number
   ): Promise<Entity> {
+    // the sync algorithm should do recursive manually already.
+    // if we set recursive: true here, Digest auth will return some error inside the PROPFIND
     await this.client.createDirectory(key, {
-      recursive: true,
+      recursive: false,
     });
     return await this._statFromRoot(key);
   }
@@ -531,7 +533,13 @@ export class FakeFsWebdav extends FakeFs {
       // throw e;
       this.isNextcloud = false;
       this.supportNativePartial = false;
-      return await this._writeFileFromRootFull(key, content, mtime, ctime, origKey);
+      return await this._writeFileFromRootFull(
+        key,
+        content,
+        mtime,
+        ctime,
+        origKey
+      );
     }
   }
 
