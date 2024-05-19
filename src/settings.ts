@@ -2417,13 +2417,27 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
       .setName(t("settings_syncplans"))
       .setDesc(t("settings_syncplans_desc"))
       .addButton(async (button) => {
+        button.setButtonText(t("settings_syncplans_button_1_only_change"));
+        button.onClick(async () => {
+          await exportVaultSyncPlansToFiles(
+            this.plugin.db,
+            this.app.vault,
+            this.plugin.vaultRandomID,
+            1,
+            true
+          );
+          new Notice(t("settings_syncplans_notice"));
+        });
+      })
+      .addButton(async (button) => {
         button.setButtonText(t("settings_syncplans_button_1"));
         button.onClick(async () => {
           await exportVaultSyncPlansToFiles(
             this.plugin.db,
             this.app.vault,
             this.plugin.vaultRandomID,
-            1
+            1,
+            false
           );
           new Notice(t("settings_syncplans_notice"));
         });
@@ -2435,7 +2449,8 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
             this.plugin.db,
             this.app.vault,
             this.plugin.vaultRandomID,
-            5
+            5,
+            false
           );
           new Notice(t("settings_syncplans_notice"));
         });
@@ -2447,7 +2462,8 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
             this.plugin.db,
             this.app.vault,
             this.plugin.vaultRandomID,
-            -1
+            -1,
+            false
           );
           new Notice(t("settings_syncplans_notice"));
         });

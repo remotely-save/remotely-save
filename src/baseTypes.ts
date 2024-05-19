@@ -252,6 +252,8 @@ export interface MixedEntity {
   decision?: DecisionTypeForMixedEntity;
   conflictAction?: ConflictActionType;
 
+  change?: boolean;
+
   sideNotes?: any;
 }
 

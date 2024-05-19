@@ -11,12 +11,30 @@ import {
 } from "./localdb";
 import type { InternalDBs } from "./localdb";
 import { mkdirpInVault } from "./misc";
+import type { SyncPlanType } from "./sync";
+
+const getSubsetOfSyncPlan = (x: string, onlyChange: boolean) => {
+  if (!onlyChange) {
+    return x;
+  }
+  const y: SyncPlanType = JSON.parse(x);
+  const z: SyncPlanType = Object.fromEntries(
+    Object.entries(y).filter(([key, val]) => {
+      if (key === "/$@meta") {
+        return true;
+      }
+      return val.change === undefined || val.change === true;
+    })
+  );
+  return JSON.stringify(z, null, 2);
+};
 
 export const exportVaultSyncPlansToFiles = async (
   db: InternalDBs,
   vault: Vault,
   vaultRandomID: string,
-  howMany: number
+  howMany: number,
+  onlyChange: boolean
 ) => {
   console.info("exporting sync plans");
   await mkdirpInVault(DEFAULT_DEBUG_FOLDER, vault);
@@ -28,12 +46,18 @@ export const exportVaultSyncPlansToFiles = async (
     if (howMany <= 0) {
       md =
         "Sync plans found:\n\n" +
-        records.map((x) => "```json\n" + x + "\n```\n").join("\n");
+        records
+          .map(
+            (x) => "```json\n" + getSubsetOfSyncPlan(x, onlyChange) + "\n```\n"
+          )
+          .join("\n");
     } else {
       md =
         "Sync plans found:\n\n" +
         records
-          .map((x) => "```json\n" + x + "\n```\n")
+          .map(
+            (x) => "```json\n" + getSubsetOfSyncPlan(x, onlyChange) + "\n```\n"
+          )
           .slice(0, howMany)
           .join("\n");
     }

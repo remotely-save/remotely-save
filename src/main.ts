@@ -746,6 +746,22 @@ export default class RemotelySavePlugin extends Plugin {
     });
 
     this.addCommand({
+      id: "export-sync-plans-1-only-change",
+      name: t("command_exportsyncplans_1_only_change"),
+      icon: iconNameLogs,
+      callback: async () => {
+        await exportVaultSyncPlansToFiles(
+          this.db,
+          this.app.vault,
+          this.vaultRandomID,
+          1,
+          true
+        );
+        new Notice(t("settings_syncplans_notice"));
+      },
+    });
+
+    this.addCommand({
       id: "export-sync-plans-1",
       name: t("command_exportsyncplans_1"),
       icon: iconNameLogs,
@@ -754,7 +770,8 @@ export default class RemotelySavePlugin extends Plugin {
           this.db,
           this.app.vault,
           this.vaultRandomID,
-          1
+          1,
+          false
         );
         new Notice(t("settings_syncplans_notice"));
       },
@@ -769,7 +786,8 @@ export default class RemotelySavePlugin extends Plugin {
           this.db,
           this.app.vault,
           this.vaultRandomID,
-          5
+          5,
+          false
         );
         new Notice(t("settings_syncplans_notice"));
       },
@@ -784,7 +802,8 @@ export default class RemotelySavePlugin extends Plugin {
           this.db,
           this.app.vault,
           this.vaultRandomID,
-          -1
+          -1,
+          false
         );
         new Notice(t("settings_syncplans_notice"));
       },
