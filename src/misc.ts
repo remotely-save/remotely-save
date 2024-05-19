@@ -679,3 +679,34 @@ export const roughSizeOfObject = (object: any) => {
   }
   return bytes;
 };
+
+export const splitFileSizeToChunkRanges = (
+  totalSize: number,
+  chunkSize: number
+) => {
+  if (totalSize < 0) {
+    throw Error(`totalSize should not be negative`);
+  } 
+  if (chunkSize <= 0) {
+    throw Error(`chunkSize should not be negative or zero`);
+  }
+
+  if (totalSize === 0) {
+    return [];
+  }
+  if (totalSize <= chunkSize) {
+    return [{ start: 0, end: totalSize - 1 }];
+  }
+
+  const res: { start: number; end: number }[] = [];
+
+  const blocksCount = Math.ceil((totalSize * 1.0) / chunkSize);
+
+  for (let i = 0; i < blocksCount; ++i) {
+    res.push({
+      start: i * chunkSize,
+      end: Math.min((i + 1) * chunkSize - 1, totalSize - 1),
+    });
+  }
+  return res;
+};

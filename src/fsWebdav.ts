@@ -17,7 +17,7 @@ import type {
 import type { Entity, WebdavConfig } from "./baseTypes";
 import { VALID_REQURL } from "./baseTypesObs";
 import { FakeFs } from "./fsAll";
-import { bufferToArrayBuffer, delay } from "./misc";
+import { bufferToArrayBuffer, delay, splitFileSizeToChunkRanges } from "./misc";
 
 /**
  * https://stackoverflow.com/questions/32850898/how-to-check-if-a-string-has-any-non-iso-8859-1-characters-with-javascript
@@ -550,7 +550,7 @@ export class FakeFsWebdav extends FakeFs {
     ctime: number,
     origKey: string
   ): Promise<Entity> {
-    console.debug(`start _writeFileFromRootFull`);
+    // console.debug(`start _writeFileFromRootFull`);
     await this.client.putFileContents(key, content, {
       overwrite: true,
       onUploadProgress: (progress: any) => {
@@ -558,7 +558,7 @@ export class FakeFsWebdav extends FakeFs {
       },
     });
     const k = await this._statFromRoot(key);
-    console.debug(`end _writeFileFromRootFull`);
+    // console.debug(`end _writeFileFromRootFull`);
     return k;
   }
 
@@ -623,19 +623,23 @@ export class FakeFsWebdav extends FakeFs {
     console.debug(`finish creating folder`);
 
     // upload by chunks
-    const size_5mb = 5 * 1024 * 1024;
-    let tmpFileIdx = 1; // a number between 1 and 10000
-    let startInclusive = 0;
-    let endInclusive = Math.min(size_5mb, content.byteLength);
-    do {
-      const tmpFileName = `${tmpFileIdx}`.padStart(5, "0");
+    const sizePerChunk = 5 * 1024 * 1024; // 5 mb
+    const chunkRanges = splitFileSizeToChunkRanges(
+      content.byteLength,
+      sizePerChunk
+    );
+    for (let i = 0; i < chunkRanges.length; ++i) {
+      const { start, end } = chunkRanges[i];
+      const tmpFileName = `${i + 1}`.padStart(5, "0");
       const tmpFileNameWithFolder = `${tmpFolder}/${tmpFileName}`;
       console.debug(
-        `start to upload chunk ${tmpFileIdx} to ${tmpFileNameWithFolder} with startInclusive=${startInclusive}, endInclusive=${endInclusive}`
+        `start to upload chunk ${
+          i + 1
+        } to ${tmpFileNameWithFolder} with startInclusive=${start}, endInclusive=${end}`
       );
       await this.client.putFileContents(
         tmpFileNameWithFolder,
-        content.slice(startInclusive, endInclusive - 1),
+        content.slice(start, end + 1),
         {
           headers: {
             Destination: destUrl,
@@ -643,10 +647,7 @@ export class FakeFsWebdav extends FakeFs {
           },
         }
       );
-      tmpFileIdx += 1;
-      startInclusive = Math.min(startInclusive + size_5mb, content.byteLength);
-      endInclusive = Math.min(endInclusive + size_5mb, content.byteLength);
-    } while (startInclusive < content.byteLength);
+    }
     console.debug(`finish upload all chunks`);
 
     // move to assemble
@@ -710,20 +711,20 @@ export class FakeFsWebdav extends FakeFs {
     );
 
     // then "update" by chunks
-    const size_5mb = 5 * 1024 * 1024;
-    let startInclusive = 0;
-    let endInclusive = Math.min(size_5mb, content.byteLength);
-    do {
+    const sizePerChunk = 5 * 1024 * 1024; // 5 mb
+    const chunkRanges = splitFileSizeToChunkRanges(
+      content.byteLength,
+      sizePerChunk
+    );
+    for (let i = 0; i < chunkRanges.length; ++i) {
+      const { start, end } = chunkRanges[i];
       await this.client.partialUpdateFileContents(
         key,
-        startInclusive,
-        endInclusive,
-        content.slice(startInclusive, endInclusive - 1)
+        start,
+        end,
+        content.slice(start, end + 1)
       );
-
-      startInclusive = Math.min(startInclusive + size_5mb, content.byteLength);
-      endInclusive = Math.min(endInclusive + size_5mb, content.byteLength);
-    } while (startInclusive < content.byteLength);
+    }
 
     // lastly return
     return await this.stat(origKey);

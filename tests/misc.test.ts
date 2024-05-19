@@ -286,6 +286,83 @@ describe("Misc: special char for dir", () => {
   });
 });
 
+describe("Misc: split chunk ranges", () => {
+  it("should fail on negative numner", () => {
+    assert.throws(() => misc.splitFileSizeToChunkRanges(-1, 2));
+    assert.throws(() => misc.splitFileSizeToChunkRanges(1, -1));
+    assert.throws(() => misc.splitFileSizeToChunkRanges(1, 0));
+  });
+
+  it("should return nothing for 0 input", () => {
+    let input: [number, number] = [0, 1];
+    let output: any = [];
+    assert.deepStrictEqual(output, misc.splitFileSizeToChunkRanges(...input));
+
+    input = [0, 100];
+    output = [];
+    assert.deepStrictEqual(output, misc.splitFileSizeToChunkRanges(...input));
+  });
+
+  it("should return single item for 1 input", () => {
+    let input: [number, number] = [1, 1];
+    let output = [{ start: 0, end: 0 }];
+    assert.deepStrictEqual(output, misc.splitFileSizeToChunkRanges(...input));
+
+    input = [1, 100];
+    output = [{ start: 0, end: 0 }];
+    assert.deepStrictEqual(output, misc.splitFileSizeToChunkRanges(...input));
+  });
+
+  it("should return single item for larger or equal input", () => {
+    let input: [number, number] = [10, 10];
+    let output = [{ start: 0, end: 9 }];
+    assert.deepStrictEqual(output, misc.splitFileSizeToChunkRanges(...input));
+
+    input = [10, 21];
+    output = [{ start: 0, end: 9 }];
+    assert.deepStrictEqual(output, misc.splitFileSizeToChunkRanges(...input));
+  });
+
+  it("should return correct items for normal input", () => {
+    let input: [number, number] = [10, 9];
+    let output = [
+      { start: 0, end: 8 },
+      { start: 9, end: 9 },
+    ];
+    assert.deepStrictEqual(output, misc.splitFileSizeToChunkRanges(...input));
+
+    input = [10, 5];
+    output = [
+      { start: 0, end: 4 },
+      { start: 5, end: 9 },
+    ];
+    assert.deepStrictEqual(output, misc.splitFileSizeToChunkRanges(...input));
+
+    input = [3, 1];
+    output = [
+      { start: 0, end: 0 },
+      { start: 1, end: 1 },
+      { start: 2, end: 2 },
+    ];
+    assert.deepStrictEqual(output, misc.splitFileSizeToChunkRanges(...input));
+
+    input = [15, 5];
+    output = [
+      { start: 0, end: 4 },
+      { start: 5, end: 9 },
+      { start: 10, end: 14 },
+    ];
+    assert.deepStrictEqual(output, misc.splitFileSizeToChunkRanges(...input));
+
+    input = [1024, 578];
+    output = [
+      { start: 0, end: 577 },
+      { start: 578, end: 1023 },
+    ];
+    assert.deepStrictEqual(output, misc.splitFileSizeToChunkRanges(...input));
+  });
+});
+
 describe("Misc: Dropbox: should fix the folder name cases", () => {
   it("should do nothing on empty folders", () => {
     const input: any[] = [];
