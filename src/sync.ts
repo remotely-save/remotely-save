@@ -950,12 +950,21 @@ async function copyFile(
   }
 
   // console.debug(`copyFile: about to start right.writeFile`);
-  return await right.writeFile(
-    key,
-    content,
-    statsLeft.mtimeCli,
-    statsLeft.mtimeCli /* TODO */
-  );
+  if (typeof (content as any).transfer === "function") {
+    return await right.writeFile(
+      key,
+      (content as any).transfer(),
+      statsLeft.mtimeCli,
+      statsLeft.mtimeCli /* TODO */
+    );
+  } else {
+    return await right.writeFile(
+      key,
+      content,
+      statsLeft.mtimeCli,
+      statsLeft.mtimeCli /* TODO */
+    );
+  }
 }
 
 async function copyFileOrFolder(

@@ -4,8 +4,9 @@ import { getReasonPhrase } from "http-status-codes/build/cjs/utils-functions";
 import chunk from "lodash/chunk";
 import cloneDeep from "lodash/cloneDeep";
 import flatten from "lodash/flatten";
+import isString from "lodash/isString";
 import { nanoid } from "nanoid";
-import { Platform, requestUrl } from "obsidian";
+import { Platform, type RequestUrlParam, requestUrl } from "obsidian";
 import type {
   FileStat,
   RequestOptionsWithState,
@@ -16,7 +17,7 @@ import type {
 import type { Entity, WebdavConfig } from "./baseTypes";
 import { VALID_REQURL } from "./baseTypesObs";
 import { FakeFs } from "./fsAll";
-import { bufferToArrayBuffer } from "./misc";
+import { bufferToArrayBuffer, delay } from "./misc";
 
 /**
  * https://stackoverflow.com/questions/32850898/how-to-check-if-a-string-has-any-non-iso-8859-1-characters-with-javascript
@@ -62,14 +63,29 @@ if (VALID_REQURL) {
       // console.debug(`headers: ${JSON.stringify(retractedHeaders, null, 2)}`);
       // console.debug(`reqContentType: ${reqContentType}`);
 
-      let r = await requestUrl({
+      const p: RequestUrlParam = {
         url: options.url,
         method: options.method,
-        body: options.data as string | ArrayBuffer,
+        // body: options.data as string | ArrayBuffer,
         headers: transformedHeaders,
         contentType: reqContentType,
         throw: false,
-      });
+      };
+      if (
+        options.data === undefined ||
+        options.data === null ||
+        isString(options.data)
+      ) {
+        p.body = options.data;
+      } else {
+        if (typeof (options.data as any).transfer === "function") {
+          p.body = (options.data as any).transfer();
+        } else {
+          p.body = options.data as ArrayBuffer;
+        }
+      }
+
+      let r = await requestUrl(p);
 
       if (
         r.status === 401 &&
@@ -83,14 +99,8 @@ if (VALID_REQURL) {
         // if a folder doesn't exist without slash, the servers return 401 instead of 404
         // here is a dirty hack that works
         console.debug(`so we have 401, try appending request url with slash`);
-        r = await requestUrl({
-          url: `${options.url}/`,
-          method: options.method,
-          body: options.data as string | ArrayBuffer,
-          headers: transformedHeaders,
-          contentType: reqContentType,
-          throw: false,
-        });
+        p.url = `${options.url}/`;
+        r = await requestUrl(p);
       }
 
       // console.debug(`after request:`);
@@ -539,7 +549,7 @@ export class FakeFsWebdav extends FakeFs {
     }
     const destUrl = `${this.webdavConfig.address}/${encodeURI(key)}`;
     console.debug(`destUrl=${destUrl}`);
-    const tmpFolder = `_${key}-${nanoid()}`;
+    const tmpFolder = `${key}-${nanoid()}`;
     console.debug(`tmpFolder=${tmpFolder}`);
     const tmpFolderUrl = `${this.webdavConfig.address}/${encodeURI(tmpFolder)}`;
     console.debug(`tmpFolderUrl=${tmpFolderUrl}`);
@@ -598,23 +608,47 @@ export class FakeFsWebdav extends FakeFs {
         `while assembling chunks of nextcloud, some errors occur but we ignore them:`
       );
       console.error(e);
+
+      // wait for a few time!
+      await delay(1000);
     }
     // TODO: setting X-OC-Mtime
 
+    // wait for anything broken??
+    await delay(1000);
+
+    // clean up!
+    console.debug(`try to clean up`);
+    try {
+      // tmpFileIdx -= 1;
+      // do {
+      //   const tmpFileName = `${tmpFileIdx}`.padStart(5, "0");
+      //   const tmpFileNameWithFolder = `${tmpFolder}/${tmpFileName}`;
+
+      //   await this.client.deleteFile(tmpFileNameWithFolder);
+      //   tmpFileIdx -= 1;
+      // } while (tmpFileIdx > 0);
+      await this.client.deleteFile(tmpFolder);
+      console.debug(`finish clean up`);
+    } catch (e) {
+      console.error(
+        `while cleaning chunks of nextcloud, some errors occur but we ignore them:`
+      );
+      console.error(e);
+    }
+
     // stat
+    console.debug(`before stat key=${key}`);
     const k = await this._statFromRoot(key);
+    console.debug(`after stat`);
     if (k.sizeRaw !== content.byteLength) {
       // we failed!
       this.isNextcloud = false; // give up next time!
-      throw Error(`unable to upload file ${key} by chunks to nextcloud`);
+      const err = `unable to upload file ${key} by chunks to nextcloud`;
+      console.error(err);
+      throw Error(err);
     }
-
-    // clean up!
-    try {
-      await this.client.deleteFile(tmpFolder);
-    } catch (e) {
-      // the folde might exist or not, still ignore the error
-    }
+    console.debug(`after stat, k=${JSON.stringify(k, null, 2)}`);
 
     return k;
   }
