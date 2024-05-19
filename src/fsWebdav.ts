@@ -476,18 +476,31 @@ export class FakeFsWebdav extends FakeFs {
     }
     await this._init();
     const uploadFile = getWebdavPath(key, this.remoteBaseDir);
-    return await this._writeFileFromRoot(uploadFile, content, mtime, ctime);
+    return await this._writeFileFromRoot(
+      uploadFile,
+      content,
+      mtime,
+      ctime,
+      key
+    );
   }
 
   async _writeFileFromRoot(
     key: string,
     content: ArrayBuffer,
     mtime: number,
-    ctime: number
+    ctime: number,
+    origKey: string
   ): Promise<Entity> {
     // less than 10 MB
     if (content.byteLength <= 10 * 1024 * 1024) {
-      return await this._writeFileFromRootFull(key, content, mtime, ctime);
+      return await this._writeFileFromRootFull(
+        key,
+        content,
+        mtime,
+        ctime,
+        origKey
+      );
     }
 
     // larger than 10 MB, try to upload by chunks
@@ -497,19 +510,28 @@ export class FakeFsWebdav extends FakeFs {
           key,
           content,
           mtime,
-          ctime
+          ctime,
+          origKey
         );
       } else if (this.supportNativePartial) {
         return await this._writeFileFromRootNativePartial(
           key,
           content,
           mtime,
-          ctime
+          ctime,
+          origKey
         );
       }
       throw Error(`no partial upload / update`);
     } catch (e) {
-      return await this._writeFileFromRootFull(key, content, mtime, ctime);
+      console.error(
+        `we fail to write file partially, so downgrade to full and ignore the error:`
+      );
+      console.error(e);
+      // throw e;
+      this.isNextcloud = false;
+      this.supportNativePartial = false;
+      return await this._writeFileFromRootFull(key, content, mtime, ctime, origKey);
     }
   }
 
@@ -517,15 +539,19 @@ export class FakeFsWebdav extends FakeFs {
     key: string,
     content: ArrayBuffer,
     mtime: number,
-    ctime: number
+    ctime: number,
+    origKey: string
   ): Promise<Entity> {
+    console.debug(`start _writeFileFromRootFull`);
     await this.client.putFileContents(key, content, {
       overwrite: true,
       onUploadProgress: (progress: any) => {
         console.info(`Uploaded ${progress.loaded} bytes of ${progress.total}`);
       },
     });
-    return await this._statFromRoot(key);
+    const k = await this._statFromRoot(key);
+    console.debug(`end _writeFileFromRootFull`);
+    return k;
   }
 
   /**
@@ -540,7 +566,8 @@ export class FakeFsWebdav extends FakeFs {
     key: string,
     content: ArrayBuffer,
     mtime: number,
-    ctime: number
+    ctime: number,
+    origKey: string
   ): Promise<Entity> {
     if (key.endsWith("/")) {
       throw Error(
@@ -549,7 +576,21 @@ export class FakeFsWebdav extends FakeFs {
     }
     const destUrl = `${this.webdavConfig.address}/${encodeURI(key)}`;
     console.debug(`destUrl=${destUrl}`);
-    const tmpFolder = `${key}-${nanoid()}`;
+
+    const getTmpFolder = (x: string) => {
+      const y = x.split("/");
+      y[y.length - 1] = `${y[y.length - 1]}-${nanoid()}`;
+      const nodot = y.join("/");
+      y[y.length - 1] = `.${y[y.length - 1]}`;
+      const withdot = y.join("/");
+      return {
+        withdot: withdot,
+        nodot: nodot,
+      };
+    };
+    const tmpFolders = getTmpFolder(key);
+    const tmpFolder = tmpFolders.withdot;
+    const tmpFolderNoDot = tmpFolders.nodot;
     console.debug(`tmpFolder=${tmpFolder}`);
     const tmpFolderUrl = `${this.webdavConfig.address}/${encodeURI(tmpFolder)}`;
     console.debug(`tmpFolderUrl=${tmpFolderUrl}`);
@@ -560,6 +601,17 @@ export class FakeFsWebdav extends FakeFs {
         Destination: destUrl,
       },
     });
+    try {
+      const tmpFolderResult = await this.client.stat(tmpFolder);
+    } catch (e) {
+      // not exists??
+      try {
+        // try to clean no dot folder
+        await this.client.deleteFile(tmpFolderNoDot);
+      } catch (e2) {}
+      this.isNextcloud = false;
+      throw Error(`cannot create hidden file into nextcloud: ${tmpFolder}`);
+    }
     console.debug(`finish creating folder`);
 
     // upload by chunks
@@ -590,28 +642,16 @@ export class FakeFsWebdav extends FakeFs {
     console.debug(`finish upload all chunks`);
 
     // move to assemble
-    try {
-      const fakeFileToMoveUrl = `${tmpFolderUrl}/.file`;
-      console.debug(`fakeFileToMoveUrl=${fakeFileToMoveUrl}`);
-      await this.client.customRequest(fakeFileToMoveUrl, {
-        method: "MOVE",
-        headers: {
-          Destination: destUrl,
-          "OC-Total-Length": `${content.byteLength}`,
-        },
-      });
-      console.debug(`finish moving file`);
-    } catch (e) {
-      // sometimes the server returns 404 but actually it works,
-      // we ignore the error.
-      console.error(
-        `while assembling chunks of nextcloud, some errors occur but we ignore them:`
-      );
-      console.error(e);
-
-      // wait for a few time!
-      await delay(1000);
-    }
+    const fakeFileToMoveUrl = `${tmpFolderUrl}/.file`;
+    console.debug(`fakeFileToMoveUrl=${fakeFileToMoveUrl}`);
+    await this.client.customRequest(fakeFileToMoveUrl, {
+      method: "MOVE",
+      headers: {
+        Destination: destUrl,
+        "OC-Total-Length": `${content.byteLength}`,
+      },
+    });
+    console.debug(`finish moving file`);
     // TODO: setting X-OC-Mtime
 
     // wait for anything broken??
@@ -620,14 +660,6 @@ export class FakeFsWebdav extends FakeFs {
     // clean up!
     console.debug(`try to clean up`);
     try {
-      // tmpFileIdx -= 1;
-      // do {
-      //   const tmpFileName = `${tmpFileIdx}`.padStart(5, "0");
-      //   const tmpFileNameWithFolder = `${tmpFolder}/${tmpFileName}`;
-
-      //   await this.client.deleteFile(tmpFileNameWithFolder);
-      //   tmpFileIdx -= 1;
-      // } while (tmpFileIdx > 0);
       await this.client.deleteFile(tmpFolder);
       console.debug(`finish clean up`);
     } catch (e) {
@@ -638,8 +670,8 @@ export class FakeFsWebdav extends FakeFs {
     }
 
     // stat
-    console.debug(`before stat key=${key}`);
-    const k = await this._statFromRoot(key);
+    console.debug(`before stat origKey=${origKey}`);
+    const k = await this.stat(origKey);
     console.debug(`after stat`);
     if (k.sizeRaw !== content.byteLength) {
       // we failed!
@@ -657,10 +689,17 @@ export class FakeFsWebdav extends FakeFs {
     key: string,
     content: ArrayBuffer,
     mtime: number,
-    ctime: number
+    ctime: number,
+    origKey: string
   ): Promise<Entity> {
     // firstly upload a 0-byte data
-    await this._writeFileFromRootFull(key, new ArrayBuffer(0), mtime, ctime);
+    await this._writeFileFromRootFull(
+      key,
+      new ArrayBuffer(0),
+      mtime,
+      ctime,
+      origKey
+    );
 
     // then "update" by chunks
     const size_5mb = 5 * 1024 * 1024;
@@ -679,7 +718,7 @@ export class FakeFsWebdav extends FakeFs {
     } while (startInclusive < content.byteLength);
 
     // lastly return
-    return await this._statFromRoot(key);
+    return await this.stat(origKey);
   }
 
   async readFile(key: string): Promise<ArrayBuffer> {
