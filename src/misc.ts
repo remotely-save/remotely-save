@@ -686,7 +686,7 @@ export const splitFileSizeToChunkRanges = (
 ) => {
   if (totalSize < 0) {
     throw Error(`totalSize should not be negative`);
-  } 
+  }
   if (chunkSize <= 0) {
     throw Error(`chunkSize should not be negative or zero`);
   }

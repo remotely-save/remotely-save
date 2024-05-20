@@ -233,6 +233,7 @@ export class FakeFsWebdav extends FakeFs {
 
   supportNativePartial: boolean;
   isNextcloud: boolean;
+  nextcloudUploadServerAddress: string;
 
   constructor(
     webdavConfig: WebdavConfig,
@@ -249,6 +250,7 @@ export class FakeFsWebdav extends FakeFs {
 
     this.supportNativePartial = false;
     this.isNextcloud = false;
+    this.nextcloudUploadServerAddress = "";
   }
 
   async _init() {
@@ -322,21 +324,50 @@ export class FakeFsWebdav extends FakeFs {
     await this._checkPartialSupport();
   }
 
+  _getnextcloudUploadServerAddress = () => {
+    const s = this.webdavConfig.address.split("/");
+    if (
+      s.length > 3 &&
+      s[s.length - 3] === "dav" &&
+      s[s.length - 2] === "files" &&
+      s[s.length - 1] !== ""
+    ) {
+      s[s.length - 2] = "uploads";
+      return s.join("/");
+    }
+    throw Error(`cannot construct upload address for ${s}`);
+  };
+
   async _checkPartialSupport() {
     const compliance = await this.client.getDAVCompliance(
       `/${this.remoteBaseDir}/`
     );
 
     for (const c of compliance.compliance) {
+      // nextcloud AND with an account
       if (
         c.toLocaleLowerCase().includes("nextcloud") &&
         this.webdavConfig.username !== "" &&
         this.webdavConfig.password !== ""
       ) {
-        // nextcloud AND with an account
-        this.isNextcloud = true;
-        console.debug(`isNextcloud=true`);
-        return true;
+        // the address is parsable
+        const s = this.webdavConfig.address.split("/");
+        if (
+          s.length > 3 &&
+          s[s.length - 3] === "dav" &&
+          s[s.length - 2] === "files" &&
+          s[s.length - 1] !== ""
+        ) {
+          this.isNextcloud = true;
+          this.nextcloudUploadServerAddress =
+            this._getnextcloudUploadServerAddress();
+          console.debug(
+            `isNextcloud=${this.isNextcloud}, uploadFolder=${this.nextcloudUploadServerAddress}`
+          );
+          return true;
+        } else {
+          return false;
+        }
       }
     }
 
@@ -530,16 +561,16 @@ export class FakeFsWebdav extends FakeFs {
         `we fail to write file partially, so downgrade to full and ignore the error:`
       );
       console.error(e);
-      // throw e;
-      this.isNextcloud = false;
-      this.supportNativePartial = false;
-      return await this._writeFileFromRootFull(
-        key,
-        content,
-        mtime,
-        ctime,
-        origKey
-      );
+      throw e;
+      // this.isNextcloud = false;
+      // this.supportNativePartial = false;
+      // return await this._writeFileFromRootFull(
+      //   key,
+      //   content,
+      //   mtime,
+      //   ctime,
+      //   origKey
+      // );
     }
   }
 
@@ -586,40 +617,38 @@ export class FakeFsWebdav extends FakeFs {
     console.debug(`destUrl=${destUrl}`);
 
     const getTmpFolder = (x: string) => {
+      if (x.endsWith("/")) {
+        throw Error(`file to upload by chunk should not ends with /`);
+      }
       const y = x.split("/");
-      y[y.length - 1] = `${y[y.length - 1]}-${nanoid()}`;
-      const nodot = y.join("/");
-      y[y.length - 1] = `.${y[y.length - 1]}`;
-      const withdot = y.join("/");
-      return {
-        withdot: withdot,
-        nodot: nodot,
-      };
+      const z = encodeURI(`${y[y.length - 1]}`);
+      return z;
     };
-    const tmpFolders = getTmpFolder(key);
-    const tmpFolder = tmpFolders.withdot;
-    const tmpFolderNoDot = tmpFolders.nodot;
-    console.debug(`tmpFolder=${tmpFolder}`);
-    const tmpFolderUrl = `${this.webdavConfig.address}/${encodeURI(tmpFolder)}`;
-    console.debug(`tmpFolderUrl=${tmpFolderUrl}`);
+
+    const uploadServerAddress = this.nextcloudUploadServerAddress;
+    console.debug(`uploadServerAddress=${uploadServerAddress}`);
+    const tmpFolderName = getTmpFolder(key);
+    console.debug(`tmpFolderName=${tmpFolderName}`);
+
+    const clientForUpload = createClient(uploadServerAddress, {
+      username: this.webdavConfig.username,
+      password: this.webdavConfig.password,
+      headers: {
+        "Cache-Control": "no-cache",
+      },
+      authType:
+        this.webdavConfig.authType === "digest"
+          ? AuthType.Digest
+          : AuthType.Password,
+    });
 
     // create folder
-    await this.client.createDirectory(tmpFolder, {
+    await clientForUpload.createDirectory(tmpFolderName, {
+      method: "MKCOL",
       headers: {
         Destination: destUrl,
       },
     });
-    try {
-      const tmpFolderResult = await this.client.stat(tmpFolder);
-    } catch (e) {
-      // not exists??
-      try {
-        // try to clean no dot folder
-        await this.client.deleteFile(tmpFolderNoDot);
-      } catch (e2) {}
-      this.isNextcloud = false;
-      throw Error(`cannot create hidden file into nextcloud: ${tmpFolder}`);
-    }
     console.debug(`finish creating folder`);
 
     // upload by chunks
@@ -631,13 +660,13 @@ export class FakeFsWebdav extends FakeFs {
     for (let i = 0; i < chunkRanges.length; ++i) {
       const { start, end } = chunkRanges[i];
       const tmpFileName = `${i + 1}`.padStart(5, "0");
-      const tmpFileNameWithFolder = `${tmpFolder}/${tmpFileName}`;
+      const tmpFileNameWithFolder = `${tmpFolderName}/${tmpFileName}`;
       console.debug(
         `start to upload chunk ${
           i + 1
         } to ${tmpFileNameWithFolder} with startInclusive=${start}, endInclusive=${end}`
       );
-      await this.client.putFileContents(
+      await clientForUpload.putFileContents(
         tmpFileNameWithFolder,
         content.slice(start, end + 1),
         {
@@ -651,9 +680,9 @@ export class FakeFsWebdav extends FakeFs {
     console.debug(`finish upload all chunks`);
 
     // move to assemble
-    const fakeFileToMoveUrl = `${tmpFolderUrl}/.file`;
+    const fakeFileToMoveUrl = `${tmpFolderName}/.file`;
     console.debug(`fakeFileToMoveUrl=${fakeFileToMoveUrl}`);
-    await this.client.customRequest(fakeFileToMoveUrl, {
+    await clientForUpload.customRequest(fakeFileToMoveUrl, {
       method: "MOVE",
       headers: {
         Destination: destUrl,
@@ -662,21 +691,6 @@ export class FakeFsWebdav extends FakeFs {
     });
     console.debug(`finish moving file`);
     // TODO: setting X-OC-Mtime
-
-    // wait for anything broken??
-    await delay(1000);
-
-    // clean up!
-    console.debug(`try to clean up`);
-    try {
-      await this.client.deleteFile(tmpFolder);
-      console.debug(`finish clean up`);
-    } catch (e) {
-      console.error(
-        `while cleaning chunks of nextcloud, some errors occur but we ignore them:`
-      );
-      console.error(e);
-    }
 
     // stat
     console.debug(`before stat origKey=${origKey}`);
