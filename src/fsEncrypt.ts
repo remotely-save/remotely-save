@@ -87,7 +87,9 @@ export class FakeFsEncrypt extends FakeFs {
     this.cacheMapOrigToEnc = {};
     this.hasCacheMap = false;
 
-    this.kind = `encrypt(${this.innerFs.kind},${method})`;
+    this.kind = `encrypt(${this.innerFs.kind},${
+      this.password !== "" ? method : "no password"
+    })`;
 
     if (method === "rclone-base64") {
       this.cipherRClone = new rclone.CipherRclone(password, 5);
