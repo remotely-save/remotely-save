@@ -422,7 +422,20 @@ export class FakeFsWebdav extends FakeFs {
               // glob: "/**" /* avoid dot files by using glob */,
             }) as Promise<FileStat[]>;
           });
-          const r2 = flatten(await Promise.all(r));
+          const r3 = await Promise.all(r);
+          for (const r4 of r3) {
+            if (
+              this.webdavConfig.address.includes("jianguoyun.com") &&
+              r4.length >= 749
+            ) {
+              // https://help.jianguoyun.com/?p=2064
+              // no more than 750 per request
+              throw Error(
+                `出错：坚果云 api 有限制，文件列表加载不全。终止同步！`
+              );
+            }
+          }
+          const r2 = flatten(r3);
           subContents.push(...r2);
         }
         for (let i = 0; i < subContents.length; ++i) {
