@@ -549,7 +549,19 @@ export class FakeFsWebdav extends FakeFs {
       );
     }
 
-    // larger than 10 MB, try to upload by chunks
+    // larger than 10 MB
+    if (!this.isNextcloud && !this.supportNativePartial) {
+      // give up and upload by whole, and directly return
+      return await this._writeFileFromRootFull(
+        key,
+        content,
+        mtime,
+        ctime,
+        origKey
+      );
+    }
+
+    // try to upload by chunks
     try {
       if (this.isNextcloud) {
         return await this._writeFileFromRootNextcloud(
@@ -568,10 +580,10 @@ export class FakeFsWebdav extends FakeFs {
           origKey
         );
       }
-      throw Error(`no partial upload / update`);
+      throw Error(`Error: partial upload / update method is not implemented??`);
     } catch (e) {
       console.error(
-        `we fail to write file partially, so downgrade to full and ignore the error:`
+        `we fail to write file partially for nextcloud or apache or sabre/dav, stop!`
       );
       console.error(e);
       throw e;
