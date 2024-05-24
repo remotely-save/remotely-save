@@ -986,7 +986,8 @@ async function copyFile(
   const statsLeft = await left.stat(key);
   const content = await left.readFile(key);
 
-  if (statsLeft.size === undefined) {
+  if (statsLeft.size === undefined || statsLeft.size === 0) {
+    // some weird bugs on android not returning size. just ignore them
     statsLeft.size = content.byteLength;
   } else {
     if (statsLeft.size !== content.byteLength) {
