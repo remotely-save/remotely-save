@@ -106,7 +106,13 @@ export type SyncDirectionType =
 
 export type CipherMethodType = "rclone-base64" | "openssl-base64" | "unknown";
 
-export type QRExportType = "all_but_oauth2" | "dropbox" | "onedrive";
+export type QRExportType =
+  | "basic_and_advanced"
+  | "s3"
+  | "dropbox"
+  | "onedrive"
+  | "webdav"
+  | "webdis";
 
 export interface ProfilerConfig {
   enablePrinting?: boolean;

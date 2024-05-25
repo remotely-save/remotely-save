@@ -2317,13 +2317,19 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
     importExportDivSetting1.settingEl.addClass("setting-need-wrapping");
     importExportDivSetting1
       .addButton(async (button) => {
-        button.setButtonText(t("settings_export_all_but_oauth2_button"));
+        button.setButtonText(t("settings_export_basic_and_advanced_button"));
         button.onClick(async () => {
           new ExportSettingsQrCodeModal(
             this.app,
             this.plugin,
-            "all_but_oauth2"
+            "basic_and_advanced"
           ).open();
+        });
+      })
+      .addButton(async (button) => {
+        button.setButtonText(t("settings_export_s3_button"));
+        button.onClick(async () => {
+          new ExportSettingsQrCodeModal(this.app, this.plugin, "s3").open();
         });
       })
       .addButton(async (button) => {
@@ -2344,6 +2350,18 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
             this.plugin,
             "onedrive"
           ).open();
+        });
+      })
+      .addButton(async (button) => {
+        button.setButtonText(t("settings_export_webdav_button"));
+        button.onClick(async () => {
+          new ExportSettingsQrCodeModal(this.app, this.plugin, "webdav").open();
+        });
+      })
+      .addButton(async (button) => {
+        button.setButtonText(t("settings_export_webdis_button"));
+        button.onClick(async () => {
+          new ExportSettingsQrCodeModal(this.app, this.plugin, "webdis").open();
         });
       });
 

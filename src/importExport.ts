@@ -17,14 +17,23 @@ export const exportQrCodeUri = async (
 ) => {
   let settings2: Partial<RemotelySavePluginSettings> = {};
 
-  if (exportFields === "all_but_oauth2") {
+  if (exportFields === "basic_and_advanced") {
     settings2 = cloneDeep(settings);
+    delete settings2.s3;
     delete settings2.dropbox;
     delete settings2.onedrive;
+    delete settings2.webdav;
+    delete settings2.webdis;
+  } else if (exportFields === "s3") {
+    settings2 = { s3: cloneDeep(settings.s3) };
   } else if (exportFields === "dropbox") {
     settings2 = { dropbox: cloneDeep(settings.dropbox) };
   } else if (exportFields === "onedrive") {
     settings2 = { onedrive: getShrinkedSettings(settings.onedrive) };
+  } else if (exportFields === "webdav") {
+    settings2 = { webdav: cloneDeep(settings.webdav) };
+  } else if (exportFields === "webdis") {
+    settings2 = { webdis: cloneDeep(settings.webdis) };
   }
 
   delete settings2.vaultRandomID;
