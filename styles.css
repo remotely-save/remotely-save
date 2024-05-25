@@ -17,6 +17,10 @@
   padding-top: 18px;
 }
 
+.settings-percentage-custom-hide {
+  display: none;
+}
+
 .s3-disclaimer {
   font-weight: bold;
 }

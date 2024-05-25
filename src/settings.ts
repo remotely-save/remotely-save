@@ -2168,28 +2168,77 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
           });
       });
 
-    new Setting(advDiv)
+    const percentage1 = new Setting(advDiv)
       .setName(t("settings_protectmodifypercentage"))
-      .setDesc(t("settings_protectmodifypercentage_desc"))
-      .addDropdown((dropdown) => {
-        for (const i of Array.from({ length: 11 }, (x, i) => i * 10)) {
-          let desc = `${i}`;
-          if (i === 0) {
-            desc = t("settings_protectmodifypercentage_000_desc");
-          } else if (i === 50) {
-            desc = t("settings_protectmodifypercentage_050_desc");
-          } else if (i === 100) {
-            desc = t("settings_protectmodifypercentage_100_desc");
-          }
-          dropdown.addOption(`${i}`, desc);
-        }
-        dropdown
-          .setValue(`${this.plugin.settings.protectModifyPercentage ?? 50}`)
-          .onChange(async (val) => {
-            this.plugin.settings.protectModifyPercentage = Number.parseInt(val);
+      .setDesc(t("settings_protectmodifypercentage_desc"));
+
+    const percentage2 = new Setting(advDiv)
+      .setName(t("settings_protectmodifypercentage_customfield"))
+      .setDesc(t("settings_protectmodifypercentage_customfield_desc"));
+    if ((this.plugin.settings.protectModifyPercentage ?? 50) % 10 === 0) {
+      percentage2.settingEl.addClass("settings-percentage-custom-hide");
+    }
+    let percentage2Text: TextComponent | undefined = undefined;
+    percentage2.addText((text) => {
+      text.inputEl.type = "number";
+      percentage2Text = text;
+      text
+        .setPlaceholder("0 ~ 100")
+        .setValue(`${this.plugin.settings.protectModifyPercentage ?? 50}`)
+        .onChange(async (val) => {
+          let k = Number.parseFloat(val.trim());
+          if (Number.isNaN(k)) {
+            // do nothing!
+          } else {
+            if (k < 0) {
+              k = 0;
+            } else if (k > 100) {
+              k = 100;
+            }
+            this.plugin.settings.protectModifyPercentage = k;
             await this.plugin.saveSettings();
-          });
+          }
+        });
+    });
+
+    percentage1.addDropdown((dropdown) => {
+      for (const i of Array.from({ length: 11 }, (x, i) => i * 10)) {
+        let desc = `${i}`;
+        if (i === 0) {
+          desc = t("settings_protectmodifypercentage_000_desc");
+        } else if (i === 50) {
+          desc = t("settings_protectmodifypercentage_050_desc");
+        } else if (i === 100) {
+          desc = t("settings_protectmodifypercentage_100_desc");
+        }
+        dropdown.addOption(`${i}`, desc);
+      }
+      dropdown.addOption(
+        "custom",
+        t("settings_protectmodifypercentage_custom_desc")
+      );
+
+      const p = this.plugin.settings.protectModifyPercentage ?? 50;
+      let initVal = "custom";
+      if (p % 10 === 0) {
+        initVal = `${p}`;
+      } else {
+        // show custom
+        percentage2.settingEl.removeClass("settings-percentage-custom");
+      }
+      dropdown.setValue(initVal).onChange(async (val) => {
+        const k = Number.parseInt(val);
+        if (val === "custom" || Number.isNaN(k)) {
+          // do nothing until user changes something in custom field
+          percentage2.settingEl.removeClass("settings-percentage-custom-hide");
+        } else {
+          this.plugin.settings.protectModifyPercentage = k;
+          percentage2.settingEl.addClass("settings-percentage-custom-hide");
+          percentage2Text?.setValue(`${k}`);
+          await this.plugin.saveSettings();
+        }
       });
+    });
 
     new Setting(advDiv)
       .setName(t("setting_syncdirection"))
