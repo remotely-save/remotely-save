@@ -324,8 +324,17 @@ export class FakeFsWebdav extends FakeFs {
     await this._checkPartialSupport();
   }
 
+  /**
+   * <server>/remote.php/dav/files/<userid>
+   * => <server>/remote.php/dav/uploads/<userid>
+   */
   _getnextcloudUploadServerAddress = () => {
-    const s = this.webdavConfig.address.split("/");
+    let k = this.webdavConfig.address;
+    if (k.endsWith('/')) {
+      // no tailing slash
+      k = k.substring(0, k.length-1);
+    }
+    const s = k.split("/");
     if (
       s.length > 3 &&
       s[s.length - 3] === "dav" &&
