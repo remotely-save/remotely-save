@@ -345,7 +345,7 @@ export const unixTimeToStr = (x: number | undefined | null) => {
   if (x === undefined || x === null || Number.isNaN(x)) {
     return undefined;
   }
-  return new Date(x).toISOString();
+  return window.moment(x).format() as string;
 };
 
 /**
