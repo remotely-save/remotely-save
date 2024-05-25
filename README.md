@@ -100,6 +100,8 @@ Additionally, the plugin author may occasionally visit Obsidian official forum a
 ### webdav
 
 - Tutorials / Examples:
+  - [Nextcloud](./docs/remote_services/webdav_nextcloud/README.md)
+  - [The Good Cloud](./docs/remote_services/webdav_thegoodcloud/README.md)
   - [ownCloud](./docs/remote_services/webdav_owncloud/README.md)
   - [InfiniCloud](./docs/remote_services/webdav_infinicloud_teracloud/README.md)
   - [Synology webdav server](./docs/remote_services/webdav_synology_webdav_server/README.md) | [群晖 webdav server](./docs/remote_services/webdav_synology_webdav_server/README.zh-cn.md)
