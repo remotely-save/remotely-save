@@ -774,12 +774,16 @@ const getSyncPlanInplace = async (
   mixedEntityMappings["/$@meta"] = {
     key: "/$@meta", // don't mess up with the types
     sideNotes: {
-      version: "20240508 fs version",
+      version: "20240525 fs version",
       generateTime: currTime,
       generateTimeFmt: currTimeFmt,
       service: settings.serviceType,
+      concurrency: settings.concurrency,
       hasPassword: settings.password !== "",
       syncConfigDir: settings.syncConfigDir,
+      syncUnderscoreItems: settings.syncUnderscoreItems,
+      skipSizeLargerThan: settings.skipSizeLargerThan,
+      protectModifyPercentage: settings.protectModifyPercentage,
       conflictAction: conflictAction,
       syncDirection: syncDirection,
       triggerSource: triggerSource,
