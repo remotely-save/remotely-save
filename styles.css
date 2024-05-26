@@ -90,3 +90,18 @@
   /* flex-wrap: wrap; */
   display: grid;
 }
+
+.pro-disclaimer {
+  font-weight: bold;
+}
+.pro-hide {
+  display: none;
+}
+
+.pro-auth-button-hide {
+  display: none;
+}
+
+.pro-revoke-auth-button-hide {
+  display: none;
+}

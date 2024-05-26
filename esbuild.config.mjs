@@ -1,3 +1,4 @@
+import "dotenv/config";
 import esbuild from "esbuild";
 import inlineWorkerPlugin from "esbuild-plugin-inline-worker";
 import process from "process";
@@ -16,6 +17,8 @@ const prod = process.argv[2] === "production";
 const DEFAULT_DROPBOX_APP_KEY = process.env.DROPBOX_APP_KEY || "";
 const DEFAULT_ONEDRIVE_CLIENT_ID = process.env.ONEDRIVE_CLIENT_ID || "";
 const DEFAULT_ONEDRIVE_AUTHORITY = process.env.ONEDRIVE_AUTHORITY || "";
+const DEFAULT_REMOTELYSAVE_WEBSITE = process.env.REMOTELYSAVE_WEBSITE || "";
+const DEFAULT_REMOTELYSAVE_CLIENT_ID = process.env.REMOTELYSAVE_CLIENT_ID || "";
 
 esbuild
   .context({
@@ -51,6 +54,8 @@ esbuild
       "process.env.DEFAULT_DROPBOX_APP_KEY": `"${DEFAULT_DROPBOX_APP_KEY}"`,
       "process.env.DEFAULT_ONEDRIVE_CLIENT_ID": `"${DEFAULT_ONEDRIVE_CLIENT_ID}"`,
       "process.env.DEFAULT_ONEDRIVE_AUTHORITY": `"${DEFAULT_ONEDRIVE_AUTHORITY}"`,
+      "process.env.DEFAULT_REMOTELYSAVE_WEBSITE": `"${DEFAULT_REMOTELYSAVE_WEBSITE}"`,
+      "process.env.DEFAULT_REMOTELYSAVE_CLIENT_ID": `"${DEFAULT_REMOTELYSAVE_CLIENT_ID}"`,
       global: "window",
       "process.env.NODE_DEBUG": `undefined`, // ugly fix
       "process.env.DEBUG": `undefined`, // ugly fix

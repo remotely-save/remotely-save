@@ -230,6 +230,15 @@ export class FakeFsWebdis extends FakeFs {
     return rsp;
   }
 
+  async rename(key1: string, key2: string): Promise<void> {
+    const fullKey1 = getWebdisPath(key1, this.remoteBaseDir);
+    const fullKey2 = getWebdisPath(key2, this.remoteBaseDir);
+    const commandContent = `RENAME/${fullKey1}:content/${fullKey2}:content`;
+    await this._fetchCommand("POST", commandContent);
+    const commandMeta = `RENAME/${fullKey1}:meta/${fullKey2}:meta`;
+    await this._fetchCommand("POST", commandMeta);
+  }
+
   async rm(key: string): Promise<void> {
     const fullKey = getWebdisPath(key, this.remoteBaseDir);
     const command = `DEL/${fullKey}:meta/${fullKey}:content`;

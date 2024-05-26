@@ -356,6 +356,31 @@ export class FakeFsEncrypt extends FakeFs {
     }
   }
 
+  async rename(key1: string, key2: string): Promise<void> {
+    if (!this.hasCacheMap) {
+      throw new Error("You have to build the cacheMap firstly for readFile");
+    }
+    let key1Enc = this.cacheMapOrigToEnc[key1];
+    if (key1Enc === undefined) {
+      if (this.isPasswordEmpty()) {
+        key1Enc = key1;
+      } else {
+        key1Enc = await this._encryptName(key1);
+      }
+      this.cacheMapOrigToEnc[key1] = key1Enc;
+    }
+    let key2Enc = this.cacheMapOrigToEnc[key2];
+    if (key2Enc === undefined) {
+      if (this.isPasswordEmpty()) {
+        key2Enc = key2;
+      } else {
+        key2Enc = await this._encryptName(key2);
+      }
+      this.cacheMapOrigToEnc[key2] = key2Enc;
+    }
+    return await this.innerFs.rename(key1Enc, key2Enc);
+  }
+
   async rm(key: string): Promise<void> {
     if (!this.hasCacheMap) {
       throw new Error("You have to build the cacheMap firstly for rm");

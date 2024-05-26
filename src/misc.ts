@@ -416,7 +416,7 @@ export const toText = (x: any) => {
 export const statFix = async (vault: Vault, path: string) => {
   const s = await vault.adapter.stat(path);
   if (s === undefined || s === null) {
-    return s;
+    throw Error(`${path} doesn't exist cannot run stat`);
   }
   if (s.ctime === undefined || s.ctime === null || Number.isNaN(s.ctime)) {
     s.ctime = undefined as any; // force assignment

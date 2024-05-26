@@ -695,6 +695,25 @@ export class FakeFsDropbox extends FakeFs {
     }
   }
 
+  async rename(key1: string, key2: string): Promise<void> {
+    const remoteFileName1 = getDropboxPath(key1, this.remoteBaseDir);
+    const remoteFileName2 = getDropboxPath(key2, this.remoteBaseDir);
+    await this._init();
+    try {
+      await retryReq(
+        () =>
+          this.dropbox.filesMoveV2({
+            from_path: remoteFileName1,
+            to_path: remoteFileName2,
+          }),
+        `${key1}=>${key2}` // just a hint here
+      );
+    } catch (err) {
+      console.error("some error while moving");
+      console.error(err);
+    }
+  }
+
   async rm(key: string): Promise<void> {
     if (key === "/") {
       return;

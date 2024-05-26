@@ -13,6 +13,7 @@ export abstract class FakeFs {
     ctime: number
   ): Promise<Entity>;
   abstract readFile(key: string): Promise<ArrayBuffer>;
+  abstract rename(key1: string, key2: string): Promise<void>;
   abstract rm(key: string): Promise<void>;
   abstract checkConnect(callbackFunc?: any): Promise<boolean>;
   abstract getUserDisplayName(): Promise<string>;

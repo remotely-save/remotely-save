@@ -20,6 +20,7 @@ export const DEFAULT_TBL_LOGGER_OUTPUT = "loggeroutput";
 export const DEFAULT_TBL_SIMPLE_KV_FOR_MISC = "simplekvformisc";
 export const DEFAULT_TBL_PREV_SYNC_RECORDS = "prevsyncrecords";
 export const DEFAULT_TBL_PROFILER_RESULTS = "profilerresults";
+export const DEFAULT_TBL_FILE_CONTENT_HISTORY = "filecontenthistory";
 
 /**
  * @deprecated
@@ -62,6 +63,7 @@ export interface InternalDBs {
   simpleKVForMiscTbl: LocalForage;
   prevSyncRecordsTbl: LocalForage;
   profilerResultsTbl: LocalForage;
+  fileContentHistoryTbl: LocalForage;
 
   /**
    * @deprecated
@@ -220,6 +222,11 @@ export const prepareDBs = async (
     syncMappingTbl: localforage.createInstance({
       name: DEFAULT_DB_NAME,
       storeName: DEFAULT_TBL_SYNC_MAPPING,
+    }),
+
+    fileContentHistoryTbl: localforage.createInstance({
+      name: DEFAULT_DB_NAME,
+      storeName: DEFAULT_TBL_FILE_CONTENT_HISTORY,
     }),
   } as InternalDBs;
 

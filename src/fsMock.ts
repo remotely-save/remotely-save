@@ -38,6 +38,10 @@ export class FakeFsMock extends FakeFs {
     throw new Error("Method not implemented.");
   }
 
+  async rename(key1: string, key2: string): Promise<void> {
+    throw new Error("Method not implemented.");
+  }
+
   async rm(key: string): Promise<void> {
     throw new Error("Method not implemented.");
   }

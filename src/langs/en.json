@@ -277,7 +277,7 @@
   "settings_deletetowhere_system_trash": "system trash (default)",
   "settings_deletetowhere_obsidian_trash": "Obsidian .trash folder",
   "settings_conflictaction": "Action For Conflict",
-  "settings_conflictaction_desc": "If a file is created or modified on both side since last update, it's a conflict event. How to deal with it? This only works for bidirectional sync.",
+  "settings_conflictaction_desc": "<p>If a file is created or modified on both side since last update, it's a conflict event. How to deal with it? This only works for bidirectional sync.</p>",
   "settings_conflictaction_keep_newer": "newer version survives (default)",
   "settings_conflictaction_keep_larger": "larger size version survives",
   "settings_cleanemptyfolder": "Action For Empty Folders",

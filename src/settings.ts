@@ -21,6 +21,7 @@ import type {
 } from "./baseTypes";
 
 import cloneDeep from "lodash/cloneDeep";
+import { generateProSettingsPart } from "../pro/src/settingsPro";
 import { API_VER_ENSURE_REQURL_OK, VALID_REQURL } from "./baseTypesObs";
 import { messyConfigToNormal } from "./configPersist";
 import {
@@ -2130,25 +2131,44 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
           });
       });
 
-    new Setting(advDiv)
+    let conflictActionSettingOrigDesc = t("settings_conflictaction_desc");
+    if (
+      (this.plugin.settings.conflictAction ?? "keep_newer") === "smart_conflict"
+    ) {
+      conflictActionSettingOrigDesc += t(
+        "settings_conflictaction_smart_conflict_desc"
+      );
+    }
+    const conflictActionSetting = new Setting(advDiv)
       .setName(t("settings_conflictaction"))
-      .setDesc(t("settings_conflictaction_desc"))
-      .addDropdown((dropdown) => {
-        dropdown.addOption(
-          "keep_newer",
-          t("settings_conflictaction_keep_newer")
-        );
-        dropdown.addOption(
-          "keep_larger",
-          t("settings_conflictaction_keep_larger")
-        );
-        dropdown
-          .setValue(this.plugin.settings.conflictAction ?? "keep_newer")
-          .onChange(async (val) => {
-            this.plugin.settings.conflictAction = val as ConflictActionType;
-            await this.plugin.saveSettings();
-          });
-      });
+      .setDesc(stringToFragment(conflictActionSettingOrigDesc));
+    conflictActionSetting.addDropdown((dropdown) => {
+      dropdown
+        .addOption("keep_newer", t("settings_conflictaction_keep_newer"))
+        .addOption("keep_larger", t("settings_conflictaction_keep_larger"))
+        .addOption(
+          "smart_conflict",
+          t("settings_conflictaction_smart_conflict")
+        )
+        .setValue(this.plugin.settings.conflictAction ?? "keep_newer")
+        .onChange(async (val) => {
+          this.plugin.settings.conflictAction = val as ConflictActionType;
+          await this.plugin.saveSettings();
+
+          conflictActionSettingOrigDesc = t("settings_conflictaction_desc");
+          if (
+            (this.plugin.settings.conflictAction ?? "keep_newer") ===
+            "smart_conflict"
+          ) {
+            conflictActionSettingOrigDesc += t(
+              "settings_conflictaction_smart_conflict_desc"
+            );
+          }
+          conflictActionSetting.setDesc(
+            stringToFragment(conflictActionSettingOrigDesc)
+          );
+        });
+    });
 
     new Setting(advDiv)
       .setName(t("settings_cleanemptyfolder"))
@@ -2416,6 +2436,15 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
           }
         });
       });
+
+    //////////////////////////////////////////////////
+    // below for pro
+    //////////////////////////////////////////////////
+
+    const proDiv = containerEl.createEl("div");
+    generateProSettingsPart(proDiv, t, this.app, this.plugin, () =>
+      this.plugin.saveSettings()
+    );
 
     //////////////////////////////////////////////////
     // below for debug

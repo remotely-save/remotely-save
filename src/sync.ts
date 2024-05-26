@@ -2,6 +2,13 @@
 import AggregateError from "aggregate-error";
 import PQueue from "p-queue";
 import XRegExp from "xregexp";
+import { checkProRunnableAndFixInplace } from "../pro/src/account";
+import { duplicateFile, isMergable, mergeFile } from "../pro/src/conflictLogic";
+import {
+  clearFileContentHistoryByVaultAndProfile,
+  getFileContentHistoryByVaultAndProfile,
+  upsertFileContentHistoryByVaultAndProfile,
+} from "../pro/src/localdb";
 import type {
   ConflictActionType,
   EmptyFolderCleanType,
@@ -12,6 +19,7 @@ import type {
   SyncDirectionType,
   SyncTriggerSourceType,
 } from "./baseTypes";
+import { copyFile, copyFileOrFolder, copyFolder } from "./copyLogic";
 import type { FakeFs } from "./fsAll";
 import type { FakeFsEncrypt } from "./fsEncrypt";
 import {
@@ -432,7 +440,6 @@ const getSyncPlanInplace = async (
         } else {
           // Both exists, but modified or conflict
           // Look for past files of A or B.
-
           const localEqualPrevSync =
             prevSync?.mtimeCli === local.mtimeCli &&
             prevSync?.sizeEnc === local.sizeEnc;
@@ -521,9 +528,10 @@ const getSyncPlanInplace = async (
                     mixedEntry.change = true;
                     keptFolder.add(getParentFolder(key));
                   }
-                } else {
-                  mixedEntry.decisionBranch = 15;
-                  mixedEntry.decision = "conflict_created_then_keep_both";
+                } else if (conflictAction === "smart_conflict") {
+                  // try merge!
+                  mixedEntry.decisionBranch = 302;
+                  mixedEntry.decision = "conflict_created_then_smart_conflict";
                   mixedEntry.change = true;
                   keptFolder.add(getParentFolder(key));
                 }
@@ -572,9 +580,10 @@ const getSyncPlanInplace = async (
                     mixedEntry.change = true;
                     keptFolder.add(getParentFolder(key));
                   }
-                } else {
-                  mixedEntry.decisionBranch = 20;
-                  mixedEntry.decision = "conflict_modified_then_keep_both";
+                } else if (conflictAction === "smart_conflict") {
+                  // yeah, try to merge them!
+                  mixedEntry.decisionBranch = 301;
+                  mixedEntry.decision = "conflict_modified_then_smart_conflict";
                   mixedEntry.change = true;
                   keptFolder.add(getParentFolder(key));
                 }
@@ -900,10 +909,10 @@ const splitFourStepsOnEntityMappings = (
       val.decision === "remote_is_created_then_pull" ||
       val.decision === "conflict_created_then_keep_local" ||
       val.decision === "conflict_created_then_keep_remote" ||
-      val.decision === "conflict_created_then_keep_both" ||
+      val.decision === "conflict_created_then_smart_conflict" ||
       val.decision === "conflict_modified_then_keep_local" ||
       val.decision === "conflict_modified_then_keep_remote" ||
-      val.decision === "conflict_modified_then_keep_both"
+      val.decision === "conflict_modified_then_smart_conflict"
     ) {
       if (
         uploadDownloads.length === 0 ||
@@ -966,75 +975,6 @@ const fullfillMTimeOfRemoteEntityInplace = (
   return remote;
 };
 
-async function copyFolder(
-  key: string,
-  left: FakeFs,
-  right: FakeFs
-): Promise<Entity> {
-  if (!key.endsWith("/")) {
-    throw Error(`should not call ${key} in copyFolder`);
-  }
-  const statsLeft = await left.stat(key);
-  return await right.mkdir(key, statsLeft.mtimeCli);
-}
-
-async function copyFile(
-  key: string,
-  left: FakeFs,
-  right: FakeFs
-): Promise<Entity> {
-  // console.debug(`copyFile: key=${key}, left=${left.kind}, right=${right.kind}`);
-  if (key.endsWith("/")) {
-    throw Error(`should not call ${key} in copyFile`);
-  }
-  const statsLeft = await left.stat(key);
-  const content = await left.readFile(key);
-
-  if (statsLeft.size === undefined || statsLeft.size === 0) {
-    // some weird bugs on android not returning size. just ignore them
-    statsLeft.size = content.byteLength;
-  } else {
-    if (statsLeft.size !== content.byteLength) {
-      throw Error(
-        `error copying ${left.kind}=>${right.kind}: size not matched`
-      );
-    }
-  }
-
-  if (statsLeft.mtimeCli === undefined) {
-    throw Error(`error copying ${left.kind}=>${right.kind}, no mtimeCli`);
-  }
-
-  // console.debug(`copyFile: about to start right.writeFile`);
-  if (typeof (content as any).transfer === "function") {
-    return await right.writeFile(
-      key,
-      (content as any).transfer(),
-      statsLeft.mtimeCli,
-      statsLeft.mtimeCli /* TODO */
-    );
-  } else {
-    return await right.writeFile(
-      key,
-      content,
-      statsLeft.mtimeCli,
-      statsLeft.mtimeCli /* TODO */
-    );
-  }
-}
-
-async function copyFileOrFolder(
-  key: string,
-  left: FakeFs,
-  right: FakeFs
-): Promise<Entity> {
-  if (key.endsWith("/")) {
-    return await copyFolder(key, left, right);
-  } else {
-    return await copyFile(key, left, right);
-  }
-}
-
 const dispatchOperationToActualV3 = async (
   key: string,
   vaultRandomID: string,
@@ -1042,7 +982,8 @@ const dispatchOperationToActualV3 = async (
   r: MixedEntity,
   fsLocal: FakeFs,
   fsEncrypt: FakeFsEncrypt,
-  db: InternalDBs
+  db: InternalDBs,
+  conflictAction: ConflictActionType
 ) => {
   // console.debug(
   //   `inside dispatchOperationToActualV3, key=${key}, r=${JSON.stringify(
@@ -1052,7 +993,20 @@ const dispatchOperationToActualV3 = async (
   //   )}`
   // );
   if (r.decision === "only_history") {
-    clearPrevSyncRecordByVaultAndProfile(db, vaultRandomID, profileID, key);
+    await clearPrevSyncRecordByVaultAndProfile(
+      db,
+      vaultRandomID,
+      profileID,
+      key
+    );
+    if (conflictAction === "smart_conflict") {
+      await clearFileContentHistoryByVaultAndProfile(
+        db,
+        vaultRandomID,
+        profileID,
+        key
+      );
+    }
   } else if (
     r.decision === "local_is_created_too_large_then_do_nothing" ||
     r.decision === "remote_is_created_too_large_then_do_nothing" ||
@@ -1071,12 +1025,34 @@ const dispatchOperationToActualV3 = async (
 
     if (r.prevSync !== undefined) {
       // if we have prevSync,
-      // we don't need to do anything, because the record is already there!
+      // we don't need to update prevSync, because the record is already there!
+
+      // but we might need to update content, because it's a new feature
+      if (conflictAction === "smart_conflict") {
+        if (isMergable(r.local!)) {
+          const k = await getFileContentHistoryByVaultAndProfile(
+            db,
+            vaultRandomID,
+            profileID,
+            r.local!
+          );
+          if (k === null || k === undefined) {
+            await upsertFileContentHistoryByVaultAndProfile(
+              db,
+              vaultRandomID,
+              profileID,
+              r.local!,
+              await fsLocal.readFile(r.local!.keyRaw)
+            );
+          }
+        }
+      }
     } else {
       // if we don't have prevSync, we use remote entity AND local mtime
       // as if it is "uploaded"
       if (r.remote !== undefined) {
         let entity = r.remote;
+        // TODO: abstract away the dirty hack
         entity = fullfillMTimeOfRemoteEntityInplace(entity, r.local?.mtimeCli);
 
         if (entity !== undefined) {
@@ -1086,6 +1062,17 @@ const dispatchOperationToActualV3 = async (
             profileID,
             entity
           );
+          if (conflictAction === "smart_conflict") {
+            if (isMergable(entity)) {
+              await upsertFileContentHistoryByVaultAndProfile(
+                db,
+                vaultRandomID,
+                profileID,
+                entity,
+                await fsLocal.readFile(entity.keyRaw)
+              );
+            }
+          }
         }
       }
     }
@@ -1098,7 +1085,12 @@ const dispatchOperationToActualV3 = async (
   ) {
     // console.debug(`before upload in sync, r=${JSON.stringify(r, null, 2)}`);
     const mtimeCli = (await fsLocal.stat(r.key)).mtimeCli!;
-    const entity = await copyFileOrFolder(r.key, fsLocal, fsEncrypt);
+    const { entity, content } = await copyFileOrFolder(
+      r.key,
+      fsLocal,
+      fsEncrypt
+    );
+    // TODO: abstract away the dirty hack
     fullfillMTimeOfRemoteEntityInplace(entity, mtimeCli);
     // console.debug(`after fullfill, entity=${JSON.stringify(entity,null,2)}`)
     await upsertPrevSyncRecordByVaultAndProfile(
@@ -1107,6 +1099,17 @@ const dispatchOperationToActualV3 = async (
       profileID,
       entity
     );
+    if (conflictAction === "smart_conflict") {
+      if (isMergable(entity)) {
+        await upsertFileContentHistoryByVaultAndProfile(
+          db,
+          vaultRandomID,
+          profileID,
+          entity,
+          content!
+        );
+      }
+    }
   } else if (
     r.decision === "remote_is_modified_then_pull" ||
     r.decision === "remote_is_created_then_pull" ||
@@ -1114,10 +1117,14 @@ const dispatchOperationToActualV3 = async (
     r.decision === "conflict_modified_then_keep_remote" ||
     r.decision === "folder_existed_remote_then_also_create_local"
   ) {
+    let e1: Entity | undefined = undefined;
+    let c1: ArrayBuffer | undefined = undefined;
     if (r.key.endsWith("/")) {
       await fsLocal.mkdir(r.key);
     } else {
-      await copyFile(r.key, fsEncrypt, fsLocal);
+      const { entity, content } = await copyFile(r.key, fsEncrypt, fsLocal);
+      e1 = entity;
+      c1 = content;
     }
     await upsertPrevSyncRecordByVaultAndProfile(
       db,
@@ -1125,6 +1132,17 @@ const dispatchOperationToActualV3 = async (
       profileID,
       r.remote!
     );
+    if (conflictAction === "smart_conflict") {
+      if (isMergable(r.remote!)) {
+        await upsertFileContentHistoryByVaultAndProfile(
+          db,
+          vaultRandomID,
+          profileID,
+          r.remote!,
+          c1! // always file, always has real value
+        );
+      }
+    }
   } else if (r.decision === "local_is_deleted_thus_also_delete_remote") {
     // local is deleted, we need to delete remote now
     await fsEncrypt.rm(r.key);
@@ -1134,6 +1152,16 @@ const dispatchOperationToActualV3 = async (
       profileID,
       r.key
     );
+    if (conflictAction === "smart_conflict") {
+      if (isMergable(r.remote!)) {
+        await clearFileContentHistoryByVaultAndProfile(
+          db,
+          vaultRandomID,
+          profileID,
+          r.key
+        );
+      }
+    }
   } else if (r.decision === "remote_is_deleted_thus_also_delete_local") {
     // remote is deleted, we need to delete local now
     await fsLocal.rm(r.key);
@@ -1143,20 +1171,92 @@ const dispatchOperationToActualV3 = async (
       profileID,
       r.key
     );
+    if (conflictAction === "smart_conflict") {
+      if (isMergable(r.remote!)) {
+        await clearFileContentHistoryByVaultAndProfile(
+          db,
+          vaultRandomID,
+          profileID,
+          r.key
+        );
+      }
+    }
   } else if (
-    r.decision === "conflict_created_then_keep_both" ||
-    r.decision === "conflict_modified_then_keep_both"
+    r.decision === "conflict_created_then_smart_conflict" ||
+    r.decision === "conflict_modified_then_smart_conflict"
   ) {
-    throw Error(`${r.decision} not implemented yet: ${JSON.stringify(r)}`);
+    // heavy lifting
+    if (isMergable(r.local!, r.remote!)) {
+      const origContent = await getFileContentHistoryByVaultAndProfile(
+        db,
+        vaultRandomID,
+        profileID,
+        r.local!
+      );
+      // console.debug(`we get origContent:`)
+      // console.debug(origContent)
+      const { entity, content } = await mergeFile(
+        r.key,
+        fsLocal,
+        fsEncrypt,
+        origContent
+      );
+      await upsertPrevSyncRecordByVaultAndProfile(
+        db,
+        vaultRandomID,
+        profileID,
+        entity
+      );
+      await upsertFileContentHistoryByVaultAndProfile(
+        db,
+        vaultRandomID,
+        profileID,
+        entity,
+        content
+      );
+    } else {
+      // duplicate the files
+      await clearPrevSyncRecordByVaultAndProfile(
+        db,
+        vaultRandomID,
+        profileID,
+        r.key
+      );
+      const mtimeCli = (await fsLocal.stat(r.key)).mtimeCli!;
+      const { upload, download } = await duplicateFile(
+        r.key,
+        fsLocal,
+        fsEncrypt,
+        async (upload) => {
+          // TODO: abstract away the dirty hack
+          fullfillMTimeOfRemoteEntityInplace(upload, mtimeCli);
+          await upsertPrevSyncRecordByVaultAndProfile(
+            db,
+            vaultRandomID,
+            profileID,
+            upload
+          );
+        },
+        async (download) => {
+          await upsertPrevSyncRecordByVaultAndProfile(
+            db,
+            vaultRandomID,
+            profileID,
+            download
+          );
+        }
+      );
+    }
   } else if (r.decision === "folder_to_be_created") {
     await fsLocal.mkdir(r.key);
-    const entity = await copyFolder(r.key, fsLocal, fsEncrypt);
+    const { entity } = await copyFolder(r.key, fsLocal, fsEncrypt);
     await upsertPrevSyncRecordByVaultAndProfile(
       db,
       vaultRandomID,
       profileID,
       entity
     );
+    // no need to record file content for folder here
   } else if (
     r.decision === "folder_to_be_deleted_on_both" ||
     r.decision === "folder_to_be_deleted_on_local" ||
@@ -1180,6 +1280,7 @@ const dispatchOperationToActualV3 = async (
       profileID,
       r.key
     );
+    // no need to record file content for folder here
   } else {
     throw Error(`don't know how to dispatch decision: ${JSON.stringify(r)}`);
   }
@@ -1196,6 +1297,7 @@ export const doActualSync = async (
   getProtectModifyPercentageErrorStrFunc: any,
   db: InternalDBs,
   profiler: Profiler | undefined,
+  conflictAction: ConflictActionType,
   callbackSyncProcess?: any
 ) => {
   profiler?.addIndent();
@@ -1318,7 +1420,8 @@ export const doActualSync = async (
             val,
             fsLocal,
             fsEncrypt,
-            db
+            db,
+            conflictAction
           );
 
           // console.debug(`finished ${key}`);
@@ -1381,6 +1484,8 @@ export async function syncer(
   vaultRandomID: string,
   configDir: string,
   settings: RemotelySavePluginSettings,
+  pluginVersion: string,
+  configSaver: () => Promise<any>,
   getProtectModifyPercentageErrorStrFunc: any,
   markIsSyncingFunc: (isSyncing: boolean) => void,
   notifyFunc?: (s: SyncTriggerSourceType, step: number) => Promise<any>,
@@ -1397,17 +1502,27 @@ export async function syncer(
   markIsSyncingFunc(true);
 
   let everythingOk = true;
-
-  let step = 0; // dry mode only
-  await notifyFunc?.(triggerSource, step);
-
-  step = 1;
-  await notifyFunc?.(triggerSource, step);
-  await ribboonFunc?.(triggerSource, step);
-  await statusBarFunc?.(triggerSource, step, everythingOk);
-  profiler?.insert("start big sync func");
+  let step = 0;
 
   try {
+    // check pro feature
+    // if anything goes wrong, it will throw
+    await checkProRunnableAndFixInplace(
+      ["feature-smart_conflict"],
+      settings,
+      pluginVersion,
+      configSaver
+    );
+
+    // try mode?
+    await notifyFunc?.(triggerSource, step);
+
+    step = 1;
+    await notifyFunc?.(triggerSource, step);
+    await ribboonFunc?.(triggerSource, step);
+    await statusBarFunc?.(triggerSource, step, everythingOk);
+    profiler?.insert("start big sync func");
+
     step = 2;
     await notifyFunc?.(triggerSource, step);
     await ribboonFunc?.(triggerSource, step);
@@ -1514,6 +1629,7 @@ export async function syncer(
         getProtectModifyPercentageErrorStrFunc,
         db,
         profiler,
+        settings.conflictAction ?? "keep_newer",
         callbackSyncProcess
       );
       profiler?.insert(`finish step${step} (actual sync)`);

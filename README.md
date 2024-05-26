@@ -28,9 +28,9 @@ This is yet another unofficial sync plugin for Obsidian. If you like it or find 
 - **Scheduled auto sync supported.** You can also manually trigger the sync using sidebar ribbon, or using the command from the command palette (or even bind the hot key combination to the command then press the hot key combination).
 - **[Minimal Intrusive](./docs/minimal_intrusive_design.md).**
 - **Skip Large files** and **skip paths** by custom regex conditions!
-- **Fully open source under [Apache-2.0 License](./LICENSE).**
-- **[Sync Algorithm open](./docs/sync_algorithm/v3/intro.md) for discussion.**
-- **[Basic Conflict Detection And Handling](./docs/sync_algorithm/v3/intro.md)** now, more to come!
+- **[Sync Algorithm](./docs/sync_algorithm/v3/intro.md) is provided for discussion.**
+- **[Basic Conflict Detection And Handling](./docs/sync_algorithm/v3/intro.md)** for free version. **[Advanced Conflict Handling](./pro/README.md)** for PRO version. 
+- Source Available. See [License](./LICENSE) for details.
 
 ## Limitations
 
@@ -130,6 +130,10 @@ Additionally, the plugin author may occasionally visit Obsidian official forum a
 **By default, all files or folder starting with `.` (dot) or `_` (underscore) are treated as hidden files, and would NOT be synced.** It's useful if you have some files just staying locally. But this strategy also means that themes / other plugins / settings of this plugin would neither be synced.
 
 In the latest version, you can change the settings to allow syncing `_` files or folders, as well as `.obsidian` special config folder (but not any other `.` files or folders).
+
+## PRO Features
+
+See [PRO](./pro/README.md) for more details.
 
 ## How To Debug
 

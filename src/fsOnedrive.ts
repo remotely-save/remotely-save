@@ -928,6 +928,18 @@ export class FakeFsOnedrive extends FakeFs {
     }
   }
 
+  async rename(key1: string, key2: string): Promise<void> {
+    if (key1 === "" || key1 === "/" || key2 === "" || key2 === "/") {
+      return;
+    }
+    const remoteFileName1 = getOnedrivePath(key1, this.remoteBaseDir);
+    const remoteFileName2 = getOnedrivePath(key2, this.remoteBaseDir);
+    await this._init();
+    await this._patchJson(remoteFileName1, {
+      name: remoteFileName2,
+    });
+  }
+
   async rm(key: string): Promise<void> {
     if (key === "" || key === "/") {
       return;

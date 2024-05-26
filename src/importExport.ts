@@ -24,6 +24,7 @@ export const exportQrCodeUri = async (
     delete settings2.onedrive;
     delete settings2.webdav;
     delete settings2.webdis;
+    delete settings2.pro;
   } else if (exportFields === "s3") {
     settings2 = { s3: cloneDeep(settings.s3) };
   } else if (exportFields === "dropbox") {

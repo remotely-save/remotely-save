@@ -13,6 +13,13 @@ import {
   requireApiVersion,
   setIcon,
 } from "obsidian";
+import {
+  DEFAULT_PRO_CONFIG,
+  getAndSaveProEmail,
+  getAndSaveProFeatures,
+  sendAuthReq as sendAuthReqPro,
+  setConfigBySuccessfullAuthInplace as setConfigBySuccessfullAuthInplacePro,
+} from "../pro/src/account";
 import type {
   RemotelySavePluginSettings,
   SyncTriggerSourceType,
@@ -56,6 +63,7 @@ import { SyncAlgoV3Modal } from "./syncAlgoV3Notice";
 // biome-ignore lint/suspicious/noShadowRestrictedNames: <explanation>
 import AggregateError from "aggregate-error";
 import throttle from "lodash/throttle";
+import { COMMAND_CALLBACK_PRO } from "../pro/src/baseTypesPro";
 import { exportVaultSyncPlansToFiles } from "./debugMode";
 import { FakeFsEncrypt } from "./fsEncrypt";
 import { getClient } from "./fsGetter";
@@ -97,6 +105,7 @@ const DEFAULT_SETTINGS: RemotelySavePluginSettings = {
   enableMobileStatusBar: false,
   encryptionMethod: "unknown",
   profiler: DEFAULT_PROFILER_CONFIG,
+  pro: DEFAULT_PRO_CONFIG,
 };
 
 interface OAuth2Info {
@@ -399,6 +408,8 @@ export default class RemotelySavePlugin extends Plugin {
       return;
     }
 
+    const configSaver = async () => await this.saveSettings();
+
     await syncer(
       fsLocal,
       fsRemote,
@@ -410,6 +421,8 @@ export default class RemotelySavePlugin extends Plugin {
       this.vaultRandomID,
       this.app.vault.configDir,
       this.settings,
+      this.manifest.version,
+      configSaver,
       getProtectError,
       markIsSyncingFunc,
       notifyFunc,
@@ -693,6 +706,77 @@ export default class RemotelySavePlugin extends Plugin {
             })
           );
         }
+      }
+    );
+
+    this.registerObsidianProtocolHandler(
+      COMMAND_CALLBACK_PRO,
+      async (inputParams) => {
+        if (this.oauth2Info.helperModal !== undefined) {
+          const k = this.oauth2Info.helperModal.contentEl;
+          k.empty();
+
+          t("protocol_pro_connecting")
+            .split("\n")
+            .forEach((val) => {
+              k.createEl("p", {
+                text: val,
+              });
+            });
+        }
+
+        console.debug(inputParams);
+        const authRes = await sendAuthReqPro(
+          this.oauth2Info.verifier || "verifier",
+          inputParams.code,
+          async (e: any) => {
+            new Notice(t("protocol_pro_connect_fail"));
+            new Notice(`${e}`);
+            throw e;
+          }
+        );
+        console.debug(authRes);
+
+        const self = this;
+        await setConfigBySuccessfullAuthInplacePro(
+          this.settings.pro!,
+          authRes,
+          () => self.saveSettings()
+        );
+
+        await getAndSaveProFeatures(
+          this.settings.pro!,
+          this.manifest.version,
+          () => self.saveSettings()
+        );
+
+        await getAndSaveProEmail(
+          this.settings.pro!,
+          this.manifest.version,
+          () => self.saveSettings()
+        );
+
+        this.oauth2Info.verifier = ""; // reset it
+        this.oauth2Info.helperModal?.close(); // close it
+        this.oauth2Info.helperModal = undefined;
+
+        this.oauth2Info.authDiv?.toggleClass(
+          "pro-auth-button-hide",
+          this.settings.pro?.refreshToken !== ""
+        );
+        this.oauth2Info.authDiv = undefined;
+
+        this.oauth2Info.revokeAuthSetting?.setDesc(
+          t("protocol_pro_connect_succ_revoke", {
+            email: this.settings.pro?.email,
+          })
+        );
+        this.oauth2Info.revokeAuthSetting = undefined;
+        this.oauth2Info.revokeDiv?.toggleClass(
+          "pro-revoke-auth-button-hide",
+          this.settings.pro?.email === ""
+        );
+        this.oauth2Info.revokeDiv = undefined;
       }
     );
 
@@ -1044,6 +1128,10 @@ export default class RemotelySavePlugin extends Plugin {
       onedriveExpired = true;
       this.settings.onedrive = cloneDeep(DEFAULT_ONEDRIVE_CONFIG);
       needSave = true;
+    }
+
+    if (this.settings.pro === undefined) {
+      this.settings.pro = cloneDeep(DEFAULT_PRO_CONFIG);
     }
 
     // save back

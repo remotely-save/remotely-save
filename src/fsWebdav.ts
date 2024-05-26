@@ -66,24 +66,11 @@ if (VALID_REQURL) {
       const p: RequestUrlParam = {
         url: options.url,
         method: options.method,
-        // body: options.data as string | ArrayBuffer,
+        body: options.data as string | ArrayBuffer,
         headers: transformedHeaders,
         contentType: reqContentType,
         throw: false,
       };
-      if (
-        options.data === undefined ||
-        options.data === null ||
-        isString(options.data)
-      ) {
-        p.body = options.data;
-      } else {
-        if (typeof (options.data as any).transfer === "function") {
-          p.body = (options.data as any).transfer();
-        } else {
-          p.body = options.data as ArrayBuffer;
-        }
-      }
 
       let r = await requestUrl(p);
 
@@ -330,9 +317,9 @@ export class FakeFsWebdav extends FakeFs {
    */
   _getnextcloudUploadServerAddress = () => {
     let k = this.webdavConfig.address;
-    if (k.endsWith('/')) {
+    if (k.endsWith("/")) {
       // no tailing slash
-      k = k.substring(0, k.length-1);
+      k = k.substring(0, k.length - 1);
     }
     const s = k.split("/");
     if (
@@ -795,6 +782,16 @@ export class FakeFsWebdav extends FakeFs {
       return bufferToArrayBuffer(buff);
     }
     throw Error(`unexpected file content result with type ${typeof buff}`);
+  }
+
+  async rename(key1: string, key2: string): Promise<void> {
+    if (key1 === "/" || key2 === "/") {
+      return;
+    }
+    const remoteFileName1 = getWebdavPath(key1, this.remoteBaseDir);
+    const remoteFileName2 = getWebdavPath(key2, this.remoteBaseDir);
+    await this._init();
+    await this.client.moveFile(remoteFileName1, remoteFileName2);
   }
 
   async rm(key: string): Promise<void> {

@@ -1,6 +1,6 @@
 {
   "name": "remotely-save",
-  "version": "0.4.25",
+  "version": "0.5.1",
   "description": "This is yet another sync plugin for Obsidian app.",
   "scripts": {
     "dev2": "node esbuild.config.mjs --watch",
@@ -9,7 +9,7 @@
     "dev": "webpack --mode development --watch",
     "format": "npx @biomejs/biome check --apply .",
     "clean": "npx rimraf main.js",
-    "test": "cross-env TS_NODE_COMPILER_OPTIONS={\\\"module\\\":\\\"commonjs\\\"} mocha -r ts-node/register 'tests/**/*.ts'"
+    "test": "cross-env TS_NODE_COMPILER_OPTIONS={\\\"module\\\":\\\"commonjs\\\"} mocha -r ts-node/register 'tests/**/*.ts' 'pro/tests/**/*.ts'"
   },
   "browser": {
     "path": "path-browserify",
@@ -23,7 +23,7 @@
   "source": "main.ts",
   "keywords": [],
   "author": "",
-  "license": "Apache-2.0",
+  "license": "SEE LICENSE IN LICENSE",
   "devDependencies": {
     "@biomejs/biome": "1.7.3",
     "@microsoft/microsoft-graph-types": "^2.40.0",
@@ -63,6 +63,7 @@
     "@fyears/rclone-crypt": "^0.0.7",
     "@fyears/tsqueue": "^1.0.1",
     "@microsoft/microsoft-graph-client": "^3.0.7",
+    "@sanity/diff-match-patch": "^3.1.1",
     "@smithy/fetch-http-handler": "^2.5.0",
     "@smithy/protocol-http": "^3.3.0",
     "@smithy/querystring-builder": "^2.2.0",
@@ -83,6 +84,7 @@
     "mime-types": "^2.1.35",
     "mustache": "^4.2.0",
     "nanoid": "^5.0.7",
+    "node-diff3": "^3.1.2",
     "p-queue": "^8.0.1",
     "path-browserify": "^1.0.1",
     "process": "^0.11.10",

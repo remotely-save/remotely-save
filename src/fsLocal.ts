@@ -145,12 +145,17 @@ export class FakeFsLocal extends FakeFs {
   ): Promise<Entity> {
     await this.vault.adapter.writeBinary(key, content, {
       mtime: mtime,
+      ctime: ctime,
     });
     return await this.stat(key);
   }
 
   async readFile(key: string): Promise<ArrayBuffer> {
     return await this.vault.adapter.readBinary(key);
+  }
+
+  async rename(key1: string, key2: string): Promise<void> {
+    return await this.vault.adapter.rename(key1, key2);
   }
 
   async rm(key: string): Promise<void> {

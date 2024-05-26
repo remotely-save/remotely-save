@@ -3,6 +3,7 @@
  * To avoid circular dependency.
  */
 
+import type { ProConfig } from "../pro/src/baseTypesPro";
 import type { LangTypeAndAuto } from "./i18n";
 
 export const DEFAULT_CONTENT_TYPE = "application/octet-stream";
@@ -155,6 +156,8 @@ export interface RemotelySavePluginSettings {
 
   profiler?: ProfilerConfig;
 
+  pro?: ProConfig;
+
   /**
    * @deprecated
    */
@@ -188,7 +191,10 @@ export const OAUTH2_FORCE_EXPIRE_MILLISECONDS = 1000 * 60 * 60 * 24 * 80;
 
 export type EmptyFolderCleanType = "skip" | "clean_both";
 
-export type ConflictActionType = "keep_newer" | "keep_larger" | "rename_both";
+export type ConflictActionType =
+  | "keep_newer"
+  | "keep_larger"
+  | "smart_conflict";
 
 export type DecisionTypeForMixedEntity =
   | "only_history"
@@ -203,11 +209,11 @@ export type DecisionTypeForMixedEntity =
   | "remote_is_deleted_thus_also_delete_local"
   | "conflict_created_then_keep_local"
   | "conflict_created_then_keep_remote"
-  | "conflict_created_then_keep_both"
+  | "conflict_created_then_smart_conflict"
   | "conflict_created_then_do_nothing"
   | "conflict_modified_then_keep_local"
   | "conflict_modified_then_keep_remote"
-  | "conflict_modified_then_keep_both"
+  | "conflict_modified_then_smart_conflict"
   | "folder_existed_both_then_do_nothing"
   | "folder_existed_local_then_also_create_remote"
   | "folder_existed_remote_then_also_create_local"
