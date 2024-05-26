@@ -246,12 +246,6 @@ export class FakeFsWebdav extends FakeFs {
       return;
     }
 
-    if (Platform.isIosApp && !this.webdavConfig.address.startsWith("https")) {
-      throw Error(
-        `Your webdav address could only be https, not http, because of the iOS restriction.`
-      );
-    }
-
     const headers = {
       "Cache-Control": "no-cache",
     };

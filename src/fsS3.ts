@@ -780,13 +780,6 @@ export class FakeFsS3 extends FakeFs {
 
   async checkConnect(callbackFunc?: any): Promise<boolean> {
     try {
-      // TODO: no universal way now, just check this in connectivity
-      if (Platform.isIosApp && this.s3Config.s3Endpoint.startsWith("http://")) {
-        throw Error(
-          `Your s3 endpoint could only be https, not http, because of the iOS restriction.`
-        );
-      }
-
       // const results = await this.s3Client.send(
       //   new HeadBucketCommand({ Bucket: this.s3Config.s3BucketName })
       // );
