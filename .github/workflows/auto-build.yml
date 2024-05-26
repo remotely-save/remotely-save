@@ -19,6 +19,8 @@ jobs:
       DROPBOX_APP_KEY: ${{secrets.DROPBOX_APP_KEY}}
       ONEDRIVE_CLIENT_ID: ${{secrets.ONEDRIVE_CLIENT_ID}}
       ONEDRIVE_AUTHORITY: ${{secrets.ONEDRIVE_AUTHORITY}}
+      REMOTELYSAVE_WEBSITE: ${{secrets.REMOTELYSAVE_WEBSITE}}
+      REMOTELYSAVE_CLIENT_ID: ${{secrets.REMOTELYSAVE_CLIENT_ID}}
 
     strategy:
       matrix:
