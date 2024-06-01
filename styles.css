@@ -72,6 +72,21 @@
   display: none;
 }
 
+.googledrive-disclaimer {
+  font-weight: bold;
+}
+.googledrive-hide {
+  display: none;
+}
+
+.googledrive-auth-button-hide {
+  display: none;
+}
+
+.googledrive-revoke-auth-button-hide {
+  display: none;
+}
+
 .qrcode-img {
   width: 350px;
   height: 350px;

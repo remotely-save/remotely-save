@@ -21,6 +21,7 @@ import type {
 } from "./baseTypes";
 
 import cloneDeep from "lodash/cloneDeep";
+import { generateGoogleDriveSettingsPart } from "../pro/src/settingsGoogleDrive";
 import { generateProSettingsPart } from "../pro/src/settingsPro";
 import { API_VER_ENSURE_REQURL_OK, VALID_REQURL } from "./baseTypesObs";
 import { messyConfigToNormal } from "./configPersist";
@@ -169,7 +170,7 @@ class EncryptionMethodModal extends Modal {
   }
 }
 
-class ChangeRemoteBaseDirModal extends Modal {
+export class ChangeRemoteBaseDirModal extends Modal {
   readonly plugin: RemotelySavePlugin;
   readonly newRemoteBaseDir: string;
   readonly service: SUPPORTED_SERVICES_TYPE_WITH_REMOTE_BASE_DIR;
@@ -1792,6 +1793,18 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
       });
 
     //////////////////////////////////////////////////
+    // below for googledrive
+    //////////////////////////////////////////////////
+
+    const googleDriveDiv = generateGoogleDriveSettingsPart(
+      containerEl,
+      t,
+      this.app,
+      this.plugin,
+      () => this.plugin.saveSettings()
+    );
+
+    //////////////////////////////////////////////////
     // below for general chooser (part 2/2)
     //////////////////////////////////////////////////
 
@@ -1806,6 +1819,10 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
         dropdown.addOption("webdav", t("settings_chooseservice_webdav"));
         dropdown.addOption("onedrive", t("settings_chooseservice_onedrive"));
         dropdown.addOption("webdis", t("settings_chooseservice_webdis"));
+        dropdown.addOption(
+          "googledrive",
+          t("settings_chooseservice_googledrive")
+        );
 
         dropdown
           .setValue(this.plugin.settings.serviceType)
@@ -1830,6 +1847,10 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
             webdisDiv.toggleClass(
               "webdis-hide",
               this.plugin.settings.serviceType !== "webdis"
+            );
+            googleDriveDiv.toggleClass(
+              "googledrive-hide",
+              this.plugin.settings.serviceType !== "googledrive"
             );
             await this.plugin.saveSettings();
           });
@@ -2382,6 +2403,16 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
         button.setButtonText(t("settings_export_webdis_button"));
         button.onClick(async () => {
           new ExportSettingsQrCodeModal(this.app, this.plugin, "webdis").open();
+        });
+      })
+      .addButton(async (button) => {
+        button.setButtonText(t("settings_export_googledrive_button"));
+        button.onClick(async () => {
+          new ExportSettingsQrCodeModal(
+            this.app,
+            this.plugin,
+            "googledrive"
+          ).open();
         });
       });
 

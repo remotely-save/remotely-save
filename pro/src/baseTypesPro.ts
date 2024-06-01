@@ -23,3 +23,18 @@ export interface ProConfig {
   enabledProFeatures: FeatureInfo[];
   credentialsShouldBeDeletedAtTimeMs?: number;
 }
+
+export interface GoogleDriveConfig {
+  accessToken: string;
+  accessTokenExpiresInMs: number;
+  accessTokenExpiresAtTimeMs: number;
+  refreshToken: string;
+  remoteBaseDir?: string;
+  credentialsShouldBeDeletedAtTimeMs?: number;
+  scope: "https://www.googleapis.com/auth/drive.file";
+}
+
+export const DEFAULT_GOOGLEDRIVE_CLIENT_ID =
+  process.env.DEFAULT_GOOGLEDRIVE_CLIENT_ID;
+export const DEFAULT_GOOGLEDRIVE_CLIENT_SECRET =
+  process.env.DEFAULT_GOOGLEDRIVE_CLIENT_SECRET;

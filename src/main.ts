@@ -64,6 +64,7 @@ import { SyncAlgoV3Modal } from "./syncAlgoV3Notice";
 import AggregateError from "aggregate-error";
 import throttle from "lodash/throttle";
 import { COMMAND_CALLBACK_PRO } from "../pro/src/baseTypesPro";
+import { DEFAULT_GOOGLEDRIVE_CONFIG } from "../pro/src/fsGoogleDrive";
 import { exportVaultSyncPlansToFiles } from "./debugMode";
 import { FakeFsEncrypt } from "./fsEncrypt";
 import { getClient } from "./fsGetter";
@@ -79,6 +80,7 @@ const DEFAULT_SETTINGS: RemotelySavePluginSettings = {
   dropbox: DEFAULT_DROPBOX_CONFIG,
   onedrive: DEFAULT_ONEDRIVE_CONFIG,
   webdis: DEFAULT_WEBDIS_CONFIG,
+  googledrive: DEFAULT_GOOGLEDRIVE_CONFIG,
   password: "",
   serviceType: "s3",
   currLogLevel: "info",
@@ -1060,6 +1062,10 @@ export default class RemotelySavePlugin extends Plugin {
     }
     if (this.settings.profiler.recordSize === undefined) {
       this.settings.profiler.recordSize = false;
+    }
+
+    if (this.settings.googledrive === undefined) {
+      this.settings.googledrive = DEFAULT_GOOGLEDRIVE_CONFIG;
     }
 
     await this.saveSettings();

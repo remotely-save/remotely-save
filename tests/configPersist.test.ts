@@ -19,6 +19,9 @@ const DEFAULT_SETTINGS: RemotelySavePluginSettings = {
   webdis: {
     address: "addr",
   } as any,
+  googledrive: {
+    refreshToken: "xxx",
+  } as any,
   password: "password",
   serviceType: "s3",
   currLogLevel: "info",
