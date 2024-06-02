@@ -1,3 +1,4 @@
+import { FakeFsGoogleDrive } from "../pro/src/fsGoogleDrive";
 import type { RemotelySavePluginSettings } from "./baseTypes";
 import type { FakeFs } from "./fsAll";
 import { FakeFsDropbox } from "./fsDropbox";
@@ -38,6 +39,12 @@ export function getClient(
     case "webdis":
       return new FakeFsWebdis(
         settings.webdis,
+        vaultName,
+        saveUpdatedConfigFunc
+      );
+    case "googledrive":
+      return new FakeFsGoogleDrive(
+        settings.googledrive,
         vaultName,
         saveUpdatedConfigFunc
       );

@@ -150,6 +150,9 @@ export class ProAuthModal extends Modal {
             );
             this.plugin.oauth2Info.revokeDiv = undefined;
 
+            // try to remove data in clipboard
+            await navigator.clipboard.writeText("");
+
             this.close();
           } catch (err) {
             console.error(err);
@@ -244,7 +247,9 @@ export const generateProSettingsPart = (
   t: (x: TransItemType, vars?: any) => string,
   app: App,
   plugin: RemotelySavePlugin,
-  saveUpdatedConfigFunc: () => Promise<any> | undefined
+  saveUpdatedConfigFunc: () => Promise<any> | undefined,
+  googleDriveAllowedToUsedDiv: HTMLDivElement,
+  googleDriveNotShowUpHintSetting: Setting
 ) => {
   proDiv
     .createEl("h2", { text: t("settings_pro") })
@@ -290,6 +295,28 @@ export const generateProSettingsPart = (
           })
         )
       );
+
+      const allowGoogleDrive =
+        plugin.settings.pro?.enabledProFeatures.filter(
+          (x) => x.featureName === "feature-google_drive"
+        ).length === 1;
+      console.debug(
+        `allow to show up google drive settings? ${allowGoogleDrive}`
+      );
+      if (allowGoogleDrive) {
+        googleDriveAllowedToUsedDiv.removeClass(
+          "googledrive-allow-to-use-hide"
+        );
+        googleDriveNotShowUpHintSetting.settingEl.addClass(
+          "googledrive-allow-to-use-hide"
+        );
+      } else {
+        googleDriveAllowedToUsedDiv.addClass("googledrive-allow-to-use-hide");
+        googleDriveNotShowUpHintSetting.settingEl.removeClass(
+          "googledrive-allow-to-use-hide"
+        );
+      }
+
       new Notice(t("settings_pro_features_refresh_succ"));
     });
   });

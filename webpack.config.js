@@ -8,6 +8,9 @@ const DEFAULT_ONEDRIVE_CLIENT_ID = process.env.ONEDRIVE_CLIENT_ID || "";
 const DEFAULT_ONEDRIVE_AUTHORITY = process.env.ONEDRIVE_AUTHORITY || "";
 const DEFAULT_REMOTELYSAVE_WEBSITE = process.env.REMOTELYSAVE_WEBSITE || "";
 const DEFAULT_REMOTELYSAVE_CLIENT_ID = process.env.REMOTELYSAVE_CLIENT_ID || "";
+const DEFAULT_GOOGLEDRIVE_CLIENT_ID = process.env.GOOGLEDRIVE_CLIENT_ID || "";
+const DEFAULT_GOOGLEDRIVE_CLIENT_SECRET =
+  process.env.GOOGLEDRIVE_CLIENT_SECRET || "";
 
 module.exports = {
   entry: "./src/main.ts",
@@ -24,6 +27,8 @@ module.exports = {
       "process.env.DEFAULT_ONEDRIVE_AUTHORITY": `"${DEFAULT_ONEDRIVE_AUTHORITY}"`,
       "process.env.DEFAULT_REMOTELYSAVE_WEBSITE": `"${DEFAULT_REMOTELYSAVE_WEBSITE}"`,
       "process.env.DEFAULT_REMOTELYSAVE_CLIENT_ID": `"${DEFAULT_REMOTELYSAVE_CLIENT_ID}"`,
+      "process.env.DEFAULT_GOOGLEDRIVE_CLIENT_ID": `"${DEFAULT_GOOGLEDRIVE_CLIENT_ID}"`,
+      "process.env.DEFAULT_GOOGLEDRIVE_CLIENT_SECRET": `"${DEFAULT_GOOGLEDRIVE_CLIENT_SECRET}"`,
     }),
     // Work around for Buffer is undefined:
     // https://github.com/webpack/changelog-v5/issues/10
