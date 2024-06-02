@@ -38,7 +38,7 @@ Because Google Drive's api doesn't fit into the special envorinment of Obsidian 
 
 # The credential
 
-The website does **NOT** store or save the credential (the code you obtian in the end of the flow). The website is just a "bridge" to help you obtain that code, and just manage your subscription to PRO features.
+The website does **NOT** store or save the Google drive credential (the code you obtian in the end of the flow). The website is just a "bridge" to help you obtain that code, and just manage your subscription to PRO features.
 
 But please be aware that the code is saved locally in your Obsidian. It works like a special password. So that the plugin can upload or download or modify the files for you.
 
