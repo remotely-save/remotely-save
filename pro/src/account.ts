@@ -246,13 +246,7 @@ export const checkProRunnableAndFixInplace = async (
   pluginVersion: string,
   saveUpdatedConfigFunc: () => Promise<any> | undefined
 ): Promise<true> => {
-  // if no pro features are used, we are good to go, no checking
-  if (
-    featuresToCheck.contains("feature-smart_conflict") &&
-    config.conflictAction !== "smart_conflict"
-  ) {
-    return true;
-  }
+  console.debug(`checkProRunnableAndFixInplace`);
 
   // many checks if status is valid
 
@@ -280,6 +274,8 @@ export const checkProRunnableAndFixInplace = async (
     }
   }
 
+  const errorMsgs = [];
+
   // check for the features
   if (featuresToCheck.contains("feature-smart_conflict")) {
     if (config.conflictAction === "smart_conflict") {
@@ -288,15 +284,45 @@ export const checkProRunnableAndFixInplace = async (
           (x) => x.featureName === "feature-smart_conflict"
         ).length === 1
       ) {
-        return true;
+        // good to go
       } else {
-        throw Error(
+        errorMsgs.push(
           `You're trying to use "smart conflict" PRO feature but you haven't subscribe to it.`
         );
       }
     } else {
-      return true;
+      // good to go
     }
   }
+
+  if (featuresToCheck.contains("feature-google_drive")) {
+    console.debug(
+      `checking "feature-google_drive", serviceType=${config.serviceType}`
+    );
+    console.debug(
+      `enabledProFeatures=${JSON.stringify(config.pro.enabledProFeatures)}`
+    );
+
+    if (config.serviceType === "googledrive") {
+      if (
+        config.pro.enabledProFeatures.filter(
+          (x) => x.featureName === "feature-google_drive"
+        ).length === 1
+      ) {
+        // good to go
+      } else {
+        errorMsgs.push(
+          `You're trying to use "sync with Google Drive" PRO feature but you haven't subscribe to it.`
+        );
+      }
+    } else {
+      // good to go
+    }
+  }
+
+  if (errorMsgs.length !== 0) {
+    throw Error(errorMsgs.join("\n\n"));
+  }
+
   return true;
 };

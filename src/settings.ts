@@ -1796,7 +1796,11 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
     // below for googledrive
     //////////////////////////////////////////////////
 
-    const googleDriveDiv = generateGoogleDriveSettingsPart(
+    const {
+      googleDriveDiv,
+      googleDriveAllowedToUsedDiv,
+      googleDriveNotShowUpHintSetting,
+    } = generateGoogleDriveSettingsPart(
       containerEl,
       t,
       this.app,
@@ -2473,8 +2477,14 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
     //////////////////////////////////////////////////
 
     const proDiv = containerEl.createEl("div");
-    generateProSettingsPart(proDiv, t, this.app, this.plugin, () =>
-      this.plugin.saveSettings()
+    generateProSettingsPart(
+      proDiv,
+      t,
+      this.app,
+      this.plugin,
+      () => this.plugin.saveSettings(),
+      googleDriveAllowedToUsedDiv,
+      googleDriveNotShowUpHintSetting
     );
 
     //////////////////////////////////////////////////

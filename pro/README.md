@@ -4,15 +4,19 @@
 
 Remotely Save has some "pro features", which users have to pay for using them.
 
-## Sign Up / Sign In
+## Sign Up / Sign In And Connect
 
-Please go to <https://remotelysave.com> to sign up and sign in an account firstly.
+See the tutorial about your PRO account [here](../docs/pro/README.md).
 
 ## Smart Conflict
 
 Basic (free) version can detect conflicts, but users have to choose to keep newer version or larger version of the files.
 
 PRO (paid) feature "Smart Conflict" gives users one more option: merge small markdown files, or duplicate large markdown files or non-markdown files.
+
+## Sync With Google Drive
+
+PRO (paid) feature "sync with Google Drive" allows users to to sync with Google Drive. Tutorials and limitations are documented [here](../docs/remote_services/googledrive/README.md).
 
 ## License
 

@@ -79,6 +79,10 @@
   display: none;
 }
 
+.googledrive-allow-to-use-hide {
+  display: none;
+}
+
 .googledrive-auth-button-hide {
   display: none;
 }

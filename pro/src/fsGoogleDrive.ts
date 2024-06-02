@@ -213,7 +213,7 @@ export class FakeFsGoogleDrive extends FakeFs {
       });
 
       const k1: { files: File[] } = await k.json();
-      console.debug(k1);
+      // console.debug(k1);
       if (k1.files.length > 0) {
         // yeah we find it
         this.baseDirID = k1.files[0].id!;
@@ -308,11 +308,11 @@ export class FakeFsGoogleDrive extends FakeFs {
                 id: f.id,
                 folderPath: f.keyRaw,
               };
-              console.debug(
-                `looping result of _walkFolder(${id},${folderPath}), adding child=${JSON.stringify(
-                  child
-                )}`
-              );
+              // console.debug(
+              //   `looping result of _walkFolder(${id},${folderPath}), adding child=${JSON.stringify(
+              //     child
+              //   )}`
+              // );
               children.push(child);
             }
           }
@@ -322,16 +322,16 @@ export class FakeFsGoogleDrive extends FakeFs {
       parents = children;
     }
 
-    console.debug(`in the end of walk:`);
-    console.debug(allFiles);
-    console.debug(this.keyToGDEntity);
+    // console.debug(`in the end of walk:`);
+    // console.debug(allFiles);
+    // console.debug(this.keyToGDEntity);
     return allFiles;
   }
 
   async _walkFolder(parentID: string, parentFolderPath: string) {
-    console.debug(
-      `input of single level: parentID=${parentID}, parentFolderPath=${parentFolderPath}`
-    );
+    // console.debug(
+    //   `input of single level: parentID=${parentID}, parentFolderPath=${parentFolderPath}`
+    // );
     const filesOneLevel: GDEntity[] = [];
     let nextPageToken: string | undefined = undefined;
     if (parentID === undefined || parentID === "" || parentID === "root") {
@@ -359,7 +359,7 @@ export class FakeFsGoogleDrive extends FakeFs {
       }
 
       const k1 = await k.json();
-      console.debug(k1);
+      // console.debug(k1);
       for (const file of k1.files as File[]) {
         const entity = fromFileToGDEntity(file, parentID, parentFolderPath);
         this.keyToGDEntity[entity.keyRaw] = entity; // build cache

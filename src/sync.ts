@@ -1508,7 +1508,7 @@ export async function syncer(
     // check pro feature
     // if anything goes wrong, it will throw
     await checkProRunnableAndFixInplace(
-      ["feature-smart_conflict"],
+      ["feature-smart_conflict", "feature-google_drive"],
       settings,
       pluginVersion,
       configSaver

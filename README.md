@@ -22,6 +22,7 @@ This is yet another unofficial sync plugin for Obsidian. If you like it or find 
   - OneDrive for personal
   - Webdav
   - Webdis
+  - Google Drive (PRO feature)
   - [Here](./docs/services_connectable_or_not.md) shows more connectable (or not-connectable) services in details.
 - **Obsidian Mobile supported.** Vaults can be synced across mobile and desktop devices with the cloud service as the "broker".
 - **[End-to-end encryption](./docs/encryption/README.md) supported.** Files would be encrypted using openssl format before being sent to the cloud **if** user specify a password.
@@ -119,6 +120,10 @@ Additionally, the plugin author may occasionally visit Obsidian official forum a
 - Mostly experimental.
 - You have to setup and protect your web server by yourself.
 
+### Google Drive (PRO feature)
+
+PRO (paid) feature "sync with Google Drive" allows users to to sync with Google Drive. Tutorials and limitations are documented [here](./docs/remote_services/googledrive/README.md).
+
 ## Scheduled Auto Sync
 
 - You can configure auto syncing every N minutes in settings.
@@ -133,7 +138,7 @@ In the latest version, you can change the settings to allow syncing `_` files or
 
 ## PRO Features
 
-See [PRO](./pro/README.md) for more details.
+See [PRO](./docs/pro/README.md) for more details.
 
 ## How To Debug
 
