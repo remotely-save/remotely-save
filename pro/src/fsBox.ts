@@ -1,4 +1,3 @@
-import { BoxClient, BoxDeveloperTokenAuth } from "box-typescript-sdk-gen";
 import {
   BoxOAuth,
   OAuthConfig,
@@ -13,6 +12,8 @@ import {
   COMMAND_CALLBACK_BOX,
 } from "./baseTypesPro";
 
+import { BoxDeveloperTokenAuth } from "box-typescript-sdk-gen/lib/box/developerTokenAuth.generated";
+import { BoxClient } from "box-typescript-sdk-gen/lib/client.generated";
 import type { FileFull } from "box-typescript-sdk-gen/lib/schemas/fileFull.generated";
 import type { FileFullOrFolderMiniOrWebLink } from "box-typescript-sdk-gen/lib/schemas/fileFullOrFolderMiniOrWebLink.generated";
 import type { FolderFull } from "box-typescript-sdk-gen/lib/schemas/folderFull.generated";
