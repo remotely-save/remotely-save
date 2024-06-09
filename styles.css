@@ -91,6 +91,25 @@
   display: none;
 }
 
+.box-disclaimer {
+  font-weight: bold;
+}
+.box-hide {
+  display: none;
+}
+
+.box-allow-to-use-hide {
+  display: none;
+}
+
+.box-auth-button-hide {
+  display: none;
+}
+
+.box-revoke-auth-button-hide {
+  display: none;
+}
+
 .qrcode-img {
   width: 350px;
   height: 350px;

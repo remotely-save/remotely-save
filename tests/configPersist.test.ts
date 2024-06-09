@@ -22,6 +22,9 @@ const DEFAULT_SETTINGS: RemotelySavePluginSettings = {
   googledrive: {
     refreshToken: "xxx",
   } as any,
+  box: {
+    refreshToken: "xxx",
+  } as any,
   password: "password",
   serviceType: "s3",
   currLogLevel: "info",

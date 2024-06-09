@@ -11,6 +11,8 @@ const DEFAULT_REMOTELYSAVE_CLIENT_ID = process.env.REMOTELYSAVE_CLIENT_ID || "";
 const DEFAULT_GOOGLEDRIVE_CLIENT_ID = process.env.GOOGLEDRIVE_CLIENT_ID || "";
 const DEFAULT_GOOGLEDRIVE_CLIENT_SECRET =
   process.env.GOOGLEDRIVE_CLIENT_SECRET || "";
+const DEFAULT_BOX_CLIENT_ID = process.env.BOX_CLIENT_ID || "";
+const DEFAULT_BOX_CLIENT_SECRET = process.env.BOX_CLIENT_SECRET || "";
 
 module.exports = {
   entry: "./src/main.ts",
@@ -29,6 +31,8 @@ module.exports = {
       "process.env.DEFAULT_REMOTELYSAVE_CLIENT_ID": `"${DEFAULT_REMOTELYSAVE_CLIENT_ID}"`,
       "process.env.DEFAULT_GOOGLEDRIVE_CLIENT_ID": `"${DEFAULT_GOOGLEDRIVE_CLIENT_ID}"`,
       "process.env.DEFAULT_GOOGLEDRIVE_CLIENT_SECRET": `"${DEFAULT_GOOGLEDRIVE_CLIENT_SECRET}"`,
+      "process.env.DEFAULT_BOX_CLIENT_ID": `"${DEFAULT_BOX_CLIENT_ID}"`,
+      "process.env.DEFAULT_BOX_CLIENT_SECRET": `"${DEFAULT_BOX_CLIENT_SECRET}"`,
     }),
     // Work around for Buffer is undefined:
     // https://github.com/webpack/changelog-v5/issues/10

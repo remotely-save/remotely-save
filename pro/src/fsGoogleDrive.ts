@@ -26,6 +26,7 @@ export const DEFAULT_GOOGLEDRIVE_CONFIG: GoogleDriveConfig = {
   accessTokenExpiresAtTimeMs: 0,
   credentialsShouldBeDeletedAtTimeMs: 0,
   scope: "https://www.googleapis.com/auth/drive.file",
+  kind: "googledrive",
 };
 
 const FOLDER_MIME_TYPE = "application/vnd.google-apps.folder";

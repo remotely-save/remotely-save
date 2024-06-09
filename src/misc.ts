@@ -716,3 +716,14 @@ export const splitFileSizeToChunkRanges = (
   }
   return res;
 };
+
+export const getSha1 = async (x: ArrayBuffer, stringify: "base64" | "hex") => {
+  const y = await window.crypto.subtle.digest("SHA-1", x);
+
+  if (stringify === "base64") {
+    return arrayBufferToBase64(y);
+  } else if (stringify === "hex") {
+    return arrayBufferToHex(y);
+  }
+  throw Error(`not supported stringify option = ${stringify}`);
+};

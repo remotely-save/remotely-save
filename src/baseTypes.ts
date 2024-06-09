@@ -3,7 +3,11 @@
  * To avoid circular dependency.
  */
 
-import type { GoogleDriveConfig, ProConfig } from "../pro/src/baseTypesPro";
+import type {
+  BoxConfig,
+  GoogleDriveConfig,
+  ProConfig,
+} from "../pro/src/baseTypesPro";
 import type { LangTypeAndAuto } from "./i18n";
 
 export const DEFAULT_CONTENT_TYPE = "application/octet-stream";
@@ -14,14 +18,16 @@ export type SUPPORTED_SERVICES_TYPE =
   | "dropbox"
   | "onedrive"
   | "webdis"
-  | "googledrive";
+  | "googledrive"
+  | "box";
 
 export type SUPPORTED_SERVICES_TYPE_WITH_REMOTE_BASE_DIR =
   | "webdav"
   | "dropbox"
   | "onedrive"
   | "webdis"
-  | "googledrive";
+  | "googledrive"
+  | "box";
 
 export interface S3Config {
   s3Endpoint: string;
@@ -116,7 +122,8 @@ export type QRExportType =
   | "onedrive"
   | "webdav"
   | "webdis"
-  | "googledrive";
+  | "googledrive"
+  | "box";
 
 export interface ProfilerConfig {
   enablePrinting?: boolean;
@@ -130,6 +137,7 @@ export interface RemotelySavePluginSettings {
   onedrive: OnedriveConfig;
   webdis: WebdisConfig;
   googledrive: GoogleDriveConfig;
+  box: BoxConfig;
   password: string;
   serviceType: SUPPORTED_SERVICES_TYPE;
   currLogLevel?: string;

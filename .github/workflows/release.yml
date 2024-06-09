@@ -27,6 +27,8 @@ jobs:
       REMOTELYSAVE_CLIENT_ID: ${{secrets.REMOTELYSAVE_CLIENT_ID}}
       GOOGLEDRIVE_CLIENT_ID: ${{secrets.GOOGLEDRIVE_CLIENT_ID}}
       GOOGLEDRIVE_CLIENT_SECRET: ${{secrets.GOOGLEDRIVE_CLIENT_SECRET}}
+      BOX_CLIENT_ID: ${{secrets.BOX_CLIENT_ID}}
+      BOX_CLIENT_SECRET: ${{secrets.BOX_CLIENT_SECRET}}
 
     strategy:
       matrix:

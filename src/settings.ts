@@ -21,6 +21,7 @@ import type {
 } from "./baseTypes";
 
 import cloneDeep from "lodash/cloneDeep";
+import { generateBoxSettingsPart } from "../pro/src/settingsBox";
 import { generateGoogleDriveSettingsPart } from "../pro/src/settingsGoogleDrive";
 import { generateProSettingsPart } from "../pro/src/settingsPro";
 import { API_VER_ENSURE_REQURL_OK, VALID_REQURL } from "./baseTypesObs";
@@ -1809,6 +1810,15 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
     );
 
     //////////////////////////////////////////////////
+    // below for box
+    //////////////////////////////////////////////////
+
+    const { boxDiv, boxAllowedToUsedDiv, boxNotShowUpHintSetting } =
+      generateBoxSettingsPart(containerEl, t, this.app, this.plugin, () =>
+        this.plugin.saveSettings()
+      );
+
+    //////////////////////////////////////////////////
     // below for general chooser (part 2/2)
     //////////////////////////////////////////////////
 
@@ -1827,6 +1837,7 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
           "googledrive",
           t("settings_chooseservice_googledrive")
         );
+        dropdown.addOption("box", t("settings_chooseservice_box"));
 
         dropdown
           .setValue(this.plugin.settings.serviceType)
@@ -1855,6 +1866,10 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
             googleDriveDiv.toggleClass(
               "googledrive-hide",
               this.plugin.settings.serviceType !== "googledrive"
+            );
+            boxDiv.toggleClass(
+              "box-hide",
+              this.plugin.settings.serviceType !== "box"
             );
             await this.plugin.saveSettings();
           });
@@ -2417,6 +2432,12 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
             this.plugin,
             "googledrive"
           ).open();
+        });
+      })
+      .addButton(async (button) => {
+        button.setButtonText(t("settings_export_box_button"));
+        button.onClick(async () => {
+          new ExportSettingsQrCodeModal(this.app, this.plugin, "box").open();
         });
       });
 

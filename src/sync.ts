@@ -1507,12 +1507,7 @@ export async function syncer(
   try {
     // check pro feature
     // if anything goes wrong, it will throw
-    await checkProRunnableAndFixInplace(
-      ["feature-smart_conflict", "feature-google_drive"],
-      settings,
-      pluginVersion,
-      configSaver
-    );
+    await checkProRunnableAndFixInplace(settings, pluginVersion, configSaver);
 
     // try mode?
     await notifyFunc?.(triggerSource, step);

@@ -71,6 +71,7 @@
     "aggregate-error": "^5.0.0",
     "assert": "^2.1.0",
     "aws-crt": "^1.21.2",
+    "box-typescript-sdk-gen": "^1.0.0",
     "buffer": "^6.0.3",
     "crypto-browserify": "^3.12.0",
     "dropbox": "^10.34.0",

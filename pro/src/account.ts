@@ -1,5 +1,4 @@
 import { nanoid } from "nanoid";
-import { base64url } from "rfc4648";
 import {
   OAUTH2_FORCE_EXPIRE_MILLISECONDS,
   type RemotelySavePluginSettings,
@@ -12,6 +11,7 @@ import {
   PRO_WEBSITE,
   type ProConfig,
 } from "./baseTypesPro";
+import { codeVerifier2CodeChallenge } from "./oauth2";
 
 const site = PRO_WEBSITE;
 console.debug(`remotelysave official website: ${site}`);
@@ -24,31 +24,6 @@ export const DEFAULT_PRO_CONFIG: ProConfig = {
   enabledProFeatures: [],
   email: "",
 };
-
-/**
- * https://datatracker.ietf.org/doc/html/rfc7636
- * dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk
- * => E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM
- * @param x
- * @returns BASE64URL-ENCODE(SHA256(ASCII(code_verifier)))
- */
-async function codeVerifier2CodeChallenge(x: string) {
-  if (x === undefined || x === "") {
-    return "";
-  }
-  try {
-    return base64url.stringify(
-      new Uint8Array(
-        await crypto.subtle.digest("SHA-256", new TextEncoder().encode(x))
-      ),
-      {
-        pad: false,
-      }
-    );
-  } catch (e) {
-    return "";
-  }
-}
 
 export const generateAuthUrlAndCodeVerifierChallenge = async (
   hasCallback: boolean
@@ -241,7 +216,6 @@ export const getAndSaveProEmail = async (
  * @returns
  */
 export const checkProRunnableAndFixInplace = async (
-  featuresToCheck: PRO_FEATURE_TYPE[],
   config: RemotelySavePluginSettings,
   pluginVersion: string,
   saveUpdatedConfigFunc: () => Promise<any> | undefined
@@ -276,48 +250,59 @@ export const checkProRunnableAndFixInplace = async (
 
   const errorMsgs = [];
 
-  // check for the features
-  if (featuresToCheck.contains("feature-smart_conflict")) {
-    if (config.conflictAction === "smart_conflict") {
-      if (
-        config.pro.enabledProFeatures.filter(
-          (x) => x.featureName === "feature-smart_conflict"
-        ).length === 1
-      ) {
-        // good to go
-      } else {
-        errorMsgs.push(
-          `You're trying to use "smart conflict" PRO feature but you haven't subscribe to it.`
-        );
-      }
-    } else {
+  // check for smart_conflict
+  if (config.conflictAction === "smart_conflict") {
+    if (
+      config.pro.enabledProFeatures.filter(
+        (x) => x.featureName === "feature-smart_conflict"
+      ).length === 1
+    ) {
       // good to go
+    } else {
+      errorMsgs.push(
+        `You're trying to use "smart conflict" PRO feature but you haven't subscribe to it.`
+      );
     }
+  } else {
+    // good to go
   }
 
-  if (featuresToCheck.contains("feature-google_drive")) {
-    console.debug(
-      `checking "feature-google_drive", serviceType=${config.serviceType}`
-    );
-    console.debug(
-      `enabledProFeatures=${JSON.stringify(config.pro.enabledProFeatures)}`
-    );
-
-    if (config.serviceType === "googledrive") {
-      if (
-        config.pro.enabledProFeatures.filter(
-          (x) => x.featureName === "feature-google_drive"
-        ).length === 1
-      ) {
-        // good to go
-      } else {
-        errorMsgs.push(
-          `You're trying to use "sync with Google Drive" PRO feature but you haven't subscribe to it.`
-        );
-      }
-    } else {
+  // check for google_drive
+  console.debug(
+    `checking "feature-google_drive", serviceType=${config.serviceType}`
+  );
+  if (config.serviceType === "googledrive") {
+    if (
+      config.pro.enabledProFeatures.filter(
+        (x) => x.featureName === "feature-google_drive"
+      ).length === 1
+    ) {
       // good to go
+    } else {
+      errorMsgs.push(
+        `You're trying to use "sync with Google Drive" PRO feature but you haven't subscribe to it.`
+      );
     }
+  } else {
+    // good to go
+  }
+
+  // check for box
+  console.debug(`checking "feature-box", serviceType=${config.serviceType}`);
+  if (config.serviceType === "box") {
+    if (
+      config.pro.enabledProFeatures.filter(
+        (x) => x.featureName === "feature-box"
+      ).length === 1
+    ) {
+      // good to go
+    } else {
+      errorMsgs.push(
+        `You're trying to use "sync with Box" PRO feature but you haven't subscribe to it.`
+      );
+    }
+  } else {
+    // good to go
   }
 
   if (errorMsgs.length !== 0) {

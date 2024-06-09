@@ -1,3 +1,4 @@
+import { FakeFsBox } from "../pro/src/fsBox";
 import { FakeFsGoogleDrive } from "../pro/src/fsGoogleDrive";
 import type { RemotelySavePluginSettings } from "./baseTypes";
 import type { FakeFs } from "./fsAll";
@@ -48,6 +49,8 @@ export function getClient(
         vaultName,
         saveUpdatedConfigFunc
       );
+    case "box":
+      return new FakeFsBox(settings.box, vaultName, saveUpdatedConfigFunc);
     default:
       throw Error(`cannot init client for serviceType=${settings.serviceType}`);
   }

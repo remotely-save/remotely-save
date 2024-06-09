@@ -63,7 +63,16 @@ import { SyncAlgoV3Modal } from "./syncAlgoV3Notice";
 // biome-ignore lint/suspicious/noShadowRestrictedNames: <explanation>
 import AggregateError from "aggregate-error";
 import throttle from "lodash/throttle";
-import { COMMAND_CALLBACK_PRO } from "../pro/src/baseTypesPro";
+import {
+  COMMAND_CALLBACK_BOX,
+  COMMAND_CALLBACK_PRO,
+} from "../pro/src/baseTypesPro";
+import {
+  DEFAULT_BOX_CONFIG,
+  FakeFsBox,
+  sendAuthReq as sendAuthReqBox,
+  setConfigBySuccessfullAuthInplace as setConfigBySuccessfullAuthInplaceBox,
+} from "../pro/src/fsBox";
 import { DEFAULT_GOOGLEDRIVE_CONFIG } from "../pro/src/fsGoogleDrive";
 import { exportVaultSyncPlansToFiles } from "./debugMode";
 import { FakeFsEncrypt } from "./fsEncrypt";
@@ -81,6 +90,7 @@ const DEFAULT_SETTINGS: RemotelySavePluginSettings = {
   onedrive: DEFAULT_ONEDRIVE_CONFIG,
   webdis: DEFAULT_WEBDIS_CONFIG,
   googledrive: DEFAULT_GOOGLEDRIVE_CONFIG,
+  box: DEFAULT_BOX_CONFIG,
   password: "",
   serviceType: "s3",
   currLogLevel: "info",
@@ -782,6 +792,62 @@ export default class RemotelySavePlugin extends Plugin {
       }
     );
 
+    this.registerObsidianProtocolHandler(
+      COMMAND_CALLBACK_BOX,
+      async (inputParams) => {
+        if (this.oauth2Info.helperModal !== undefined) {
+          const k = this.oauth2Info.helperModal.contentEl;
+          k.empty();
+
+          t("protocol_box_connecting")
+            .split("\n")
+            .forEach((val) => {
+              k.createEl("p", {
+                text: val,
+              });
+            });
+        }
+
+        console.debug(inputParams);
+        const authRes = await sendAuthReqBox(
+          inputParams.code,
+          async (e: any) => {
+            new Notice(t("protocol_box_connect_fail"));
+            new Notice(`${e}`);
+            throw e;
+          }
+        );
+        console.debug(authRes);
+
+        const self = this;
+        await setConfigBySuccessfullAuthInplaceBox(
+          this.settings.box!,
+          authRes,
+          () => self.saveSettings()
+        );
+
+        this.oauth2Info.verifier = ""; // reset it
+        this.oauth2Info.helperModal?.close(); // close it
+        this.oauth2Info.helperModal = undefined;
+
+        this.oauth2Info.authDiv?.toggleClass(
+          "box-auth-button-hide",
+          this.settings.box?.refreshToken !== ""
+        );
+        this.oauth2Info.authDiv = undefined;
+
+        this.oauth2Info.revokeAuthSetting?.setDesc(
+          t("protocol_box_connect_succ_revoke")
+        );
+        this.oauth2Info.revokeAuthSetting = undefined;
+        this.oauth2Info.revokeDiv?.toggleClass(
+          "box-revoke-auth-button-hide",
+          this.settings.box?.refreshToken === ""
+        );
+        this.oauth2Info.revokeDiv = undefined;
+      }
+    );
+
     this.syncRibbon = this.addRibbonIcon(
       iconNameSyncWait,
       `${this.manifest.name}`,
@@ -1068,6 +1134,10 @@ export default class RemotelySavePlugin extends Plugin {
       this.settings.googledrive = DEFAULT_GOOGLEDRIVE_CONFIG;
     }
 
+    if (this.settings.box === undefined) {
+      this.settings.box = DEFAULT_BOX_CONFIG;
+    }
+
     await this.saveSettings();
   }
 
@@ -1133,6 +1203,26 @@ export default class RemotelySavePlugin extends Plugin {
     ) {
       onedriveExpired = true;
       this.settings.onedrive = cloneDeep(DEFAULT_ONEDRIVE_CONFIG);
+      needSave = true;
+    }
+
+    let googleDriveExpired = false;
+    if (
+      this.settings.googledrive.refreshToken !== "" &&
+      current >= this.settings!.googledrive!.credentialsShouldBeDeletedAtTimeMs!
+    ) {
+      googleDriveExpired = true;
+      this.settings.googledrive = cloneDeep(DEFAULT_GOOGLEDRIVE_CONFIG);
+      needSave = true;
+    }
+
+    let boxExpired = false;
+    if (
+      this.settings.box.refreshToken !== "" &&
+      current >= this.settings!.box!.credentialsShouldBeDeletedAtTimeMs!
+    ) {
+      boxExpired = true;
+      this.settings.box = cloneDeep(DEFAULT_BOX_CONFIG);
       needSave = true;
     }
 
