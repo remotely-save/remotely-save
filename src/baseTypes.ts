@@ -6,6 +6,7 @@
 import type {
   BoxConfig,
   GoogleDriveConfig,
+  PCloudConfig,
   ProConfig,
 } from "../pro/src/baseTypesPro";
 import type { LangTypeAndAuto } from "./i18n";
@@ -19,7 +20,8 @@ export type SUPPORTED_SERVICES_TYPE =
   | "onedrive"
   | "webdis"
   | "googledrive"
-  | "box";
+  | "box"
+  | "pcloud";
 
 export type SUPPORTED_SERVICES_TYPE_WITH_REMOTE_BASE_DIR =
   | "webdav"
@@ -27,7 +29,8 @@ export type SUPPORTED_SERVICES_TYPE_WITH_REMOTE_BASE_DIR =
   | "onedrive"
   | "webdis"
   | "googledrive"
-  | "box";
+  | "box"
+  | "pcloud";
 
 export interface S3Config {
   s3Endpoint: string;
@@ -123,7 +126,8 @@ export type QRExportType =
   | "webdav"
   | "webdis"
   | "googledrive"
-  | "box";
+  | "box"
+  | "pcloud";
 
 export interface ProfilerConfig {
   enablePrinting?: boolean;
@@ -138,6 +142,7 @@ export interface RemotelySavePluginSettings {
   webdis: WebdisConfig;
   googledrive: GoogleDriveConfig;
   box: BoxConfig;
+  pcloud: PCloudConfig;
   password: string;
   serviceType: SUPPORTED_SERVICES_TYPE;
   currLogLevel?: string;

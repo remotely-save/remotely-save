@@ -249,7 +249,11 @@ export const generateProSettingsPart = (
   plugin: RemotelySavePlugin,
   saveUpdatedConfigFunc: () => Promise<any> | undefined,
   googleDriveAllowedToUsedDiv: HTMLDivElement,
-  googleDriveNotShowUpHintSetting: Setting
+  googleDriveNotShowUpHintSetting: Setting,
+  boxAllowedToUsedDiv: HTMLDivElement,
+  boxNotShowUpHintSetting: Setting,
+  pCloudAllowedToUsedDiv: HTMLDivElement,
+  pCloudNotShowUpHintSetting: Setting
 ) => {
   proDiv
     .createEl("h2", { text: t("settings_pro") })
@@ -314,6 +318,36 @@ export const generateProSettingsPart = (
         googleDriveAllowedToUsedDiv.addClass("googledrive-allow-to-use-hide");
         googleDriveNotShowUpHintSetting.settingEl.removeClass(
           "googledrive-allow-to-use-hide"
+        );
+      }
+
+      const allowBox =
+        plugin.settings.pro?.enabledProFeatures.filter(
+          (x) => x.featureName === "feature-box"
+        ).length === 1;
+      console.debug(`allow to show up Box settings? ${allowBox}`);
+      if (allowBox) {
+        boxAllowedToUsedDiv.removeClass("box-allow-to-use-hide");
+        boxNotShowUpHintSetting.settingEl.addClass("box-allow-to-use-hide");
+      } else {
+        boxAllowedToUsedDiv.addClass("box-allow-to-use-hide");
+        boxNotShowUpHintSetting.settingEl.removeClass("box-allow-to-use-hide");
+      }
+
+      const allowPCloud =
+        plugin.settings.pro?.enabledProFeatures.filter(
+          (x) => x.featureName === "feature-pcloud"
+        ).length === 1;
+      console.debug(`allow to show up pCloud settings? ${allowPCloud}`);
+      if (allowPCloud) {
+        pCloudAllowedToUsedDiv.removeClass("pcloud-allow-to-use-hide");
+        pCloudNotShowUpHintSetting.settingEl.addClass(
+          "pcloud-allow-to-use-hide"
+        );
+      } else {
+        pCloudAllowedToUsedDiv.addClass("pcloud-allow-to-use-hide");
+        pCloudNotShowUpHintSetting.settingEl.removeClass(
+          "pcloud-allow-to-use-hide"
         );
       }
 

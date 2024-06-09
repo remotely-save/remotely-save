@@ -29,6 +29,8 @@ jobs:
       GOOGLEDRIVE_CLIENT_SECRET: ${{secrets.GOOGLEDRIVE_CLIENT_SECRET}}
       BOX_CLIENT_ID: ${{secrets.BOX_CLIENT_ID}}
       BOX_CLIENT_SECRET: ${{secrets.BOX_CLIENT_SECRET}}
+      PCLOUD_CLIENT_ID: ${{secrets.PCLOUD_CLIENT_ID}}
+      PCLOUD_CLIENT_SECRET: ${{secrets.PCLOUD_CLIENT_SECRET}}
 
     strategy:
       matrix:

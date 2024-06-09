@@ -23,6 +23,7 @@ import type {
 import cloneDeep from "lodash/cloneDeep";
 import { generateBoxSettingsPart } from "../pro/src/settingsBox";
 import { generateGoogleDriveSettingsPart } from "../pro/src/settingsGoogleDrive";
+import { generatePCloudSettingsPart } from "../pro/src/settingsPCloud";
 import { generateProSettingsPart } from "../pro/src/settingsPro";
 import { API_VER_ENSURE_REQURL_OK, VALID_REQURL } from "./baseTypesObs";
 import { messyConfigToNormal } from "./configPersist";
@@ -1819,6 +1820,15 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
       );
 
     //////////////////////////////////////////////////
+    // below for box
+    //////////////////////////////////////////////////
+
+    const { pCloudDiv, pCloudAllowedToUsedDiv, pCloudNotShowUpHintSetting } =
+      generatePCloudSettingsPart(containerEl, t, this.app, this.plugin, () =>
+        this.plugin.saveSettings()
+      );
+
+    //////////////////////////////////////////////////
     // below for general chooser (part 2/2)
     //////////////////////////////////////////////////
 
@@ -1838,6 +1848,7 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
           t("settings_chooseservice_googledrive")
         );
         dropdown.addOption("box", t("settings_chooseservice_box"));
+        dropdown.addOption("pcloud", t("settings_chooseservice_pcloud"));
 
         dropdown
           .setValue(this.plugin.settings.serviceType)
@@ -1870,6 +1881,10 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
             boxDiv.toggleClass(
               "box-hide",
               this.plugin.settings.serviceType !== "box"
+            );
+            pCloudDiv.toggleClass(
+              "pcloud-hide",
+              this.plugin.settings.serviceType !== "pcloud"
             );
             await this.plugin.saveSettings();
           });
@@ -2439,6 +2454,12 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
         button.onClick(async () => {
           new ExportSettingsQrCodeModal(this.app, this.plugin, "box").open();
         });
+      })
+      .addButton(async (button) => {
+        button.setButtonText(t("settings_export_pcloud_button"));
+        button.onClick(async () => {
+          new ExportSettingsQrCodeModal(this.app, this.plugin, "pcloud").open();
+        });
       });
 
     let importSettingVal = "";
@@ -2505,7 +2526,11 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
       this.plugin,
       () => this.plugin.saveSettings(),
       googleDriveAllowedToUsedDiv,
-      googleDriveNotShowUpHintSetting
+      googleDriveNotShowUpHintSetting,
+      boxAllowedToUsedDiv,
+      boxNotShowUpHintSetting,
+      pCloudAllowedToUsedDiv,
+      pCloudNotShowUpHintSetting
     );
 
     //////////////////////////////////////////////////

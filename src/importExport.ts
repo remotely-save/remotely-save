@@ -26,6 +26,7 @@ export const exportQrCodeUri = async (
     delete settings2.webdis;
     delete settings2.googledrive;
     delete settings2.box;
+    delete settings2.pcloud;
     delete settings2.pro;
   } else if (exportFields === "s3") {
     settings2 = { s3: cloneDeep(settings.s3) };
@@ -41,6 +42,8 @@ export const exportQrCodeUri = async (
     settings2 = { googledrive: cloneDeep(settings.googledrive) };
   } else if (exportFields === "box") {
     settings2 = { box: cloneDeep(settings.box) };
+  } else if (exportFields === "pcloud") {
+    settings2 = { pcloud: cloneDeep(settings.pcloud) };
   }
 
   delete settings2.vaultRandomID;

@@ -1,4 +1,7 @@
+// biome-ignore lint/suspicious/noShadowRestrictedNames: <explanation>
+import AggregateError from "aggregate-error";
 import cloneDeep from "lodash/cloneDeep";
+import throttle from "lodash/throttle";
 import { FileText, RefreshCcw, RotateCcw, createElement } from "lucide";
 import {
   Events,
@@ -20,6 +23,25 @@ import {
   sendAuthReq as sendAuthReqPro,
   setConfigBySuccessfullAuthInplace as setConfigBySuccessfullAuthInplacePro,
 } from "../pro/src/account";
+import {
+  COMMAND_CALLBACK_BOX,
+  COMMAND_CALLBACK_PCLOUD,
+  COMMAND_CALLBACK_PRO,
+} from "../pro/src/baseTypesPro";
+import {
+  DEFAULT_BOX_CONFIG,
+  FakeFsBox,
+  sendAuthReq as sendAuthReqBox,
+  setConfigBySuccessfullAuthInplace as setConfigBySuccessfullAuthInplaceBox,
+} from "../pro/src/fsBox";
+import { DEFAULT_GOOGLEDRIVE_CONFIG } from "../pro/src/fsGoogleDrive";
+import {
+  type AuthAllowFirstRes as AuthAllowFirstResPCloud,
+  DEFAULT_PCLOUD_CONFIG,
+  generateAuthUrl as generateAuthUrlPCloud,
+  sendAuthReq as sendAuthReqPCloud,
+  setConfigBySuccessfullAuthInplace as setConfigBySuccessfullAuthInplacePCloud,
+} from "../pro/src/fsPCloud";
 import type {
   RemotelySavePluginSettings,
   SyncTriggerSourceType,
@@ -32,11 +54,15 @@ import {
 } from "./baseTypes";
 import { API_VER_ENSURE_REQURL_OK } from "./baseTypesObs";
 import { messyConfigToNormal, normalConfigToMessy } from "./configPersist";
+import { exportVaultSyncPlansToFiles } from "./debugMode";
 import {
   DEFAULT_DROPBOX_CONFIG,
   sendAuthReq as sendAuthReqDropbox,
   setConfigBySuccessfullAuthInplace as setConfigBySuccessfullAuthInplaceDropbox,
 } from "./fsDropbox";
+import { FakeFsEncrypt } from "./fsEncrypt";
+import { getClient } from "./fsGetter";
+import { FakeFsLocal } from "./fsLocal";
 import {
   type AccessCodeResponseSuccessfulType,
   DEFAULT_ONEDRIVE_CONFIG,
@@ -45,6 +71,7 @@ import {
 } from "./fsOnedrive";
 import { DEFAULT_S3_CONFIG } from "./fsS3";
 import { DEFAULT_WEBDAV_CONFIG } from "./fsWebdav";
+import { DEFAULT_WEBDIS_CONFIG } from "./fsWebdis";
 import { I18n } from "./i18n";
 import type { LangTypeAndAuto, TransItemType } from "./i18n";
 import { importQrCodeUri } from "./importExport";
@@ -57,31 +84,11 @@ import {
   upsertLastSuccessSyncTimeByVault,
   upsertPluginVersionByVault,
 } from "./localdb";
-import { RemotelySaveSettingTab } from "./settings";
-import { SyncAlgoV3Modal } from "./syncAlgoV3Notice";
-
-// biome-ignore lint/suspicious/noShadowRestrictedNames: <explanation>
-import AggregateError from "aggregate-error";
-import throttle from "lodash/throttle";
-import {
-  COMMAND_CALLBACK_BOX,
-  COMMAND_CALLBACK_PRO,
-} from "../pro/src/baseTypesPro";
-import {
-  DEFAULT_BOX_CONFIG,
-  FakeFsBox,
-  sendAuthReq as sendAuthReqBox,
-  setConfigBySuccessfullAuthInplace as setConfigBySuccessfullAuthInplaceBox,
-} from "../pro/src/fsBox";
-import { DEFAULT_GOOGLEDRIVE_CONFIG } from "../pro/src/fsGoogleDrive";
-import { exportVaultSyncPlansToFiles } from "./debugMode";
-import { FakeFsEncrypt } from "./fsEncrypt";
-import { getClient } from "./fsGetter";
-import { FakeFsLocal } from "./fsLocal";
-import { DEFAULT_WEBDIS_CONFIG } from "./fsWebdis";
 import { changeMobileStatusBar } from "./misc";
 import { DEFAULT_PROFILER_CONFIG, type Profiler } from "./profiler";
+import { RemotelySaveSettingTab } from "./settings";
 import { syncer } from "./sync";
+import { SyncAlgoV3Modal } from "./syncAlgoV3Notice";
 
 const DEFAULT_SETTINGS: RemotelySavePluginSettings = {
   s3: DEFAULT_S3_CONFIG,
@@ -91,6 +98,7 @@ const DEFAULT_SETTINGS: RemotelySavePluginSettings = {
   webdis: DEFAULT_WEBDIS_CONFIG,
   googledrive: DEFAULT_GOOGLEDRIVE_CONFIG,
   box: DEFAULT_BOX_CONFIG,
+  pcloud: DEFAULT_PCLOUD_CONFIG,
   password: "",
   serviceType: "s3",
   currLogLevel: "info",
@@ -848,6 +856,64 @@ export default class RemotelySavePlugin extends Plugin {
       }
     );
 
+    this.registerObsidianProtocolHandler(
+      COMMAND_CALLBACK_PCLOUD,
+      async (inputParams) => {
+        if (this.oauth2Info.helperModal !== undefined) {
+          const k = this.oauth2Info.helperModal.contentEl;
+          k.empty();
+
+          t("protocol_pcloud_connecting")
+            .split("\n")
+            .forEach((val) => {
+              k.createEl("p", {
+                text: val,
+              });
+            });
+        }
+
+        console.debug(inputParams);
+        const authRes = await sendAuthReqPCloud(
+          inputParams.hostname,
+          inputParams.code,
+          async (e: any) => {
+            new Notice(t("protocol_pcloud_connect_fail"));
+            new Notice(`${e}`);
+            throw e;
+          }
+        );
+        console.debug(authRes);
+
+        const self = this;
+        await setConfigBySuccessfullAuthInplacePCloud(
+          this.settings.pcloud!,
+          inputParams as unknown as AuthAllowFirstResPCloud,
+          authRes,
+          () => self.saveSettings()
+        );
+
+        this.oauth2Info.verifier = ""; // reset it
+        this.oauth2Info.helperModal?.close(); // close it
+        this.oauth2Info.helperModal = undefined;
+
+        this.oauth2Info.authDiv?.toggleClass(
+          "pcloud-auth-button-hide",
+          this.settings.pcloud?.accessToken !== ""
+        );
+        this.oauth2Info.authDiv = undefined;
+
+        this.oauth2Info.revokeAuthSetting?.setDesc(
+          t("protocol_pcloud_connect_succ_revoke")
+        );
+        this.oauth2Info.revokeAuthSetting = undefined;
+        this.oauth2Info.revokeDiv?.toggleClass(
+          "pcloud-revoke-auth-button-hide",
+          this.settings.pcloud?.accessToken === ""
+        );
+        this.oauth2Info.revokeDiv = undefined;
+      }
+    );
+
     this.syncRibbon = this.addRibbonIcon(
       iconNameSyncWait,
       `${this.manifest.name}`,
@@ -1138,6 +1204,10 @@ export default class RemotelySavePlugin extends Plugin {
       this.settings.box = DEFAULT_BOX_CONFIG;
     }
 
+    if (this.settings.pcloud === undefined) {
+      this.settings.pcloud = DEFAULT_PCLOUD_CONFIG;
+    }
+
     await this.saveSettings();
   }
 
@@ -1226,6 +1296,16 @@ export default class RemotelySavePlugin extends Plugin {
       needSave = true;
     }
 
+    let pCloudExpired = false;
+    if (
+      this.settings.pcloud.accessToken !== "" &&
+      current >= this.settings!.pcloud!.credentialsShouldBeDeletedAtTimeMs!
+    ) {
+      pCloudExpired = true;
+      this.settings.pcloud = cloneDeep(DEFAULT_PCLOUD_CONFIG);
+      needSave = true;
+    }
+
     if (this.settings.pro === undefined) {
       this.settings.pro = cloneDeep(DEFAULT_PRO_CONFIG);
     }
@@ -1236,19 +1316,33 @@ export default class RemotelySavePlugin extends Plugin {
     }
 
     // send notice
-    if (dropboxExpired && onedriveExpired) {
+    if (dropboxExpired) {
       new Notice(
-        `${this.manifest.name}: You haven't manually auth Dropbox and OneDrive for a while, you need to re-auth them again.`,
+        `${this.manifest.name}: You haven't manually auth Dropbox for many days, you need to re-auth it again.`,
         6000
       );
-    } else if (dropboxExpired) {
+    }
+    if (onedriveExpired) {
       new Notice(
-        `${this.manifest.name}: You haven't manually auth Dropbox for a while, you need to re-auth it again.`,
+        `${this.manifest.name}: You haven't manually auth OneDrive for many days, you need to re-auth it again.`,
         6000
       );
-    } else if (onedriveExpired) {
+    }
+    if (googleDriveExpired) {
       new Notice(
-        `${this.manifest.name}: You haven't manually auth OneDrive for a while, you need to re-auth it again.`,
+        `${this.manifest.name}: You haven't manually auth Google Drive for many days, you need to re-auth it again.`,
+        6000
+      );
+    }
+    if (boxExpired) {
+      new Notice(
+        `${this.manifest.name}: You haven't manually auth Box for many days, you need to re-auth it again.`,
+        6000
+      );
+    }
+    if (pCloudExpired) {
+      new Notice(
+        `${this.manifest.name}: You haven't manually auth pCloud for many days, you need to re-auth it again.`,
         6000
       );
     }

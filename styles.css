@@ -110,6 +110,25 @@
   display: none;
 }
 
+.pcloud-disclaimer {
+  font-weight: bold;
+}
+.pcloud-hide {
+  display: none;
+}
+
+.pcloud-allow-to-use-hide {
+  display: none;
+}
+
+.pcloud-auth-button-hide {
+  display: none;
+}
+
+.pcloud-revoke-auth-button-hide {
+  display: none;
+}
+
 .qrcode-img {
   width: 350px;
   height: 350px;

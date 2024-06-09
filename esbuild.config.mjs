@@ -24,6 +24,8 @@ const DEFAULT_GOOGLEDRIVE_CLIENT_SECRET =
   process.env.GOOGLEDRIVE_CLIENT_SECRET || "";
 const DEFAULT_BOX_CLIENT_ID = process.env.BOX_CLIENT_ID || "";
 const DEFAULT_BOX_CLIENT_SECRET = process.env.BOX_CLIENT_SECRET || "";
+const DEFAULT_PCLOUD_CLIENT_ID = process.env.PCLOUD_CLIENT_ID || "";
+const DEFAULT_PCLOUD_CLIENT_SECRET = process.env.PCLOUD_CLIENT_SECRET || "";
 
 esbuild
   .context({
@@ -65,6 +67,8 @@ esbuild
       "process.env.DEFAULT_GOOGLEDRIVE_CLIENT_SECRET": `"${DEFAULT_GOOGLEDRIVE_CLIENT_SECRET}"`,
       "process.env.DEFAULT_BOX_CLIENT_ID": `"${DEFAULT_BOX_CLIENT_ID}"`,
       "process.env.DEFAULT_BOX_CLIENT_SECRET": `"${DEFAULT_BOX_CLIENT_SECRET}"`,
+      "process.env.DEFAULT_PCLOUD_CLIENT_ID": `"${DEFAULT_PCLOUD_CLIENT_ID}"`,
+      "process.env.DEFAULT_PCLOUD_CLIENT_SECRET": `"${DEFAULT_PCLOUD_CLIENT_SECRET}"`,
       global: "window",
       "process.env.NODE_DEBUG": `undefined`, // ugly fix
       "process.env.DEBUG": `undefined`, // ugly fix

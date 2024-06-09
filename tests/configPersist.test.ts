@@ -25,6 +25,9 @@ const DEFAULT_SETTINGS: RemotelySavePluginSettings = {
   box: {
     refreshToken: "xxx",
   } as any,
+  pcloud: {
+    refreshToken: "xxx",
+  } as any,
   password: "password",
   serviceType: "s3",
   currLogLevel: "info",
