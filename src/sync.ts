@@ -1172,7 +1172,7 @@ const dispatchOperationToActualV3 = async (
       r.key
     );
     if (conflictAction === "smart_conflict") {
-      if (isMergable(r.remote!)) {
+      if (isMergable(r.local!)) {
         await clearFileContentHistoryByVaultAndProfile(
           db,
           vaultRandomID,
