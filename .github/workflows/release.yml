@@ -31,6 +31,8 @@ jobs:
       BOX_CLIENT_SECRET: ${{secrets.BOX_CLIENT_SECRET}}
       PCLOUD_CLIENT_ID: ${{secrets.PCLOUD_CLIENT_ID}}
       PCLOUD_CLIENT_SECRET: ${{secrets.PCLOUD_CLIENT_SECRET}}
+      YANDEXDISK_CLIENT_ID: ${{secrets.YANDEXDISK_CLIENT_ID}}
+      YANDEXDISK_CLIENT_SECRET: ${{secrets.YANDEXDISK_CLIENT_SECRET}}
 
     strategy:
       matrix:

@@ -10,7 +10,8 @@ export type PRO_FEATURE_TYPE =
   | "feature-smart_conflict"
   | "feature-google_drive"
   | "feature-box"
-  | "feature-pcloud";
+  | "feature-pcloud"
+  | "feature-yandex_disk";
 
 export interface FeatureInfo {
   featureName: PRO_FEATURE_TYPE;
@@ -88,4 +89,24 @@ export interface PCloudConfig {
   credentialsShouldBeDeletedAtTimeMs?: number;
   emptyFile: "skip" | "error";
   kind: "pcloud";
+}
+
+///////////////////////////////////////////////////////////
+// Yandex Disk
+//////////////////////////////////////////////////////////
+
+export const COMMAND_CALLBACK_YANDEXDISK = "remotely-save-cb-yandexdisk";
+export const YANDEXDISK_CLIENT_ID = process.env.DEFAULT_YANDEXDISK_CLIENT_ID;
+export const YANDEXDISK_CLIENT_SECRET =
+  process.env.DEFAULT_YANDEXDISK_CLIENT_SECRET;
+
+export interface YandexDiskConfig {
+  accessToken: string;
+  accessTokenExpiresInMs: number;
+  accessTokenExpiresAtTimeMs: number;
+  refreshToken: string;
+  remoteBaseDir?: string;
+  credentialsShouldBeDeletedAtTimeMs?: number;
+  scope: string;
+  kind: "yandexdisk";
 }

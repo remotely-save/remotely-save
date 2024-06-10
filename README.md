@@ -25,6 +25,7 @@ This is yet another unofficial sync plugin for Obsidian. If you like it or find 
   - Google Drive (PRO feature)
   - Box (PRO feature)
   - pCloud (PRO feature)
+  - Yandex Disk (PRO feature)
   - [Here](./docs/services_connectable_or_not.md) shows more connectable (or not-connectable) services in details.
 - **Obsidian Mobile supported.** Vaults can be synced across mobile and desktop devices with the cloud service as the "broker".
 - **[End-to-end encryption](./docs/encryption/README.md) supported.** Files would be encrypted using openssl format before being sent to the cloud **if** user specify a password.
@@ -133,6 +134,10 @@ PRO (paid) feature "sync with Box" allows users to to sync with Box. Tutorials a
 ### pCloud (PRO feature)
 
 PRO (paid) feature "sync with pCloud" allows users to to sync with pCloud (using its native API instead of webdav). Tutorials and limitations are documented [here](./docs/remote_services/pcloud/README.md).
+
+### Yandex Disk (PRO feature)
+
+PRO (paid) feature "sync with Yandex Disk" allows users to to sync with Yandex Disk (using its native API instead of webdav). Tutorials and limitations are documented [here](./docs/remote_services/yandexdisk/README.md).
 
 ## Scheduled Auto Sync
 

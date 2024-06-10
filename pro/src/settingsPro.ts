@@ -253,7 +253,9 @@ export const generateProSettingsPart = (
   boxAllowedToUsedDiv: HTMLDivElement,
   boxNotShowUpHintSetting: Setting,
   pCloudAllowedToUsedDiv: HTMLDivElement,
-  pCloudNotShowUpHintSetting: Setting
+  pCloudNotShowUpHintSetting: Setting,
+  yandexDiskAllowedToUsedDiv: HTMLDivElement,
+  yandexDiskNotShowUpHintSetting: Setting
 ) => {
   proDiv
     .createEl("h2", { text: t("settings_pro") })
@@ -348,6 +350,25 @@ export const generateProSettingsPart = (
         pCloudAllowedToUsedDiv.addClass("pcloud-allow-to-use-hide");
         pCloudNotShowUpHintSetting.settingEl.removeClass(
           "pcloud-allow-to-use-hide"
+        );
+      }
+
+      const allowYandexDisk =
+        plugin.settings.pro?.enabledProFeatures.filter(
+          (x) => x.featureName === "feature-yandex_disk"
+        ).length === 1;
+      console.debug(
+        `allow to show up Yandex Disk settings? ${allowYandexDisk}`
+      );
+      if (allowYandexDisk) {
+        yandexDiskAllowedToUsedDiv.removeClass("yandexdisk-allow-to-use-hide");
+        yandexDiskNotShowUpHintSetting.settingEl.addClass(
+          "yandexdisk-allow-to-use-hide"
+        );
+      } else {
+        yandexDiskAllowedToUsedDiv.addClass("yandexdisk-allow-to-use-hide");
+        yandexDiskNotShowUpHintSetting.settingEl.removeClass(
+          "yandexdisk-allow-to-use-hide"
         );
       }
 

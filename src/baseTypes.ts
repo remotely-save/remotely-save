@@ -8,6 +8,7 @@ import type {
   GoogleDriveConfig,
   PCloudConfig,
   ProConfig,
+  YandexDiskConfig,
 } from "../pro/src/baseTypesPro";
 import type { LangTypeAndAuto } from "./i18n";
 
@@ -21,7 +22,8 @@ export type SUPPORTED_SERVICES_TYPE =
   | "webdis"
   | "googledrive"
   | "box"
-  | "pcloud";
+  | "pcloud"
+  | "yandexdisk";
 
 export type SUPPORTED_SERVICES_TYPE_WITH_REMOTE_BASE_DIR =
   | "webdav"
@@ -30,7 +32,8 @@ export type SUPPORTED_SERVICES_TYPE_WITH_REMOTE_BASE_DIR =
   | "webdis"
   | "googledrive"
   | "box"
-  | "pcloud";
+  | "pcloud"
+  | "yandexdisk";
 
 export interface S3Config {
   s3Endpoint: string;
@@ -127,7 +130,8 @@ export type QRExportType =
   | "webdis"
   | "googledrive"
   | "box"
-  | "pcloud";
+  | "pcloud"
+  | "yandexdisk";
 
 export interface ProfilerConfig {
   enablePrinting?: boolean;
@@ -143,6 +147,7 @@ export interface RemotelySavePluginSettings {
   googledrive: GoogleDriveConfig;
   box: BoxConfig;
   pcloud: PCloudConfig;
+  yandexdisk: YandexDiskConfig;
   password: string;
   serviceType: SUPPORTED_SERVICES_TYPE;
   currLogLevel?: string;

@@ -407,10 +407,6 @@ export class FakeFsBox extends FakeFs {
     await this.saveUpdatedConfigFunc();
     console.info("Box accessToken updated");
     return this.boxConfig.accessToken;
-
-    // const access = "tUf643YKLuGhUmXRBKPAK0hz9ZKv85kS";
-    // this.boxConfig.accessToken = access;
-    // return access;
   }
 
   async walk(): Promise<Entity[]> {

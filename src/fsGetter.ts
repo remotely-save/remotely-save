@@ -1,6 +1,7 @@
 import { FakeFsBox } from "../pro/src/fsBox";
 import { FakeFsGoogleDrive } from "../pro/src/fsGoogleDrive";
 import { FakeFsPCloud } from "../pro/src/fsPCloud";
+import { FakeFsYandexDisk } from "../pro/src/fsYandexDisk";
 import type { RemotelySavePluginSettings } from "./baseTypes";
 import type { FakeFs } from "./fsAll";
 import { FakeFsDropbox } from "./fsDropbox";
@@ -55,6 +56,12 @@ export function getClient(
     case "pcloud":
       return new FakeFsPCloud(
         settings.pcloud,
+        vaultName,
+        saveUpdatedConfigFunc
+      );
+    case "yandexdisk":
+      return new FakeFsYandexDisk(
+        settings.yandexdisk,
         vaultName,
         saveUpdatedConfigFunc
       );

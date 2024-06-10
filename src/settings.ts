@@ -25,6 +25,7 @@ import { generateBoxSettingsPart } from "../pro/src/settingsBox";
 import { generateGoogleDriveSettingsPart } from "../pro/src/settingsGoogleDrive";
 import { generatePCloudSettingsPart } from "../pro/src/settingsPCloud";
 import { generateProSettingsPart } from "../pro/src/settingsPro";
+import { generateYandexDiskSettingsPart } from "../pro/src/settingsYandexDisk";
 import { API_VER_ENSURE_REQURL_OK, VALID_REQURL } from "./baseTypesObs";
 import { messyConfigToNormal } from "./configPersist";
 import {
@@ -1820,13 +1821,29 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
       );
 
     //////////////////////////////////////////////////
-    // below for box
+    // below for pcloud
     //////////////////////////////////////////////////
 
     const { pCloudDiv, pCloudAllowedToUsedDiv, pCloudNotShowUpHintSetting } =
       generatePCloudSettingsPart(containerEl, t, this.app, this.plugin, () =>
         this.plugin.saveSettings()
       );
+
+    //////////////////////////////////////////////////
+    // below for yandexdisk
+    //////////////////////////////////////////////////
+
+    const {
+      yandexDiskDiv,
+      yandexDiskAllowedToUsedDiv,
+      yandexDiskNotShowUpHintSetting,
+    } = generateYandexDiskSettingsPart(
+      containerEl,
+      t,
+      this.app,
+      this.plugin,
+      () => this.plugin.saveSettings()
+    );
 
     //////////////////////////////////////////////////
     // below for general chooser (part 2/2)
@@ -1849,6 +1866,10 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
         );
         dropdown.addOption("box", t("settings_chooseservice_box"));
         dropdown.addOption("pcloud", t("settings_chooseservice_pcloud"));
+        dropdown.addOption(
+          "yandexdisk",
+          t("settings_chooseservice_yandexdisk")
+        );
 
         dropdown
           .setValue(this.plugin.settings.serviceType)
@@ -1885,6 +1906,10 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
             pCloudDiv.toggleClass(
               "pcloud-hide",
               this.plugin.settings.serviceType !== "pcloud"
+            );
+            yandexDiskDiv.toggleClass(
+              "yandexdisk-hide",
+              this.plugin.settings.serviceType !== "yandexdisk"
             );
             await this.plugin.saveSettings();
           });
@@ -2460,6 +2485,16 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
         button.onClick(async () => {
           new ExportSettingsQrCodeModal(this.app, this.plugin, "pcloud").open();
         });
+      })
+      .addButton(async (button) => {
+        button.setButtonText(t("settings_export_yandexdisk_button"));
+        button.onClick(async () => {
+          new ExportSettingsQrCodeModal(
+            this.app,
+            this.plugin,
+            "yandexdisk"
+          ).open();
+        });
       });
 
     let importSettingVal = "";
@@ -2530,7 +2565,9 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
       boxAllowedToUsedDiv,
       boxNotShowUpHintSetting,
       pCloudAllowedToUsedDiv,
-      pCloudNotShowUpHintSetting
+      pCloudNotShowUpHintSetting,
+      yandexDiskAllowedToUsedDiv,
+      yandexDiskNotShowUpHintSetting
     );
 
     //////////////////////////////////////////////////

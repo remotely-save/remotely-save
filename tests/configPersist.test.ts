@@ -26,6 +26,9 @@ const DEFAULT_SETTINGS: RemotelySavePluginSettings = {
     refreshToken: "xxx",
   } as any,
   pcloud: {
+    accessToken: "xxx",
+  } as any,
+  yandexdisk: {
     refreshToken: "xxx",
   } as any,
   password: "password",

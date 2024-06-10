@@ -27,6 +27,7 @@ import {
   COMMAND_CALLBACK_BOX,
   COMMAND_CALLBACK_PCLOUD,
   COMMAND_CALLBACK_PRO,
+  COMMAND_CALLBACK_YANDEXDISK,
 } from "../pro/src/baseTypesPro";
 import {
   DEFAULT_BOX_CONFIG,
@@ -42,6 +43,11 @@ import {
   sendAuthReq as sendAuthReqPCloud,
   setConfigBySuccessfullAuthInplace as setConfigBySuccessfullAuthInplacePCloud,
 } from "../pro/src/fsPCloud";
+import {
+  DEFAULT_YANDEXDISK_CONFIG,
+  sendAuthReq as sendAuthReqYandexDisk,
+  setConfigBySuccessfullAuthInplace as setConfigBySuccessfullAuthInplaceYandexDisk,
+} from "../pro/src/fsYandexDisk";
 import type {
   RemotelySavePluginSettings,
   SyncTriggerSourceType,
@@ -99,6 +105,7 @@ const DEFAULT_SETTINGS: RemotelySavePluginSettings = {
   googledrive: DEFAULT_GOOGLEDRIVE_CONFIG,
   box: DEFAULT_BOX_CONFIG,
   pcloud: DEFAULT_PCLOUD_CONFIG,
+  yandexdisk: DEFAULT_YANDEXDISK_CONFIG,
   password: "",
   serviceType: "s3",
   currLogLevel: "info",
@@ -914,6 +921,62 @@ export default class RemotelySavePlugin extends Plugin {
       }
     );
 
+    this.registerObsidianProtocolHandler(
+      COMMAND_CALLBACK_YANDEXDISK,
+      async (inputParams) => {
+        if (this.oauth2Info.helperModal !== undefined) {
+          const k = this.oauth2Info.helperModal.contentEl;
+          k.empty();
+
+          t("protocol_yandexdisk_connecting")
+            .split("\n")
+            .forEach((val) => {
+              k.createEl("p", {
+                text: val,
+              });
+            });
+        }
+
+        console.debug(inputParams);
+        const authRes = await sendAuthReqYandexDisk(
+          inputParams.code,
+          async (e: any) => {
+            new Notice(t("protocol_yandexdisk_connect_fail"));
+            new Notice(`${e}`);
+            throw e;
+          }
+        );
+        console.debug(authRes);
+
+        const self = this;
+        await setConfigBySuccessfullAuthInplaceYandexDisk(
+          this.settings.yandexdisk!,
+          authRes,
+          () => self.saveSettings()
+        );
+
+        this.oauth2Info.verifier = ""; // reset it
+        this.oauth2Info.helperModal?.close(); // close it
+        this.oauth2Info.helperModal = undefined;
+
+        this.oauth2Info.authDiv?.toggleClass(
+          "yandexdisk-auth-button-hide",
+          this.settings.yandexdisk?.refreshToken !== ""
+        );
+        this.oauth2Info.authDiv = undefined;
+
+        this.oauth2Info.revokeAuthSetting?.setDesc(
+          t("protocol_yandexdisk_connect_succ_revoke")
+        );
+        this.oauth2Info.revokeAuthSetting = undefined;
+        this.oauth2Info.revokeDiv?.toggleClass(
+          "yandexdisk-revoke-auth-button-hide",
+          this.settings.yandexdisk?.refreshToken === ""
+        );
+        this.oauth2Info.revokeDiv = undefined;
+      }
+    );
+
     this.syncRibbon = this.addRibbonIcon(
       iconNameSyncWait,
       `${this.manifest.name}`,
@@ -1208,6 +1271,10 @@ export default class RemotelySavePlugin extends Plugin {
       this.settings.pcloud = DEFAULT_PCLOUD_CONFIG;
     }
 
+    if (this.settings.yandexdisk === undefined) {
+      this.settings.yandexdisk = DEFAULT_YANDEXDISK_CONFIG;
+    }
+
     await this.saveSettings();
   }
 
@@ -1306,6 +1373,16 @@ export default class RemotelySavePlugin extends Plugin {
       needSave = true;
     }
 
+    let yandexDiskExpired = false;
+    if (
+      this.settings.yandexdisk.refreshToken !== "" &&
+      current >= this.settings!.yandexdisk!.credentialsShouldBeDeletedAtTimeMs!
+    ) {
+      yandexDiskExpired = true;
+      this.settings.yandexdisk = cloneDeep(DEFAULT_YANDEXDISK_CONFIG);
+      needSave = true;
+    }
+
     if (this.settings.pro === undefined) {
       this.settings.pro = cloneDeep(DEFAULT_PRO_CONFIG);
     }
@@ -1343,6 +1420,12 @@ export default class RemotelySavePlugin extends Plugin {
     if (pCloudExpired) {
       new Notice(
         `${this.manifest.name}: You haven't manually auth pCloud for many days, you need to re-auth it again.`,
+        6000
+      );
+    }
+    if (yandexDiskExpired) {
+      new Notice(
+        `${this.manifest.name}: You haven't manually auth Yandex Disk for many days, you need to re-auth it again.`,
         6000
       );
     }
