@@ -43,8 +43,13 @@ export class FakeFsLocal extends FakeFs {
     for (const entry of localTAbstractFiles) {
       let r: Entity | undefined = undefined;
       let key = entry.path;
+      if (key.startsWith("/")) {
+        // why?
+        // just remove leading slash /
+        key = key.slice(1);
+      }
 
-      if (entry.path === "/") {
+      if (entry.path === "/" || entry.path === "") {
         // ignore
         continue;
       } else if (entry instanceof TFile) {
@@ -61,15 +66,15 @@ export class FakeFsLocal extends FakeFs {
           );
         }
         r = {
-          key: entry.path, // local always unencrypted
-          keyRaw: entry.path,
+          key: key, // local always unencrypted
+          keyRaw: key,
           mtimeCli: mtimeLocal,
           mtimeSvr: mtimeLocal,
           size: entry.stat.size, // local always unencrypted
           sizeRaw: entry.stat.size,
         };
       } else if (entry instanceof TFolder) {
-        key = `${entry.path}/`;
+        key = `${key}/`;
         r = {
           key: key,
           keyRaw: key,
