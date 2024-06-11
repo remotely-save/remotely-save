@@ -309,6 +309,7 @@ const getSyncPlanInplace = async (
   profiler?.insertSize("sizeof sortedKeys", sortedKeys);
 
   const keptFolder = new Set<string>();
+  const mayDeleteFolder = new Set<string>();
 
   for (let i = 0; i < sortedKeys.length; ++i) {
     if (i % 100 === 0) {
@@ -330,6 +331,7 @@ const getSyncPlanInplace = async (
         // parent should also be kept
         // console.debug(`${key} in keptFolder`)
         keptFolder.add(getParentFolder(key));
+        mayDeleteFolder.delete(getParentFolder(key));
         // should fill the missing part
         if (local !== undefined && remote !== undefined) {
           mixedEntry.decisionBranch = 101;
@@ -364,49 +366,101 @@ const getSyncPlanInplace = async (
           mixedEntry.change = true;
         }
         keptFolder.delete(key); // no need to save it in the Set later
+        mayDeleteFolder.delete(key); // must ignore this
       } else {
         if (howToCleanEmptyFolder === "skip") {
           mixedEntry.decisionBranch = 105;
           mixedEntry.decision = "folder_to_skip";
           mixedEntry.change = false;
+          keptFolder.add(getParentFolder(key)); // we want to keep parent!
+          mayDeleteFolder.delete(getParentFolder(key)); // we don't want to delete parent!
         } else if (howToCleanEmptyFolder === "clean_both") {
           if (local !== undefined && remote !== undefined) {
             if (syncDirection === "bidirectional") {
-              mixedEntry.decisionBranch = 106;
-              mixedEntry.decision = "folder_to_be_deleted_on_both";
-              mixedEntry.change = true;
+              if (mayDeleteFolder.has(key)) {
+                // from 0.5.6 and on,
+                // we only delete the folders caused by file deletion
+                mixedEntry.decisionBranch = 106;
+                mixedEntry.decision = "folder_to_be_deleted_on_both";
+                mixedEntry.change = true;
+                mayDeleteFolder.add(getParentFolder(key));
+                mayDeleteFolder.delete(key); // good to remove now
+              } else {
+                mixedEntry.decisionBranch = 115;
+                mixedEntry.decision = "folder_existed_both_then_do_nothing";
+                mixedEntry.change = false;
+                keptFolder.add(getParentFolder(key)); // we want to keep parent!
+                mayDeleteFolder.delete(getParentFolder(key)); // we don't want to delete parent!
+              }
             } else {
               // right now it does nothing because of "incremental"
               // TODO: should we delete??
               mixedEntry.decisionBranch = 109;
               mixedEntry.decision = "folder_to_skip";
               mixedEntry.change = false;
+              keptFolder.add(getParentFolder(key)); // we want to keep parent!
+              mayDeleteFolder.delete(getParentFolder(key)); // we don't want to delete parent!
             }
           } else if (local !== undefined && remote === undefined) {
             if (syncDirection === "bidirectional") {
-              mixedEntry.decisionBranch = 110;
-              mixedEntry.decision = "folder_to_be_deleted_on_local";
-              mixedEntry.change = true;
+              if (mayDeleteFolder.has(key)) {
+                // from 0.5.6 and on,
+                // we only delete the folders caused by file deletion
+                mixedEntry.decisionBranch = 110;
+                mixedEntry.decision = "folder_to_be_deleted_on_local";
+                mixedEntry.change = true;
+                mayDeleteFolder.add(getParentFolder(key));
+                mayDeleteFolder.delete(key); // good to remove now
+              } else {
+                // the folder might be created locally
+                // so we want to create it remotely as well.
+                mixedEntry.decisionBranch = 116;
+                mixedEntry.decision =
+                  "folder_existed_local_then_also_create_remote";
+                mixedEntry.change = false;
+                keptFolder.add(getParentFolder(key)); // we want to keep parent!
+                mayDeleteFolder.delete(getParentFolder(key)); // we don't want to delete parent!
+              }
             } else {
               // right now it does nothing because of "incremental"
               // TODO: should we delete??
               mixedEntry.decisionBranch = 111;
               mixedEntry.decision = "folder_to_skip";
               mixedEntry.change = false;
+              keptFolder.add(getParentFolder(key)); // we want to keep parent!
+              mayDeleteFolder.delete(getParentFolder(key)); // we don't want to delete parent!
             }
           } else if (local === undefined && remote !== undefined) {
             if (syncDirection === "bidirectional") {
-              mixedEntry.decisionBranch = 112;
-              mixedEntry.decision = "folder_to_be_deleted_on_remote";
-              mixedEntry.change = true;
+              if (mayDeleteFolder.has(key)) {
+                // from 0.5.6 and on,
+                // we only delete the folders caused by file deletion
+                mixedEntry.decisionBranch = 112;
+                mixedEntry.decision = "folder_to_be_deleted_on_remote";
+                mixedEntry.change = true;
+                mayDeleteFolder.add(getParentFolder(key));
+                mayDeleteFolder.delete(key); // good to remove now
+              } else {
+                // the folder might be created remotely
+                // so we want to create it locally as well.
+                mixedEntry.decisionBranch = 117;
+                mixedEntry.decision =
+                  "folder_existed_remote_then_also_create_local";
+                mixedEntry.change = false;
+                keptFolder.add(getParentFolder(key)); // we want to keep parent!
+                mayDeleteFolder.delete(getParentFolder(key)); // we don't want to delete parent!
+              }
             } else {
               // right now it does nothing because of "incremental"
               // TODO: should we delete??
               mixedEntry.decisionBranch = 113;
               mixedEntry.decision = "folder_to_skip";
               mixedEntry.change = false;
+              keptFolder.add(getParentFolder(key)); // we want to keep parent!
+              mayDeleteFolder.delete(getParentFolder(key)); // we don't want to delete parent!
             }
           } else {
+            // local === undefined && remote === undefined
             // no folder to delete, do nothing
             mixedEntry.decisionBranch = 114;
             mixedEntry.decision = "folder_to_skip";
@@ -658,6 +712,7 @@ const getSyncPlanInplace = async (
             mixedEntry.decisionBranch = 4;
             mixedEntry.decision = "local_is_deleted_thus_also_delete_remote";
             mixedEntry.change = true;
+            mayDeleteFolder.add(getParentFolder(key));
           }
         } else {
           // if B is in the previous list and MODIFIED, B has been deleted by A but modified by B
@@ -725,6 +780,7 @@ const getSyncPlanInplace = async (
             mixedEntry.decisionBranch = 7;
             mixedEntry.decision = "remote_is_deleted_thus_also_delete_local";
             mixedEntry.change = true;
+            mayDeleteFolder.add(getParentFolder(key));
           }
         } else {
           // if A is in the previous list and MODIFIED, A has been deleted by B but modified by A
@@ -770,6 +826,9 @@ const getSyncPlanInplace = async (
 
   keptFolder.delete("/");
   keptFolder.delete("");
+  mayDeleteFolder.delete("/");
+  mayDeleteFolder.delete("");
+
   if (keptFolder.size > 0) {
     throw Error(`unexpectedly keptFolder no decisions: ${[...keptFolder]}`);
   }
