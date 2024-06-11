@@ -147,7 +147,6 @@
   "settings_pcloud_connect_succ": "Great! We can connect to pCloud!",
   "settings_pcloud_connect_fail": "We cannot connect to pCloud.",
 
-  
   "settings_yandexdisk": "Yandex Disk (PRO) (beta)",
   "settings_chooseservice_yandexdisk": "Yandex Disk (PRO) (beta)",
   "settings_yandexdisk_disclaimer1": "Disclaimer: This app is NOT an official Yandex Disk product. The app just uses Yandex Disk's public api.",
