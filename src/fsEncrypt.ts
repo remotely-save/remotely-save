@@ -1,7 +1,7 @@
 import type { CipherMethodType, Entity } from "./baseTypes";
 import * as openssl from "./encryptOpenSSL";
 import * as rclone from "./encryptRClone";
-import { isVaildText } from "./misc";
+import { isSpecialFolderNameToSkip, isVaildText } from "./misc";
 
 import cloneDeep from "lodash/cloneDeep";
 import { FakeFs } from "./fsAll";
@@ -189,6 +189,10 @@ export class FakeFsEncrypt extends FakeFs {
       return res;
     } else {
       for (const innerEntity of innerWalkResult) {
+        if (isSpecialFolderNameToSkip(innerEntity.keyRaw, [])) {
+          continue;
+        }
+
         const key = await this._decryptName(innerEntity.keyRaw);
         const size = key.endsWith("/") ? 0 : undefined;
         res.push({
