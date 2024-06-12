@@ -1,5 +1,6 @@
 import type { Vault } from "obsidian";
 
+import type { SyncPlanType } from "../pro/src/sync";
 import {
   DEFAULT_DEBUG_FOLDER,
   DEFAULT_PROFILER_RESULT_FILE_PREFIX,
@@ -11,7 +12,6 @@ import {
 } from "./localdb";
 import type { InternalDBs } from "./localdb";
 import { mkdirpInVault } from "./misc";
-import type { SyncPlanType } from "./sync";
 
 const getSubsetOfSyncPlan = (x: string, onlyChange: boolean) => {
   if (!onlyChange) {

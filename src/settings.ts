@@ -2250,24 +2250,6 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
         });
     });
 
-    new Setting(advDiv)
-      .setName(t("settings_cleanemptyfolder"))
-      .setDesc(t("settings_cleanemptyfolder_desc"))
-      .addDropdown((dropdown) => {
-        dropdown.addOption("skip", t("settings_cleanemptyfolder_skip"));
-        dropdown.addOption(
-          "clean_both",
-          t("settings_cleanemptyfolder_clean_both")
-        );
-        dropdown
-          .setValue(this.plugin.settings.howToCleanEmptyFolder ?? "clean_both")
-          .onChange(async (val) => {
-            this.plugin.settings.howToCleanEmptyFolder =
-              val as EmptyFolderCleanType;
-            await this.plugin.saveSettings();
-          });
-      });
-
     const percentage1 = new Setting(advDiv)
       .setName(t("settings_protectmodifypercentage"))
       .setDesc(t("settings_protectmodifypercentage_desc"));

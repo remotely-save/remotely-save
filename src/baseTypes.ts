@@ -165,7 +165,6 @@ export interface RemotelySavePluginSettings {
   enableStatusBarInfo?: boolean;
   deleteToWhere?: "system" | "obsidian";
   conflictAction?: ConflictActionType;
-  howToCleanEmptyFolder?: EmptyFolderCleanType;
 
   protectModifyPercentage?: number;
   syncDirection?: SyncDirectionType;
@@ -194,6 +193,11 @@ export interface RemotelySavePluginSettings {
    * @deprecated
    */
   logToDB?: boolean;
+
+  /**
+   * @deprecated
+   */
+  howToCleanEmptyFolder?: EmptyFolderCleanType;
 }
 
 export const COMMAND_URI = "remotely-save";
