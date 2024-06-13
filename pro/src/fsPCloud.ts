@@ -285,6 +285,10 @@ const fromNestedFolderToEntityListAndCache = (
   };
 };
 
+const getPCloudPath = (fileOrFolderPath: string, remoteBaseDir: string) => {
+  return `/${remoteBaseDir}/${fileOrFolderPath}`;
+};
+
 export class FakeFsPCloud extends FakeFs {
   kind: string;
 
@@ -464,25 +468,6 @@ export class FakeFsPCloud extends FakeFs {
 
     await this._init();
 
-    if (content.byteLength === 0) {
-      if (this.pCloudConfig.emptyFile === "error") {
-        throw Error(
-          `${key}: Empty file is not allowed in pCloud, and please write something in it.`
-        );
-      } else {
-        return {
-          key: key,
-          keyRaw: key,
-          mtimeSvr: mtime,
-          mtimeCli: mtime,
-          size: 0,
-          sizeRaw: 0,
-          synthesizedFile: true,
-          // hash: ?? // TODO
-        };
-      }
-    }
-
     const prevCachedEntity: PCloudEntity | undefined =
       this.keyToPCloudEntity[key];
     const prevFileID: number | undefined = prevCachedEntity?.id;
@@ -522,15 +507,51 @@ export class FakeFsPCloud extends FakeFs {
     });
     const apiUrl = `https://${this.pCloudConfig.hostname}/uploadfile?${params}`;
 
-    const rsp = await fetch(apiUrl, {
-      method: "PUT",
-      body: content,
-    });
-    const f: StatRawResponse = await rsp.json();
-    const entity = fromRawResponseToEntity(f.metadata[0], parentFolderPath);
-    // console.debug(entity);
-    this.keyToPCloudEntity[key] = entity;
-    return entity;
+    if (content.byteLength > 0) {
+      const rsp = await fetch(apiUrl, {
+        method: "PUT",
+        body: content,
+      });
+      const f: StatRawResponse = await rsp.json();
+      const entity = fromRawResponseToEntity(f.metadata[0], parentFolderPath);
+      // console.debug(entity);
+      this.keyToPCloudEntity[key] = entity;
+      return entity;
+    } else {
+      // no idea why pcloud doesn't work for empty files
+      // it can be uploaded successfully but the call doesn't end
+      // we abort it and stat it manually.
+      // console.warn(`uploading empty file ${key}`);
+      const controller = new AbortController();
+      const timeoutMs = 300; // just a random reasonable number
+      const id = setTimeout(() => controller.abort(), timeoutMs);
+      try {
+        const rsp = await fetch(apiUrl, {
+          method: "PUT",
+          body: content,
+          signal: controller.signal,
+        });
+      } catch (e) {
+        // console.warn(`we abort the request of uploading empty file ${key}:`);
+        // console.warn(e);
+      } finally {
+        clearTimeout(id);
+      }
+
+      // raw stat here
+      // https://docs.pcloud.com/methods/file/stat.html
+      const params = new URLSearchParams({
+        access_token: await this._getAccessToken(),
+        path: getPCloudPath(key, this.remoteBaseDir),
+      });
+      const apiUrlStat = `https://${this.pCloudConfig.hostname}/stat?${params}`;
+      const rsp2 = await fetch(apiUrlStat);
+      const f = await rsp2.json();
+      const entity = fromRawResponseToEntity(f.metadata, parentFolderPath);
+      // console.warn(entity);
+      this.keyToPCloudEntity[key] = entity;
+      return entity;
+    }
   }
 
   async readFile(key: string): Promise<ArrayBuffer> {
@@ -602,6 +623,6 @@ export class FakeFsPCloud extends FakeFs {
   }
 
   allowEmptyFile(): boolean {
-    return false;
+    return true;
   }
 }

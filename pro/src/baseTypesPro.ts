@@ -87,8 +87,12 @@ export interface PCloudConfig {
   locationid: 1 | 2;
   remoteBaseDir?: string;
   credentialsShouldBeDeletedAtTimeMs?: number;
-  emptyFile: "skip" | "error";
   kind: "pcloud";
+
+  /**
+   * @deprecated
+   */
+  emptyFile: "skip" | "error";
 }
 
 ///////////////////////////////////////////////////////////

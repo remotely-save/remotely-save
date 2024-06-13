@@ -281,20 +281,6 @@ export const generatePCloudSettingsPart = (
     });
 
   new Setting(pCloudAllowedToUsedDiv)
-    .setName(t("settings_pcloud_emptyfile"))
-    .setDesc(t("settings_pcloud_emptyfile_desc"))
-    .addDropdown(async (dropdown) => {
-      dropdown
-        .addOption("skip", t("settings_pcloud_emptyfile_skip"))
-        .addOption("error", t("settings_pcloud_emptyfile_error"))
-        .setValue(plugin.settings.pcloud.emptyFile)
-        .onChange(async (val) => {
-          plugin.settings.pcloud.emptyFile = val as any;
-          await saveUpdatedConfigFunc();
-        });
-    });
-
-  new Setting(pCloudAllowedToUsedDiv)
     .setName(t("settings_checkonnectivity"))
     .setDesc(t("settings_checkonnectivity_desc"))
     .addButton(async (button) => {
