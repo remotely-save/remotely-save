@@ -112,6 +112,8 @@ Additionally, the plugin author may occasionally visit Obsidian official forum a
   - [AList（中文）](./docs/remote_services/webdav_alist/README.zh-cn.md) | [AList (English)](./docs/remote_services/webdav_alist/README.md)
   - [坚果云](./docs/remote_services/webdav_jianguoyun/README.zh-cn.md) | [JianGuoYun/NutStore](./docs/remote_services/webdav_jianguoyun/README.md)
   - [Open Media Vault](./docs/remote_services/webdav_openmediavault/README.md)
+  - [Nginx (`ngx_http_dav_module`, `nginx-dav-ext-module`, with Docker)](./docs/remote_services/webdav_nginx/README.md)
+  - [Apache (with Docker)](./docs/remote_services/webdav_apache/README.md)
 - Very old version of Obsidian needs [configuring CORS](./docs/remote_services/webdav_general/webav_cors.md).
 - Your data would be synced to a `${vaultName}` sub folder on your webdav server.
 - Password-based end-to-end encryption is also supported. But please be aware that **the vault name itself is not encrypted**.
