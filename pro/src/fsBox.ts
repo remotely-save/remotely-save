@@ -404,6 +404,8 @@ export class FakeFsBox extends FakeFs {
     this.boxConfig.accessTokenExpiresInMs = k.expires_in * 1000;
     this.boxConfig.accessTokenExpiresAtTimeMs =
       ts + k.expires_in * 1000 - 60 * 2 * 1000;
+    this.boxConfig.refreshToken =
+      k.refresh_token || this.boxConfig.refreshToken;
     await this.saveUpdatedConfigFunc();
     console.info("Box accessToken updated");
     return this.boxConfig.accessToken;
