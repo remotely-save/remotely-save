@@ -913,7 +913,8 @@ export class FakeFsOnedrive extends FakeFs {
       `${key}?$select=@microsoft.graph.downloadUrl`
     );
     const downloadUrl: string = rsp["@microsoft.graph.downloadUrl"];
-    if (VALID_REQURL) {
+    // biome-ignore lint/correctness/noConstantCondition: <explanation>
+    if (false /*VALID_REQURL*/) {
       const content = (
         await requestUrl({
           url: downloadUrl,
@@ -923,7 +924,9 @@ export class FakeFsOnedrive extends FakeFs {
       return content;
     } else {
       // cannot set no-cache here, will have cors error
-      const content = await (await fetch(downloadUrl)).arrayBuffer();
+      const content = await (
+        await fetch(downloadUrl, { cache: "no-store" })
+      ).arrayBuffer();
       return content;
     }
   }
