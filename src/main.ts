@@ -25,6 +25,7 @@ import {
 } from "../pro/src/account";
 import {
   COMMAND_CALLBACK_BOX,
+  COMMAND_CALLBACK_KOOFR,
   COMMAND_CALLBACK_PCLOUD,
   COMMAND_CALLBACK_PRO,
   COMMAND_CALLBACK_YANDEXDISK,
@@ -36,6 +37,11 @@ import {
   setConfigBySuccessfullAuthInplace as setConfigBySuccessfullAuthInplaceBox,
 } from "../pro/src/fsBox";
 import { DEFAULT_GOOGLEDRIVE_CONFIG } from "../pro/src/fsGoogleDrive";
+import {
+  DEFAULT_KOOFR_CONFIG,
+  sendAuthReq as sendAuthReqKoofr,
+  setConfigBySuccessfullAuthInplace as setConfigBySuccessfullAuthInplaceKoofr,
+} from "../pro/src/fsKoofr";
 import {
   type AuthAllowFirstRes as AuthAllowFirstResPCloud,
   DEFAULT_PCLOUD_CONFIG,
@@ -106,6 +112,7 @@ const DEFAULT_SETTINGS: RemotelySavePluginSettings = {
   box: DEFAULT_BOX_CONFIG,
   pcloud: DEFAULT_PCLOUD_CONFIG,
   yandexdisk: DEFAULT_YANDEXDISK_CONFIG,
+  koofr: DEFAULT_KOOFR_CONFIG,
   password: "",
   serviceType: "s3",
   currLogLevel: "info",
@@ -977,6 +984,64 @@ export default class RemotelySavePlugin extends Plugin {
       }
     );
 
+    this.registerObsidianProtocolHandler(
+      COMMAND_CALLBACK_KOOFR,
+      async (inputParams) => {
+        if (this.oauth2Info.helperModal !== undefined) {
+          const k = this.oauth2Info.helperModal.contentEl;
+          k.empty();
+
+          t("protocol_koofr_connecting")
+            .split("\n")
+            .forEach((val) => {
+              k.createEl("p", {
+                text: val,
+              });
+            });
+        }
+
+        console.debug(inputParams);
+        const authRes = await sendAuthReqKoofr(
+          this.settings.koofr.api,
+          inputParams.code,
+          async (e: any) => {
+            new Notice(t("protocol_koofr_connect_fail"));
+            new Notice(`${e}`);
+            throw e;
+          },
+          true
+        );
+        console.debug(authRes);
+
+        const self = this;
+        await setConfigBySuccessfullAuthInplaceKoofr(
+          this.settings.koofr!,
+          authRes!,
+          () => self.saveSettings()
+        );
+
+        this.oauth2Info.verifier = ""; // reset it
+        this.oauth2Info.helperModal?.close(); // close it
+        this.oauth2Info.helperModal = undefined;
+
+        this.oauth2Info.authDiv?.toggleClass(
+          "koofr-auth-button-hide",
+          this.settings.koofr?.refreshToken !== ""
+        );
+        this.oauth2Info.authDiv = undefined;
+
+        this.oauth2Info.revokeAuthSetting?.setDesc(
+          t("protocol_koofr_connect_succ_revoke")
+        );
+        this.oauth2Info.revokeAuthSetting = undefined;
+        this.oauth2Info.revokeDiv?.toggleClass(
+          "koofr-revoke-auth-button-hide",
+          this.settings.koofr?.refreshToken === ""
+        );
+        this.oauth2Info.revokeDiv = undefined;
+      }
+    );
+
     this.syncRibbon = this.addRibbonIcon(
       iconNameSyncWait,
       `${this.manifest.name}`,
@@ -1275,6 +1340,10 @@ export default class RemotelySavePlugin extends Plugin {
       this.settings.yandexdisk = DEFAULT_YANDEXDISK_CONFIG;
     }
 
+    if (this.settings.koofr === undefined) {
+      this.settings.koofr = DEFAULT_KOOFR_CONFIG;
+    }
+
     await this.saveSettings();
   }
 
@@ -1383,6 +1452,16 @@ export default class RemotelySavePlugin extends Plugin {
       needSave = true;
     }
 
+    let koofrExpired = false;
+    if (
+      this.settings.koofr.refreshToken !== "" &&
+      current >= this.settings!.koofr!.credentialsShouldBeDeletedAtTimeMs!
+    ) {
+      koofrExpired = true;
+      this.settings.koofr = cloneDeep(DEFAULT_KOOFR_CONFIG);
+      needSave = true;
+    }
+
     if (this.settings.pro === undefined) {
       this.settings.pro = cloneDeep(DEFAULT_PRO_CONFIG);
     }
@@ -1426,6 +1505,12 @@ export default class RemotelySavePlugin extends Plugin {
     if (yandexDiskExpired) {
       new Notice(
         `${this.manifest.name}: You haven't manually auth Yandex Disk for many days, you need to re-auth it again.`,
+        6000
+      );
+    }
+    if (koofrExpired) {
+      new Notice(
+        `${this.manifest.name}: You haven't manually auth koofr for many days, you need to re-auth it again.`,
         6000
       );
     }

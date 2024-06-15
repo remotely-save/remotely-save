@@ -285,6 +285,11 @@ export const checkProRunnableAndFixInplace = async (
       service: "yandexdisk",
       name: "Yandex Disk",
     },
+    {
+      feature: "feature-koofr",
+      service: "koofr",
+      name: "Koofr",
+    },
   ];
 
   for (const { feature, service, name } of toChecked) {

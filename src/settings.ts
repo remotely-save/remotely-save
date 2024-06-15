@@ -23,6 +23,7 @@ import type {
 import cloneDeep from "lodash/cloneDeep";
 import { generateBoxSettingsPart } from "../pro/src/settingsBox";
 import { generateGoogleDriveSettingsPart } from "../pro/src/settingsGoogleDrive";
+import { generateKoofrSettingsPart } from "../pro/src/settingsKoofr";
 import { generatePCloudSettingsPart } from "../pro/src/settingsPCloud";
 import { generateProSettingsPart } from "../pro/src/settingsPro";
 import { generateYandexDiskSettingsPart } from "../pro/src/settingsYandexDisk";
@@ -1863,6 +1864,15 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
     );
 
     //////////////////////////////////////////////////
+    // below for koofr
+    //////////////////////////////////////////////////
+
+    const { koofrDiv, koofrAllowedToUsedDiv, koofrNotShowUpHintSetting } =
+      generateKoofrSettingsPart(containerEl, t, this.app, this.plugin, () =>
+        this.plugin.saveSettings()
+      );
+
+    //////////////////////////////////////////////////
     // below for general chooser (part 2/2)
     //////////////////////////////////////////////////
 
@@ -1887,6 +1897,7 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
           "yandexdisk",
           t("settings_chooseservice_yandexdisk")
         );
+        dropdown.addOption("koofr", t("settings_chooseservice_koofr"));
 
         dropdown
           .setValue(this.plugin.settings.serviceType)
@@ -1927,6 +1938,10 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
             yandexDiskDiv.toggleClass(
               "yandexdisk-hide",
               this.plugin.settings.serviceType !== "yandexdisk"
+            );
+            koofrDiv.toggleClass(
+              "koofr-hide",
+              this.plugin.settings.serviceType !== "koofr"
             );
             await this.plugin.saveSettings();
           });
@@ -2507,6 +2522,12 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
             "yandexdisk"
           ).open();
         });
+      })
+      .addButton(async (button) => {
+        button.setButtonText(t("settings_export_koofr_button"));
+        button.onClick(async () => {
+          new ExportSettingsQrCodeModal(this.app, this.plugin, "koofr").open();
+        });
       });
 
     let importSettingVal = "";
@@ -2579,7 +2600,9 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
       pCloudAllowedToUsedDiv,
       pCloudNotShowUpHintSetting,
       yandexDiskAllowedToUsedDiv,
-      yandexDiskNotShowUpHintSetting
+      yandexDiskNotShowUpHintSetting,
+      koofrAllowedToUsedDiv,
+      koofrNotShowUpHintSetting
     );
 
     //////////////////////////////////////////////////

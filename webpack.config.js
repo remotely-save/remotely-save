@@ -18,6 +18,8 @@ const DEFAULT_PCLOUD_CLIENT_SECRET = process.env.PCLOUD_CLIENT_SECRET || "";
 const DEFAULT_YANDEXDISK_CLIENT_ID = process.env.YANDEXDISK_CLIENT_ID || "";
 const DEFAULT_YANDEXDISK_CLIENT_SECRET =
   process.env.YANDEXDISK_CLIENT_SECRET || "";
+const DEFAULT_KOOFR_CLIENT_ID = process.env.KOOFR_CLIENT_ID || "";
+const DEFAULT_KOOFR_CLIENT_SECRET = process.env.KOOFR_CLIENT_SECRET || "";
 
 module.exports = {
   entry: "./src/main.ts",
@@ -42,6 +44,8 @@ module.exports = {
       "process.env.DEFAULT_PCLOUD_CLIENT_SECRET": `"${DEFAULT_PCLOUD_CLIENT_SECRET}"`,
       "process.env.DEFAULT_YANDEXDISK_CLIENT_ID": `"${DEFAULT_YANDEXDISK_CLIENT_ID}"`,
       "process.env.DEFAULT_YANDEXDISK_CLIENT_SECRET": `"${DEFAULT_YANDEXDISK_CLIENT_SECRET}"`,
+      "process.env.DEFAULT_KOOFR_CLIENT_ID": `"${DEFAULT_KOOFR_CLIENT_ID}"`,
+      "process.env.DEFAULT_KOOFR_CLIENT_SECRET": `"${DEFAULT_KOOFR_CLIENT_SECRET}"`,
     }),
     // Work around for Buffer is undefined:
     // https://github.com/webpack/changelog-v5/issues/10

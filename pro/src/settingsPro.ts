@@ -255,7 +255,9 @@ export const generateProSettingsPart = (
   pCloudAllowedToUsedDiv: HTMLDivElement,
   pCloudNotShowUpHintSetting: Setting,
   yandexDiskAllowedToUsedDiv: HTMLDivElement,
-  yandexDiskNotShowUpHintSetting: Setting
+  yandexDiskNotShowUpHintSetting: Setting,
+  koofrAllowedToUsedDiv: HTMLDivElement,
+  koofrNotShowUpHintSetting: Setting
 ) => {
   proDiv
     .createEl("h2", { text: t("settings_pro") })
@@ -369,6 +371,21 @@ export const generateProSettingsPart = (
         yandexDiskAllowedToUsedDiv.addClass("yandexdisk-allow-to-use-hide");
         yandexDiskNotShowUpHintSetting.settingEl.removeClass(
           "yandexdisk-allow-to-use-hide"
+        );
+      }
+
+      const allowKoofr =
+        plugin.settings.pro?.enabledProFeatures.filter(
+          (x) => x.featureName === "feature-koofr"
+        ).length === 1;
+      console.debug(`allow to show up Koofr settings? ${allowKoofr}`);
+      if (allowKoofr) {
+        koofrAllowedToUsedDiv.removeClass("koofr-allow-to-use-hide");
+        koofrNotShowUpHintSetting.settingEl.addClass("koofr-allow-to-use-hide");
+      } else {
+        koofrAllowedToUsedDiv.addClass("koofr-allow-to-use-hide");
+        koofrNotShowUpHintSetting.settingEl.removeClass(
+          "koofr-allow-to-use-hide"
         );
       }
 

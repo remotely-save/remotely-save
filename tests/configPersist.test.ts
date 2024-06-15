@@ -31,6 +31,9 @@ const DEFAULT_SETTINGS: RemotelySavePluginSettings = {
   yandexdisk: {
     refreshToken: "xxx",
   } as any,
+  koofr: {
+    refreshToken: "xxx",
+  } as any,
   password: "password",
   serviceType: "s3",
   currLogLevel: "info",

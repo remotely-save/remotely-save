@@ -11,7 +11,8 @@ export type PRO_FEATURE_TYPE =
   | "feature-google_drive"
   | "feature-box"
   | "feature-pcloud"
-  | "feature-yandex_disk";
+  | "feature-yandex_disk"
+  | "feature-koofr";
 
 export interface FeatureInfo {
   featureName: PRO_FEATURE_TYPE;
@@ -113,4 +114,25 @@ export interface YandexDiskConfig {
   credentialsShouldBeDeletedAtTimeMs?: number;
   scope: string;
   kind: "yandexdisk";
+}
+
+///////////////////////////////////////////////////////////
+// Koofr
+//////////////////////////////////////////////////////////
+
+export const COMMAND_CALLBACK_KOOFR = "remotely-save-cb-koofr";
+export const KOOFR_CLIENT_ID = process.env.DEFAULT_KOOFR_CLIENT_ID;
+export const KOOFR_CLIENT_SECRET = process.env.DEFAULT_KOOFR_CLIENT_SECRET;
+
+export interface KoofrConfig {
+  accessToken: string;
+  accessTokenExpiresInMs: number;
+  accessTokenExpiresAtTimeMs: number;
+  refreshToken: string;
+  remoteBaseDir?: string;
+  credentialsShouldBeDeletedAtTimeMs?: number;
+  scope: string;
+  api: string;
+  mountID: string;
+  kind: "koofr";
 }

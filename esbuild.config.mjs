@@ -29,6 +29,8 @@ const DEFAULT_PCLOUD_CLIENT_SECRET = process.env.PCLOUD_CLIENT_SECRET || "";
 const DEFAULT_YANDEXDISK_CLIENT_ID = process.env.YANDEXDISK_CLIENT_ID || "";
 const DEFAULT_YANDEXDISK_CLIENT_SECRET =
   process.env.YANDEXDISK_CLIENT_SECRET || "";
+const DEFAULT_KOOFR_CLIENT_ID = process.env.KOOFR_CLIENT_ID || "";
+const DEFAULT_KOOFR_CLIENT_SECRET = process.env.KOOFR_CLIENT_SECRET || "";
 
 esbuild
   .context({
@@ -74,6 +76,8 @@ esbuild
       "process.env.DEFAULT_PCLOUD_CLIENT_SECRET": `"${DEFAULT_PCLOUD_CLIENT_SECRET}"`,
       "process.env.DEFAULT_YANDEXDISK_CLIENT_ID": `"${DEFAULT_YANDEXDISK_CLIENT_ID}"`,
       "process.env.DEFAULT_YANDEXDISK_CLIENT_SECRET": `"${DEFAULT_YANDEXDISK_CLIENT_SECRET}"`,
+      "process.env.DEFAULT_KOOFR_CLIENT_ID": `"${DEFAULT_KOOFR_CLIENT_ID}"`,
+      "process.env.DEFAULT_KOOFR_CLIENT_SECRET": `"${DEFAULT_KOOFR_CLIENT_SECRET}"`,
       global: "window",
       "process.env.NODE_DEBUG": `undefined`, // ugly fix
       "process.env.DEBUG": `undefined`, // ugly fix

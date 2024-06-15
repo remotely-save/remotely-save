@@ -6,6 +6,7 @@
 import type {
   BoxConfig,
   GoogleDriveConfig,
+  KoofrConfig,
   PCloudConfig,
   ProConfig,
   YandexDiskConfig,
@@ -23,7 +24,8 @@ export type SUPPORTED_SERVICES_TYPE =
   | "googledrive"
   | "box"
   | "pcloud"
-  | "yandexdisk";
+  | "yandexdisk"
+  | "koofr";
 
 export type SUPPORTED_SERVICES_TYPE_WITH_REMOTE_BASE_DIR =
   | "webdav"
@@ -33,7 +35,8 @@ export type SUPPORTED_SERVICES_TYPE_WITH_REMOTE_BASE_DIR =
   | "googledrive"
   | "box"
   | "pcloud"
-  | "yandexdisk";
+  | "yandexdisk"
+  | "koofr";
 
 export interface S3Config {
   s3Endpoint: string;
@@ -131,7 +134,8 @@ export type QRExportType =
   | "googledrive"
   | "box"
   | "pcloud"
-  | "yandexdisk";
+  | "yandexdisk"
+  | "koofr";
 
 export interface ProfilerConfig {
   enablePrinting?: boolean;
@@ -148,6 +152,8 @@ export interface RemotelySavePluginSettings {
   box: BoxConfig;
   pcloud: PCloudConfig;
   yandexdisk: YandexDiskConfig;
+  koofr: KoofrConfig;
+
   password: string;
   serviceType: SUPPORTED_SERVICES_TYPE;
   currLogLevel?: string;
