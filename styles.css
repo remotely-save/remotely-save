@@ -21,6 +21,10 @@
   display: none;
 }
 
+.settings-encryption-method-hide {
+  display: none;
+}
+
 .s3-disclaimer {
   font-weight: bold;
 }

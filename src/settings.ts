@@ -67,10 +67,17 @@ import { DEFAULT_PROFILER_CONFIG } from "./profiler";
 class PasswordModal extends Modal {
   plugin: RemotelySavePlugin;
   newPassword: string;
-  constructor(app: App, plugin: RemotelySavePlugin, newPassword: string) {
+  encryptionMethodSetting: Setting;
+  constructor(
+    app: App,
+    plugin: RemotelySavePlugin,
+    newPassword: string,
+    encryptionMethodSetting: Setting
+  ) {
     super(app);
     this.plugin = plugin;
     this.newPassword = newPassword;
+    this.encryptionMethodSetting = encryptionMethodSetting;
   }
 
   onOpen() {
@@ -114,6 +121,16 @@ class PasswordModal extends Modal {
         button.setButtonText(t("modal_password_secondconfirm"));
         button.onClick(async () => {
           this.plugin.settings.password = this.newPassword;
+          if (this.newPassword !== "") {
+            this.encryptionMethodSetting.settingEl.removeClass(
+              "settings-encryption-method-hide"
+            );
+          } else {
+            this.encryptionMethodSetting.settingEl.addClass(
+              "settings-encryption-method-hide"
+            );
+          }
+
           await this.plugin.saveSettings();
           new Notice(t("modal_password_notice"));
           this.close();
@@ -1922,8 +1939,11 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
     const basicDiv = containerEl.createEl("div");
     basicDiv.createEl("h2", { text: t("settings_basic") });
 
+    const passwordSetting = new Setting(basicDiv);
+    const encryptionMethodSetting = new Setting(basicDiv);
+
     let newPassword = `${this.plugin.settings.password}`;
-    new Setting(basicDiv)
+    passwordSetting
       .setName(t("settings_password"))
       .setDesc(t("settings_password_desc"))
       .addText((text) => {
@@ -1938,11 +1958,21 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
       .addButton(async (button) => {
         button.setButtonText(t("confirm"));
         button.onClick(async () => {
-          new PasswordModal(this.app, this.plugin, newPassword).open();
+          new PasswordModal(
+            this.app,
+            this.plugin,
+            newPassword,
+            encryptionMethodSetting
+          ).open();
         });
       });
 
-    new Setting(basicDiv)
+    if (this.plugin.settings.password === "") {
+      encryptionMethodSetting.settingEl.addClass(
+        "settings-encryption-method-hide"
+      );
+    }
+    encryptionMethodSetting
       .setName(t("settings_encryptionmethod"))
       .setDesc(stringToFragment(t("settings_encryptionmethod_desc")))
       .addDropdown((dropdown) => {
