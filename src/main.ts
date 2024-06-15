@@ -1589,12 +1589,14 @@ export default class RemotelySavePlugin extends Plugin {
         this.registerEvent(this.app.vault.on("modify", this._syncOnSaveEvent2));
         this.registerEvent(this.app.vault.on("create", this._syncOnSaveEvent2));
         this.registerEvent(this.app.vault.on("delete", this._syncOnSaveEvent2));
+        this.registerEvent(this.app.vault.on("rename", this._syncOnSaveEvent2));
       });
     } else {
       this.syncEvent?.off("SYNC_DONE", this._syncOnSaveEvent1);
       this.app.vault.off("modify", this._syncOnSaveEvent2);
       this.app.vault.off("create", this._syncOnSaveEvent2);
       this.app.vault.off("delete", this._syncOnSaveEvent2);
+      this.app.vault.off("rename", this._syncOnSaveEvent2);
     }
   }
 
