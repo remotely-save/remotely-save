@@ -2369,7 +2369,7 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
 
     new Setting(advDiv)
       .setName(t("setting_syncdirection"))
-      .setDesc(t("setting_syncdirection_desc"))
+      .setDesc(stringToFragment(t("setting_syncdirection_desc")))
       .addDropdown((dropdown) => {
         dropdown.addOption(
           "bidirectional",
@@ -2382,6 +2382,14 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
         dropdown.addOption(
           "incremental_pull_only",
           t("setting_syncdirection_incremental_pull_only_desc")
+        );
+        dropdown.addOption(
+          "incremental_push_and_delete_only",
+          t("setting_syncdirection_incremental_push_and_delete_only_desc")
+        );
+        dropdown.addOption(
+          "incremental_pull_and_delete_only",
+          t("setting_syncdirection_incremental_pull_and_delete_only_desc")
         );
 
         dropdown

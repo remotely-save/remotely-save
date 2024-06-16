@@ -120,7 +120,9 @@ export interface WebdisConfig {
 export type SyncDirectionType =
   | "bidirectional"
   | "incremental_pull_only"
-  | "incremental_push_only";
+  | "incremental_push_only"
+  | "incremental_pull_and_delete_only"
+  | "incremental_push_and_delete_only";
 
 export type CipherMethodType = "rclone-base64" | "openssl-base64" | "unknown";
 

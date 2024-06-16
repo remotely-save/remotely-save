@@ -335,7 +335,10 @@ const getSyncPlanInplace = async (
           mixedEntry.decision = "folder_existed_both_then_do_nothing";
           mixedEntry.change = false;
         } else if (local !== undefined && remote === undefined) {
-          if (syncDirection === "incremental_pull_only") {
+          if (
+            syncDirection === "incremental_pull_only" ||
+            syncDirection === "incremental_pull_and_delete_only"
+          ) {
             mixedEntry.decisionBranch = 107;
             mixedEntry.decision = "folder_to_skip";
             mixedEntry.change = false;
@@ -346,7 +349,10 @@ const getSyncPlanInplace = async (
             mixedEntry.change = true;
           }
         } else if (local === undefined && remote !== undefined) {
-          if (syncDirection === "incremental_push_only") {
+          if (
+            syncDirection === "incremental_push_only" ||
+            syncDirection === "incremental_push_and_delete_only"
+          ) {
             mixedEntry.decisionBranch = 108;
             mixedEntry.decision = "folder_to_skip";
             mixedEntry.change = false;
@@ -373,7 +379,10 @@ const getSyncPlanInplace = async (
         } else if (local !== undefined && remote === undefined) {
           if (prevSync !== undefined) {
             // then the folder is deleted on remote
-            if (syncDirection === "incremental_push_only") {
+            if (
+              syncDirection === "incremental_push_only" ||
+              syncDirection === "incremental_push_and_delete_only"
+            ) {
               mixedEntry.decisionBranch = 122;
               mixedEntry.decision = "folder_to_skip";
               keptFolder.add(getParentFolder(key));
@@ -383,6 +392,10 @@ const getSyncPlanInplace = async (
               mixedEntry.decision = "folder_to_skip";
               mixedEntry.change = false;
               keptFolder.add(getParentFolder(key));
+            } else if (syncDirection === "incremental_pull_and_delete_only") {
+              mixedEntry.decisionBranch = 135;
+              mixedEntry.decision = "folder_to_be_deleted_on_local";
+              mixedEntry.change = true;
             } else {
               // bidirectional
               mixedEntry.decisionBranch = 124;
@@ -392,13 +405,19 @@ const getSyncPlanInplace = async (
           } else {
             // then the folder is created on local
 
-            if (syncDirection === "incremental_push_only") {
+            if (
+              syncDirection === "incremental_push_only" ||
+              syncDirection === "incremental_push_and_delete_only"
+            ) {
               mixedEntry.decisionBranch = 125;
               mixedEntry.decision =
                 "folder_existed_local_then_also_create_remote";
               mixedEntry.change = true;
               keptFolder.add(getParentFolder(key));
-            } else if (syncDirection === "incremental_pull_only") {
+            } else if (
+              syncDirection === "incremental_pull_only" ||
+              syncDirection === "incremental_pull_and_delete_only"
+            ) {
               mixedEntry.decisionBranch = 126;
               mixedEntry.decision = "folder_to_skip";
               mixedEntry.change = false;
@@ -420,7 +439,14 @@ const getSyncPlanInplace = async (
               mixedEntry.decision = "folder_to_skip";
               mixedEntry.change = false;
               keptFolder.add(getParentFolder(key));
-            } else if (syncDirection === "incremental_pull_only") {
+            } else if (syncDirection === "incremental_push_and_delete_only") {
+              mixedEntry.decisionBranch = 136;
+              mixedEntry.decision = "folder_to_be_deleted_on_remote";
+              mixedEntry.change = true;
+            } else if (
+              syncDirection === "incremental_pull_only" ||
+              syncDirection === "incremental_pull_and_delete_only"
+            ) {
               mixedEntry.decisionBranch = 129;
               mixedEntry.decision = "folder_to_skip";
               mixedEntry.change = false;
@@ -433,12 +459,18 @@ const getSyncPlanInplace = async (
             }
           } else {
             // then the folder is created on remote
-            if (syncDirection === "incremental_push_only") {
+            if (
+              syncDirection === "incremental_push_only" ||
+              syncDirection === "incremental_push_and_delete_only"
+            ) {
               mixedEntry.decisionBranch = 131;
               mixedEntry.decision = "folder_to_skip";
               mixedEntry.change = false;
               keptFolder.add(getParentFolder(key));
-            } else if (syncDirection === "incremental_pull_only") {
+            } else if (
+              syncDirection === "incremental_pull_only" ||
+              syncDirection === "incremental_pull_and_delete_only"
+            ) {
               mixedEntry.decisionBranch = 132;
               mixedEntry.decision =
                 "folder_existed_remote_then_also_create_local";
@@ -497,7 +529,10 @@ const getSyncPlanInplace = async (
               skipSizeLargerThan <= 0 ||
               remote.sizeEnc! <= skipSizeLargerThan
             ) {
-              if (syncDirection === "incremental_push_only") {
+              if (
+                syncDirection === "incremental_push_only" ||
+                syncDirection === "incremental_push_and_delete_only"
+              ) {
                 mixedEntry.decisionBranch = 26;
                 mixedEntry.decision = "conflict_modified_then_keep_local";
                 mixedEntry.change = true;
@@ -521,7 +556,10 @@ const getSyncPlanInplace = async (
               skipSizeLargerThan <= 0 ||
               local.sizeEnc! <= skipSizeLargerThan
             ) {
-              if (syncDirection === "incremental_pull_only") {
+              if (
+                syncDirection === "incremental_pull_only" ||
+                syncDirection === "incremental_pull_and_delete_only"
+              ) {
                 mixedEntry.decisionBranch = 27;
                 mixedEntry.decision = "conflict_modified_then_keep_remote";
                 mixedEntry.change = true;
@@ -578,12 +616,18 @@ const getSyncPlanInplace = async (
                   mixedEntry.change = true;
                   keptFolder.add(getParentFolder(key));
                 }
-              } else if (syncDirection === "incremental_pull_only") {
+              } else if (
+                syncDirection === "incremental_pull_only" ||
+                syncDirection === "incremental_pull_and_delete_only"
+              ) {
                 mixedEntry.decisionBranch = 22;
                 mixedEntry.decision = "conflict_created_then_keep_remote";
                 mixedEntry.change = true;
                 keptFolder.add(getParentFolder(key));
-              } else if (syncDirection === "incremental_push_only") {
+              } else if (
+                syncDirection === "incremental_push_only" ||
+                syncDirection === "incremental_push_and_delete_only"
+              ) {
                 mixedEntry.decisionBranch = 23;
                 mixedEntry.decision = "conflict_created_then_keep_local";
                 mixedEntry.change = true;
@@ -630,12 +674,18 @@ const getSyncPlanInplace = async (
                   mixedEntry.change = true;
                   keptFolder.add(getParentFolder(key));
                 }
-              } else if (syncDirection === "incremental_pull_only") {
+              } else if (
+                syncDirection === "incremental_pull_only" ||
+                syncDirection === "incremental_pull_and_delete_only"
+              ) {
                 mixedEntry.decisionBranch = 24;
                 mixedEntry.decision = "conflict_modified_then_keep_remote";
                 mixedEntry.change = true;
                 keptFolder.add(getParentFolder(key));
-              } else if (syncDirection === "incremental_push_only") {
+              } else if (
+                syncDirection === "incremental_push_only" ||
+                syncDirection === "incremental_push_and_delete_only"
+              ) {
                 mixedEntry.decisionBranch = 25;
                 mixedEntry.decision = "conflict_modified_then_keep_local";
                 mixedEntry.change = true;
@@ -664,7 +714,10 @@ const getSyncPlanInplace = async (
             skipSizeLargerThan <= 0 ||
             remote.sizeEnc! <= skipSizeLargerThan
           ) {
-            if (syncDirection === "incremental_push_only") {
+            if (
+              syncDirection === "incremental_push_only" ||
+              syncDirection === "incremental_push_and_delete_only"
+            ) {
               mixedEntry.decisionBranch = 28;
               mixedEntry.decision = "conflict_created_then_do_nothing";
               mixedEntry.change = false;
@@ -692,7 +745,14 @@ const getSyncPlanInplace = async (
             mixedEntry.decision = "conflict_created_then_do_nothing";
             mixedEntry.change = false;
             keptFolder.add(getParentFolder(key));
-          } else if (syncDirection === "incremental_pull_only") {
+          } else if (syncDirection === "incremental_push_and_delete_only") {
+            mixedEntry.decisionBranch = 38;
+            mixedEntry.decision = "local_is_deleted_thus_also_delete_remote";
+            mixedEntry.change = true;
+          } else if (
+            syncDirection === "incremental_pull_only" ||
+            syncDirection === "incremental_pull_and_delete_only"
+          ) {
             mixedEntry.decisionBranch = 35;
             mixedEntry.decision = "conflict_created_then_keep_remote";
             mixedEntry.change = true;
@@ -708,7 +768,10 @@ const getSyncPlanInplace = async (
             skipSizeLargerThan <= 0 ||
             remote.sizeEnc! <= skipSizeLargerThan
           ) {
-            if (syncDirection === "incremental_push_only") {
+            if (
+              syncDirection === "incremental_push_only" ||
+              syncDirection === "incremental_push_and_delete_only"
+            ) {
               mixedEntry.decisionBranch = 30;
               mixedEntry.decision = "conflict_created_then_do_nothing";
               mixedEntry.change = false;
@@ -733,7 +796,10 @@ const getSyncPlanInplace = async (
         if (prevSync === undefined) {
           // if A is not in the previous list, A is new
           if (skipSizeLargerThan <= 0 || local.sizeEnc! <= skipSizeLargerThan) {
-            if (syncDirection === "incremental_pull_only") {
+            if (
+              syncDirection === "incremental_pull_only" ||
+              syncDirection === "incremental_pull_and_delete_only"
+            ) {
               mixedEntry.decisionBranch = 31;
               mixedEntry.decision = "conflict_created_then_do_nothing";
               mixedEntry.change = false;
@@ -756,7 +822,10 @@ const getSyncPlanInplace = async (
           prevSync.sizeEnc === local.sizeEnc
         ) {
           // if A is in the previous list and UNMODIFIED, A has been deleted by B
-          if (syncDirection === "incremental_push_only") {
+          if (
+            syncDirection === "incremental_push_only" ||
+            syncDirection === "incremental_push_and_delete_only"
+          ) {
             mixedEntry.decisionBranch = 32;
             mixedEntry.decision = "conflict_created_then_keep_local";
             mixedEntry.change = true;
@@ -764,6 +833,10 @@ const getSyncPlanInplace = async (
             mixedEntry.decisionBranch = 33;
             mixedEntry.decision = "conflict_created_then_do_nothing";
             mixedEntry.change = false;
+          } else if (syncDirection === "incremental_pull_and_delete_only") {
+            mixedEntry.decisionBranch = 39;
+            mixedEntry.decision = "remote_is_deleted_thus_also_delete_local";
+            mixedEntry.change = true;
           } else {
             mixedEntry.decisionBranch = 7;
             mixedEntry.decision = "remote_is_deleted_thus_also_delete_local";
@@ -772,7 +845,10 @@ const getSyncPlanInplace = async (
         } else {
           // if A is in the previous list and MODIFIED, A has been deleted by B but modified by A
           if (skipSizeLargerThan <= 0 || local.sizeEnc! <= skipSizeLargerThan) {
-            if (syncDirection === "incremental_pull_only") {
+            if (
+              syncDirection === "incremental_pull_only" ||
+              syncDirection === "incremental_pull_and_delete_only"
+            ) {
               mixedEntry.decisionBranch = 34;
               mixedEntry.decision = "conflict_created_then_do_nothing";
               mixedEntry.change = false;
@@ -826,7 +902,7 @@ const getSyncPlanInplace = async (
   mixedEntityMappings["/$@meta"] = {
     key: "/$@meta", // don't mess up with the types
     sideNotes: {
-      version: "20240525 fs version",
+      version: "20240616 fs version",
       generateTime: currTime,
       generateTimeFmt: currTimeFmt,
       service: settings.serviceType,
