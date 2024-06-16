@@ -44,10 +44,10 @@ You need to connect your plugin to your online account. In Obsidian, in your Rem
 
 ## Why so complicated?
 
-Because we doesn't have payment method inside the plugin, so we have to:
+Because we don't have a payment method inside the plugin, so we have to:
 
 * build a website, 
 * require users having online accounts
 * and connect the plugin to the online account.
 
-Moreover, an online account allows flexibe management of subscriptions. 
+Moreover, an online account allows flexible management of subscriptions. 
