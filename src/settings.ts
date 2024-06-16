@@ -55,6 +55,7 @@ import {
   clearAllPrevSyncRecordByVault,
   clearAllSyncPlanRecords,
   destroyDBs,
+  upsertLastFailedSyncTimeByVault,
   upsertLastSuccessSyncTimeByVault,
 } from "./localdb";
 import type RemotelySavePlugin from "./main"; // unavoidable
@@ -2134,7 +2135,12 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
               this.plugin.vaultRandomID,
               -1
             );
-            this.plugin.updateLastSuccessSyncMsg(-1);
+            await upsertLastFailedSyncTimeByVault(
+              this.plugin.db,
+              this.plugin.vaultRandomID,
+              -1
+            );
+            this.plugin.updateLastSyncMsg(undefined, null, null);
             new Notice(t("settings_resetstatusbar_notice"));
           });
         });

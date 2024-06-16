@@ -92,8 +92,10 @@ import {
   type InternalDBs,
   clearAllLoggerOutputRecords,
   clearExpiredSyncPlanRecords,
+  getLastFailedSyncTimeByVault,
   getLastSuccessSyncTimeByVault,
   prepareDBs,
+  upsertLastFailedSyncTimeByVault,
   upsertLastSuccessSyncTimeByVault,
   upsertPluginVersionByVault,
 } from "./localdb";
@@ -174,6 +176,29 @@ const getIconSvg = () => {
   iconSvgSyncRunning.empty();
   iconSvgLogs.empty();
   return res;
+};
+
+const getStatusBarShortMsgFromSyncSource = (
+  t: (x: TransItemType, vars?: any) => string,
+  s: SyncTriggerSourceType | undefined
+) => {
+  if (s === undefined) {
+    return "";
+  }
+  switch (s) {
+    case "manual":
+      return t("statusbar_sync_source_manual");
+    case "dry":
+      return t("statusbar_sync_source_dry");
+    case "auto":
+      return t("statusbar_sync_source_auto");
+    case "auto_once_init":
+      return t("statusbar_sync_source_auto_once_init");
+    case "auto_sync_on_save":
+      return t("statusbar_sync_source_auto_sync_on_save");
+    default:
+      throw Error(`no translate for ${s}`);
+  }
 };
 
 export default class RemotelySavePlugin extends Plugin {
@@ -393,17 +418,15 @@ export default class RemotelySavePlugin extends Plugin {
     ) => {
       if (step === 1) {
         // change status to "syncing..." on statusbar
-        this.updateLastSuccessSyncMsg(-1);
+        this.updateLastSyncMsg(s, -1, -1);
       } else if (step === 8 && everythingOk) {
-        const lastSuccessSyncMillis = Date.now();
-        await upsertLastSuccessSyncTimeByVault(
-          this.db,
-          this.vaultRandomID,
-          lastSuccessSyncMillis
-        );
-        this.updateLastSuccessSyncMsg(lastSuccessSyncMillis);
+        const ts = Date.now();
+        await upsertLastSuccessSyncTimeByVault(this.db, this.vaultRandomID, ts);
+        this.updateLastSyncMsg(s, ts, null);
       } else if (!everythingOk) {
-        this.updateLastSuccessSyncMsg(-2); // magic number
+        const ts = Date.now();
+        await upsertLastFailedSyncTimeByVault(this.db, this.vaultRandomID, ts);
+        this.updateLastSyncMsg(s, null, ts); // magic number
       }
     };
 
@@ -412,12 +435,15 @@ export default class RemotelySavePlugin extends Plugin {
     };
 
     const callbackSyncProcess = async (
+      s: SyncTriggerSourceType,
       realCounter: number,
       realTotalCount: number,
       pathName: string,
       decision: string
     ) => {
       this.setCurrSyncMsg(
+        t,
+        s,
         realCounter,
         realTotalCount,
         pathName,
@@ -1060,15 +1086,21 @@ export default class RemotelySavePlugin extends Plugin {
       this.statusBarElement = statusBarItem.createEl("span");
       this.statusBarElement.setAttribute("data-tooltip-position", "top");
 
-      this.updateLastSuccessSyncMsg(
-        await getLastSuccessSyncTimeByVault(this.db, this.vaultRandomID)
+      this.updateLastSyncMsg(
+        undefined,
+        await getLastSuccessSyncTimeByVault(this.db, this.vaultRandomID),
+        await getLastFailedSyncTimeByVault(this.db, this.vaultRandomID)
       );
       // update statusbar text every 30 seconds
       this.registerInterval(
         window.setInterval(async () => {
-          this.updateLastSuccessSyncMsg(
-            await getLastSuccessSyncTimeByVault(this.db, this.vaultRandomID)
-          );
+          if (!this.isSyncing) {
+            this.updateLastSyncMsg(
+              undefined,
+              await getLastSuccessSyncTimeByVault(this.db, this.vaultRandomID),
+              await getLastFailedSyncTimeByVault(this.db, this.vaultRandomID)
+            );
+          }
         }, 1000 * 30)
       );
     }
@@ -1618,7 +1650,8 @@ export default class RemotelySavePlugin extends Plugin {
 
       if (
         caller === "SYNC" ||
-        (caller === "FILE_CHANGES" && lastModified > lastSuccessSyncMillis)
+        (caller === "FILE_CHANGES" &&
+          lastModified > (lastSuccessSyncMillis ?? 1))
       ) {
         console.debug(
           `so lastModified > lastSuccessSyncMillis or it's called while syncing before`
@@ -1734,17 +1767,34 @@ export default class RemotelySavePlugin extends Plugin {
   }
 
   setCurrSyncMsg(
+    t: (x: TransItemType, vars?: any) => string,
+    s: SyncTriggerSourceType,
     i: number,
     totalCount: number,
     pathName: string,
     decision: string,
     triggerSource: SyncTriggerSourceType
   ) {
-    const msg = `syncing progress=${i}/${totalCount},decision=${decision},path=${pathName},source=${triggerSource}`;
-    this.currSyncMsg = msg;
+    const L = `${totalCount}`.length;
+    const iStr = `${i}`.padStart(L, "0");
+    const prefix = getStatusBarShortMsgFromSyncSource(t, s);
+    const shortMsg = prefix + `Syncing ${iStr}/${totalCount}`;
+    const longMsg =
+      prefix +
+      `Syncing progress=${iStr}/${totalCount},decision=${decision},path=${pathName},source=${triggerSource}`;
+    this.currSyncMsg = longMsg;
+
+    if (this.statusBarElement !== undefined) {
+      this.statusBarElement.setText(shortMsg);
+      this.statusBarElement.setAttribute("aria-label", longMsg);
+    }
   }
 
-  updateLastSuccessSyncMsg(lastSuccessSyncMillis?: number) {
+  updateLastSyncMsg(
+    s: SyncTriggerSourceType | undefined,
+    lastSuccessSyncMillis: number | null | undefined,
+    lastFailedSyncMillis: number | null | undefined
+  ) {
     if (this.statusBarElement === undefined) return;
 
     const t = (x: TransItemType, vars?: any) => {
@@ -1754,18 +1804,27 @@ export default class RemotelySavePlugin extends Plugin {
     let lastSyncMsg = t("statusbar_lastsync_never");
     let lastSyncLabelMsg = t("statusbar_lastsync_never_label");
 
-    if (lastSuccessSyncMillis !== undefined && lastSuccessSyncMillis === -1) {
-      lastSyncMsg = t("statusbar_syncing");
-    }
+    const inputTs = Math.max(
+      lastSuccessSyncMillis ?? -999,
+      lastFailedSyncMillis ?? -999
+    );
+    const isSuccess =
+      (lastSuccessSyncMillis ?? -999) >= (lastFailedSyncMillis ?? -999);
 
-    if (lastSuccessSyncMillis !== undefined && lastSuccessSyncMillis === -2) {
-      lastSyncMsg = t("statusbar_failed");
-      lastSyncLabelMsg = t("statusbar_failed");
-    }
+    if (lastSuccessSyncMillis === -1) {
+      // magic number
+      // otherwise how can we know we are syncing??
+      lastSyncMsg =
+        getStatusBarShortMsgFromSyncSource(t, s!) + t("statusbar_syncing");
+    } else if (inputTs > 0) {
+      let prefix = "";
+      if (isSuccess) {
+        prefix = t("statusbar_sync_status_prefix_success");
+      } else {
+        prefix = t("statusbar_sync_status_prefix_failed");
+      }
 
-    if (lastSuccessSyncMillis !== undefined && lastSuccessSyncMillis > 0) {
-      const deltaTime = Date.now() - lastSuccessSyncMillis;
-
+      const deltaTime = Date.now() - inputTs;
       // create human readable time
       const years = Math.floor(deltaTime / 31556952000);
       const months = Math.floor(deltaTime / 2629746000);
@@ -1774,9 +1833,7 @@ export default class RemotelySavePlugin extends Plugin {
       const hours = Math.floor(deltaTime / 3600000);
       const minutes = Math.floor(deltaTime / 60000);
       const seconds = Math.floor(deltaTime / 1000);
-
       let timeText = "";
-
       if (years > 0) {
         timeText = t("statusbar_time_years", { time: years });
       } else if (months > 0) {
@@ -1792,10 +1849,9 @@ export default class RemotelySavePlugin extends Plugin {
       } else if (seconds > 30) {
         timeText = t("statusbar_time_lessminute");
       } else {
-        timeText = t("statusbar_now");
+        timeText = t("statusbar_time_now");
       }
-
-      const dateText = new Date(lastSuccessSyncMillis).toLocaleTimeString(
+      const dateText = new Date(inputTs).toLocaleTimeString(
         navigator.language,
         {
           weekday: "long",
@@ -1805,8 +1861,11 @@ export default class RemotelySavePlugin extends Plugin {
         }
       );
 
-      lastSyncMsg = timeText;
-      lastSyncLabelMsg = t("statusbar_lastsync_label", { date: dateText });
+      lastSyncMsg = prefix + timeText;
+      lastSyncLabelMsg =
+        prefix + t("statusbar_lastsync_label", { date: dateText });
+    } else {
+      // TODO: no idea what happened.
     }
 
     this.statusBarElement.setText(lastSyncMsg);

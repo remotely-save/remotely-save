@@ -1417,6 +1417,7 @@ export const doActualSync = async (
   db: InternalDBs,
   profiler: Profiler | undefined,
   conflictAction: ConflictActionType,
+  triggerSource: SyncTriggerSourceType,
   callbackSyncProcess?: any
 ) => {
   profiler?.addIndent();
@@ -1524,13 +1525,16 @@ export const doActualSync = async (
           // );
 
           await callbackSyncProcess?.(
+            triggerSource,
             realCounter,
             realTotalCount,
             key,
             val.decision
           );
 
-          realCounter += 1;
+          if (val.change === undefined || val.change) {
+            realCounter += 1;
+          }
 
           await dispatchOperationToActualV3(
             key,
@@ -1743,6 +1747,7 @@ export async function syncer(
         db,
         profiler,
         settings.conflictAction ?? "keep_newer",
+        triggerSource,
         callbackSyncProcess
       );
       profiler?.insert(`finish step${step} (actual sync)`);
