@@ -22,7 +22,7 @@ This is yet another unofficial sync plugin for Obsidian. If you like it or find 
   - OneDrive for personal
   - Webdav (NextCloud / InfiniCloud / Synology webdav server / ...)
   - Webdis
-  - Google Drive (PRO feature)
+  - Google Drive (GDrive) (PRO feature)
   - Box (PRO feature)
   - pCloud (PRO feature)
   - Yandex Disk (PRO feature)
@@ -34,7 +34,7 @@ This is yet another unofficial sync plugin for Obsidian. If you like it or find 
 - **[Minimal Intrusive](./docs/minimal_intrusive_design.md).**
 - **Skip Large files** and **skip paths** by custom regex conditions!
 - **[Sync Algorithm](./docs/sync_algorithm/v3/intro.md) is provided for discussion.**
-- **[Basic Conflict Detection And Handling](./docs/sync_algorithm/v3/intro.md)** for free version. **[Advanced Conflict Handling](./pro/README.md)** for PRO version. 
+- **[Basic Conflict Detection And Handling](./docs/sync_algorithm/v3/intro.md)** for free version. **[Advanced Smart Conflict Handling](./pro/README.md)** for PRO version. 
 - Source Available. See [License](./LICENSE) for details.
 
 ## Limitations
@@ -127,7 +127,7 @@ Additionally, the plugin author may occasionally visit Obsidian official forum a
 - Mostly experimental.
 - You have to setup and protect your web server by yourself.
 
-### Google Drive (PRO feature)
+### Google Drive (GDrive) (PRO feature)
 
 PRO (paid) feature "sync with Google Drive" allows users to to sync with Google Drive. Tutorials and limitations are documented [here](./docs/remote_services/googledrive/README.md).
 
@@ -143,15 +143,28 @@ PRO (paid) feature "sync with pCloud" allows users to to sync with pCloud (using
 
 PRO (paid) feature "sync with Yandex Disk" allows users to to sync with Yandex Disk (using its native API instead of webdav). Tutorials and limitations are documented [here](./docs/remote_services/yandexdisk/README.md).
 
-### Yandex Disk (PRO feature)
+### Koofr (PRO feature)
 
 PRO (paid) feature "sync with Koofr" allows users to to sync with Koofr (using its native API instead of webdav). Tutorials and limitations are documented [here](./docs/remote_services/koofr/README.md).
+
+## Smart Conflict (PRO feature)
+
+Basic (free) version can detect conflicts, but users have to choose to keep newer version or larger version of the files.
+
+PRO (paid) feature "Smart Conflict" gives users one more option: merge small markdown files, or duplicate large markdown files or non-markdown files.
+
+See documents [here](./docs/pro/README.md)
 
 ## Scheduled Auto Sync
 
 - You can configure auto syncing every N minutes in settings.
 - In auto sync mode, if any error occurs, the plugin would **fail silently**.
 - Auto sync only works when Obsidian is being opened. It's **technically impossible** to auto sync while Obsidian is in background, because the plugin just works in the browser environment provided by Obsidian.
+
+## Sync On Save
+
+- You can configure sync on save in settings.
+- In sync on save mode, if any error occurs, the plugin would **fail silently**.
 
 ## How To Deal With Hidden Files Or Folders
 
