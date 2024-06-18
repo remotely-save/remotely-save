@@ -1898,7 +1898,7 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
           "yandexdisk",
           t("settings_chooseservice_yandexdisk")
         );
-        // dropdown.addOption("koofr", t("settings_chooseservice_koofr"));
+        dropdown.addOption("koofr", t("settings_chooseservice_koofr"));
 
         dropdown
           .setValue(this.plugin.settings.serviceType)

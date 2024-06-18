@@ -1797,6 +1797,9 @@ export default class RemotelySavePlugin extends Plugin {
   ) {
     if (this.statusBarElement === undefined) return;
 
+    // console.debug(lastSuccessSyncMillis);
+    // console.debug(lastFailedSyncMillis);
+
     const t = (x: TransItemType, vars?: any) => {
       return this.i18n.t(x, vars);
     };
@@ -1811,7 +1814,7 @@ export default class RemotelySavePlugin extends Plugin {
     const isSuccess =
       (lastSuccessSyncMillis ?? -999) >= (lastFailedSyncMillis ?? -999);
 
-    if (lastSuccessSyncMillis === -1) {
+    if (this.isSyncing) {
       // magic number
       // otherwise how can we know we are syncing??
       lastSyncMsg =
