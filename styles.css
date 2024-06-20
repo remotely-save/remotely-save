@@ -17,6 +17,14 @@
   padding-top: 18px;
 }
 
+.settings-percentage-custom-hide {
+  display: none;
+}
+
+.settings-encryption-method-hide {
+  display: none;
+}
+
 .s3-disclaimer {
   font-weight: bold;
 }
@@ -61,6 +69,108 @@
   display: none;
 }
 
+.webdis-disclaimer {
+  font-weight: bold;
+}
+.webdis-hide {
+  display: none;
+}
+
+.googledrive-disclaimer {
+  font-weight: bold;
+}
+.googledrive-hide {
+  display: none;
+}
+
+.googledrive-allow-to-use-hide {
+  display: none;
+}
+
+.googledrive-auth-button-hide {
+  display: none;
+}
+
+.googledrive-revoke-auth-button-hide {
+  display: none;
+}
+
+.box-disclaimer {
+  font-weight: bold;
+}
+.box-hide {
+  display: none;
+}
+
+.box-allow-to-use-hide {
+  display: none;
+}
+
+.box-auth-button-hide {
+  display: none;
+}
+
+.box-revoke-auth-button-hide {
+  display: none;
+}
+
+.pcloud-disclaimer {
+  font-weight: bold;
+}
+.pcloud-hide {
+  display: none;
+}
+
+.pcloud-allow-to-use-hide {
+  display: none;
+}
+
+.pcloud-auth-button-hide {
+  display: none;
+}
+
+.pcloud-revoke-auth-button-hide {
+  display: none;
+}
+
+.yandexdisk-disclaimer {
+  font-weight: bold;
+}
+.yandexdisk-hide {
+  display: none;
+}
+
+.yandexdisk-allow-to-use-hide {
+  display: none;
+}
+
+.yandexdisk-auth-button-hide {
+  display: none;
+}
+
+.yandexdisk-revoke-auth-button-hide {
+  display: none;
+}
+
+.koofr-disclaimer {
+  font-weight: bold;
+}
+.koofr-hide {
+  display: none;
+}
+
+.koofr-allow-to-use-hide {
+  display: none;
+}
+
+.koofr-auth-button-hide {
+  display: none;
+}
+
+.koofr-revoke-auth-button-hide {
+  display: none;
+}
+
 .qrcode-img {
   width: 350px;
   height: 350px;
@@ -75,6 +185,22 @@
   font-weight: bolder;
 }
 
-.setting-need-wrapping-mobile .setting-item-control {
-  flex-wrap: wrap;
+.setting-need-wrapping .setting-item-control {
+  /* flex-wrap: wrap; */
+  display: grid;
+}
+
+.pro-disclaimer {
+  font-weight: bold;
+}
+.pro-hide {
+  display: none;
+}
+
+.pro-auth-button-hide {
+  display: none;
+}
+
+.pro-revoke-auth-button-hide {
+  display: none;
 }

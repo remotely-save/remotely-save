@@ -1,14 +1,14 @@
 import localforage from "localforage";
-import { extendPrototype } from "localforage-getitems";
-extendPrototype(localforage);
+import { extendPrototype as ep1 } from "localforage-getitems";
+import { extendPrototype as ep2 } from "localforage-removeitems";
+ep1(localforage);
+ep2(localforage);
 export type LocalForage = typeof localforage;
 import { nanoid } from "nanoid";
-import { requireApiVersion, TAbstractFile, TFile, TFolder } from "obsidian";
 
-import { API_VER_STAT_FOLDER } from "./baseTypes";
-import type { Entity, MixedEntity, SUPPORTED_SERVICES_TYPE } from "./baseTypes";
-import type { SyncPlanType } from "./sync";
-import { statFix, toText, unixTimeToStr } from "./misc";
+import type { SyncPlanType } from "../pro/src/sync";
+import type { Entity, SUPPORTED_SERVICES_TYPE } from "./baseTypes";
+import { unixTimeToStr } from "./misc";
 
 const DB_VERSION_NUMBER_IN_HISTORY = [20211114, 20220108, 20220326, 20240220];
 export const DEFAULT_DB_VERSION_NUMBER: number = 20240220;
@@ -20,6 +20,7 @@ export const DEFAULT_TBL_LOGGER_OUTPUT = "loggeroutput";
 export const DEFAULT_TBL_SIMPLE_KV_FOR_MISC = "simplekvformisc";
 export const DEFAULT_TBL_PREV_SYNC_RECORDS = "prevsyncrecords";
 export const DEFAULT_TBL_PROFILER_RESULTS = "profilerresults";
+export const DEFAULT_TBL_FILE_CONTENT_HISTORY = "filecontenthistory";
 
 /**
  * @deprecated
@@ -62,6 +63,7 @@ export interface InternalDBs {
   simpleKVForMiscTbl: LocalForage;
   prevSyncRecordsTbl: LocalForage;
   profilerResultsTbl: LocalForage;
+  fileContentHistoryTbl: LocalForage;
 
   /**
    * @deprecated
@@ -221,6 +223,11 @@ export const prepareDBs = async (
       name: DEFAULT_DB_NAME,
       storeName: DEFAULT_TBL_SYNC_MAPPING,
     }),
+
+    fileContentHistoryTbl: localforage.createInstance({
+      name: DEFAULT_DB_NAME,
+      storeName: DEFAULT_TBL_FILE_CONTENT_HISTORY,
+    }),
   } as InternalDBs;
 
   // try to get vaultRandomID firstly
@@ -309,12 +316,15 @@ export const clearFileHistoryOfEverythingByVault = async (
   db: InternalDBs,
   vaultRandomID: string
 ) => {
-  const keys = await db.fileHistoryTbl.keys();
-  for (const key of keys) {
-    if (key.startsWith(`${vaultRandomID}\t`)) {
-      await db.fileHistoryTbl.removeItem(key);
-    }
-  }
+  const keys = (await db.fileHistoryTbl.keys()).filter((x) =>
+    x.startsWith(`${vaultRandomID}\t`)
+  );
+  await db.fileHistoryTbl.removeItems(keys);
+  // for (const key of keys) {
+  //   if (key.startsWith(`${vaultRandomID}\t`)) {
+  //     await db.fileHistoryTbl.removeItem(key);
+  //   }
+  // }
 };
 
 /**
@@ -341,12 +351,15 @@ export const clearAllSyncMetaMappingByVault = async (
   db: InternalDBs,
   vaultRandomID: string
 ) => {
-  const keys = await db.syncMappingTbl.keys();
-  for (const key of keys) {
-    if (key.startsWith(`${vaultRandomID}\t`)) {
-      await db.syncMappingTbl.removeItem(key);
-    }
-  }
+  const keys = (await db.syncMappingTbl.keys()).filter((x) =>
+    x.startsWith(`${vaultRandomID}\t`)
+  );
+  await db.syncMappingTbl.removeItems(keys);
+  // for (const key of keys) {
+  //   if (key.startsWith(`${vaultRandomID}\t`)) {
+  //     await db.syncMappingTbl.removeItem(key);
+  //   }
+  // }
 };
 
 export const insertSyncPlanRecordByVault = async (
@@ -402,7 +415,7 @@ export const clearExpiredSyncPlanRecords = async (db: InternalDBs) => {
   const expiredTs = currTs - MILLISECONDS_OLD;
 
   let records = (await db.syncPlansTbl.keys()).map((key) => {
-    const ts = parseInt(key.split("\t")[1]);
+    const ts = Number.parseInt(key.split("\t")[1]);
     const expired = ts <= expiredTs;
     return {
       ts: ts,
@@ -424,11 +437,12 @@ export const clearExpiredSyncPlanRecords = async (db: InternalDBs) => {
     });
   }
 
-  const ps = [] as Promise<void>[];
-  keysToRemove.forEach((element) => {
-    ps.push(db.syncPlansTbl.removeItem(element));
-  });
-  await Promise.all(ps);
+  // const ps = [] as Promise<void>[];
+  // keysToRemove.forEach((element) => {
+  //   ps.push(db.syncPlansTbl.removeItem(element));
+  // });
+  // await Promise.all(ps);
+  await db.syncPlansTbl.removeItems(Array.from(keysToRemove));
 };
 
 export const getAllPrevSyncRecordsByVaultAndProfile = async (
@@ -477,12 +491,10 @@ export const clearAllPrevSyncRecordByVault = async (
   db: InternalDBs,
   vaultRandomID: string
 ) => {
-  const keys = await db.prevSyncRecordsTbl.keys();
-  for (const key of keys) {
-    if (key.startsWith(`${vaultRandomID}\t`)) {
-      await db.prevSyncRecordsTbl.removeItem(key);
-    }
-  }
+  const keys = (await db.prevSyncRecordsTbl.keys()).filter((x) =>
+    x.startsWith(`${vaultRandomID}\t`)
+  );
+  await db.prevSyncRecordsTbl.removeItems(keys);
 };
 
 export const clearAllLoggerOutputRecords = async (db: InternalDBs) => {
@@ -507,7 +519,27 @@ export const getLastSuccessSyncTimeByVault = async (
 ) => {
   return (await db.simpleKVForMiscTbl.getItem(
     `${vaultRandomID}-lastSuccessSyncMillis`
-  )) as number;
+  )) as number | null | undefined;
+};
+
+export const upsertLastFailedSyncTimeByVault = async (
+  db: InternalDBs,
+  vaultRandomID: string,
+  millis: number
+) => {
+  await db.simpleKVForMiscTbl.setItem(
+    `${vaultRandomID}-lastFailedSyncMillis`,
+    millis
+  );
+};
+
+export const getLastFailedSyncTimeByVault = async (
+  db: InternalDBs,
+  vaultRandomID: string
+) => {
+  return (await db.simpleKVForMiscTbl.getItem(
+    `${vaultRandomID}-lastFailedSyncMillis`
+  )) as number | null | undefined;
 };
 
 export const upsertPluginVersionByVault = async (
@@ -544,7 +576,7 @@ export const insertProfilerResultByVault = async (
   // clear older one while writing
   const records = (await db.profilerResultsTbl.keys())
     .filter((x) => x.startsWith(`${vaultRandomID}\t`))
-    .map((x) => parseInt(x.split("\t")[1]));
+    .map((x) => Number.parseInt(x.split("\t")[1]));
   records.sort((a, b) => -(a - b)); // descending
   while (records.length > 5) {
     const ts = records.pop()!;
@@ -561,7 +593,7 @@ export const readAllProfilerResultsByVault = async (
     if (key.startsWith(`${vaultRandomID}\t`)) {
       records.push({
         val: value as string,
-        ts: parseInt(key.split("\t")[1]),
+        ts: Number.parseInt(key.split("\t")[1]),
       });
     }
   });

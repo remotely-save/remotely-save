@@ -1,10 +1,10 @@
-import type { Vault, Stat, ListedFiles } from "obsidian";
-import type { Entity, MixedEntity } from "./baseTypes";
+import type { ListedFiles, Vault } from "obsidian";
+import type { Entity } from "./baseTypes";
 
 import { Queue } from "@fyears/tsqueue";
 import chunk from "lodash/chunk";
 import flatten from "lodash/flatten";
-import { statFix, isSpecialFolderNameToSkip } from "./misc";
+import { isSpecialFolderNameToSkip, statFix } from "./misc";
 
 const isPluginDirItself = (x: string, pluginId: string) => {
   return (
@@ -29,13 +29,6 @@ const isLikelyPluginSubFiles = (x: string) => {
     }
   }
   return false;
-};
-
-export const isInsideObsFolder = (x: string, configDir: string) => {
-  if (!configDir.startsWith(".")) {
-    throw Error(`configDir should starts with . but we get ${configDir}`);
-  }
-  return x === configDir || x.startsWith(`${configDir}/`);
 };
 
 export const listFilesInObsFolder = async (

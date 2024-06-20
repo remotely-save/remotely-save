@@ -52,7 +52,7 @@ Bidirectional:
 | local deleted   | (04) delete remote | (05) pull                 | (01) clean history | (03) pull                 |
 | local created   | (??) conflict      | (??) conflict             | (06) push          | (11/12/13/14/15) conflict |
 
-Incremental push only:
+Incremental push:
 
 | local\remote    | remote unchanged             | remote modified              | remote deleted         | remote created               |
 | --------------- | ---------------------------- | ---------------------------- | ---------------------- | ---------------------------- |
@@ -61,11 +61,29 @@ Incremental push only:
 | local deleted   | **(29) conflict do nothing** | **(30) conflict do nothing** | (01) clean history     | **(28) conflict do nothing** |
 | local created   | (??) conflict                | (??) conflict                | (06) push              | **(23) conflict push**       |
 
-Incremental pull only:
+Incremental pull:
 
 | local\remote    | remote unchanged       | remote modified        | remote deleted               | remote created         |
 | --------------- | ---------------------- | ---------------------- | ---------------------------- | ---------------------- |
 | local unchanged | (02/21) do nothing     | (09) pull              | **(33) conflict do nothing** | (??) conflict          |
+| local modified  | **(27) conflict pull** | **(24) conflict pull** | **(34) conflict do nothing** | (??) conflict          |
+| local deleted   | **(35) conflict pull** | (05) pull              | (01) clean history           | (03) pull              |
+| local created   | (??) conflict          | (??) conflict          | **(31) conflict do nothing** | **(22) conflict pull** |
+
+Incremental push and delete (diff decisionBranch: 38):
+
+| local\remote    | remote unchanged             | remote modified              | remote deleted         | remote created               |
+| --------------- | ---------------------------- | ---------------------------- | ---------------------- | ---------------------------- |
+| local unchanged | (02/21) do nothing           | **(26) conflict push**       | **(32) conflict push** | (??) conflict                |
+| local modified  | (10) push                    | **(25) conflict push**       | (08) push              | (??) conflict                |
+| local deleted   | **(38) delete remote**       | **(30) conflict do nothing** | (01) clean history     | **(28) conflict do nothing** |
+| local created   | (??) conflict                | (??) conflict                | (06) push              | **(23) conflict push**       |
+
+Incremental pull and delete (diff decisionBranch: 39):
+
+| local\remote    | remote unchanged       | remote modified        | remote deleted               | remote created         |
+| --------------- | ---------------------- | ---------------------- | ---------------------------- | ---------------------- |
+| local unchanged | (02/21) do nothing     | (09) pull              | **(39) delete local**        | (??) conflict          |
 | local modified  | **(27) conflict pull** | **(24) conflict pull** | **(34) conflict do nothing** | (??) conflict          |
 | local deleted   | **(35) conflict pull** | (05) pull              | (01) clean history           | (03) pull              |
 | local created   | (??) conflict          | (??) conflict          | **(31) conflict do nothing** | **(22) conflict pull** |

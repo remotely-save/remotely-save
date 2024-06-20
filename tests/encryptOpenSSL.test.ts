@@ -1,5 +1,4 @@
-import * as chai from "chai";
-import chaiAsPromised from "chai-as-promised";
+import { strict as assert } from "assert";
 import * as fs from "fs";
 import * as path from "path";
 import {
@@ -13,11 +12,8 @@ import {
 } from "../src/encryptOpenSSL";
 import { base64ToBase64url, bufferToArrayBuffer } from "../src/misc";
 
-chai.use(chaiAsPromised);
-const expect = chai.expect;
-
 describe("Encryption OpenSSL tests", () => {
-  beforeEach(function () {
+  beforeEach(() => {
     global.window = {
       crypto: require("crypto").webcrypto,
     } as any;
@@ -26,7 +22,7 @@ describe("Encryption OpenSSL tests", () => {
   it("should encrypt string", async () => {
     const k = "dkjdhkfhdkjgsdklxxd";
     const password = "hey";
-    expect(await encryptStringToBase32(k, password)).to.not.equal(k);
+    assert.notEqual(await encryptStringToBase32(k, password), k);
   });
 
   it("should encrypt string and return different results each time", async () => {
@@ -34,7 +30,7 @@ describe("Encryption OpenSSL tests", () => {
     const password = "hey";
     const res1 = await encryptStringToBase32(k, password);
     const res2 = await encryptStringToBase32(k, password);
-    expect(res1).to.not.equal(res2);
+    assert.notEqual(res1, res2);
   });
 
   it("should raise error using different password", async () => {
@@ -42,7 +38,7 @@ describe("Encryption OpenSSL tests", () => {
     const password = "hey";
     const password2 = "hey2";
     const enc = await encryptStringToBase32(k, password);
-    await expect(decryptBase32ToString(enc, password2)).to.be.rejected;
+    await assert.rejects(decryptBase32ToString(enc, password2));
   });
 
   it("should encrypt and decrypt string and get the same result returned", async () => {
@@ -52,7 +48,7 @@ describe("Encryption OpenSSL tests", () => {
     // console.log(enc);
     const dec = await decryptBase32ToString(enc, password);
     // console.log(dec);
-    expect(dec).equal(k);
+    assert.equal(dec, k);
   });
 
   it("should encrypt text file and get the same result as openssl", async () => {
@@ -78,7 +74,7 @@ describe("Encryption OpenSSL tests", () => {
     // we output base32, so we need some transformation
     const opensslBase64urlRes = base64ToBase64url(opensslBase64Res);
 
-    expect(enc).equal(opensslBase64urlRes);
+    assert.equal(enc, opensslBase64urlRes);
   });
 
   it("should encrypt binary file and get the same result as openssl", async () => {
@@ -102,7 +98,7 @@ describe("Encryption OpenSSL tests", () => {
 
     // openssl enc -p -aes-256-cbc -S 8302F586FAB491EC -pbkdf2 -iter 20000 -pass pass:somepassword -in mona_lisa/1374px-Mona_Lisa,_by_Leonardo_da_Vinci,_from_C2RMF_retouched.jpg -out mona_lisa/1374px-Mona_Lisa,_by_Leonardo_da_Vinci,_from_C2RMF_retouched.jpg.enc
 
-    expect(Buffer.from(enc).equals(Buffer.from(opensslArrBuf))).to.be.true;
+    assert.ok(Buffer.from(enc).equals(Buffer.from(opensslArrBuf)));
   });
 
   it("should encrypt binary file not deterministically", async () => {
@@ -116,7 +112,7 @@ describe("Encryption OpenSSL tests", () => {
     const res1 = await encryptArrayBuffer(fileArrBuf, password);
     const res2 = await encryptArrayBuffer(fileArrBuf, password);
 
-    expect(Buffer.from(res1).equals(Buffer.from(res2))).to.be.false;
+    assert.ok(!Buffer.from(res1).equals(Buffer.from(res2)));
   });
 
   it("should decrypt binary file and get the same result as openssl", async () => {
@@ -132,36 +128,36 @@ describe("Encryption OpenSSL tests", () => {
       await fs.readFileSync(path.join(testFolder, testFileName))
     );
 
-    expect(Buffer.from(dec).equals(Buffer.from(opensslArrBuf))).to.be.true;
+    assert.deepEqual(Buffer.from(dec), Buffer.from(opensslArrBuf));
   });
 
   it("should get size from origin to encrypted correctly", () => {
-    expect(() => getSizeFromOrigToEnc(-1)).to.throw();
-    expect(() => getSizeFromOrigToEnc(0.5)).to.throw();
-    expect(getSizeFromOrigToEnc(0)).equals(32);
-    expect(getSizeFromOrigToEnc(15)).equals(32);
-    expect(getSizeFromOrigToEnc(16)).equals(48);
-    expect(getSizeFromOrigToEnc(31)).equals(48);
-    expect(getSizeFromOrigToEnc(32)).equals(64);
-    expect(getSizeFromOrigToEnc(14787203)).equals(14787232);
+    assert.throws(() => getSizeFromOrigToEnc(-1));
+    assert.throws(() => getSizeFromOrigToEnc(0.5));
+    assert.equal(getSizeFromOrigToEnc(0), 32);
+    assert.equal(getSizeFromOrigToEnc(15), 32);
+    assert.equal(getSizeFromOrigToEnc(16), 48);
+    assert.equal(getSizeFromOrigToEnc(31), 48);
+    assert.equal(getSizeFromOrigToEnc(32), 64);
+    assert.equal(getSizeFromOrigToEnc(14787203), 14787232);
   });
 
   it("should get size from encrypted to origin correctly", () => {
-    expect(() => getSizeFromEncToOrig(-1)).to.throw();
-    expect(() => getSizeFromEncToOrig(30)).to.throw();
+    assert.throws(() => getSizeFromEncToOrig(-1));
+    assert.throws(() => getSizeFromEncToOrig(30));
 
-    expect(getSizeFromEncToOrig(32)).to.deep.equal({
+    assert.deepEqual(getSizeFromEncToOrig(32), {
       minSize: 0,
       maxSize: 15,
     });
-    expect(getSizeFromEncToOrig(48)).to.deep.equal({
+    assert.deepEqual(getSizeFromEncToOrig(48), {
       minSize: 16,
       maxSize: 31,
     });
 
-    expect(() => getSizeFromEncToOrig(14787231)).to.throw();
+    assert.throws(() => getSizeFromEncToOrig(14787231));
 
-    let { minSize, maxSize } = getSizeFromEncToOrig(14787232);
-    expect(minSize <= 14787203 && 14787203 <= maxSize).to.be.true;
+    const { minSize, maxSize } = getSizeFromEncToOrig(14787232);
+    assert.ok(minSize <= 14787203 && 14787203 <= maxSize);
   });
 });

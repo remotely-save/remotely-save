@@ -1,82 +1,120 @@
-import {
-  Modal,
-  Notice,
-  Plugin,
-  Setting,
-  addIcon,
-  setIcon,
-  FileSystemAdapter,
-  Platform,
-  requestUrl,
-  requireApiVersion,
-  Events,
-} from "obsidian";
+// biome-ignore lint/suspicious/noShadowRestrictedNames: <explanation>
+import AggregateError from "aggregate-error";
 import cloneDeep from "lodash/cloneDeep";
-import { createElement, RotateCcw, RefreshCcw, FileText } from "lucide";
+import throttle from "lodash/throttle";
+import { FileText, RefreshCcw, RotateCcw, createElement } from "lucide";
+import {
+  Events,
+  FileSystemAdapter,
+  type Modal,
+  Notice,
+  Platform,
+  Plugin,
+  type Setting,
+  TFolder,
+  addIcon,
+  requireApiVersion,
+  setIcon,
+} from "obsidian";
+import {
+  DEFAULT_PRO_CONFIG,
+  getAndSaveProEmail,
+  getAndSaveProFeatures,
+  sendAuthReq as sendAuthReqPro,
+  setConfigBySuccessfullAuthInplace as setConfigBySuccessfullAuthInplacePro,
+} from "../pro/src/account";
+import {
+  COMMAND_CALLBACK_BOX,
+  COMMAND_CALLBACK_KOOFR,
+  COMMAND_CALLBACK_PCLOUD,
+  COMMAND_CALLBACK_PRO,
+  COMMAND_CALLBACK_YANDEXDISK,
+} from "../pro/src/baseTypesPro";
+import {
+  DEFAULT_BOX_CONFIG,
+  FakeFsBox,
+  sendAuthReq as sendAuthReqBox,
+  setConfigBySuccessfullAuthInplace as setConfigBySuccessfullAuthInplaceBox,
+} from "../pro/src/fsBox";
+import { DEFAULT_GOOGLEDRIVE_CONFIG } from "../pro/src/fsGoogleDrive";
+import {
+  DEFAULT_KOOFR_CONFIG,
+  sendAuthReq as sendAuthReqKoofr,
+  setConfigBySuccessfullAuthInplace as setConfigBySuccessfullAuthInplaceKoofr,
+} from "../pro/src/fsKoofr";
+import {
+  type AuthAllowFirstRes as AuthAllowFirstResPCloud,
+  DEFAULT_PCLOUD_CONFIG,
+  generateAuthUrl as generateAuthUrlPCloud,
+  sendAuthReq as sendAuthReqPCloud,
+  setConfigBySuccessfullAuthInplace as setConfigBySuccessfullAuthInplacePCloud,
+} from "../pro/src/fsPCloud";
+import {
+  DEFAULT_YANDEXDISK_CONFIG,
+  sendAuthReq as sendAuthReqYandexDisk,
+  setConfigBySuccessfullAuthInplace as setConfigBySuccessfullAuthInplaceYandexDisk,
+} from "../pro/src/fsYandexDisk";
+import { syncer } from "../pro/src/sync";
 import type {
   RemotelySavePluginSettings,
   SyncTriggerSourceType,
 } from "./baseTypes";
 import {
   COMMAND_CALLBACK,
-  COMMAND_CALLBACK_ONEDRIVE,
   COMMAND_CALLBACK_DROPBOX,
+  COMMAND_CALLBACK_ONEDRIVE,
   COMMAND_URI,
-  API_VER_ENSURE_REQURL_OK,
 } from "./baseTypes";
-import { importQrCodeUri } from "./importExport";
-import {
-  insertSyncPlanRecordByVault,
-  prepareDBs,
-  InternalDBs,
-  clearExpiredSyncPlanRecords,
-  upsertPluginVersionByVault,
-  clearAllLoggerOutputRecords,
-  upsertLastSuccessSyncTimeByVault,
-  getLastSuccessSyncTimeByVault,
-  getAllPrevSyncRecordsByVaultAndProfile,
-  insertProfilerResultByVault,
-} from "./localdb";
-import { RemoteClient } from "./remote";
+import { API_VER_ENSURE_REQURL_OK } from "./baseTypesObs";
+import { messyConfigToNormal, normalConfigToMessy } from "./configPersist";
+import { exportVaultSyncPlansToFiles } from "./debugMode";
 import {
   DEFAULT_DROPBOX_CONFIG,
-  getAuthUrlAndVerifier as getAuthUrlAndVerifierDropbox,
   sendAuthReq as sendAuthReqDropbox,
   setConfigBySuccessfullAuthInplace as setConfigBySuccessfullAuthInplaceDropbox,
-} from "./remoteForDropbox";
+} from "./fsDropbox";
+import { FakeFsEncrypt } from "./fsEncrypt";
+import { getClient } from "./fsGetter";
+import { FakeFsLocal } from "./fsLocal";
 import {
-  AccessCodeResponseSuccessfulType,
+  type AccessCodeResponseSuccessfulType,
   DEFAULT_ONEDRIVE_CONFIG,
   sendAuthReq as sendAuthReqOnedrive,
   setConfigBySuccessfullAuthInplace as setConfigBySuccessfullAuthInplaceOnedrive,
-} from "./remoteForOnedrive";
-import { DEFAULT_S3_CONFIG } from "./remoteForS3";
-import { DEFAULT_WEBDAV_CONFIG } from "./remoteForWebdav";
-import { RemotelySaveSettingTab } from "./settings";
-import {
-  doActualSync,
-  ensembleMixedEnties,
-  getSyncPlanInplace,
-  isPasswordOk,
-  SyncStatusType,
-} from "./sync";
-import { messyConfigToNormal, normalConfigToMessy } from "./configPersist";
-import { getLocalEntityList } from "./local";
+} from "./fsOnedrive";
+import { DEFAULT_S3_CONFIG } from "./fsS3";
+import { DEFAULT_WEBDAV_CONFIG } from "./fsWebdav";
+import { DEFAULT_WEBDIS_CONFIG } from "./fsWebdis";
 import { I18n } from "./i18n";
-import type { LangType, LangTypeAndAuto, TransItemType } from "./i18n";
+import type { LangTypeAndAuto, TransItemType } from "./i18n";
+import { importQrCodeUri } from "./importExport";
+import {
+  type InternalDBs,
+  clearAllLoggerOutputRecords,
+  clearExpiredSyncPlanRecords,
+  getLastFailedSyncTimeByVault,
+  getLastSuccessSyncTimeByVault,
+  prepareDBs,
+  upsertLastFailedSyncTimeByVault,
+  upsertLastSuccessSyncTimeByVault,
+  upsertPluginVersionByVault,
+} from "./localdb";
+import { changeMobileStatusBar } from "./misc";
+import { DEFAULT_PROFILER_CONFIG, type Profiler } from "./profiler";
+import { RemotelySaveSettingTab } from "./settings";
 import { SyncAlgoV3Modal } from "./syncAlgoV3Notice";
-
-import AggregateError from "aggregate-error";
-import { exportVaultSyncPlansToFiles } from "./debugMode";
-import { changeMobileStatusBar, compareVersion } from "./misc";
-import { Cipher } from "./encryptUnified";
-import { Profiler } from "./profiler";
 
 const DEFAULT_SETTINGS: RemotelySavePluginSettings = {
   s3: DEFAULT_S3_CONFIG,
   webdav: DEFAULT_WEBDAV_CONFIG,
   dropbox: DEFAULT_DROPBOX_CONFIG,
   onedrive: DEFAULT_ONEDRIVE_CONFIG,
+  webdis: DEFAULT_WEBDIS_CONFIG,
+  googledrive: DEFAULT_GOOGLEDRIVE_CONFIG,
+  box: DEFAULT_BOX_CONFIG,
+  pcloud: DEFAULT_PCLOUD_CONFIG,
+  yandexdisk: DEFAULT_YANDEXDISK_CONFIG,
+  koofr: DEFAULT_KOOFR_CONFIG,
   password: "",
   serviceType: "s3",
   currLogLevel: "info",
@@ -96,12 +134,14 @@ const DEFAULT_SETTINGS: RemotelySavePluginSettings = {
   deleteToWhere: "system",
   agreeToUseSyncV3: false,
   conflictAction: "keep_newer",
-  howToCleanEmptyFolder: "skip",
+  howToCleanEmptyFolder: "clean_both",
   protectModifyPercentage: 50,
   syncDirection: "bidirectional",
   obfuscateSettingFile: true,
   enableMobileStatusBar: false,
   encryptionMethod: "unknown",
+  profiler: DEFAULT_PROFILER_CONFIG,
+  pro: DEFAULT_PRO_CONFIG,
 };
 
 interface OAuth2Info {
@@ -138,10 +178,34 @@ const getIconSvg = () => {
   return res;
 };
 
+const getStatusBarShortMsgFromSyncSource = (
+  t: (x: TransItemType, vars?: any) => string,
+  s: SyncTriggerSourceType | undefined
+) => {
+  if (s === undefined) {
+    return "";
+  }
+  switch (s) {
+    case "manual":
+      return t("statusbar_sync_source_manual");
+    case "dry":
+      return t("statusbar_sync_source_dry");
+    case "auto":
+      return t("statusbar_sync_source_auto");
+    case "auto_once_init":
+      return t("statusbar_sync_source_auto_once_init");
+    case "auto_sync_on_save":
+      return t("statusbar_sync_source_auto_sync_on_save");
+    default:
+      throw Error(`no translate for ${s}`);
+  }
+};
+
 export default class RemotelySavePlugin extends Plugin {
   settings!: RemotelySavePluginSettings;
   db!: InternalDBs;
-  syncStatus!: SyncStatusType;
+  isSyncing!: boolean;
+  hasPendingSyncOnSave!: boolean;
   statusBarElement!: HTMLSpanElement;
   oauth2Info!: OAuth2Info;
   currLogLevel!: string;
@@ -156,7 +220,30 @@ export default class RemotelySavePlugin extends Plugin {
   appContainerObserver?: MutationObserver;
 
   async syncRun(triggerSource: SyncTriggerSourceType = "manual") {
-    const profiler = new Profiler("start of syncRun");
+    // const profiler = new Profiler(
+    //   undefined,
+    //   this.settings.profiler?.enablePrinting ?? false,
+    //   this.settings.profiler?.recordSize ?? false
+    // );
+    const profiler: Profiler | undefined = undefined;
+    const fsLocal = new FakeFsLocal(
+      this.app.vault,
+      this.settings.syncConfigDir ?? false,
+      this.app.vault.configDir,
+      this.manifest.id,
+      profiler,
+      this.settings.deleteToWhere ?? "system"
+    );
+    const fsRemote = getClient(
+      this.settings,
+      this.app.vault.getName(),
+      async () => await this.saveSettings()
+    );
+    const fsEncrypt = new FakeFsEncrypt(
+      fsRemote,
+      this.settings.password ?? "",
+      this.settings.encryptionMethod ?? "rclone-base64"
+    );
 
     const t = (x: TransItemType, vars?: any) => {
       return this.i18n.t(x, vars);
@@ -164,333 +251,251 @@ export default class RemotelySavePlugin extends Plugin {
 
     const profileID = this.getCurrProfileID();
 
-    const getNotice = (x: string, timeout?: number) => {
-      // only show notices in manual mode
-      // no notice in auto mode
-      if (triggerSource === "manual" || triggerSource === "dry") {
-        new Notice(x, timeout);
+    const getProtectError = (
+      protectModifyPercentage: number,
+      realModifyDeleteCount: number,
+      allFilesCount: number
+    ) => {
+      const percent = ((100 * realModifyDeleteCount) / allFilesCount).toFixed(
+        1
+      );
+      const res = t("syncrun_abort_protectmodifypercentage", {
+        protectModifyPercentage,
+        realModifyDeleteCount,
+        allFilesCount,
+        percent,
+      });
+      return res;
+    };
+
+    const getNotice = (
+      s: SyncTriggerSourceType,
+      msg: string,
+      timeout?: number
+    ) => {
+      if (s === "manual" || s === "dry") {
+        new Notice(msg, timeout);
       }
     };
-    if (this.syncStatus !== "idle") {
-      // really, users don't want to see this in auto mode
-      // so we use getNotice to avoid unnecessary show up
+
+    const notifyFunc = async (s: SyncTriggerSourceType, step: number) => {
+      switch (step) {
+        case 0:
+          if (s === "dry") {
+            if (this.settings.currLogLevel === "info") {
+              getNotice(s, t("syncrun_shortstep0"));
+            } else {
+              getNotice(s, t("syncrun_step0"));
+            }
+          }
+
+          break;
+
+        case 1:
+          if (this.settings.currLogLevel === "info") {
+            getNotice(
+              s,
+              t("syncrun_shortstep1", {
+                serviceType: this.settings.serviceType,
+              })
+            );
+          } else {
+            getNotice(
+              s,
+              t("syncrun_step1", {
+                serviceType: this.settings.serviceType,
+              })
+            );
+          }
+          break;
+
+        case 2:
+          if (this.settings.currLogLevel === "info") {
+            // pass
+          } else {
+            getNotice(s, t("syncrun_step2"));
+          }
+          break;
+
+        case 3:
+          if (this.settings.currLogLevel === "info") {
+            // pass
+          } else {
+            getNotice(s, t("syncrun_step3"));
+          }
+          break;
+
+        case 4:
+          if (this.settings.currLogLevel === "info") {
+            // pass
+          } else {
+            getNotice(s, t("syncrun_step4"));
+          }
+          break;
+
+        case 5:
+          if (this.settings.currLogLevel === "info") {
+            // pass
+          } else {
+            getNotice(s, t("syncrun_step5"));
+          }
+          break;
+
+        case 6:
+          if (this.settings.currLogLevel === "info") {
+            // pass
+          } else {
+            getNotice(s, t("syncrun_step6"));
+          }
+          break;
+
+        case 7:
+          if (s === "dry") {
+            if (this.settings.currLogLevel === "info") {
+              getNotice(s, t("syncrun_shortstep2skip"));
+            } else {
+              getNotice(s, t("syncrun_step7skip"));
+            }
+          } else {
+            if (this.settings.currLogLevel === "info") {
+              // pass
+            } else {
+              getNotice(s, t("syncrun_step7"));
+            }
+          }
+          break;
+
+        case 8:
+          if (this.settings.currLogLevel === "info") {
+            getNotice(s, t("syncrun_shortstep2"));
+          } else {
+            getNotice(s, t("syncrun_step8"));
+          }
+          break;
+
+        default:
+          throw Error(`unknown step=${step} for showing notice`);
+      }
+    };
+
+    const errNotifyFunc = async (s: SyncTriggerSourceType, error: Error) => {
+      console.error(error);
+      if (error instanceof AggregateError) {
+        for (const e of error.errors) {
+          getNotice(s, e.message, 10 * 1000);
+        }
+      } else {
+        getNotice(s, error?.message ?? "error while sync", 10 * 1000);
+      }
+    };
+
+    const ribboonFunc = async (s: SyncTriggerSourceType, step: number) => {
+      if (step === 1) {
+        if (this.syncRibbon !== undefined) {
+          setIcon(this.syncRibbon, iconNameSyncRunning);
+          this.syncRibbon.setAttribute(
+            "aria-label",
+            t("syncrun_syncingribbon", {
+              pluginName: this.manifest.name,
+              triggerSource: s,
+            })
+          );
+        }
+      } else if (step === 8) {
+        // last step
+        if (this.syncRibbon !== undefined) {
+          setIcon(this.syncRibbon, iconNameSyncWait);
+          const originLabel = `${this.manifest.name}`;
+          this.syncRibbon.setAttribute("aria-label", originLabel);
+        }
+      }
+    };
+
+    const statusBarFunc = async (
+      s: SyncTriggerSourceType,
+      step: number,
+      everythingOk: boolean
+    ) => {
+      if (step === 1) {
+        // change status to "syncing..." on statusbar
+        this.updateLastSyncMsg(s, -1, -1);
+      } else if (step === 8 && everythingOk) {
+        const ts = Date.now();
+        await upsertLastSuccessSyncTimeByVault(this.db, this.vaultRandomID, ts);
+        this.updateLastSyncMsg(s, ts, null);
+      } else if (!everythingOk) {
+        const ts = Date.now();
+        await upsertLastFailedSyncTimeByVault(this.db, this.vaultRandomID, ts);
+        this.updateLastSyncMsg(s, null, ts); // magic number
+      }
+    };
+
+    const markIsSyncingFunc = async (isSyncing: boolean) => {
+      this.isSyncing = isSyncing;
+    };
+
+    const callbackSyncProcess = async (
+      s: SyncTriggerSourceType,
+      realCounter: number,
+      realTotalCount: number,
+      pathName: string,
+      decision: string
+    ) => {
+      this.setCurrSyncMsg(
+        t,
+        s,
+        realCounter,
+        realTotalCount,
+        pathName,
+        decision,
+        triggerSource
+      );
+    };
+
+    if (this.isSyncing) {
       getNotice(
+        triggerSource,
         t("syncrun_alreadyrunning", {
           pluginName: this.manifest.name,
-          syncStatus: this.syncStatus,
+          syncStatus: "running",
           newTriggerSource: triggerSource,
         })
       );
+
       if (this.currSyncMsg !== undefined && this.currSyncMsg !== "") {
-        getNotice(this.currSyncMsg);
+        getNotice(triggerSource, this.currSyncMsg);
       }
       return;
     }
 
-    let originLabel = `${this.manifest.name}`;
-    if (this.syncRibbon !== undefined) {
-      originLabel = this.syncRibbon.getAttribute("aria-label") as string;
-    }
+    const configSaver = async () => await this.saveSettings();
 
-    try {
-      console.info(
-        `${
-          this.manifest.id
-        }-${Date.now()}: start sync, triggerSource=${triggerSource}`
-      );
-
-      if (this.syncRibbon !== undefined) {
-        setIcon(this.syncRibbon, iconNameSyncRunning);
-        this.syncRibbon.setAttribute(
-          "aria-label",
-          t("syncrun_syncingribbon", {
-            pluginName: this.manifest.name,
-            triggerSource: triggerSource,
-          })
-        );
-      }
-
-      if (triggerSource === "dry") {
-        if (this.settings.currLogLevel === "info") {
-          getNotice(t("syncrun_shortstep0"));
-        } else {
-          getNotice(t("syncrun_step0"));
-        }
-      }
-
-      // change status to "syncing..." on statusbar
-      if (this.statusBarElement !== undefined) {
-        this.updateLastSuccessSyncMsg(-1);
-      }
-      //console.info(`huh ${this.settings.password}`)
-      if (this.settings.currLogLevel === "info") {
-        getNotice(
-          t("syncrun_shortstep1", {
-            serviceType: this.settings.serviceType,
-          })
-        );
-      } else {
-        getNotice(
-          t("syncrun_step1", {
-            serviceType: this.settings.serviceType,
-          })
-        );
-      }
-
-      this.syncStatus = "preparing";
-      profiler.insert("finish step1");
-
-      if (this.settings.currLogLevel === "info") {
-        // pass
-      } else {
-        getNotice(t("syncrun_step2"));
-      }
-      this.syncStatus = "getting_remote_files_list";
-      const self = this;
-      const client = new RemoteClient(
-        this.settings.serviceType,
-        this.settings.s3,
-        this.settings.webdav,
-        this.settings.dropbox,
-        this.settings.onedrive,
-        this.app.vault.getName(),
-        () => self.saveSettings(),
-        profiler
-      );
-      const remoteEntityList = await client.listAllFromRemote();
-      console.debug("remoteEntityList:");
-      console.debug(remoteEntityList);
-
-      profiler.insert("finish step2 (listing remote)");
-
-      if (this.settings.currLogLevel === "info") {
-        // pass
-      } else {
-        getNotice(t("syncrun_step3"));
-      }
-      this.syncStatus = "checking_password";
-
-      const cipher = new Cipher(
-        this.settings.password,
-        this.settings.encryptionMethod ?? "unknown"
-      );
-      const passwordCheckResult = await isPasswordOk(remoteEntityList, cipher);
-      if (!passwordCheckResult.ok) {
-        getNotice(t("syncrun_passworderr"));
-        throw Error(passwordCheckResult.reason);
-      }
-
-      profiler.insert("finish step3 (checking password)");
-
-      if (this.settings.currLogLevel === "info") {
-        // pass
-      } else {
-        getNotice(t("syncrun_step4"));
-      }
-      this.syncStatus = "getting_local_meta";
-      const localEntityList = await getLocalEntityList(
-        this.app.vault,
-        this.settings.syncConfigDir ?? false,
-        this.app.vault.configDir,
-        this.manifest.id,
-        profiler
-      );
-      console.debug("localEntityList:");
-      console.debug(localEntityList);
-
-      profiler.insert("finish step4 (local meta)");
-
-      if (this.settings.currLogLevel === "info") {
-        // pass
-      } else {
-        getNotice(t("syncrun_step5"));
-      }
-      this.syncStatus = "getting_local_prev_sync";
-      const prevSyncEntityList = await getAllPrevSyncRecordsByVaultAndProfile(
-        this.db,
-        this.vaultRandomID,
-        profileID
-      );
-      console.debug("prevSyncEntityList:");
-      console.debug(prevSyncEntityList);
-
-      profiler.insert("finish step5 (prev sync)");
-
-      if (this.settings.currLogLevel === "info") {
-        // pass
-      } else {
-        getNotice(t("syncrun_step6"));
-      }
-      this.syncStatus = "generating_plan";
-      let mixedEntityMappings = await ensembleMixedEnties(
-        localEntityList,
-        prevSyncEntityList,
-        remoteEntityList,
-        this.settings.syncConfigDir ?? false,
-        this.app.vault.configDir,
-        this.settings.syncUnderscoreItems ?? false,
-        this.settings.ignorePaths ?? [],
-        cipher,
-        this.settings.serviceType,
-        profiler
-      );
-      profiler.insert("finish building partial mixedEntity");
-      mixedEntityMappings = await getSyncPlanInplace(
-        mixedEntityMappings,
-        this.settings.howToCleanEmptyFolder ?? "skip",
-        this.settings.skipSizeLargerThan ?? -1,
-        this.settings.conflictAction ?? "keep_newer",
-        this.settings.syncDirection ?? "bidirectional",
-        profiler
-      );
-      console.info(`mixedEntityMappings:`);
-      console.info(mixedEntityMappings); // for debugging
-      profiler.insert("finish building full sync plan");
-      await insertSyncPlanRecordByVault(
-        this.db,
-        mixedEntityMappings,
-        this.vaultRandomID,
-        client.serviceType
-      );
-
-      profiler.insert("finish writing sync plan");
-      profiler.insert("finish step6 (plan)");
-
-      // The operations above are almost read only and kind of safe.
-      // The operations below begins to write or delete (!!!) something.
-
-      if (triggerSource !== "dry") {
-        if (this.settings.currLogLevel === "info") {
-          // pass
-        } else {
-          getNotice(t("syncrun_step7"));
-        }
-        this.syncStatus = "syncing";
-        await doActualSync(
-          mixedEntityMappings,
-          client,
-          this.vaultRandomID,
-          profileID,
-          this.app.vault,
-          cipher,
-          this.settings.concurrency ?? 5,
-          (key: string) => self.trash(key),
-          this.settings.protectModifyPercentage ?? 50,
-          (
-            protectModifyPercentage: number,
-            realModifyDeleteCount: number,
-            allFilesCount: number
-          ) => {
-            const percent = (
-              (100 * realModifyDeleteCount) /
-              allFilesCount
-            ).toFixed(1);
-            const res = t("syncrun_abort_protectmodifypercentage", {
-              protectModifyPercentage,
-              realModifyDeleteCount,
-              allFilesCount,
-              percent,
-            });
-            return res;
-          },
-          (
-            realCounter: number,
-            realTotalCount: number,
-            pathName: string,
-            decision: string
-          ) =>
-            self.setCurrSyncMsg(
-              realCounter,
-              realTotalCount,
-              pathName,
-              decision,
-              triggerSource
-            ),
-          this.db,
-          profiler
-        );
-      } else {
-        this.syncStatus = "syncing";
-        if (this.settings.currLogLevel === "info") {
-          getNotice(t("syncrun_shortstep2skip"));
-        } else {
-          getNotice(t("syncrun_step7skip"));
-        }
-      }
-
-      cipher.closeResources();
-
-      profiler.insert("finish step7 (actual sync)");
-
-      if (this.settings.currLogLevel === "info") {
-        getNotice(t("syncrun_shortstep2"));
-      } else {
-        getNotice(t("syncrun_step8"));
-      }
-
-      this.syncStatus = "finish";
-      this.syncStatus = "idle";
-
-      profiler.insert("finish step8");
-
-      const lastSuccessSyncMillis = Date.now();
-      await upsertLastSuccessSyncTimeByVault(
-        this.db,
-        this.vaultRandomID,
-        lastSuccessSyncMillis
-      );
-
-      if (this.syncRibbon !== undefined) {
-        setIcon(this.syncRibbon, iconNameSyncWait);
-        this.syncRibbon.setAttribute("aria-label", originLabel);
-      }
-
-      if (this.statusBarElement !== undefined) {
-        this.updateLastSuccessSyncMsg(lastSuccessSyncMillis);
-      }
-
-      this.syncEvent?.trigger("SYNC_DONE");
-      console.info(
-        `${
-          this.manifest.id
-        }-${Date.now()}: finish sync, triggerSource=${triggerSource}`
-      );
-    } catch (error: any) {
-      profiler.insert("start error branch");
-      const msg = t("syncrun_abort", {
-        manifestID: this.manifest.id,
-        theDate: `${Date.now()}`,
-        triggerSource: triggerSource,
-        syncStatus: this.syncStatus,
-      });
-      console.error(msg);
-      console.error(error);
-      getNotice(msg, 10 * 1000);
-      if (error instanceof AggregateError) {
-        for (const e of error.errors) {
-          getNotice(e.message, 10 * 1000);
-        }
-      } else {
-        getNotice(error?.message ?? "error while sync", 10 * 1000);
-      }
-      this.syncStatus = "idle";
-      if (this.syncRibbon !== undefined) {
-        setIcon(this.syncRibbon, iconNameSyncWait);
-        this.syncRibbon.setAttribute("aria-label", originLabel);
-      }
-
-      profiler.insert("finish error branch");
-    }
-
-    profiler.insert("finish syncRun");
-    console.debug(profiler.toString());
-    insertProfilerResultByVault(
+    await syncer(
+      fsLocal,
+      fsRemote,
+      fsEncrypt,
+      profiler,
       this.db,
-      profiler.toString(),
+      triggerSource,
+      profileID,
       this.vaultRandomID,
-      this.settings.serviceType
+      this.app.vault.configDir,
+      this.settings,
+      this.manifest.version,
+      configSaver,
+      getProtectError,
+      markIsSyncingFunc,
+      notifyFunc,
+      errNotifyFunc,
+      ribboonFunc,
+      statusBarFunc,
+      callbackSyncProcess
     );
-    profiler.clear();
+
+    fsEncrypt.closeResources();
+    (profiler as Profiler | undefined)?.clear();
+
+    this.syncEvent?.trigger("SYNC_DONE");
   }
 
   async onload() {
@@ -511,6 +516,8 @@ export default class RemotelySavePlugin extends Plugin {
     }; // init
 
     this.currSyncMsg = "";
+    this.isSyncing = false;
+    this.hasPendingSyncOnSave = false;
 
     this.syncEvent = new Events();
 
@@ -560,8 +567,6 @@ export default class RemotelySavePlugin extends Plugin {
 
     // must AFTER preparing DB
     this.enableAutoClearSyncPlanHist();
-
-    this.syncStatus = "idle";
 
     this.registerObsidianProtocolHandler(COMMAND_URI, async (inputParams) => {
       // console.debug(inputParams);
@@ -615,7 +620,7 @@ export default class RemotelySavePlugin extends Plugin {
             return;
           }
 
-          let authRes = await sendAuthReqDropbox(
+          const authRes = await sendAuthReqDropbox(
             this.settings.dropbox.clientID,
             this.oauth2Info.verifier,
             inputParams.code,
@@ -633,17 +638,12 @@ export default class RemotelySavePlugin extends Plugin {
             () => self.saveSettings()
           );
 
-          const client = new RemoteClient(
-            "dropbox",
-            undefined,
-            undefined,
-            this.settings.dropbox,
-            undefined,
+          const client = getClient(
+            this.settings,
             this.app.vault.getName(),
             () => self.saveSettings()
           );
-
-          const username = await client.getUser();
+          const username = await client.getUserDisplayName();
           this.settings.dropbox.username = username;
           await this.saveSettings();
 
@@ -705,7 +705,7 @@ export default class RemotelySavePlugin extends Plugin {
               });
           }
 
-          let rsp = await sendAuthReqOnedrive(
+          const rsp = await sendAuthReqOnedrive(
             this.settings.onedrive.clientID,
             this.settings.onedrive.authority,
             inputParams.code,
@@ -729,16 +729,12 @@ export default class RemotelySavePlugin extends Plugin {
             () => self.saveSettings()
           );
 
-          const client = new RemoteClient(
-            "onedrive",
-            undefined,
-            undefined,
-            undefined,
-            this.settings.onedrive,
+          const client = getClient(
+            this.settings,
             this.app.vault.getName(),
             () => self.saveSettings()
           );
-          this.settings.onedrive.username = await client.getUser();
+          this.settings.onedrive.username = await client.getUserDisplayName();
           await this.saveSettings();
 
           this.oauth2Info.verifier = ""; // reset it
@@ -773,6 +769,305 @@ export default class RemotelySavePlugin extends Plugin {
       }
     );
 
+    this.registerObsidianProtocolHandler(
+      COMMAND_CALLBACK_PRO,
+      async (inputParams) => {
+        if (this.oauth2Info.helperModal !== undefined) {
+          const k = this.oauth2Info.helperModal.contentEl;
+          k.empty();
+
+          t("protocol_pro_connecting")
+            .split("\n")
+            .forEach((val) => {
+              k.createEl("p", {
+                text: val,
+              });
+            });
+        }
+
+        console.debug(inputParams);
+        const authRes = await sendAuthReqPro(
+          this.oauth2Info.verifier || "verifier",
+          inputParams.code,
+          async (e: any) => {
+            new Notice(t("protocol_pro_connect_fail"));
+            new Notice(`${e}`);
+            throw e;
+          }
+        );
+        console.debug(authRes);
+
+        const self = this;
+        await setConfigBySuccessfullAuthInplacePro(
+          this.settings.pro!,
+          authRes,
+          () => self.saveSettings()
+        );
+
+        await getAndSaveProFeatures(
+          this.settings.pro!,
+          this.manifest.version,
+          () => self.saveSettings()
+        );
+
+        await getAndSaveProEmail(
+          this.settings.pro!,
+          this.manifest.version,
+          () => self.saveSettings()
+        );
+
+        this.oauth2Info.verifier = ""; // reset it
+        this.oauth2Info.helperModal?.close(); // close it
+        this.oauth2Info.helperModal = undefined;
+
+        this.oauth2Info.authDiv?.toggleClass(
+          "pro-auth-button-hide",
+          this.settings.pro?.refreshToken !== ""
+        );
+        this.oauth2Info.authDiv = undefined;
+
+        this.oauth2Info.revokeAuthSetting?.setDesc(
+          t("protocol_pro_connect_succ_revoke", {
+            email: this.settings.pro?.email,
+          })
+        );
+        this.oauth2Info.revokeAuthSetting = undefined;
+        this.oauth2Info.revokeDiv?.toggleClass(
+          "pro-revoke-auth-button-hide",
+          this.settings.pro?.email === ""
+        );
+        this.oauth2Info.revokeDiv = undefined;
+      }
+    );
+
+    this.registerObsidianProtocolHandler(
+      COMMAND_CALLBACK_BOX,
+      async (inputParams) => {
+        if (this.oauth2Info.helperModal !== undefined) {
+          const k = this.oauth2Info.helperModal.contentEl;
+          k.empty();
+
+          t("protocol_box_connecting")
+            .split("\n")
+            .forEach((val) => {
+              k.createEl("p", {
+                text: val,
+              });
+            });
+        }
+
+        console.debug(inputParams);
+        const authRes = await sendAuthReqBox(
+          inputParams.code,
+          async (e: any) => {
+            new Notice(t("protocol_box_connect_fail"));
+            new Notice(`${e}`);
+            throw e;
+          }
+        );
+        console.debug(authRes);
+
+        const self = this;
+        await setConfigBySuccessfullAuthInplaceBox(
+          this.settings.box!,
+          authRes,
+          () => self.saveSettings()
+        );
+
+        this.oauth2Info.verifier = ""; // reset it
+        this.oauth2Info.helperModal?.close(); // close it
+        this.oauth2Info.helperModal = undefined;
+
+        this.oauth2Info.authDiv?.toggleClass(
+          "box-auth-button-hide",
+          this.settings.box?.refreshToken !== ""
+        );
+        this.oauth2Info.authDiv = undefined;
+
+        this.oauth2Info.revokeAuthSetting?.setDesc(
+          t("protocol_box_connect_succ_revoke")
+        );
+        this.oauth2Info.revokeAuthSetting = undefined;
+        this.oauth2Info.revokeDiv?.toggleClass(
+          "box-revoke-auth-button-hide",
+          this.settings.box?.refreshToken === ""
+        );
+        this.oauth2Info.revokeDiv = undefined;
+      }
+    );
+
+    this.registerObsidianProtocolHandler(
+      COMMAND_CALLBACK_PCLOUD,
+      async (inputParams) => {
+        if (this.oauth2Info.helperModal !== undefined) {
+          const k = this.oauth2Info.helperModal.contentEl;
+          k.empty();
+
+          t("protocol_pcloud_connecting")
+            .split("\n")
+            .forEach((val) => {
+              k.createEl("p", {
+                text: val,
+              });
+            });
+        }
+
+        console.debug(inputParams);
+        const authRes = await sendAuthReqPCloud(
+          inputParams.hostname,
+          inputParams.code,
+          async (e: any) => {
+            new Notice(t("protocol_pcloud_connect_fail"));
+            new Notice(`${e}`);
+            throw e;
+          }
+        );
+        console.debug(authRes);
+
+        const self = this;
+        await setConfigBySuccessfullAuthInplacePCloud(
+          this.settings.pcloud!,
+          inputParams as unknown as AuthAllowFirstResPCloud,
+          authRes,
+          () => self.saveSettings()
+        );
+
+        this.oauth2Info.verifier = ""; // reset it
+        this.oauth2Info.helperModal?.close(); // close it
+        this.oauth2Info.helperModal = undefined;
+
+        this.oauth2Info.authDiv?.toggleClass(
+          "pcloud-auth-button-hide",
+          this.settings.pcloud?.accessToken !== ""
+        );
+        this.oauth2Info.authDiv = undefined;
+
+        this.oauth2Info.revokeAuthSetting?.setDesc(
+          t("protocol_pcloud_connect_succ_revoke")
+        );
+        this.oauth2Info.revokeAuthSetting = undefined;
+        this.oauth2Info.revokeDiv?.toggleClass(
+          "pcloud-revoke-auth-button-hide",
+          this.settings.pcloud?.accessToken === ""
+        );
+        this.oauth2Info.revokeDiv = undefined;
+      }
+    );
+
+    this.registerObsidianProtocolHandler(
+      COMMAND_CALLBACK_YANDEXDISK,
+      async (inputParams) => {
+        if (this.oauth2Info.helperModal !== undefined) {
+          const k = this.oauth2Info.helperModal.contentEl;
+          k.empty();
+
+          t("protocol_yandexdisk_connecting")
+            .split("\n")
+            .forEach((val) => {
+              k.createEl("p", {
+                text: val,
+              });
+            });
+        }
+
+        console.debug(inputParams);
+        const authRes = await sendAuthReqYandexDisk(
+          inputParams.code,
+          async (e: any) => {
+            new Notice(t("protocol_yandexdisk_connect_fail"));
+            new Notice(`${e}`);
+            throw e;
+          }
+        );
+        console.debug(authRes);
+
+        const self = this;
+        await setConfigBySuccessfullAuthInplaceYandexDisk(
+          this.settings.yandexdisk!,
+          authRes,
+          () => self.saveSettings()
+        );
+
+        this.oauth2Info.verifier = ""; // reset it
+        this.oauth2Info.helperModal?.close(); // close it
+        this.oauth2Info.helperModal = undefined;
+
+        this.oauth2Info.authDiv?.toggleClass(
+          "yandexdisk-auth-button-hide",
+          this.settings.yandexdisk?.refreshToken !== ""
+        );
+        this.oauth2Info.authDiv = undefined;
+
+        this.oauth2Info.revokeAuthSetting?.setDesc(
+          t("protocol_yandexdisk_connect_succ_revoke")
+        );
+        this.oauth2Info.revokeAuthSetting = undefined;
+        this.oauth2Info.revokeDiv?.toggleClass(
+          "yandexdisk-revoke-auth-button-hide",
+          this.settings.yandexdisk?.refreshToken === ""
+        );
+        this.oauth2Info.revokeDiv = undefined;
+      }
+    );
+
+    this.registerObsidianProtocolHandler(
+      COMMAND_CALLBACK_KOOFR,
+      async (inputParams) => {
+        if (this.oauth2Info.helperModal !== undefined) {
+          const k = this.oauth2Info.helperModal.contentEl;
+          k.empty();
+
+          t("protocol_koofr_connecting")
+            .split("\n")
+            .forEach((val) => {
+              k.createEl("p", {
+                text: val,
+              });
+            });
+        }
+
+        console.debug(inputParams);
+        const authRes = await sendAuthReqKoofr(
+          this.settings.koofr.api,
+          inputParams.code,
+          async (e: any) => {
+            new Notice(t("protocol_koofr_connect_fail"));
+            new Notice(`${e}`);
+            throw e;
+          },
+          true
+        );
+        console.debug(authRes);
+
+        const self = this;
+        await setConfigBySuccessfullAuthInplaceKoofr(
+          this.settings.koofr!,
+          authRes!,
+          () => self.saveSettings()
+        );
+
+        this.oauth2Info.verifier = ""; // reset it
+        this.oauth2Info.helperModal?.close(); // close it
+        this.oauth2Info.helperModal = undefined;
+
+        this.oauth2Info.authDiv?.toggleClass(
+          "koofr-auth-button-hide",
+          this.settings.koofr?.refreshToken !== ""
+        );
+        this.oauth2Info.authDiv = undefined;
+
+        this.oauth2Info.revokeAuthSetting?.setDesc(
+          t("protocol_koofr_connect_succ_revoke")
+        );
+        this.oauth2Info.revokeAuthSetting = undefined;
+        this.oauth2Info.revokeDiv?.toggleClass(
+          "koofr-revoke-auth-button-hide",
+          this.settings.koofr?.refreshToken === ""
+        );
+        this.oauth2Info.revokeDiv = undefined;
+      }
+    );
+
     this.syncRibbon = this.addRibbonIcon(
       iconNameSyncWait,
       `${this.manifest.name}`,
@@ -791,15 +1086,21 @@ export default class RemotelySavePlugin extends Plugin {
       this.statusBarElement = statusBarItem.createEl("span");
       this.statusBarElement.setAttribute("data-tooltip-position", "top");
 
-      this.updateLastSuccessSyncMsg(
-        await getLastSuccessSyncTimeByVault(this.db, this.vaultRandomID)
+      this.updateLastSyncMsg(
+        undefined,
+        await getLastSuccessSyncTimeByVault(this.db, this.vaultRandomID),
+        await getLastFailedSyncTimeByVault(this.db, this.vaultRandomID)
       );
       // update statusbar text every 30 seconds
       this.registerInterval(
         window.setInterval(async () => {
-          this.updateLastSuccessSyncMsg(
-            await getLastSuccessSyncTimeByVault(this.db, this.vaultRandomID)
-          );
+          if (!this.isSyncing) {
+            this.updateLastSyncMsg(
+              undefined,
+              await getLastSuccessSyncTimeByVault(this.db, this.vaultRandomID),
+              await getLastFailedSyncTimeByVault(this.db, this.vaultRandomID)
+            );
+          }
         }, 1000 * 30)
       );
     }
@@ -823,6 +1124,22 @@ export default class RemotelySavePlugin extends Plugin {
     });
 
     this.addCommand({
+      id: "export-sync-plans-1-only-change",
+      name: t("command_exportsyncplans_1_only_change"),
+      icon: iconNameLogs,
+      callback: async () => {
+        await exportVaultSyncPlansToFiles(
+          this.db,
+          this.app.vault,
+          this.vaultRandomID,
+          1,
+          true
+        );
+        new Notice(t("settings_syncplans_notice"));
+      },
+    });
+
+    this.addCommand({
       id: "export-sync-plans-1",
       name: t("command_exportsyncplans_1"),
       icon: iconNameLogs,
@@ -831,7 +1148,8 @@ export default class RemotelySavePlugin extends Plugin {
           this.db,
           this.app.vault,
           this.vaultRandomID,
-          1
+          1,
+          false
         );
         new Notice(t("settings_syncplans_notice"));
       },
@@ -846,7 +1164,8 @@ export default class RemotelySavePlugin extends Plugin {
           this.db,
           this.app.vault,
           this.vaultRandomID,
-          5
+          5,
+          false
         );
         new Notice(t("settings_syncplans_notice"));
       },
@@ -861,7 +1180,8 @@ export default class RemotelySavePlugin extends Plugin {
           this.db,
           this.app.vault,
           this.vaultRandomID,
-          -1
+          -1,
+          false
         );
         new Notice(t("settings_syncplans_notice"));
       },
@@ -873,13 +1193,15 @@ export default class RemotelySavePlugin extends Plugin {
     //   console.info("click", evt);
     // });
 
+    this.enableCheckingFileStat();
+
     if (!this.settings.agreeToUseSyncV3) {
       const syncAlgoV3Modal = new SyncAlgoV3Modal(this.app, this);
       syncAlgoV3Modal.open();
     } else {
       this.enableAutoSyncIfSet();
       this.enableInitSyncIfSet();
-      this.enableSyncOnSaveIfSet();
+      this.toggleSyncOnSaveIfSet();
     }
 
     // compare versions and read new versions
@@ -930,6 +1252,9 @@ export default class RemotelySavePlugin extends Plugin {
     if (this.settings.onedrive.remoteBaseDir === undefined) {
       this.settings.onedrive.remoteBaseDir = "";
     }
+    if (this.settings.onedrive.emptyFile === undefined) {
+      this.settings.onedrive.emptyFile = "skip";
+    }
     if (this.settings.webdav.manualRecursive === undefined) {
       this.settings.webdav.manualRecursive = true;
     }
@@ -960,6 +1285,9 @@ export default class RemotelySavePlugin extends Plugin {
       // it causes money, so disable it by default
       this.settings.s3.useAccurateMTime = false;
     }
+    if (this.settings.s3.generateFolderObject === undefined) {
+      this.settings.s3.generateFolderObject = false;
+    }
     if (this.settings.ignorePaths === undefined) {
       this.settings.ignorePaths = [];
     }
@@ -985,7 +1313,7 @@ export default class RemotelySavePlugin extends Plugin {
       this.settings.conflictAction = "keep_newer";
     }
     if (this.settings.howToCleanEmptyFolder === undefined) {
-      this.settings.howToCleanEmptyFolder = "skip";
+      this.settings.howToCleanEmptyFolder = "clean_both";
     }
     if (this.settings.protectModifyPercentage === undefined) {
       this.settings.protectModifyPercentage = 50;
@@ -1018,6 +1346,36 @@ export default class RemotelySavePlugin extends Plugin {
       }
     }
 
+    if (this.settings.profiler === undefined) {
+      this.settings.profiler = DEFAULT_PROFILER_CONFIG;
+    }
+    if (this.settings.profiler.enablePrinting === undefined) {
+      this.settings.profiler.enablePrinting = false;
+    }
+    if (this.settings.profiler.recordSize === undefined) {
+      this.settings.profiler.recordSize = false;
+    }
+
+    if (this.settings.googledrive === undefined) {
+      this.settings.googledrive = DEFAULT_GOOGLEDRIVE_CONFIG;
+    }
+
+    if (this.settings.box === undefined) {
+      this.settings.box = DEFAULT_BOX_CONFIG;
+    }
+
+    if (this.settings.pcloud === undefined) {
+      this.settings.pcloud = DEFAULT_PCLOUD_CONFIG;
+    }
+
+    if (this.settings.yandexdisk === undefined) {
+      this.settings.yandexdisk = DEFAULT_YANDEXDISK_CONFIG;
+    }
+
+    if (this.settings.koofr === undefined) {
+      this.settings.koofr = DEFAULT_KOOFR_CONFIG;
+    }
+
     await this.saveSettings();
   }
 
@@ -1041,7 +1399,7 @@ export default class RemotelySavePlugin extends Plugin {
   }
 
   async checkIfOauthExpires() {
-    let needSave: boolean = false;
+    let needSave = false;
     const current = Date.now();
 
     // fullfill old version settings
@@ -1086,25 +1444,105 @@ export default class RemotelySavePlugin extends Plugin {
       needSave = true;
     }
 
+    let googleDriveExpired = false;
+    if (
+      this.settings.googledrive.refreshToken !== "" &&
+      current >= this.settings!.googledrive!.credentialsShouldBeDeletedAtTimeMs!
+    ) {
+      googleDriveExpired = true;
+      this.settings.googledrive = cloneDeep(DEFAULT_GOOGLEDRIVE_CONFIG);
+      needSave = true;
+    }
+
+    let boxExpired = false;
+    if (
+      this.settings.box.refreshToken !== "" &&
+      current >= this.settings!.box!.credentialsShouldBeDeletedAtTimeMs!
+    ) {
+      boxExpired = true;
+      this.settings.box = cloneDeep(DEFAULT_BOX_CONFIG);
+      needSave = true;
+    }
+
+    let pCloudExpired = false;
+    if (
+      this.settings.pcloud.accessToken !== "" &&
+      current >= this.settings!.pcloud!.credentialsShouldBeDeletedAtTimeMs!
+    ) {
+      pCloudExpired = true;
+      this.settings.pcloud = cloneDeep(DEFAULT_PCLOUD_CONFIG);
+      needSave = true;
+    }
+
+    let yandexDiskExpired = false;
+    if (
+      this.settings.yandexdisk.refreshToken !== "" &&
+      current >= this.settings!.yandexdisk!.credentialsShouldBeDeletedAtTimeMs!
+    ) {
+      yandexDiskExpired = true;
+      this.settings.yandexdisk = cloneDeep(DEFAULT_YANDEXDISK_CONFIG);
+      needSave = true;
+    }
+
+    let koofrExpired = false;
+    if (
+      this.settings.koofr.refreshToken !== "" &&
+      current >= this.settings!.koofr!.credentialsShouldBeDeletedAtTimeMs!
+    ) {
+      koofrExpired = true;
+      this.settings.koofr = cloneDeep(DEFAULT_KOOFR_CONFIG);
+      needSave = true;
+    }
+
+    if (this.settings.pro === undefined) {
+      this.settings.pro = cloneDeep(DEFAULT_PRO_CONFIG);
+    }
+
     // save back
     if (needSave) {
       await this.saveSettings();
     }
 
     // send notice
-    if (dropboxExpired && onedriveExpired) {
+    if (dropboxExpired) {
       new Notice(
-        `${this.manifest.name}: You haven't manually auth Dropbox and OneDrive for a while, you need to re-auth them again.`,
+        `${this.manifest.name}: You haven't manually auth Dropbox for many days, you need to re-auth it again.`,
         6000
       );
-    } else if (dropboxExpired) {
+    }
+    if (onedriveExpired) {
       new Notice(
-        `${this.manifest.name}: You haven't manually auth Dropbox for a while, you need to re-auth it again.`,
+        `${this.manifest.name}: You haven't manually auth OneDrive for many days, you need to re-auth it again.`,
         6000
       );
-    } else if (onedriveExpired) {
+    }
+    if (googleDriveExpired) {
       new Notice(
-        `${this.manifest.name}: You haven't manually auth OneDrive for a while, you need to re-auth it again.`,
+        `${this.manifest.name}: You haven't manually auth Google Drive for many days, you need to re-auth it again.`,
+        6000
+      );
+    }
+    if (boxExpired) {
+      new Notice(
+        `${this.manifest.name}: You haven't manually auth Box for many days, you need to re-auth it again.`,
+        6000
+      );
+    }
+    if (pCloudExpired) {
+      new Notice(
+        `${this.manifest.name}: You haven't manually auth pCloud for many days, you need to re-auth it again.`,
+        6000
+      );
+    }
+    if (yandexDiskExpired) {
+      new Notice(
+        `${this.manifest.name}: You haven't manually auth Yandex Disk for many days, you need to re-auth it again.`,
+        6000
+      );
+    }
+    if (koofrExpired) {
+      new Notice(
+        `${this.manifest.name}: You haven't manually auth koofr for many days, you need to re-auth it again.`,
         6000
       );
     }
@@ -1191,75 +1629,92 @@ export default class RemotelySavePlugin extends Plugin {
     }
   }
 
-  enableSyncOnSaveIfSet() {
+  async _checkCurrFileModified(caller: "SYNC" | "FILE_CHANGES") {
+    console.debug(`inside checkCurrFileModified`);
+    const currentFile = this.app.workspace.getActiveFile();
+
+    if (currentFile) {
+      console.debug(`we have currentFile=${currentFile.path}`);
+      // get the last modified time of the current file
+      // if it has modified after lastSuccessSync
+      // then schedule a run for syncOnSaveAfterMilliseconds after it was modified
+      const lastModified = currentFile.stat.mtime;
+      const lastSuccessSyncMillis = await getLastSuccessSyncTimeByVault(
+        this.db,
+        this.vaultRandomID
+      );
+
+      console.debug(
+        `lastModified=${lastModified}, lastSuccessSyncMillis=${lastSuccessSyncMillis}`
+      );
+
+      if (
+        caller === "SYNC" ||
+        (caller === "FILE_CHANGES" &&
+          lastModified > (lastSuccessSyncMillis ?? 1))
+      ) {
+        console.debug(
+          `so lastModified > lastSuccessSyncMillis or it's called while syncing before`
+        );
+        console.debug(
+          `caller=${caller}, isSyncing=${this.isSyncing}, hasPendingSyncOnSave=${this.hasPendingSyncOnSave}`
+        );
+        if (this.isSyncing) {
+          this.hasPendingSyncOnSave = true;
+          // wait for next event
+          return;
+        } else {
+          if (this.hasPendingSyncOnSave || caller === "FILE_CHANGES") {
+            this.hasPendingSyncOnSave = false;
+            await this.syncRun("auto_sync_on_save");
+          }
+          return;
+        }
+      }
+    } else {
+      console.debug(`no currentFile here`);
+    }
+  }
+
+  _syncOnSaveEvent1 = () => {
+    this._checkCurrFileModified("SYNC");
+  };
+
+  _syncOnSaveEvent2 = throttle(
+    async () => {
+      await this._checkCurrFileModified("FILE_CHANGES");
+    },
+    1000 * 3,
+    {
+      leading: false,
+      trailing: true,
+    }
+  );
+
+  toggleSyncOnSaveIfSet() {
     if (
       this.settings.syncOnSaveAfterMilliseconds !== undefined &&
       this.settings.syncOnSaveAfterMilliseconds !== null &&
       this.settings.syncOnSaveAfterMilliseconds > 0
     ) {
-      let runScheduled = false;
-      let needToRunAgain = false;
-
-      const scheduleSyncOnSave = (scheduleTimeFromNow: number) => {
-        console.info(
-          `schedule a run for ${scheduleTimeFromNow} milliseconds later`
-        );
-        runScheduled = true;
-        setTimeout(() => {
-          this.syncRun("auto_sync_on_save");
-          runScheduled = false;
-        }, scheduleTimeFromNow);
-      };
-
-      const checkCurrFileModified = async (caller: "SYNC" | "FILE_CHANGES") => {
-        const currentFile = this.app.workspace.getActiveFile();
-
-        if (currentFile) {
-          // get the last modified time of the current file
-          // if it has modified after lastSuccessSync
-          // then schedule a run for syncOnSaveAfterMilliseconds after it was modified
-          const lastModified = currentFile.stat.mtime;
-          const lastSuccessSyncMillis = await getLastSuccessSyncTimeByVault(
-            this.db,
-            this.vaultRandomID
-          );
-          if (
-            this.syncStatus === "idle" &&
-            lastModified > lastSuccessSyncMillis &&
-            !runScheduled
-          ) {
-            scheduleSyncOnSave(this.settings!.syncOnSaveAfterMilliseconds!);
-          } else if (
-            this.syncStatus === "idle" &&
-            needToRunAgain &&
-            !runScheduled
-          ) {
-            scheduleSyncOnSave(this.settings!.syncOnSaveAfterMilliseconds!);
-            needToRunAgain = false;
-          } else {
-            if (caller === "FILE_CHANGES") {
-              needToRunAgain = true;
-            }
-          }
-        }
-      };
-
       this.app.workspace.onLayoutReady(() => {
         // listen to sync done
         this.registerEvent(
-          this.syncEvent?.on("SYNC_DONE", () => {
-            checkCurrFileModified("SYNC");
-          })!
+          this.syncEvent?.on("SYNC_DONE", this._syncOnSaveEvent1)!
         );
 
         // listen to current file save changes
-        this.registerEvent(
-          this.app.vault.on("modify", (x) => {
-            // console.debug(`event=modify! file=${x}`);
-            checkCurrFileModified("FILE_CHANGES");
-          })
-        );
+        this.registerEvent(this.app.vault.on("modify", this._syncOnSaveEvent2));
+        this.registerEvent(this.app.vault.on("create", this._syncOnSaveEvent2));
+        this.registerEvent(this.app.vault.on("delete", this._syncOnSaveEvent2));
+        this.registerEvent(this.app.vault.on("rename", this._syncOnSaveEvent2));
       });
+    } else {
+      this.syncEvent?.off("SYNC_DONE", this._syncOnSaveEvent1);
+      this.app.vault.off("modify", this._syncOnSaveEvent2);
+      this.app.vault.off("create", this._syncOnSaveEvent2);
+      this.app.vault.off("delete", this._syncOnSaveEvent2);
+      this.app.vault.off("rename", this._syncOnSaveEvent2);
     }
   }
 
@@ -1271,24 +1726,79 @@ export default class RemotelySavePlugin extends Plugin {
     });
   }
 
+  enableCheckingFileStat() {
+    this.app.workspace.onLayoutReady(() => {
+      const t = (x: TransItemType, vars?: any) => {
+        return this.i18n.t(x, vars);
+      };
+      this.registerEvent(
+        this.app.workspace.on("file-menu", (menu, file) => {
+          if (file instanceof TFolder) {
+            // folder not supported yet
+            return;
+          }
+
+          menu.addItem((item) => {
+            item
+              .setTitle(t("menu_check_file_stat"))
+              .setIcon("file-cog")
+              .onClick(async () => {
+                const filePath = file.path;
+                const fsLocal = new FakeFsLocal(
+                  this.app.vault,
+                  this.settings.syncConfigDir ?? false,
+                  this.app.vault.configDir,
+                  this.manifest.id,
+                  undefined,
+                  this.settings.deleteToWhere ?? "system"
+                );
+                const s = await fsLocal.stat(filePath);
+                new Notice(JSON.stringify(s, null, 2), 10000);
+              });
+          });
+        })
+      );
+    });
+  }
+
   async saveAgreeToUseNewSyncAlgorithm() {
     this.settings.agreeToUseSyncV3 = true;
     await this.saveSettings();
   }
 
-  async setCurrSyncMsg(
+  setCurrSyncMsg(
+    t: (x: TransItemType, vars?: any) => string,
+    s: SyncTriggerSourceType,
     i: number,
     totalCount: number,
     pathName: string,
     decision: string,
     triggerSource: SyncTriggerSourceType
   ) {
-    const msg = `syncing progress=${i}/${totalCount},decision=${decision},path=${pathName},source=${triggerSource}`;
-    this.currSyncMsg = msg;
+    const L = `${totalCount}`.length;
+    const iStr = `${i}`.padStart(L, "0");
+    const prefix = getStatusBarShortMsgFromSyncSource(t, s);
+    const shortMsg = prefix + `Syncing ${iStr}/${totalCount}`;
+    const longMsg =
+      prefix +
+      `Syncing progress=${iStr}/${totalCount},decision=${decision},path=${pathName},source=${triggerSource}`;
+    this.currSyncMsg = longMsg;
+
+    if (this.statusBarElement !== undefined) {
+      this.statusBarElement.setText(shortMsg);
+      this.statusBarElement.setAttribute("aria-label", longMsg);
+    }
   }
 
-  updateLastSuccessSyncMsg(lastSuccessSyncMillis?: number) {
+  updateLastSyncMsg(
+    s: SyncTriggerSourceType | undefined,
+    lastSuccessSyncMillis: number | null | undefined,
+    lastFailedSyncMillis: number | null | undefined
+  ) {
     if (this.statusBarElement === undefined) return;
+
+    // console.debug(lastSuccessSyncMillis);
+    // console.debug(lastFailedSyncMillis);
 
     const t = (x: TransItemType, vars?: any) => {
       return this.i18n.t(x, vars);
@@ -1297,13 +1807,27 @@ export default class RemotelySavePlugin extends Plugin {
     let lastSyncMsg = t("statusbar_lastsync_never");
     let lastSyncLabelMsg = t("statusbar_lastsync_never_label");
 
-    if (lastSuccessSyncMillis !== undefined && lastSuccessSyncMillis === -1) {
-      lastSyncMsg = t("statusbar_syncing");
-    }
+    const inputTs = Math.max(
+      lastSuccessSyncMillis ?? -999,
+      lastFailedSyncMillis ?? -999
+    );
+    const isSuccess =
+      (lastSuccessSyncMillis ?? -999) >= (lastFailedSyncMillis ?? -999);
 
-    if (lastSuccessSyncMillis !== undefined && lastSuccessSyncMillis > 0) {
-      const deltaTime = Date.now() - lastSuccessSyncMillis;
+    if (this.isSyncing) {
+      // magic number
+      // otherwise how can we know we are syncing??
+      lastSyncMsg =
+        getStatusBarShortMsgFromSyncSource(t, s!) + t("statusbar_syncing");
+    } else if (inputTs > 0) {
+      let prefix = "";
+      if (isSuccess) {
+        prefix = t("statusbar_sync_status_prefix_success");
+      } else {
+        prefix = t("statusbar_sync_status_prefix_failed");
+      }
 
+      const deltaTime = Date.now() - inputTs;
       // create human readable time
       const years = Math.floor(deltaTime / 31556952000);
       const months = Math.floor(deltaTime / 2629746000);
@@ -1312,9 +1836,7 @@ export default class RemotelySavePlugin extends Plugin {
       const hours = Math.floor(deltaTime / 3600000);
       const minutes = Math.floor(deltaTime / 60000);
       const seconds = Math.floor(deltaTime / 1000);
-
       let timeText = "";
-
       if (years > 0) {
         timeText = t("statusbar_time_years", { time: years });
       } else if (months > 0) {
@@ -1330,10 +1852,9 @@ export default class RemotelySavePlugin extends Plugin {
       } else if (seconds > 30) {
         timeText = t("statusbar_time_lessminute");
       } else {
-        timeText = t("statusbar_now");
+        timeText = t("statusbar_time_now");
       }
-
-      let dateText = new Date(lastSuccessSyncMillis).toLocaleTimeString(
+      const dateText = new Date(inputTs).toLocaleTimeString(
         navigator.language,
         {
           weekday: "long",
@@ -1343,8 +1864,11 @@ export default class RemotelySavePlugin extends Plugin {
         }
       );
 
-      lastSyncMsg = timeText;
-      lastSyncLabelMsg = t("statusbar_lastsync_label", { date: dateText });
+      lastSyncMsg = prefix + timeText;
+      lastSyncLabelMsg =
+        prefix + t("statusbar_lastsync_label", { date: dateText });
+    } else {
+      // TODO: no idea what happened.
     }
 
     this.statusBarElement.setText(lastSyncMsg);

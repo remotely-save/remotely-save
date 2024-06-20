@@ -1,139 +1,139 @@
-import { expect } from "chai";
+import { strict as assert } from "assert";
 import { JSDOM } from "jsdom";
 import * as misc from "../src/misc";
 
 describe("Misc: hidden file", () => {
   it("should find hidden file correctly", () => {
     let item = "";
-    expect(misc.isHiddenPath(item)).to.be.false;
+    assert.ok(!misc.isHiddenPath(item));
 
     item = ".";
-    expect(misc.isHiddenPath(item)).to.be.false;
+    assert.ok(!misc.isHiddenPath(item));
 
     item = "..";
-    expect(misc.isHiddenPath(item)).to.be.false;
+    assert.ok(!misc.isHiddenPath(item));
 
     item = "/x/y/z/../././../a/b/c";
-    expect(misc.isHiddenPath(item)).to.be.false;
+    assert.ok(!misc.isHiddenPath(item));
 
     item = ".hidden";
-    expect(misc.isHiddenPath(item)).to.be.true;
+    assert.ok(misc.isHiddenPath(item));
 
     item = "_hidden_loose";
-    expect(misc.isHiddenPath(item)).to.be.true;
-    expect(misc.isHiddenPath(item, true, false)).to.be.false;
+    assert.ok(misc.isHiddenPath(item));
+    assert.ok(!misc.isHiddenPath(item, true, false));
 
     item = "/sdd/_hidden_loose";
-    expect(misc.isHiddenPath(item)).to.be.true;
+    assert.ok(misc.isHiddenPath(item));
 
     item = "what/../_hidden_loose/what/what/what";
-    expect(misc.isHiddenPath(item)).to.be.true;
+    assert.ok(misc.isHiddenPath(item));
 
     item = "what/../_hidden_loose/what/what/what";
-    expect(misc.isHiddenPath(item, true, false)).to.be.false;
+    assert.ok(!misc.isHiddenPath(item, true, false));
 
     item = "what/../_hidden_loose/../.hidden/what/what/what";
-    expect(misc.isHiddenPath(item, true, false)).to.be.true;
+    assert.ok(misc.isHiddenPath(item, true, false));
 
     item = "what/../_hidden_loose/../.hidden/what/what/what";
-    expect(misc.isHiddenPath(item, false, true)).to.be.false;
+    assert.ok(!misc.isHiddenPath(item, false, true));
 
     item = "what/_hidden_loose/what/what/what";
-    expect(misc.isHiddenPath(item, false, true)).to.be.true;
-    expect(misc.isHiddenPath(item, true, false)).to.be.false;
+    assert.ok(misc.isHiddenPath(item, false, true));
+    assert.ok(!misc.isHiddenPath(item, true, false));
 
     item = "what/.hidden/what/what/what";
-    expect(misc.isHiddenPath(item, false, true)).to.be.false;
-    expect(misc.isHiddenPath(item, true, false)).to.be.true;
+    assert.ok(!misc.isHiddenPath(item, false, true));
+    assert.ok(misc.isHiddenPath(item, true, false));
   });
 });
 
 describe("Misc: get folder levels", () => {
   it("should ignore empty path", () => {
     const item = "";
-    expect(misc.getFolderLevels(item)).to.be.empty;
+    assert.equal(misc.getFolderLevels(item).length, 0);
   });
 
   it("should ignore single file", () => {
     const item = "xxx";
-    expect(misc.getFolderLevels(item)).to.be.empty;
+    assert.equal(misc.getFolderLevels(item).length, 0);
   });
 
   it("should detect path ending with /", () => {
     const item = "xxx/";
     const res = ["xxx"];
-    expect(misc.getFolderLevels(item)).to.deep.equal(res);
+    assert.deepEqual(misc.getFolderLevels(item), res);
   });
 
   it("should correctly split folders and files", () => {
     const item = "xxx/yyy/zzz.md";
     const res = ["xxx", "xxx/yyy"];
-    expect(misc.getFolderLevels(item)).to.deep.equal(res);
+    assert.deepEqual(misc.getFolderLevels(item), res);
 
     const item2 = "xxx/yyy/zzz";
     const res2 = ["xxx", "xxx/yyy"];
-    expect(misc.getFolderLevels(item2)).to.deep.equal(res2);
+    assert.deepEqual(misc.getFolderLevels(item2), res2);
 
     const item3 = "xxx/yyy/zzz/";
     const res3 = ["xxx", "xxx/yyy", "xxx/yyy/zzz"];
-    expect(misc.getFolderLevels(item3)).to.deep.equal(res3);
+    assert.deepEqual(misc.getFolderLevels(item3), res3);
   });
 
   it("should correctly add ending slash if required", () => {
     const item = "xxx/yyy/zzz.md";
     const res = ["xxx/", "xxx/yyy/"];
-    expect(misc.getFolderLevels(item, true)).to.deep.equal(res);
+    assert.deepEqual(misc.getFolderLevels(item, true), res);
 
     const item2 = "xxx/yyy/zzz";
     const res2 = ["xxx/", "xxx/yyy/"];
-    expect(misc.getFolderLevels(item2, true)).to.deep.equal(res2);
+    assert.deepEqual(misc.getFolderLevels(item2, true), res2);
 
     const item3 = "xxx/yyy/zzz/";
     const res3 = ["xxx/", "xxx/yyy/", "xxx/yyy/zzz/"];
-    expect(misc.getFolderLevels(item3, true)).to.deep.equal(res3);
+    assert.deepEqual(misc.getFolderLevels(item3, true), res3);
   });
 
   it("should treat path starting with / correctly", () => {
     const item = "/xxx/yyy/zzz.md";
     const res = ["/xxx", "/xxx/yyy"];
-    expect(misc.getFolderLevels(item)).to.deep.equal(res);
+    assert.deepEqual(misc.getFolderLevels(item), res);
 
     const item2 = "/xxx/yyy/zzz";
     const res2 = ["/xxx", "/xxx/yyy"];
-    expect(misc.getFolderLevels(item2)).to.deep.equal(res2);
+    assert.deepEqual(misc.getFolderLevels(item2), res2);
 
     const item3 = "/xxx/yyy/zzz/";
     const res3 = ["/xxx", "/xxx/yyy", "/xxx/yyy/zzz"];
-    expect(misc.getFolderLevels(item3)).to.deep.equal(res3);
+    assert.deepEqual(misc.getFolderLevels(item3), res3);
 
     const item4 = "/xxx";
     const res4 = [] as string[];
-    expect(misc.getFolderLevels(item4)).to.deep.equal(res4);
+    assert.deepEqual(misc.getFolderLevels(item4), res4);
 
     const item5 = "/";
     const res5 = [] as string[];
-    expect(misc.getFolderLevels(item5)).to.deep.equal(res5);
+    assert.deepEqual(misc.getFolderLevels(item5), res5);
   });
 });
 
 describe("Misc: get parent folder", () => {
   it("should treat empty path correctly", () => {
     const item = "";
-    expect(misc.getParentFolder(item)).equals("/");
+    assert.equal(misc.getParentFolder(item), "/");
   });
 
   it("should treat one level path correctly", () => {
     let item = "abc/";
-    expect(misc.getParentFolder(item)).equals("/");
+    assert.equal(misc.getParentFolder(item), "/");
     item = "/efg/";
-    expect(misc.getParentFolder(item)).equals("/");
+    assert.equal(misc.getParentFolder(item), "/");
   });
 
   it("should treat more levels path correctly", () => {
     let item = "abc/efg";
-    expect(misc.getParentFolder(item)).equals("abc/");
+    assert.equal(misc.getParentFolder(item), "abc/");
     item = "/hij/klm/";
-    expect(misc.getParentFolder(item)).equals("/hij/");
+    assert.equal(misc.getParentFolder(item), "/hij/");
   });
 });
 
@@ -141,18 +141,18 @@ describe("Misc: vaild file name tests", () => {
   it("should treat no ascii correctly", async () => {
     const x = misc.isVaildText("😄🍎 apple 苹果");
     // console.log(x)
-    expect(x).to.be.true;
+    assert.ok(x);
   });
 
   it("should find not-printable chars correctly", async () => {
     const x = misc.isVaildText("😄🍎 apple 苹果\u0000");
     // console.log(x)
-    expect(x).to.be.false;
+    assert.ok(!x);
   });
 
   it("should allow spaces/slashes/...", async () => {
     const x = misc.isVaildText("😄🍎 apple 苹果/-_=/\\*%^&@#$`");
-    expect(x).to.be.true;
+    assert.ok(x);
   });
 });
 
@@ -160,26 +160,26 @@ describe("Misc: get dirname", () => {
   it("should return itself for folder", async () => {
     const x = misc.getPathFolder("ssss/");
     // console.log(x)
-    expect(x).to.equal("ssss/");
+    assert.equal(x, "ssss/");
   });
 
   it("should return folder for file", async () => {
     const x = misc.getPathFolder("sss/yyy");
     // console.log(x)
-    expect(x).to.equal("sss/");
+    assert.equal(x, "sss/");
   });
 
   it("should treat / specially", async () => {
     const x = misc.getPathFolder("/");
-    expect(x).to.equal("/");
+    assert.equal(x, "/");
 
     const y = misc.getPathFolder("/abc");
-    expect(y).to.equal("/");
+    assert.equal(y, "/");
   });
 });
 
 describe("Misc: extract svg", () => {
-  beforeEach(function () {
+  beforeEach(() => {
     const fakeBrowser = new JSDOM("");
     global.window = fakeBrowser.window as any;
   });
@@ -188,7 +188,7 @@ describe("Misc: extract svg", () => {
     const x = "<svg><rect/><g/></svg>";
     const y = misc.extractSvgSub(x);
     // console.log(x)
-    expect(y).to.equal("<rect/><g/>");
+    assert.equal(y, "<rect/><g/>");
   });
 });
 
@@ -202,7 +202,7 @@ describe("Misc: get split ranges", () => {
         end: 10,
       },
     ];
-    expect(k).to.deep.equal(k2);
+    assert.deepEqual(k, k2);
   });
 
   it("should deal with 0 remainder", () => {
@@ -219,7 +219,7 @@ describe("Misc: get split ranges", () => {
         end: 20,
       },
     ];
-    expect(k).to.deep.equal(k2);
+    assert.deepEqual(k, k2);
   });
 
   it("should deal with not-0 remainder", () => {
@@ -241,55 +241,132 @@ describe("Misc: get split ranges", () => {
         end: 25,
       },
     ];
-    expect(k).to.deep.equal(k2);
+    assert.deepEqual(k, k2);
   });
 });
 
 describe("Misc: at which level", () => {
   it("should throw error on some parameters", () => {
-    expect(() => misc.atWhichLevel(undefined)).to.throw();
-    expect(() => misc.atWhichLevel("")).to.throw();
-    expect(() => misc.atWhichLevel("..")).to.throw();
-    expect(() => misc.atWhichLevel(".")).to.throw();
-    expect(() => misc.atWhichLevel("/")).to.throw();
-    expect(() => misc.atWhichLevel("/xxyy")).to.throw();
+    assert.throws(() => misc.atWhichLevel(undefined));
+    assert.throws(() => misc.atWhichLevel(""));
+    assert.throws(() => misc.atWhichLevel(".."));
+    assert.throws(() => misc.atWhichLevel("."));
+    assert.throws(() => misc.atWhichLevel("/"));
+    assert.throws(() => misc.atWhichLevel("/xxyy"));
   });
 
   it("should treat folders correctly", () => {
-    expect(misc.atWhichLevel("x/")).to.be.equal(1);
-    expect(misc.atWhichLevel("x/y/")).to.be.equal(2);
+    assert.equal(misc.atWhichLevel("x/"), 1);
+    assert.equal(misc.atWhichLevel("x/y/"), 2);
   });
 
   it("should treat files correctly", () => {
-    expect(misc.atWhichLevel("x.md")).to.be.equal(1);
-    expect(misc.atWhichLevel("x/y.md")).to.be.equal(2);
-    expect(misc.atWhichLevel("x/y/z.md")).to.be.equal(3);
+    assert.equal(misc.atWhichLevel("x.md"), 1);
+    assert.equal(misc.atWhichLevel("x/y.md"), 2);
+    assert.equal(misc.atWhichLevel("x/y/z.md"), 3);
   });
 });
 
 describe("Misc: special char for dir", () => {
   it("should return false for normal string", () => {
-    expect(misc.checkHasSpecialCharForDir("")).to.be.false;
-    expect(misc.checkHasSpecialCharForDir("xxx")).to.be.false;
-    expect(misc.checkHasSpecialCharForDir("yyy_xxx")).to.be.false;
-    expect(misc.checkHasSpecialCharForDir("yyy.xxx")).to.be.false;
-    expect(misc.checkHasSpecialCharForDir("yyy？xxx")).to.be.false;
+    assert.ok(!misc.checkHasSpecialCharForDir(""));
+    assert.ok(!misc.checkHasSpecialCharForDir("xxx"));
+    assert.ok(!misc.checkHasSpecialCharForDir("yyy_xxx"));
+    assert.ok(!misc.checkHasSpecialCharForDir("yyy.xxx"));
+    assert.ok(!misc.checkHasSpecialCharForDir("yyy？xxx"));
   });
 
   it("should return true for special cases", () => {
-    expect(misc.checkHasSpecialCharForDir("?")).to.be.true;
-    expect(misc.checkHasSpecialCharForDir("/")).to.be.true;
-    expect(misc.checkHasSpecialCharForDir("\\")).to.be.true;
-    expect(misc.checkHasSpecialCharForDir("xxx/yyy")).to.be.true;
-    expect(misc.checkHasSpecialCharForDir("xxx\\yyy")).to.be.true;
-    expect(misc.checkHasSpecialCharForDir("xxx?yyy")).to.be.true;
+    assert.ok(misc.checkHasSpecialCharForDir("?"));
+    assert.ok(misc.checkHasSpecialCharForDir("/"));
+    assert.ok(misc.checkHasSpecialCharForDir("\\"));
+    assert.ok(misc.checkHasSpecialCharForDir("xxx/yyy"));
+    assert.ok(misc.checkHasSpecialCharForDir("xxx\\yyy"));
+    assert.ok(misc.checkHasSpecialCharForDir("xxx?yyy"));
+  });
+});
+
+describe("Misc: split chunk ranges", () => {
+  it("should fail on negative numner", () => {
+    assert.throws(() => misc.splitFileSizeToChunkRanges(-1, 2));
+    assert.throws(() => misc.splitFileSizeToChunkRanges(1, -1));
+    assert.throws(() => misc.splitFileSizeToChunkRanges(1, 0));
+  });
+
+  it("should return nothing for 0 input", () => {
+    let input: [number, number] = [0, 1];
+    let output: any = [];
+    assert.deepStrictEqual(output, misc.splitFileSizeToChunkRanges(...input));
+
+    input = [0, 100];
+    output = [];
+    assert.deepStrictEqual(output, misc.splitFileSizeToChunkRanges(...input));
+  });
+
+  it("should return single item for 1 input", () => {
+    let input: [number, number] = [1, 1];
+    let output = [{ start: 0, end: 0 }];
+    assert.deepStrictEqual(output, misc.splitFileSizeToChunkRanges(...input));
+
+    input = [1, 100];
+    output = [{ start: 0, end: 0 }];
+    assert.deepStrictEqual(output, misc.splitFileSizeToChunkRanges(...input));
+  });
+
+  it("should return single item for larger or equal input", () => {
+    let input: [number, number] = [10, 10];
+    let output = [{ start: 0, end: 9 }];
+    assert.deepStrictEqual(output, misc.splitFileSizeToChunkRanges(...input));
+
+    input = [10, 21];
+    output = [{ start: 0, end: 9 }];
+    assert.deepStrictEqual(output, misc.splitFileSizeToChunkRanges(...input));
+  });
+
+  it("should return correct items for normal input", () => {
+    let input: [number, number] = [10, 9];
+    let output = [
+      { start: 0, end: 8 },
+      { start: 9, end: 9 },
+    ];
+    assert.deepStrictEqual(output, misc.splitFileSizeToChunkRanges(...input));
+
+    input = [10, 5];
+    output = [
+      { start: 0, end: 4 },
+      { start: 5, end: 9 },
+    ];
+    assert.deepStrictEqual(output, misc.splitFileSizeToChunkRanges(...input));
+
+    input = [3, 1];
+    output = [
+      { start: 0, end: 0 },
+      { start: 1, end: 1 },
+      { start: 2, end: 2 },
+    ];
+    assert.deepStrictEqual(output, misc.splitFileSizeToChunkRanges(...input));
+
+    input = [15, 5];
+    output = [
+      { start: 0, end: 4 },
+      { start: 5, end: 9 },
+      { start: 10, end: 14 },
+    ];
+    assert.deepStrictEqual(output, misc.splitFileSizeToChunkRanges(...input));
+
+    input = [1024, 578];
+    output = [
+      { start: 0, end: 577 },
+      { start: 578, end: 1023 },
+    ];
+    assert.deepStrictEqual(output, misc.splitFileSizeToChunkRanges(...input));
   });
 });
 
 describe("Misc: Dropbox: should fix the folder name cases", () => {
   it("should do nothing on empty folders", () => {
     const input: any[] = [];
-    expect(misc.fixEntityListCasesInplace(input)).to.be.empty;
+    assert.equal(misc.fixEntityListCasesInplace(input).length, 0);
   });
 
   it("should sort folders by length by side effect", () => {
@@ -306,7 +383,7 @@ describe("Misc: Dropbox: should fix the folder name cases", () => {
       { keyRaw: "bbb/" },
       { keyRaw: "aaaa/" },
     ];
-    expect(misc.fixEntityListCasesInplace(input)).to.deep.equal(output);
+    assert.deepEqual(misc.fixEntityListCasesInplace(input), output);
   });
 
   it("should fix folder names", () => {
@@ -335,6 +412,6 @@ describe("Misc: Dropbox: should fix the folder name cases", () => {
       { keyRaw: "ddd/eee/fff.md" },
       { keyRaw: "Ggg/Hhh你好/Fff世界.md" },
     ];
-    expect(misc.fixEntityListCasesInplace(input)).to.deep.equal(output);
+    assert.deepEqual(misc.fixEntityListCasesInplace(input), output);
   });
 });

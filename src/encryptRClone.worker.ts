@@ -1,5 +1,5 @@
-import { nanoid } from "nanoid";
 import { Cipher as CipherRCloneCryptPack } from "@fyears/rclone-crypt";
+import { nanoid } from "nanoid";
 
 const ctx: WorkerGlobalScope = self as any;
 

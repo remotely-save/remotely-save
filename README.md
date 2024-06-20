@@ -20,16 +20,22 @@ This is yet another unofficial sync plugin for Obsidian. If you like it or find 
   - Amazon S3 or S3-compatible (Cloudflare R2 / BackBlaze B2 / MinIO / ...)
   - Dropbox
   - OneDrive for personal
-  - Webdav
+  - Webdav (NextCloud / InfiniCloud / Synology webdav server / ...)
+  - Webdis
+  - Google Drive (GDrive) (PRO feature)
+  - Box (PRO feature)
+  - pCloud (PRO feature)
+  - Yandex Disk (PRO feature)
+  - Koofr (PRO feature)
   - [Here](./docs/services_connectable_or_not.md) shows more connectable (or not-connectable) services in details.
 - **Obsidian Mobile supported.** Vaults can be synced across mobile and desktop devices with the cloud service as the "broker".
 - **[End-to-end encryption](./docs/encryption/README.md) supported.** Files would be encrypted using openssl format before being sent to the cloud **if** user specify a password.
 - **Scheduled auto sync supported.** You can also manually trigger the sync using sidebar ribbon, or using the command from the command palette (or even bind the hot key combination to the command then press the hot key combination).
 - **[Minimal Intrusive](./docs/minimal_intrusive_design.md).**
 - **Skip Large files** and **skip paths** by custom regex conditions!
-- **Fully open source under [Apache-2.0 License](./LICENSE).**
-- **[Sync Algorithm open](./docs/sync_algorithm/v3/intro.md) for discussion.**
-- **[Basic Conflict Detection And Handling](./docs/sync_algorithm/v3/intro.md)** now, more to come!
+- **[Sync Algorithm](./docs/sync_algorithm/v3/intro.md) is provided for discussion.**
+- **[Basic Conflict Detection And Handling](./docs/sync_algorithm/v3/intro.md)** for free version. **[Advanced Smart Conflict Handling](./pro/README.md)** for PRO version. 
+- Source Available. See [License](./LICENSE) for details.
 
 ## Limitations
 
@@ -66,11 +72,13 @@ Additionally, the plugin author may occasionally visit Obsidian official forum a
   - [Storj](./docs/remote_services/s3_storj_io/README.md)
   - [腾讯云 COS](./docs/remote_services/s3_tencent_cloud_cos/README.zh-cn.md) | [Tencent Cloud COS](./docs/remote_services/s3_tencent_cloud_cos/README.md)
   - [MinIO](./docs/remote_services/s3_minio/README.md)
-- Prepare your S3 (-compatible) service information: [endpoint, region](https://docs.aws.amazon.com/general/latest/gr/s3.html), [access key id, secret access key](https://docs.aws.amazon.com/sdk-for-javascript/v3/developer-guide/getting-your-credentials.html), bucket name. The bucket should be empty and solely for syncing a vault.
+  - [又拍云](./docs/remote_services/s3_upyun/README.zh-cn.md)
+- Prepare your S3 (-compatible) service information: [endpoint, region](https://docs.aws.amazon.com/general/latest/gr/s3.html), [access key id, secret access key](https://docs.aws.amazon.com/sdk-for-javascript/v3/developer-guide/getting-your-credentials.html), bucket name.
 - If you are using AWS S3, create [policy and user](./docs/remote_services/s3_general/s3_user_policy.md).
 - Very old version of Obsidian needs [configuring CORS](./docs/remote_services/s3_general/s3_cors_configure.md).
 - Download and enable this plugin.
 - Enter your information to the settings of this plugin.
+- If you do not set the prefix in the settings, the bucket should be empty and solely for syncing a vault. You can set the prefix in the settings so that the same bucket can store multiple vaults.
 - If you want to enable end-to-end encryption, also set a password in settings. If you do not specify a password, the files and folders are synced in plain, original content to the cloud.
 - Click the new "circle arrow" icon on the ribbon (the left sidebar), **every time** you want to sync your vault between local and remote. (Or, you could configure auto sync in the settings panel (See next chapter).) While syncing, the icon becomes "two half-circle arrows". Besides clicking the icon on the sidebar ribbon, you can also activate the corresponding command in the command palette.
 - **Be patient while syncing.** Especially in the first-time sync.
@@ -97,15 +105,55 @@ Additionally, the plugin author may occasionally visit Obsidian official forum a
 ### webdav
 
 - Tutorials / Examples:
+  - [Nextcloud](./docs/remote_services/webdav_nextcloud/README.md)
+  - [The Good Cloud](./docs/remote_services/webdav_thegoodcloud/README.md)
   - [ownCloud](./docs/remote_services/webdav_owncloud/README.md)
   - [InfiniCloud](./docs/remote_services/webdav_infinicloud_teracloud/README.md)
   - [Synology webdav server](./docs/remote_services/webdav_synology_webdav_server/README.md) | [群晖 webdav server](./docs/remote_services/webdav_synology_webdav_server/README.zh-cn.md)
   - [AList（中文）](./docs/remote_services/webdav_alist/README.zh-cn.md) | [AList (English)](./docs/remote_services/webdav_alist/README.md)
   - [坚果云](./docs/remote_services/webdav_jianguoyun/README.zh-cn.md) | [JianGuoYun/NutStore](./docs/remote_services/webdav_jianguoyun/README.md)
+  - [Open Media Vault](./docs/remote_services/webdav_openmediavault/README.md)
+  - [Nginx (`ngx_http_dav_module`, `nginx-dav-ext-module`, with Docker)](./docs/remote_services/webdav_nginx/README.md)
+  - [Apache (with Docker)](./docs/remote_services/webdav_apache/README.md)
 - Very old version of Obsidian needs [configuring CORS](./docs/remote_services/webdav_general/webav_cors.md).
 - Your data would be synced to a `${vaultName}` sub folder on your webdav server.
 - Password-based end-to-end encryption is also supported. But please be aware that **the vault name itself is not encrypted**.
 - If you want to sync the files across multiple devices, **your vault name should be the same** while using default settings.
+
+### Webdis
+
+- Tutorials:
+  - [Webdis](./docs/remote_services/webdis/README.md)
+- Mostly experimental.
+- You have to setup and protect your web server by yourself.
+
+### Google Drive (GDrive) (PRO feature)
+
+PRO (paid) feature "sync with Google Drive" allows users to to sync with Google Drive. Tutorials and limitations are documented [here](./docs/remote_services/googledrive/README.md).
+
+### Box (PRO feature)
+
+PRO (paid) feature "sync with Box" allows users to to sync with Box. Tutorials and limitations are documented [here](./docs/remote_services/box/README.md).
+
+### pCloud (PRO feature)
+
+PRO (paid) feature "sync with pCloud" allows users to to sync with pCloud (using its native API instead of webdav). Tutorials and limitations are documented [here](./docs/remote_services/pcloud/README.md).
+
+### Yandex Disk (PRO feature)
+
+PRO (paid) feature "sync with Yandex Disk" allows users to to sync with Yandex Disk (using its native API instead of webdav). Tutorials and limitations are documented [here](./docs/remote_services/yandexdisk/README.md).
+
+### Koofr (PRO feature)
+
+PRO (paid) feature "sync with Koofr" allows users to to sync with Koofr (using its native API instead of webdav). Tutorials and limitations are documented [here](./docs/remote_services/koofr/README.md).
+
+## Smart Conflict (PRO feature)
+
+Basic (free) version can detect conflicts, but users have to choose to keep newer version or larger version of the files.
+
+PRO (paid) feature "Smart Conflict" gives users one more option: merge small markdown files, or duplicate large markdown files or non-markdown files.
+
+See documents [here](./docs/pro/README.md)
 
 ## Scheduled Auto Sync
 
@@ -113,11 +161,20 @@ Additionally, the plugin author may occasionally visit Obsidian official forum a
 - In auto sync mode, if any error occurs, the plugin would **fail silently**.
 - Auto sync only works when Obsidian is being opened. It's **technically impossible** to auto sync while Obsidian is in background, because the plugin just works in the browser environment provided by Obsidian.
 
+## Sync On Save
+
+- You can configure sync on save in settings.
+- In sync on save mode, if any error occurs, the plugin would **fail silently**.
+
 ## How To Deal With Hidden Files Or Folders
 
 **By default, all files or folder starting with `.` (dot) or `_` (underscore) are treated as hidden files, and would NOT be synced.** It's useful if you have some files just staying locally. But this strategy also means that themes / other plugins / settings of this plugin would neither be synced.
 
 In the latest version, you can change the settings to allow syncing `_` files or folders, as well as `.obsidian` special config folder (but not any other `.` files or folders).
+
+## PRO Features
+
+See [PRO](./docs/pro/README.md) for more details.
 
 ## How To Debug
 

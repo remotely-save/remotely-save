@@ -1,4 +1,4 @@
-import { base64, base64url } from "rfc4648";
+import { base64url } from "rfc4648";
 import { reverseString } from "./misc";
 
 import type { RemotelySavePluginSettings } from "./baseTypes";

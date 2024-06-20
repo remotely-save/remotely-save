@@ -39,7 +39,7 @@ export const encryptArrayBuffer = async (
   arrBuf: ArrayBuffer,
   password: string,
   rounds: number = DEFAULT_ITER,
-  saltHex: string = ""
+  saltHex = ""
 ) => {
   let salt: Uint8Array;
   if (saltHex !== "") {
@@ -109,7 +109,7 @@ export const encryptStringToBase32 = async (
   text: string,
   password: string,
   rounds: number = DEFAULT_ITER,
-  saltHex: string = ""
+  saltHex = ""
 ) => {
   const enc = await encryptArrayBuffer(
     bufferToArrayBuffer(new TextEncoder().encode(text)),
@@ -138,7 +138,7 @@ export const encryptStringToBase64url = async (
   text: string,
   password: string,
   rounds: number = DEFAULT_ITER,
-  saltHex: string = ""
+  saltHex = ""
 ) => {
   const enc = await encryptArrayBuffer(
     bufferToArrayBuffer(new TextEncoder().encode(text)),
