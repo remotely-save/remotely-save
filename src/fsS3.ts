@@ -309,7 +309,14 @@ const fromS3ObjectToEntity = (
 ) => {
   // console.debug(`fromS3ObjectToEntity: ${x.Key!}, ${JSON.stringify(x,null,2)}`);
   // S3 officially only supports seconds precision!!!!!
-  const mtimeSvr = Math.floor(x.LastModified!.valueOf() / 1000.0) * 1000;
+  if (x.LastModified === undefined) {
+    throw Error(
+      `s3 object ${x.Key!} doesn't have LastModified value: ${JSON.stringify(
+        x
+      )}`
+    );
+  }
+  const mtimeSvr = Math.floor(x.LastModified.valueOf() / 1000.0) * 1000;
   let mtimeCli = mtimeSvr;
   if (x.Key! in mtimeRecords) {
     const m2 = mtimeRecords[x.Key!];
@@ -346,7 +353,14 @@ const fromS3HeadObjectToEntity = (
 ) => {
   // console.debug(`fromS3HeadObjectToEntity: ${fileOrFolderPathWithRemotePrefix}: ${JSON.stringify(x,null,2)}`);
   // S3 officially only supports seconds precision!!!!!
-  const mtimeSvr = Math.floor(x.LastModified!.valueOf() / 1000.0) * 1000;
+  if (x.LastModified === undefined) {
+    throw Error(
+      `s3 object ${fileOrFolderPathWithRemotePrefix} doesn't have LastModified value: ${JSON.stringify(
+        x
+      )}`
+    );
+  }
+  const mtimeSvr = Math.floor(x.LastModified.valueOf() / 1000.0) * 1000;
   let mtimeCli = mtimeSvr;
   if (useAccurateMTime && x.Metadata !== undefined) {
     const m2 = Math.floor(
