@@ -34,6 +34,9 @@ const DEFAULT_SETTINGS: RemotelySavePluginSettings = {
   koofr: {
     refreshToken: "xxx",
   } as any,
+  azureblobstorage: {
+    containerSasUrl: "http://127.0.0.1",
+  } as any,
   password: "password",
   serviceType: "s3",
   currLogLevel: "info",

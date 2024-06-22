@@ -30,6 +30,7 @@ import {
   COMMAND_CALLBACK_PRO,
   COMMAND_CALLBACK_YANDEXDISK,
 } from "../pro/src/baseTypesPro";
+import { DEFAULT_AZUREBLOBSTORAGE_CONFIG } from "../pro/src/fsAzureBlobStorage";
 import {
   DEFAULT_BOX_CONFIG,
   FakeFsBox,
@@ -115,6 +116,7 @@ const DEFAULT_SETTINGS: RemotelySavePluginSettings = {
   pcloud: DEFAULT_PCLOUD_CONFIG,
   yandexdisk: DEFAULT_YANDEXDISK_CONFIG,
   koofr: DEFAULT_KOOFR_CONFIG,
+  azureblobstorage: DEFAULT_AZUREBLOBSTORAGE_CONFIG,
   password: "",
   serviceType: "s3",
   currLogLevel: "info",
@@ -1374,6 +1376,10 @@ export default class RemotelySavePlugin extends Plugin {
 
     if (this.settings.koofr === undefined) {
       this.settings.koofr = DEFAULT_KOOFR_CONFIG;
+    }
+
+    if (this.settings.azureblobstorage === undefined) {
+      this.settings.azureblobstorage = DEFAULT_AZUREBLOBSTORAGE_CONFIG;
     }
 
     await this.saveSettings();

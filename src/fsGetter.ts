@@ -1,3 +1,4 @@
+import { FakeFsAzureBlobStorage } from "../pro/src/fsAzureBlobStorage";
 import { FakeFsBox } from "../pro/src/fsBox";
 import { FakeFsGoogleDrive } from "../pro/src/fsGoogleDrive";
 import { FakeFsKoofr } from "../pro/src/fsKoofr";
@@ -68,6 +69,8 @@ export function getClient(
       );
     case "koofr":
       return new FakeFsKoofr(settings.koofr, vaultName, saveUpdatedConfigFunc);
+    case "azureblobstorage":
+      return new FakeFsAzureBlobStorage(settings.azureblobstorage, vaultName);
     default:
       throw Error(`cannot init client for serviceType=${settings.serviceType}`);
   }

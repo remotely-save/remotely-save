@@ -290,6 +290,11 @@ export const checkProRunnableAndFixInplace = async (
       service: "koofr",
       name: "Koofr",
     },
+    {
+      feature: "feature-azure_blob_storage",
+      service: "azureblobstorage",
+      name: "Azure Blob Storage",
+    },
   ];
 
   for (const { feature, service, name } of toChecked) {

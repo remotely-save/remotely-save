@@ -3,6 +3,7 @@ import type { DropboxResponse, DropboxResponseError, files } from "dropbox";
 import random from "lodash/random";
 import {
   COMMAND_CALLBACK_DROPBOX,
+  DROPBOX_APP_KEY,
   type DropboxConfig,
   type Entity,
   OAUTH2_FORCE_EXPIRE_MILLISECONDS,
@@ -21,7 +22,7 @@ export { Dropbox } from "dropbox";
 
 export const DEFAULT_DROPBOX_CONFIG: DropboxConfig = {
   accessToken: "",
-  clientID: process.env.DEFAULT_DROPBOX_APP_KEY ?? "",
+  clientID: DROPBOX_APP_KEY ?? "",
   refreshToken: "",
   accessTokenExpiresInSeconds: 0,
   accessTokenExpiresAtTime: 0,

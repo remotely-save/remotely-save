@@ -171,6 +171,17 @@
   display: none;
 }
 
+.azureblobstorage-disclaimer {
+  font-weight: bold;
+}
+.azureblobstorage-hide {
+  display: none;
+}
+
+.azureblobstorage-allow-to-use-hide {
+  display: none;
+}
+
 .qrcode-img {
   width: 350px;
   height: 350px;

@@ -27,6 +27,7 @@ This is yet another unofficial sync plugin for Obsidian. If you like it or find 
   - pCloud (PRO feature)
   - Yandex Disk (PRO feature)
   - Koofr (PRO feature)
+  - Azure Blob Storage (PRO feature)
   - [Here](./docs/services_connectable_or_not.md) shows more connectable (or not-connectable) services in details.
 - **Obsidian Mobile supported.** Vaults can be synced across mobile and desktop devices with the cloud service as the "broker".
 - **[End-to-end encryption](./docs/encryption/README.md) supported.** Files would be encrypted using openssl format before being sent to the cloud **if** user specify a password.
@@ -146,6 +147,10 @@ PRO (paid) feature "sync with Yandex Disk" allows users to to sync with Yandex D
 ### Koofr (PRO feature)
 
 PRO (paid) feature "sync with Koofr" allows users to to sync with Koofr (using its native API instead of webdav). Tutorials and limitations are documented [here](./docs/remote_services/koofr/README.md).
+
+### Azure Blob Storage (PRO feature)
+
+PRO (paid) feature "sync with Azure Blob Storage" allows users to to sync with Azure Blob Storage. Tutorials and limitations are documented [here](./docs/remote_services/azureblobstorage/README.md).
 
 ## Smart Conflict (PRO feature)
 

@@ -13,6 +13,8 @@ import {
   DEFAULT_CONTENT_TYPE,
   type Entity,
   OAUTH2_FORCE_EXPIRE_MILLISECONDS,
+  ONEDRIVE_AUTHORITY,
+  ONEDRIVE_CLIENT_ID,
   type OnedriveConfig,
 } from "./baseTypes";
 import { VALID_REQURL } from "./baseTypesObs";
@@ -24,8 +26,8 @@ const REDIRECT_URI = `obsidian://${COMMAND_CALLBACK_ONEDRIVE}`;
 
 export const DEFAULT_ONEDRIVE_CONFIG: OnedriveConfig = {
   accessToken: "",
-  clientID: process.env.DEFAULT_ONEDRIVE_CLIENT_ID ?? "",
-  authority: process.env.DEFAULT_ONEDRIVE_AUTHORITY ?? "",
+  clientID: ONEDRIVE_CLIENT_ID ?? "",
+  authority: ONEDRIVE_AUTHORITY ?? "",
   refreshToken: "",
   accessTokenExpiresInSeconds: 0,
   accessTokenExpiresAtTime: 0,

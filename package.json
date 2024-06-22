@@ -13,7 +13,7 @@
   },
   "browser": {
     "path": "path-browserify",
-    "process": "process/browser",
+    "process": false,
     "stream": "stream-browserify",
     "crypto": "crypto-browserify",
     "url": "url/",
@@ -61,6 +61,7 @@
     "@aws-sdk/signature-v4-crt": "^3.556.0",
     "@aws-sdk/types": "^3.535.0",
     "@azure/msal-node": "^2.7.0",
+    "@azure/storage-blob": "^12.23.0",
     "@fyears/rclone-crypt": "^0.0.7",
     "@fyears/tsqueue": "^1.0.1",
     "@microsoft/microsoft-graph-client": "^3.0.7",
