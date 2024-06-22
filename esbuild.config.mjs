@@ -85,7 +85,10 @@ esbuild
       // "process.version": `"v20.10.0"`, // who's using this?
       // "process":`undefined`,
       // "global.process":`undefined`,
-      "globalThis.process": `undefined`, // make azure blob storage happy
+
+      // make azure blob storage happy
+      // https://github.com/Azure/azure-sdk-for-js/blob/main/sdk/core/core-util/src/checkEnvironment.ts
+      "globalThis.process.versions": `undefined`,
     },
     plugins: [inlineWorkerPlugin()],
   })

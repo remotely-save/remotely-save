@@ -13,7 +13,7 @@
   },
   "browser": {
     "path": "path-browserify",
-    "process": false,
+    "process": "process/browser",
     "stream": "stream-browserify",
     "crypto": "crypto-browserify",
     "url": "url/",

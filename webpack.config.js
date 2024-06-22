@@ -52,16 +52,19 @@ module.exports = {
       // "process.version": `"v20.10.0"`, // who's using this?
       // "process":`undefined`,
       // "global.process":`undefined`,
-      "globalThis.process": `undefined`, // make azure blob storage happy
+
+      // make azure blob storage happy
+      // https://github.com/Azure/azure-sdk-for-js/blob/main/sdk/core/core-util/src/checkEnvironment.ts
+      "globalThis.process.versions": `undefined`,
     }),
     // Work around for Buffer is undefined:
     // https://github.com/webpack/changelog-v5/issues/10
     new webpack.ProvidePlugin({
       Buffer: ["buffer", "Buffer"],
     }),
-    // new webpack.ProvidePlugin({
-    //   process: "process/browser",
-    // }),
+    new webpack.ProvidePlugin({
+      process: "process/browser",
+    }),
   ],
   module: {
     rules: [
@@ -110,7 +113,7 @@ module.exports = {
       // os: require.resolve("os-browserify/browser"),
       path: require.resolve("path-browserify"),
       // punycode: require.resolve("punycode"),
-      process: false, // require.resolve("process/browser"),
+      process: require.resolve("process/browser"),
       // querystring: require.resolve("querystring-es3"),
       stream: require.resolve("stream-browserify"),
       // string_decoder: require.resolve("string_decoder"),
