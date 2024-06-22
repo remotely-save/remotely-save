@@ -2166,7 +2166,7 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
               this.plugin.vaultRandomID,
               -1
             );
-            this.plugin.updateLastSyncMsg(undefined, null, null);
+            this.plugin.updateLastSyncMsg(undefined, "not_syncing", null, null);
             new Notice(t("settings_resetstatusbar_notice"));
           });
         });

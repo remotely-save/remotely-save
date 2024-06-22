@@ -420,15 +420,15 @@ export default class RemotelySavePlugin extends Plugin {
     ) => {
       if (step === 1) {
         // change status to "syncing..." on statusbar
-        this.updateLastSyncMsg(s, -1, -1);
+        this.updateLastSyncMsg(s, "syncing", -1, -1);
       } else if (step === 8 && everythingOk) {
         const ts = Date.now();
         await upsertLastSuccessSyncTimeByVault(this.db, this.vaultRandomID, ts);
-        this.updateLastSyncMsg(s, ts, null);
+        this.updateLastSyncMsg(s, "not_syncing", ts, null); // hack: 'not_syncing'
       } else if (!everythingOk) {
         const ts = Date.now();
         await upsertLastFailedSyncTimeByVault(this.db, this.vaultRandomID, ts);
-        this.updateLastSyncMsg(s, null, ts); // magic number
+        this.updateLastSyncMsg(s, "not_syncing", null, ts);
       }
     };
 
@@ -1088,17 +1088,21 @@ export default class RemotelySavePlugin extends Plugin {
       this.statusBarElement = statusBarItem.createEl("span");
       this.statusBarElement.setAttribute("data-tooltip-position", "top");
 
-      this.updateLastSyncMsg(
-        undefined,
-        await getLastSuccessSyncTimeByVault(this.db, this.vaultRandomID),
-        await getLastFailedSyncTimeByVault(this.db, this.vaultRandomID)
-      );
+      if (!this.isSyncing) {
+        this.updateLastSyncMsg(
+          undefined,
+          "not_syncing",
+          await getLastSuccessSyncTimeByVault(this.db, this.vaultRandomID),
+          await getLastFailedSyncTimeByVault(this.db, this.vaultRandomID)
+        );
+      }
       // update statusbar text every 30 seconds
       this.registerInterval(
         window.setInterval(async () => {
           if (!this.isSyncing) {
             this.updateLastSyncMsg(
               undefined,
+              "not_syncing",
               await getLastSuccessSyncTimeByVault(this.db, this.vaultRandomID),
               await getLastFailedSyncTimeByVault(this.db, this.vaultRandomID)
             );
@@ -1798,6 +1802,7 @@ export default class RemotelySavePlugin extends Plugin {
 
   updateLastSyncMsg(
     s: SyncTriggerSourceType | undefined,
+    syncStatus: "not_syncing" | "syncing",
     lastSuccessSyncMillis: number | null | undefined,
     lastFailedSyncMillis: number | null | undefined
   ) {
@@ -1820,9 +1825,7 @@ export default class RemotelySavePlugin extends Plugin {
     const isSuccess =
       (lastSuccessSyncMillis ?? -999) >= (lastFailedSyncMillis ?? -999);
 
-    if (this.isSyncing) {
-      // magic number
-      // otherwise how can we know we are syncing??
+    if (syncStatus === "syncing") {
       lastSyncMsg =
         getStatusBarShortMsgFromSyncSource(t, s!) + t("statusbar_syncing");
     } else if (inputTs > 0) {
