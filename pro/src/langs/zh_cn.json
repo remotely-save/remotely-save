@@ -141,7 +141,7 @@
   "modal_proauth_maualinput_conn_fail": "连接失败",
 
   "settings_onedrivefull": "Onedrive（个人版）（Full）设置",
-  "settings_chooseservice_onedrivefull": "OneDrive（个人版）（Full）",
+  "settings_chooseservice_onedrivefull": "OneDrive（个人版）（Full）（PRO）",
   "settings_onedrivefull_disclaimer1": "声明：此插件不是微软或 OneDrive 的官方产品。",
   "settings_onedrivefull_disclaimer2": "声明：您所输入的信息存储于本地。其它有害的或者出错的插件，是有可能读取到这些信息的。如果您发现了 OneDrive 有不符合预期的访问，请立刻从 https://microsoft.com/consent 删除记录于此插件的连接鉴权。",
   "settings_onedrivefull_folder": "我们会在您的 OneDrive 上创建此文件夹并在里面同步：/{{remoteBaseDir}}。",
