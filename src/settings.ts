@@ -25,6 +25,7 @@ import { generateAzureBlobStorageSettingsPart } from "../pro/src/settingsAzureBl
 import { generateBoxSettingsPart } from "../pro/src/settingsBox";
 import { generateGoogleDriveSettingsPart } from "../pro/src/settingsGoogleDrive";
 import { generateKoofrSettingsPart } from "../pro/src/settingsKoofr";
+import { generateOnedriveFullSettingsPart } from "../pro/src/settingsOnedriveFull";
 import { generatePCloudSettingsPart } from "../pro/src/settingsPCloud";
 import { generateProSettingsPart } from "../pro/src/settingsPro";
 import { generateYandexDiskSettingsPart } from "../pro/src/settingsYandexDisk";
@@ -1816,6 +1817,22 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
       });
 
     //////////////////////////////////////////////////
+    // below for Onedrive (Full)
+    //////////////////////////////////////////////////
+
+    const {
+      onedriveFullDiv,
+      onedriveFullAllowedToUsedDiv,
+      onedriveFullNotShowUpHintSetting,
+    } = generateOnedriveFullSettingsPart(
+      containerEl,
+      t,
+      this.app,
+      this.plugin,
+      () => this.plugin.saveSettings()
+    );
+
+    //////////////////////////////////////////////////
     // below for googledrive
     //////////////////////////////////////////////////
 
@@ -1904,6 +1921,10 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
         dropdown.addOption("dropbox", t("settings_chooseservice_dropbox"));
         dropdown.addOption("webdav", t("settings_chooseservice_webdav"));
         dropdown.addOption("onedrive", t("settings_chooseservice_onedrive"));
+        dropdown.addOption(
+          "onedrivefull",
+          t("settings_chooseservice_onedrivefull")
+        );
         dropdown.addOption("webdis", t("settings_chooseservice_webdis"));
         dropdown.addOption(
           "googledrive",
@@ -1936,6 +1957,10 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
             onedriveDiv.toggleClass(
               "onedrive-hide",
               this.plugin.settings.serviceType !== "onedrive"
+            );
+            onedriveFullDiv.toggleClass(
+              "onedrivefull-hide",
+              this.plugin.settings.serviceType !== "onedrivefull"
             );
             webdavDiv.toggleClass(
               "webdav-hide",
@@ -2520,6 +2545,16 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
         });
       })
       .addButton(async (button) => {
+        button.setButtonText(t("settings_export_onedrivefull_button"));
+        button.onClick(async () => {
+          new ExportSettingsQrCodeModal(
+            this.app,
+            this.plugin,
+            "onedrivefull"
+          ).open();
+        });
+      })
+      .addButton(async (button) => {
         button.setButtonText(t("settings_export_webdav_button"));
         button.onClick(async () => {
           new ExportSettingsQrCodeModal(this.app, this.plugin, "webdav").open();
@@ -2643,6 +2678,8 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
       this.app,
       this.plugin,
       () => this.plugin.saveSettings(),
+      onedriveFullAllowedToUsedDiv,
+      onedriveFullNotShowUpHintSetting,
       googleDriveAllowedToUsedDiv,
       googleDriveNotShowUpHintSetting,
       boxAllowedToUsedDiv,

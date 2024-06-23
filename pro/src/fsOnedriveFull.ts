@@ -9,22 +9,24 @@ import type {
 import cloneDeep from "lodash/cloneDeep";
 import { request, requestUrl } from "obsidian";
 import {
-  COMMAND_CALLBACK_ONEDRIVE,
   DEFAULT_CONTENT_TYPE,
   type Entity,
   OAUTH2_FORCE_EXPIRE_MILLISECONDS,
   ONEDRIVE_AUTHORITY,
   ONEDRIVE_CLIENT_ID,
-  type OnedriveConfig,
-} from "./baseTypes";
-import { VALID_REQURL } from "./baseTypesObs";
-import { FakeFs } from "./fsAll";
-import { bufferToArrayBuffer } from "./misc";
+} from "../../src/baseTypes";
+import { VALID_REQURL } from "../../src/baseTypesObs";
+import { FakeFs } from "../../src/fsAll";
+import { bufferToArrayBuffer } from "../../src/misc";
+import {
+  COMMAND_CALLBACK_ONEDRIVEFULL,
+  type OnedriveFullConfig,
+} from "./baseTypesPro";
 
-const SCOPES = ["User.Read", "Files.ReadWrite.AppFolder", "offline_access"];
-const REDIRECT_URI = `obsidian://${COMMAND_CALLBACK_ONEDRIVE}`;
+const SCOPES = ["User.Read", "Files.ReadWrite", "offline_access"]; // not using Files.ReadWrite.All
+const REDIRECT_URI = `obsidian://${COMMAND_CALLBACK_ONEDRIVEFULL}`; // diff from Onedrive (App Folder)
 
-export const DEFAULT_ONEDRIVE_CONFIG: OnedriveConfig = {
+export const DEFAULT_ONEDRIVEFULL_CONFIG: OnedriveFullConfig = {
   accessToken: "",
   clientID: ONEDRIVE_CLIENT_ID ?? "",
   authority: ONEDRIVE_AUTHORITY ?? "",
@@ -35,7 +37,7 @@ export const DEFAULT_ONEDRIVE_CONFIG: OnedriveConfig = {
   username: "",
   credentialsShouldBeDeletedAtTime: 0,
   emptyFile: "skip",
-  kind: "onedrive",
+  kind: "onedrivefull",
 };
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -187,7 +189,7 @@ export const sendRefreshTokenReq = async (
 };
 
 export const setConfigBySuccessfullAuthInplace = async (
-  config: OnedriveConfig,
+  config: OnedriveFullConfig,
   authRes: AccessCodeResponseSuccessfulType,
   saveUpdatedConfigFunc: () => Promise<any> | undefined
 ) => {
@@ -213,9 +215,12 @@ export const setConfigBySuccessfullAuthInplace = async (
 // Other usual common methods
 ////////////////////////////////////////////////////////////////////////////////
 
+/**
+ * This is different from Onedrive (App Folder)
+ */
 const getOnedrivePath = (fileOrFolderPath: string, remoteBaseDir: string) => {
-  // https://docs.microsoft.com/en-us/onedrive/developer/rest-api/concepts/special-folders-appfolder?view=odsp-graph-online
-  const prefix = `/drive/special/approot:/${remoteBaseDir}`;
+  // https://learn.microsoft.com/en-us/onedrive/developer/rest-api/concepts/addressing-driveitems?view=odsp-graph-online
+  const prefix = `/drive/root:/${remoteBaseDir}`;
 
   let key = fileOrFolderPath;
   if (fileOrFolderPath === "/" || fileOrFolderPath === "") {
@@ -236,6 +241,7 @@ const getOnedrivePath = (fileOrFolderPath: string, remoteBaseDir: string) => {
 };
 
 const constructFromDriveItemToEntityError = (x: DriveItem) => {
+  const fullPathOriginal = `${x.parentReference?.path}/${x.name}`;
   return `parentPath="${
     x.parentReference?.path ?? "(no parentReference or path)"
   }", selfName="${x.name}"`;
@@ -245,24 +251,11 @@ const fromDriveItemToEntity = (x: DriveItem, remoteBaseDir: string): Entity => {
   let key = "";
 
   // possible prefix:
-  // pure english: /drive/root:/Apps/remotely-save/${remoteBaseDir}
-  // or localized, e.g.: /drive/root:/应用/remotely-save/${remoteBaseDir}
-  const FIRST_COMMON_PREFIX_REGEX = /^\/drive\/root:\/[^\/]+\/remotely-save\//g;
-
-  // why?? /drive/root:/Apps/Graph
-  const FIFTH_COMMON_PREFIX_REGEX = /^\/drive\/root:\/[^\/]+\/Graph\//g;
-
-  // or the root is absolute path /Livefolders,
-  // e.g.: /Livefolders/应用/remotely-save/${remoteBaseDir}
-  const SECOND_COMMON_PREFIX_REGEX = /^\/Livefolders\/[^\/]+\/remotely-save\//g;
-
-  // another report, why???
-  // /drive/root:/something/app/remotely-save/${remoteBaseDir}
-  const THIRD_COMMON_PREFIX_REGEX =
-    /^\/drive\/root:\/[^\/]+\/app\/remotely-save\//g;
-
-  // another possibile prefix
-  const FOURTH_COMMON_PREFIX_RAW = `/drive/items/`;
+  // pure english: /drive/root:${remoteBaseDir}
+  const FIRST_COMMON_PREFIX_RAW = `/drive/root:/${remoteBaseDir}`;
+  const SECOND_COMMON_PREFIX_RAW = `/drive/root:/${encodeURIComponent(
+    remoteBaseDir
+  )}`;
 
   if (
     x.parentReference === undefined ||
@@ -272,60 +265,18 @@ const fromDriveItemToEntity = (x: DriveItem, remoteBaseDir: string): Entity => {
   ) {
     throw Error("x.parentReference.path is undefinded or null");
   }
-  const fullPathOriginal = `${x.parentReference.path}/${x.name}`;
-  const matchFirstPrefixRes = fullPathOriginal.match(FIRST_COMMON_PREFIX_REGEX);
-  const matchFifthPrefixRes = fullPathOriginal.match(FIFTH_COMMON_PREFIX_REGEX);
-  const matchSecondPrefixRes = fullPathOriginal.match(
-    SECOND_COMMON_PREFIX_REGEX
+  const fullPathOriginal = `${x.parentReference?.path}/${x.name}`;
+  const matchFirstPrefixRes = fullPathOriginal.startsWith(
+    FIRST_COMMON_PREFIX_RAW
   );
-  const matchThirdPrefixRes = fullPathOriginal.match(THIRD_COMMON_PREFIX_REGEX);
-  if (
-    matchFirstPrefixRes !== null &&
-    fullPathOriginal.startsWith(`${matchFirstPrefixRes[0]}${remoteBaseDir}`)
-  ) {
-    const foundPrefix = `${matchFirstPrefixRes[0]}${remoteBaseDir}`;
-    key = fullPathOriginal.substring(foundPrefix.length + 1);
-  } else if (
-    matchFifthPrefixRes !== null &&
-    fullPathOriginal.startsWith(`${matchFifthPrefixRes[0]}${remoteBaseDir}`)
-  ) {
-    const foundPrefix = `${matchFifthPrefixRes[0]}${remoteBaseDir}`;
-    key = fullPathOriginal.substring(foundPrefix.length + 1);
-  } else if (
-    matchSecondPrefixRes !== null &&
-    fullPathOriginal.startsWith(`${matchSecondPrefixRes[0]}${remoteBaseDir}`)
-  ) {
-    const foundPrefix = `${matchSecondPrefixRes[0]}${remoteBaseDir}`;
-    key = fullPathOriginal.substring(foundPrefix.length + 1);
-  } else if (
-    matchThirdPrefixRes !== null &&
-    fullPathOriginal.startsWith(`${matchThirdPrefixRes[0]}${remoteBaseDir}`)
-  ) {
-    const foundPrefix = `${matchThirdPrefixRes[0]}${remoteBaseDir}`;
-    key = fullPathOriginal.substring(foundPrefix.length + 1);
-  } else if (x.parentReference.path.startsWith(FOURTH_COMMON_PREFIX_RAW)) {
-    // it's something like
-    // /drive/items/<some_id>!<another_id>:/${remoteBaseDir}/<subfolder>
-    // with uri encoded!
-    if (x.name === undefined || x.name === null) {
-      throw Error(
-        `OneDrive item no name variable while matching ${FOURTH_COMMON_PREFIX_RAW}`
-      );
-    }
-    const parPath = decodeURIComponent(x.parentReference.path);
-    key = parPath.substring(parPath.indexOf(":") + 1);
-    if (key.startsWith(`/${remoteBaseDir}/`)) {
-      key = key.substring(`/${remoteBaseDir}/`.length);
-      key = `${key}/${x.name}`;
-    } else if (key === `/${remoteBaseDir}`) {
-      key = x.name;
-    } else {
-      throw Error(
-        `we meet file/folder and do not know how to deal with it:\n${constructFromDriveItemToEntityError(
-          x
-        )}`
-      );
-    }
+  const matchSecondPrefixRes = fullPathOriginal.startsWith(
+    SECOND_COMMON_PREFIX_RAW
+  );
+
+  if (matchFirstPrefixRes) {
+    key = fullPathOriginal.substring(FIRST_COMMON_PREFIX_RAW.length + 1);
+  } else if (matchSecondPrefixRes) {
+    key = fullPathOriginal.substring(SECOND_COMMON_PREFIX_RAW.length + 1);
   } else {
     throw Error(
       `we meet file/folder and do not know how to deal with it:\n${constructFromDriveItemToEntityError(
@@ -359,33 +310,33 @@ const fromDriveItemToEntity = (x: DriveItem, remoteBaseDir: string): Entity => {
 
 // to adapt to the required interface
 class MyAuthProvider implements AuthenticationProvider {
-  onedriveConfig: OnedriveConfig;
+  onedriveFullConfig: OnedriveFullConfig;
   saveUpdatedConfigFunc: () => Promise<any>;
   constructor(
-    onedriveConfig: OnedriveConfig,
+    onedriveFullConfig: OnedriveFullConfig,
     saveUpdatedConfigFunc: () => Promise<any>
   ) {
-    this.onedriveConfig = onedriveConfig;
+    this.onedriveFullConfig = onedriveFullConfig;
     this.saveUpdatedConfigFunc = saveUpdatedConfigFunc;
   }
 
   async getAccessToken() {
     if (
-      this.onedriveConfig.accessToken === "" ||
-      this.onedriveConfig.refreshToken === ""
+      this.onedriveFullConfig.accessToken === "" ||
+      this.onedriveFullConfig.refreshToken === ""
     ) {
       throw Error("The user has not manually auth yet.");
     }
 
     const currentTs = Date.now();
-    if (this.onedriveConfig.accessTokenExpiresAtTime > currentTs) {
-      return this.onedriveConfig.accessToken;
+    if (this.onedriveFullConfig.accessTokenExpiresAtTime > currentTs) {
+      return this.onedriveFullConfig.accessToken;
     } else {
       // use refreshToken to refresh
       const r = await sendRefreshTokenReq(
-        this.onedriveConfig.clientID,
-        this.onedriveConfig.authority,
-        this.onedriveConfig.refreshToken
+        this.onedriveFullConfig.clientID,
+        this.onedriveFullConfig.authority,
+        this.onedriveFullConfig.refreshToken
       );
       if ((r as any).error !== undefined) {
         const r2 = r as AccessCodeResponseFailedType;
@@ -394,14 +345,14 @@ class MyAuthProvider implements AuthenticationProvider {
         );
       }
       const r2 = r as AccessCodeResponseSuccessfulType;
-      this.onedriveConfig.accessToken = r2.access_token;
-      this.onedriveConfig.refreshToken = r2.refresh_token!;
-      this.onedriveConfig.accessTokenExpiresInSeconds = r2.expires_in;
-      this.onedriveConfig.accessTokenExpiresAtTime =
+      this.onedriveFullConfig.accessToken = r2.access_token;
+      this.onedriveFullConfig.refreshToken = r2.refresh_token!;
+      this.onedriveFullConfig.accessTokenExpiresInSeconds = r2.expires_in;
+      this.onedriveFullConfig.accessTokenExpiresAtTime =
         currentTs + r2.expires_in * 1000 - 60 * 2 * 1000;
       await this.saveUpdatedConfigFunc();
       console.info("Onedrive accessToken updated");
-      return this.onedriveConfig.accessToken;
+      return this.onedriveFullConfig.accessToken;
     }
   }
 }
@@ -409,19 +360,19 @@ class MyAuthProvider implements AuthenticationProvider {
 /**
  * to export the settings in qrcode,
  * we want to "trim" or "shrink" the settings
- * @param onedriveConfig
+ * @param onedriveFullConfig
  */
-export const getShrinkedSettings = (onedriveConfig: OnedriveConfig) => {
-  const config = cloneDeep(onedriveConfig);
+export const getShrinkedSettings = (onedriveFullConfig: OnedriveFullConfig) => {
+  const config = cloneDeep(onedriveFullConfig);
   config.accessToken = "x";
   config.accessTokenExpiresInSeconds = 1;
   config.accessTokenExpiresAtTime = 1;
   return config;
 };
 
-export class FakeFsOnedrive extends FakeFs {
-  kind: "onedrive";
-  onedriveConfig: OnedriveConfig;
+export class FakeFsOnedriveFull extends FakeFs {
+  kind: "onedrivefull";
+  onedriveFullConfig: OnedriveFullConfig;
   remoteBaseDir: string;
   vaultFolderExists: boolean;
   authGetter: MyAuthProvider;
@@ -429,25 +380,29 @@ export class FakeFsOnedrive extends FakeFs {
   foldersCreatedBefore: Set<string>;
 
   constructor(
-    onedriveConfig: OnedriveConfig,
+    onedriveFullConfig: OnedriveFullConfig,
     vaultName: string,
     saveUpdatedConfigFunc: () => Promise<any>
   ) {
     super();
-    this.kind = "onedrive";
-    this.onedriveConfig = onedriveConfig;
-    this.remoteBaseDir = this.onedriveConfig.remoteBaseDir || vaultName || "";
+    this.kind = "onedrivefull";
+    this.onedriveFullConfig = onedriveFullConfig;
+    this.remoteBaseDir =
+      this.onedriveFullConfig.remoteBaseDir || vaultName || "";
     this.vaultFolderExists = false;
     this.saveUpdatedConfigFunc = saveUpdatedConfigFunc;
-    this.authGetter = new MyAuthProvider(onedriveConfig, saveUpdatedConfigFunc);
+    this.authGetter = new MyAuthProvider(
+      onedriveFullConfig,
+      saveUpdatedConfigFunc
+    );
     this.foldersCreatedBefore = new Set();
   }
 
   async _init() {
     // check token
     if (
-      this.onedriveConfig.accessToken === "" ||
-      this.onedriveConfig.refreshToken === ""
+      this.onedriveFullConfig.accessToken === "" ||
+      this.onedriveFullConfig.refreshToken === ""
     ) {
       throw Error("The user has not manually auth yet.");
     }
@@ -457,14 +412,14 @@ export class FakeFsOnedrive extends FakeFs {
     if (this.vaultFolderExists) {
       // console.info(`already checked, /${this.remoteBaseDir} exist before`)
     } else {
-      const k = await this._getJson("/drive/special/approot/children");
+      const k = await this._getJson("/drive/root/children");
       // console.debug(k);
       this.vaultFolderExists =
         (k.value as DriveItem[]).filter((x) => x.name === this.remoteBaseDir)
           .length > 0;
       if (!this.vaultFolderExists) {
         console.info(`remote does not have folder /${this.remoteBaseDir}`);
-        await this._postJson("/drive/special/approot/children", {
+        await this._postJson("/drive/root/children", {
           name: `${this.remoteBaseDir}`,
           folder: {},
           "@microsoft.graph.conflictBehavior": "replace",
@@ -662,9 +617,7 @@ export class FakeFsOnedrive extends FakeFs {
     const NEXT_LINK_KEY = "@odata.nextLink";
     const DELTA_LINK_KEY = "@odata.deltaLink";
 
-    let res = await this._getJson(
-      `/drive/special/approot:/${this.remoteBaseDir}:/delta`
-    );
+    let res = await this._getJson(`/drive/root:/${this.remoteBaseDir}:/delta`);
     const driveItems = res.value as DriveItem[];
     // console.debug(driveItems);
 
@@ -675,7 +628,7 @@ export class FakeFsOnedrive extends FakeFs {
 
     // lastly we should have delta link?
     if (DELTA_LINK_KEY in res) {
-      this.onedriveConfig.deltaLink = res[DELTA_LINK_KEY];
+      this.onedriveFullConfig.deltaLink = res[DELTA_LINK_KEY];
       await this.saveUpdatedConfigFunc();
     }
 
@@ -693,14 +646,14 @@ export class FakeFsOnedrive extends FakeFs {
     const DELTA_LINK_KEY = "@odata.deltaLink";
 
     const res = await this._getJson(
-      `/drive/special/approot:/${this.remoteBaseDir}:/delta`
+      `/drive/root:/${this.remoteBaseDir}:/delta`
     );
     const driveItems = res.value as DriveItem[];
     // console.debug(driveItems);
 
     // lastly we should have delta link?
     if (DELTA_LINK_KEY in res) {
-      this.onedriveConfig.deltaLink = res[DELTA_LINK_KEY];
+      this.onedriveFullConfig.deltaLink = res[DELTA_LINK_KEY];
       await this.saveUpdatedConfigFunc();
     }
 
@@ -791,7 +744,7 @@ export class FakeFsOnedrive extends FakeFs {
       mtime,
       ctime,
       key,
-      this.onedriveConfig.emptyFile
+      this.onedriveFullConfig.emptyFile
     );
   }
 
@@ -853,7 +806,7 @@ export class FakeFsOnedrive extends FakeFs {
       // ref: https://docs.microsoft.com/en-us/onedrive/developer/rest-api/api/driveitem_createuploadsession?view=odsp-graph-online
 
       // 1. create uploadSession
-      // uploadFile already starts with /drive/special/approot:/${remoteBaseDir}
+      // uploadFile already starts with /drive/root:/${remoteBaseDir}
       let playload: any = {
         item: {
           "@microsoft.graph.conflictBehavior": "replace",

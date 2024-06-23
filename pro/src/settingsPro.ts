@@ -248,6 +248,8 @@ export const generateProSettingsPart = (
   app: App,
   plugin: RemotelySavePlugin,
   saveUpdatedConfigFunc: () => Promise<any> | undefined,
+  onedriveFullAllowedToUsedDiv: HTMLDivElement,
+  onedriveFullNotShowUpHintSetting: Setting,
   googleDriveAllowedToUsedDiv: HTMLDivElement,
   googleDriveNotShowUpHintSetting: Setting,
   boxAllowedToUsedDiv: HTMLDivElement,
@@ -305,6 +307,27 @@ export const generateProSettingsPart = (
           })
         )
       );
+
+      const allowOnedriveFull =
+        plugin.settings.pro?.enabledProFeatures.filter(
+          (x) => x.featureName === "feature-box"
+        ).length === 1;
+      console.debug(
+        `allow to show up OnedriveFull settings? ${allowOnedriveFull}`
+      );
+      if (allowOnedriveFull) {
+        onedriveFullAllowedToUsedDiv.removeClass(
+          "onedrivefull-allow-to-use-hide"
+        );
+        onedriveFullNotShowUpHintSetting.settingEl.addClass(
+          "onedrivefull-allow-to-use-hide"
+        );
+      } else {
+        onedriveFullAllowedToUsedDiv.addClass("onedrivefull-allow-to-use-hide");
+        onedriveFullNotShowUpHintSetting.settingEl.removeClass(
+          "onedrivefull-allow-to-use-hide"
+        );
+      }
 
       const allowGoogleDrive =
         plugin.settings.pro?.enabledProFeatures.filter(

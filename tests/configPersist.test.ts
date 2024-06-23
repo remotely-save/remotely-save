@@ -16,6 +16,9 @@ const DEFAULT_SETTINGS: RemotelySavePluginSettings = {
   onedrive: {
     username: "test 🍎 emoji",
   } as any,
+  onedrivefull: {
+    username: "test 🍎 emoji",
+  } as any,
   webdis: {
     address: "addr",
   } as any,

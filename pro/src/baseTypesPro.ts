@@ -27,6 +27,7 @@ export const PRO_WEBSITE = global.DEFAULT_REMOTELYSAVE_WEBSITE;
 
 export type PRO_FEATURE_TYPE =
   | "feature-smart_conflict"
+  | "feature-onedrive_full"
   | "feature-google_drive"
   | "feature-box"
   | "feature-pcloud"
@@ -166,4 +167,25 @@ export interface AzureBlobStorageConfig {
   generateFolderObject: boolean;
   partsConcurrency: number;
   kind: "azureblobstorage";
+}
+
+///////////////////////////////////////////////////////////
+// Onedrive (Full)
+//////////////////////////////////////////////////////////
+
+export const COMMAND_CALLBACK_ONEDRIVEFULL = "remotely-save-cb-onedrivefull";
+
+export interface OnedriveFullConfig {
+  accessToken: string;
+  clientID: string;
+  authority: string;
+  refreshToken: string;
+  accessTokenExpiresInSeconds: number;
+  accessTokenExpiresAtTime: number;
+  deltaLink: string;
+  username: string;
+  credentialsShouldBeDeletedAtTime?: number;
+  remoteBaseDir?: string;
+  emptyFile: "skip" | "error";
+  kind: "onedrivefull";
 }

@@ -19,7 +19,8 @@ This is yet another unofficial sync plugin for Obsidian. If you like it or find 
 - Supports:
   - Amazon S3 or S3-compatible (Cloudflare R2 / BackBlaze B2 / MinIO / ...)
   - Dropbox
-  - OneDrive for personal
+  - OneDrive for personal (App Folder)
+  - OneDrive for personal (Full) (PRO feature)
   - Webdav (NextCloud / InfiniCloud / Synology webdav server / ...)
   - Webdis
   - Google Drive (GDrive) (PRO feature)
@@ -93,11 +94,11 @@ Additionally, the plugin author may occasionally visit Obsidian official forum a
 - Password-based end-to-end encryption is also supported. But please be aware that **the vault name itself is not encrypted**.
 - If you want to sync the files across multiple devices, **your vault name should be the same** while using default settings.
 
-### OneDrive for personal
+### OneDrive for personal (App Folder)
 
 - **This plugin is NOT an official Microsoft / OneDrive product.** The plugin just uses Microsoft's [OneDrive's public API](https://docs.microsoft.com/en-us/onedrive/developer/rest-api).
 - This plugin only works for "OneDrive for personal", and not works for "OneDrive for Business" (yet). See [#11](https://github.com/fyears/remotely-save/issues/11) to further details.
-- After the authorization, the plugin can read your name and email, and read and write files in your OneDrive's `/Apps/remotely-save` folder.
+- After the authorization, the plugin can read your name and email, and read and write files in your OneDrive's `/Apps/remotely-save` folder. **The free version of Remotely Save only connects to App Folder, while the PRO version can connect to the root folder in Onedrive. See below PRO part.** 
 - If you decide to authorize this plugin to connect to OneDrive, please go to plugin's settings, and choose OneDrive then follow the instructions.
 - Password-based end-to-end encryption is also supported. But please be aware that **the vault name itself is not encrypted**.
 - If you want to sync the files across multiple devices, **your vault name should be the same** while using default settings.
@@ -127,6 +128,10 @@ Additionally, the plugin author may occasionally visit Obsidian official forum a
   - [Webdis](./docs/remote_services/webdis/README.md)
 - Mostly experimental.
 - You have to setup and protect your web server by yourself.
+
+### Onedrive (Full access) (PRO feature)
+
+PRO (paid) feature "sync with Onedrive (Full)" allows users to to sync with Onedrive root folder. Tutorials and limitations are documented [here](./docs/remote_services/onedrivefull/README.md).
 
 ### Google Drive (GDrive) (PRO feature)
 

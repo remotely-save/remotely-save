@@ -2,6 +2,7 @@ import { FakeFsAzureBlobStorage } from "../pro/src/fsAzureBlobStorage";
 import { FakeFsBox } from "../pro/src/fsBox";
 import { FakeFsGoogleDrive } from "../pro/src/fsGoogleDrive";
 import { FakeFsKoofr } from "../pro/src/fsKoofr";
+import { FakeFsOnedriveFull } from "../pro/src/fsOnedriveFull";
 import { FakeFsPCloud } from "../pro/src/fsPCloud";
 import { FakeFsYandexDisk } from "../pro/src/fsYandexDisk";
 import type { RemotelySavePluginSettings } from "./baseTypes";
@@ -38,6 +39,12 @@ export function getClient(
     case "onedrive":
       return new FakeFsOnedrive(
         settings.onedrive,
+        vaultName,
+        saveUpdatedConfigFunc
+      );
+    case "onedrivefull":
+      return new FakeFsOnedriveFull(
+        settings.onedrivefull,
         vaultName,
         saveUpdatedConfigFunc
       );

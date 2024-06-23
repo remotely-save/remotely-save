@@ -1,13 +1,14 @@
 import cloneDeep from "lodash/cloneDeep";
 import QRCode from "qrcode";
 
+import { getShrinkedSettings as getShrinkedSettingsOnedriveFull } from "../pro/src/fsOnedriveFull";
 import {
   COMMAND_URI,
   type QRExportType,
   type RemotelySavePluginSettings,
   type UriParams,
 } from "./baseTypes";
-import { getShrinkedSettings } from "./fsOnedrive";
+import { getShrinkedSettings as getShrinkedSettingsOnedrive } from "./fsOnedrive";
 
 export const exportQrCodeUri = async (
   settings: RemotelySavePluginSettings,
@@ -22,6 +23,7 @@ export const exportQrCodeUri = async (
     delete settings2.s3;
     delete settings2.dropbox;
     delete settings2.onedrive;
+    delete settings2.onedrivefull;
     delete settings2.webdav;
     delete settings2.webdis;
     delete settings2.googledrive;
@@ -36,7 +38,11 @@ export const exportQrCodeUri = async (
   } else if (exportFields === "dropbox") {
     settings2 = { dropbox: cloneDeep(settings.dropbox) };
   } else if (exportFields === "onedrive") {
-    settings2 = { onedrive: getShrinkedSettings(settings.onedrive) };
+    settings2 = { onedrive: getShrinkedSettingsOnedrive(settings.onedrive) };
+  } else if (exportFields === "onedrivefull") {
+    settings2 = {
+      onedrivefull: getShrinkedSettingsOnedriveFull(settings.onedrivefull),
+    };
   } else if (exportFields === "webdav") {
     settings2 = { webdav: cloneDeep(settings.webdav) };
   } else if (exportFields === "webdis") {

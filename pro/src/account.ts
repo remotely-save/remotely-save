@@ -278,6 +278,11 @@ export const checkProRunnableAndFixInplace = async (
       service: "googledrive",
       name: "Google Drive",
     },
+    {
+      feature: "feature-onedrive_full",
+      service: "onedrivefull",
+      name: "Onedrive (Full)",
+    },
     { feature: "feature-box", service: "box", name: "Box" },
     { feature: "feature-pcloud", service: "pcloud", name: "pCloud" },
     {

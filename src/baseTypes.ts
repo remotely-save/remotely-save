@@ -8,6 +8,7 @@ import type {
   BoxConfig,
   GoogleDriveConfig,
   KoofrConfig,
+  OnedriveFullConfig,
   PCloudConfig,
   ProConfig,
   YandexDiskConfig,
@@ -31,6 +32,7 @@ export type SUPPORTED_SERVICES_TYPE =
   | "webdav"
   | "dropbox"
   | "onedrive"
+  | "onedrivefull"
   | "webdis"
   | "googledrive"
   | "box"
@@ -114,6 +116,7 @@ export interface OnedriveConfig {
   credentialsShouldBeDeletedAtTime?: number;
   remoteBaseDir?: string;
   emptyFile: "skip" | "error";
+  kind: "onedrive";
 }
 
 export interface WebdisConfig {
@@ -144,6 +147,7 @@ export interface RemotelySavePluginSettings {
   webdav: WebdavConfig;
   dropbox: DropboxConfig;
   onedrive: OnedriveConfig;
+  onedrivefull: OnedriveFullConfig;
   webdis: WebdisConfig;
   googledrive: GoogleDriveConfig;
   box: BoxConfig;

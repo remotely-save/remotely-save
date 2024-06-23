@@ -62,6 +62,25 @@
   display: none;
 }
 
+.onedrivefull-allow-to-use-hide {
+  display: none;
+}
+
+.onedrivefull-disclaimer {
+  font-weight: bold;
+}
+.onedrivefull-hide {
+  display: none;
+}
+
+.onedrivefull-auth-button-hide {
+  display: none;
+}
+
+.onedrivefull-revoke-auth-button-hide {
+  display: none;
+}
+
 .webdav-disclaimer {
   font-weight: bold;
 }
