@@ -4,14 +4,26 @@
  */
 
 import type {
+  AzureBlobStorageConfig,
   BoxConfig,
   GoogleDriveConfig,
   KoofrConfig,
+  OnedriveFullConfig,
   PCloudConfig,
   ProConfig,
   YandexDiskConfig,
 } from "../pro/src/baseTypesPro";
 import type { LangTypeAndAuto } from "./i18n";
+
+declare global {
+  var DEFAULT_DROPBOX_APP_KEY: string;
+  var DEFAULT_ONEDRIVE_CLIENT_ID: string;
+  var DEFAULT_ONEDRIVE_AUTHORITY: string;
+}
+
+export const DROPBOX_APP_KEY = global.DEFAULT_DROPBOX_APP_KEY;
+export const ONEDRIVE_CLIENT_ID = global.DEFAULT_ONEDRIVE_CLIENT_ID;
+export const ONEDRIVE_AUTHORITY = global.DEFAULT_ONEDRIVE_AUTHORITY;
 
 export const DEFAULT_CONTENT_TYPE = "application/octet-stream";
 
@@ -20,23 +32,19 @@ export type SUPPORTED_SERVICES_TYPE =
   | "webdav"
   | "dropbox"
   | "onedrive"
+  | "onedrivefull"
   | "webdis"
   | "googledrive"
   | "box"
   | "pcloud"
   | "yandexdisk"
-  | "koofr";
+  | "koofr"
+  | "azureblobstorage";
 
-export type SUPPORTED_SERVICES_TYPE_WITH_REMOTE_BASE_DIR =
-  | "webdav"
-  | "dropbox"
-  | "onedrive"
-  | "webdis"
-  | "googledrive"
-  | "box"
-  | "pcloud"
-  | "yandexdisk"
-  | "koofr";
+export type SUPPORTED_SERVICES_TYPE_WITH_REMOTE_BASE_DIR = Exclude<
+  SUPPORTED_SERVICES_TYPE,
+  "s3" | "azureblobstorage"
+>;
 
 export interface S3Config {
   s3Endpoint: string;
@@ -108,6 +116,7 @@ export interface OnedriveConfig {
   credentialsShouldBeDeletedAtTime?: number;
   remoteBaseDir?: string;
   emptyFile: "skip" | "error";
+  kind: "onedrive";
 }
 
 export interface WebdisConfig {
@@ -126,18 +135,7 @@ export type SyncDirectionType =
 
 export type CipherMethodType = "rclone-base64" | "openssl-base64" | "unknown";
 
-export type QRExportType =
-  | "basic_and_advanced"
-  | "s3"
-  | "dropbox"
-  | "onedrive"
-  | "webdav"
-  | "webdis"
-  | "googledrive"
-  | "box"
-  | "pcloud"
-  | "yandexdisk"
-  | "koofr";
+export type QRExportType = "basic_and_advanced" | SUPPORTED_SERVICES_TYPE;
 
 export interface ProfilerConfig {
   enablePrinting?: boolean;
@@ -149,12 +147,14 @@ export interface RemotelySavePluginSettings {
   webdav: WebdavConfig;
   dropbox: DropboxConfig;
   onedrive: OnedriveConfig;
+  onedrivefull: OnedriveFullConfig;
   webdis: WebdisConfig;
   googledrive: GoogleDriveConfig;
   box: BoxConfig;
   pcloud: PCloudConfig;
   yandexdisk: YandexDiskConfig;
   koofr: KoofrConfig;
+  azureblobstorage: AzureBlobStorageConfig;
 
   password: string;
   serviceType: SUPPORTED_SERVICES_TYPE;

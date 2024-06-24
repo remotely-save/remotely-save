@@ -14,8 +14,8 @@ import {
   unixTimeToStr,
 } from "../../src/misc";
 import {
-  DEFAULT_GOOGLEDRIVE_CLIENT_ID,
-  DEFAULT_GOOGLEDRIVE_CLIENT_SECRET,
+  GOOGLEDRIVE_CLIENT_ID,
+  GOOGLEDRIVE_CLIENT_SECRET,
   type GoogleDriveConfig,
 } from "./baseTypesPro";
 
@@ -103,8 +103,8 @@ export const sendRefreshTokenReq = async (refreshToken: string) => {
       "Content-Type": "application/x-www-form-urlencoded",
     },
     body: new URLSearchParams({
-      client_id: DEFAULT_GOOGLEDRIVE_CLIENT_ID ?? "",
-      client_secret: DEFAULT_GOOGLEDRIVE_CLIENT_SECRET ?? "",
+      client_id: GOOGLEDRIVE_CLIENT_ID ?? "",
+      client_secret: GOOGLEDRIVE_CLIENT_SECRET ?? "",
       grant_type: "refresh_token",
       refresh_token: refreshToken,
     }).toString(),

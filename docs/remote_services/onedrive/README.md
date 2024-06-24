@@ -1,7 +1,7 @@
-# OneDrive
+# OneDrive (App Folder)
 
 - **This plugin is NOT an official Microsoft / OneDrive product.** The plugin just uses Microsoft's [OneDrive's public API](https://docs.microsoft.com/en-us/onedrive/developer/rest-api).
-- After the authorization, the plugin can read your name and email, and read and write files in your OneDrive's `/Apps/remotely-save` folder.
+- After the authorization, the plugin can read your name and email, and read and write files in your OneDrive's `/Apps/remotely-save` folder.**The free version of Remotely Save only connects to App Folder, while the PRO version can connect to the root folder in Onedrive.** 
 - If you decide to authorize this plugin to connect to OneDrive, please go to plugin's settings, and choose OneDrive then follow the instructions.
 - Password-based end-to-end encryption is also supported. But please be aware that **the vault name itself is not encrypted**.
 - If you want to sync the files across multiple devices, **your vault name should be the same** while using default settings.
@@ -21,3 +21,11 @@ The solution is simple:
 1. Backup your vault manually.
 2. Go to onedrive website (<https://onedrive.live.com/>), and rename `/Application/Graph` to `/Application/remotely-save` (right click on the folder and you will see rename option)
 3. Come back to Obsidian and try to sync!
+
+### Empty file is not uploaded
+
+Onedrive's API does not allow uploading empty files. You can choose to skip them or raise errors in Remotely Save plugin's settings.
+
+### How to connect to root folder rather than the App Folder?
+
+As of June 2024, this is a new PRO feature. See the [doc](../onedrivefull/README.md).

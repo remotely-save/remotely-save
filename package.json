@@ -1,6 +1,6 @@
 {
   "name": "remotely-save",
-  "version": "0.5.8",
+  "version": "0.5.11",
   "description": "This is yet another sync plugin for Obsidian app.",
   "scripts": {
     "dev2": "node esbuild.config.mjs --watch",
@@ -61,6 +61,7 @@
     "@aws-sdk/signature-v4-crt": "^3.556.0",
     "@aws-sdk/types": "^3.535.0",
     "@azure/msal-node": "^2.7.0",
+    "@azure/storage-blob": "^12.23.0",
     "@fyears/rclone-crypt": "^0.0.7",
     "@fyears/tsqueue": "^1.0.1",
     "@microsoft/microsoft-graph-client": "^3.0.7",

@@ -26,10 +26,12 @@ import {
 import {
   COMMAND_CALLBACK_BOX,
   COMMAND_CALLBACK_KOOFR,
+  COMMAND_CALLBACK_ONEDRIVEFULL,
   COMMAND_CALLBACK_PCLOUD,
   COMMAND_CALLBACK_PRO,
   COMMAND_CALLBACK_YANDEXDISK,
 } from "../pro/src/baseTypesPro";
+import { DEFAULT_AZUREBLOBSTORAGE_CONFIG } from "../pro/src/fsAzureBlobStorage";
 import {
   DEFAULT_BOX_CONFIG,
   FakeFsBox,
@@ -42,6 +44,12 @@ import {
   sendAuthReq as sendAuthReqKoofr,
   setConfigBySuccessfullAuthInplace as setConfigBySuccessfullAuthInplaceKoofr,
 } from "../pro/src/fsKoofr";
+import {
+  type AccessCodeResponseSuccessfulType as AccessCodeResponseSuccessfulTypeOnedriveFull,
+  DEFAULT_ONEDRIVEFULL_CONFIG,
+  sendAuthReq as sendAuthReqOnedriveFull,
+  setConfigBySuccessfullAuthInplace as setConfigBySuccessfullAuthInplaceOnedriveFull,
+} from "../pro/src/fsOnedriveFull";
 import {
   type AuthAllowFirstRes as AuthAllowFirstResPCloud,
   DEFAULT_PCLOUD_CONFIG,
@@ -77,7 +85,7 @@ import { FakeFsEncrypt } from "./fsEncrypt";
 import { getClient } from "./fsGetter";
 import { FakeFsLocal } from "./fsLocal";
 import {
-  type AccessCodeResponseSuccessfulType,
+  type AccessCodeResponseSuccessfulType as AccessCodeResponseSuccessfulTypeOnedrive,
   DEFAULT_ONEDRIVE_CONFIG,
   sendAuthReq as sendAuthReqOnedrive,
   setConfigBySuccessfullAuthInplace as setConfigBySuccessfullAuthInplaceOnedrive,
@@ -109,12 +117,14 @@ const DEFAULT_SETTINGS: RemotelySavePluginSettings = {
   webdav: DEFAULT_WEBDAV_CONFIG,
   dropbox: DEFAULT_DROPBOX_CONFIG,
   onedrive: DEFAULT_ONEDRIVE_CONFIG,
+  onedrivefull: DEFAULT_ONEDRIVEFULL_CONFIG,
   webdis: DEFAULT_WEBDIS_CONFIG,
   googledrive: DEFAULT_GOOGLEDRIVE_CONFIG,
   box: DEFAULT_BOX_CONFIG,
   pcloud: DEFAULT_PCLOUD_CONFIG,
   yandexdisk: DEFAULT_YANDEXDISK_CONFIG,
   koofr: DEFAULT_KOOFR_CONFIG,
+  azureblobstorage: DEFAULT_AZUREBLOBSTORAGE_CONFIG,
   password: "",
   serviceType: "s3",
   currLogLevel: "info",
@@ -418,15 +428,15 @@ export default class RemotelySavePlugin extends Plugin {
     ) => {
       if (step === 1) {
         // change status to "syncing..." on statusbar
-        this.updateLastSyncMsg(s, -1, -1);
+        this.updateLastSyncMsg(s, "syncing", -1, -1);
       } else if (step === 8 && everythingOk) {
         const ts = Date.now();
         await upsertLastSuccessSyncTimeByVault(this.db, this.vaultRandomID, ts);
-        this.updateLastSyncMsg(s, ts, null);
+        this.updateLastSyncMsg(s, "not_syncing", ts, null); // hack: 'not_syncing'
       } else if (!everythingOk) {
         const ts = Date.now();
         await upsertLastFailedSyncTimeByVault(this.db, this.vaultRandomID, ts);
-        this.updateLastSyncMsg(s, null, ts); // magic number
+        this.updateLastSyncMsg(s, "not_syncing", null, ts);
       }
     };
 
@@ -725,7 +735,7 @@ export default class RemotelySavePlugin extends Plugin {
           const self = this;
           setConfigBySuccessfullAuthInplaceOnedrive(
             this.settings.onedrive,
-            rsp as AccessCodeResponseSuccessfulType,
+            rsp as AccessCodeResponseSuccessfulTypeOnedrive,
             () => self.saveSettings()
           );
 
@@ -762,6 +772,91 @@ export default class RemotelySavePlugin extends Plugin {
           new Notice(t("protocol_onedrive_connect_fail"));
           throw Error(
             t("protocol_onedrive_connect_unknown", {
+              params: JSON.stringify(inputParams),
+            })
+          );
+        }
+      }
+    );
+
+    this.registerObsidianProtocolHandler(
+      COMMAND_CALLBACK_ONEDRIVEFULL,
+      async (inputParams) => {
+        if (
+          inputParams.code !== undefined &&
+          this.oauth2Info?.verifier !== undefined
+        ) {
+          if (this.oauth2Info.helperModal !== undefined) {
+            const k = this.oauth2Info.helperModal.contentEl;
+            k.empty();
+
+            t("protocol_onedrivefull_connecting")
+              .split("\n")
+              .forEach((val) => {
+                k.createEl("p", {
+                  text: val,
+                });
+              });
+          }
+
+          const rsp = await sendAuthReqOnedriveFull(
+            this.settings.onedrivefull.clientID,
+            this.settings.onedrivefull.authority,
+            inputParams.code,
+            this.oauth2Info.verifier,
+            async (e: any) => {
+              new Notice(t("protocol_onedrivefull_connect_fail"));
+              new Notice(`${e}`);
+              return; // throw?
+            }
+          );
+
+          if ((rsp as any).error !== undefined) {
+            new Notice(`${JSON.stringify(rsp)}`);
+            throw Error(`${JSON.stringify(rsp)}`);
+          }
+
+          const self = this;
+          setConfigBySuccessfullAuthInplaceOnedriveFull(
+            this.settings.onedrivefull,
+            rsp as AccessCodeResponseSuccessfulTypeOnedriveFull,
+            () => self.saveSettings()
+          );
+
+          const client = getClient(
+            this.settings,
+            this.app.vault.getName(),
+            () => self.saveSettings()
+          );
+          this.settings.onedrivefull.username =
+            await client.getUserDisplayName();
+          await this.saveSettings();
+
+          this.oauth2Info.verifier = ""; // reset it
+          this.oauth2Info.helperModal?.close(); // close it
+          this.oauth2Info.helperModal = undefined;
+
+          this.oauth2Info.authDiv?.toggleClass(
+            "onedrivefull-auth-button-hide",
+            this.settings.onedrivefull.username !== ""
+          );
+          this.oauth2Info.authDiv = undefined;
+
+          this.oauth2Info.revokeAuthSetting?.setDesc(
+            t("protocol_onedrivefull_connect_succ_revoke", {
+              username: this.settings.onedrivefull.username,
+            })
+          );
+          this.oauth2Info.revokeAuthSetting = undefined;
+          this.oauth2Info.revokeDiv?.toggleClass(
+            "onedrivefull-revoke-auth-button-hide",
+            this.settings.onedrivefull.username === ""
+          );
+          this.oauth2Info.revokeDiv = undefined;
+        } else {
+          new Notice(t("protocol_onedrivefull_connect_fail"));
+          throw Error(
+            t("protocol_onedrivefull_connect_unknown", {
               params: JSON.stringify(inputParams),
             })
           );
@@ -1086,17 +1181,21 @@ export default class RemotelySavePlugin extends Plugin {
       this.statusBarElement = statusBarItem.createEl("span");
       this.statusBarElement.setAttribute("data-tooltip-position", "top");
 
-      this.updateLastSyncMsg(
-        undefined,
-        await getLastSuccessSyncTimeByVault(this.db, this.vaultRandomID),
-        await getLastFailedSyncTimeByVault(this.db, this.vaultRandomID)
-      );
+      if (!this.isSyncing) {
+        this.updateLastSyncMsg(
+          undefined,
+          "not_syncing",
+          await getLastSuccessSyncTimeByVault(this.db, this.vaultRandomID),
+          await getLastFailedSyncTimeByVault(this.db, this.vaultRandomID)
+        );
+      }
       // update statusbar text every 30 seconds
       this.registerInterval(
         window.setInterval(async () => {
           if (!this.isSyncing) {
             this.updateLastSyncMsg(
               undefined,
+              "not_syncing",
               await getLastSuccessSyncTimeByVault(this.db, this.vaultRandomID),
               await getLastFailedSyncTimeByVault(this.db, this.vaultRandomID)
             );
@@ -1237,12 +1336,14 @@ export default class RemotelySavePlugin extends Plugin {
       cloneDeep(DEFAULT_SETTINGS),
       messyConfigToNormal(await this.loadData())
     );
+
     if (this.settings.dropbox.clientID === "") {
       this.settings.dropbox.clientID = DEFAULT_SETTINGS.dropbox.clientID;
     }
     if (this.settings.dropbox.remoteBaseDir === undefined) {
       this.settings.dropbox.remoteBaseDir = "";
     }
+
     if (this.settings.onedrive.clientID === "") {
       this.settings.onedrive.clientID = DEFAULT_SETTINGS.onedrive.clientID;
     }
@@ -1255,6 +1356,14 @@ export default class RemotelySavePlugin extends Plugin {
     if (this.settings.onedrive.emptyFile === undefined) {
       this.settings.onedrive.emptyFile = "skip";
     }
+    if (this.settings.onedrive.kind === undefined) {
+      this.settings.onedrive.kind = "onedrive";
+    }
+
+    if (this.settings.onedrivefull === undefined) {
+      this.settings.onedrivefull = DEFAULT_ONEDRIVEFULL_CONFIG;
+    }
+
     if (this.settings.webdav.manualRecursive === undefined) {
       this.settings.webdav.manualRecursive = true;
     }
@@ -1376,6 +1485,10 @@ export default class RemotelySavePlugin extends Plugin {
       this.settings.koofr = DEFAULT_KOOFR_CONFIG;
     }
 
+    if (this.settings.azureblobstorage === undefined) {
+      this.settings.azureblobstorage = DEFAULT_AZUREBLOBSTORAGE_CONFIG;
+    }
+
     await this.saveSettings();
   }
 
@@ -1441,6 +1554,16 @@ export default class RemotelySavePlugin extends Plugin {
     ) {
       onedriveExpired = true;
       this.settings.onedrive = cloneDeep(DEFAULT_ONEDRIVE_CONFIG);
+      needSave = true;
+    }
+
+    let onedriveFullExpired = false;
+    if (
+      this.settings.onedrivefull.refreshToken !== "" &&
+      current >= this.settings!.onedrivefull!.credentialsShouldBeDeletedAtTime!
+    ) {
+      onedriveFullExpired = true;
+      this.settings.onedrivefull = cloneDeep(DEFAULT_ONEDRIVEFULL_CONFIG);
       needSave = true;
     }
 
@@ -1512,7 +1635,13 @@ export default class RemotelySavePlugin extends Plugin {
     }
     if (onedriveExpired) {
       new Notice(
-        `${this.manifest.name}: You haven't manually auth OneDrive for many days, you need to re-auth it again.`,
+        `${this.manifest.name}: You haven't manually auth OneDrive (App Folder) for many days, you need to re-auth it again.`,
+        6000
+      );
+    }
+    if (onedriveFullExpired) {
+      new Notice(
+        `${this.manifest.name}: You haven't manually auth OneDrive (Full) for many days, you need to re-auth it again.`,
         6000
       );
     }
@@ -1792,6 +1921,7 @@ export default class RemotelySavePlugin extends Plugin {
 
   updateLastSyncMsg(
     s: SyncTriggerSourceType | undefined,
+    syncStatus: "not_syncing" | "syncing",
     lastSuccessSyncMillis: number | null | undefined,
     lastFailedSyncMillis: number | null | undefined
   ) {
@@ -1814,9 +1944,7 @@ export default class RemotelySavePlugin extends Plugin {
     const isSuccess =
       (lastSuccessSyncMillis ?? -999) >= (lastFailedSyncMillis ?? -999);
 
-    if (this.isSyncing) {
-      // magic number
-      // otherwise how can we know we are syncing??
+    if (syncStatus === "syncing") {
       lastSyncMsg =
         getStatusBarShortMsgFromSyncSource(t, s!) + t("statusbar_syncing");
     } else if (inputTs > 0) {

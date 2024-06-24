@@ -248,6 +248,8 @@ export const generateProSettingsPart = (
   app: App,
   plugin: RemotelySavePlugin,
   saveUpdatedConfigFunc: () => Promise<any> | undefined,
+  onedriveFullAllowedToUsedDiv: HTMLDivElement,
+  onedriveFullNotShowUpHintSetting: Setting,
   googleDriveAllowedToUsedDiv: HTMLDivElement,
   googleDriveNotShowUpHintSetting: Setting,
   boxAllowedToUsedDiv: HTMLDivElement,
@@ -257,7 +259,9 @@ export const generateProSettingsPart = (
   yandexDiskAllowedToUsedDiv: HTMLDivElement,
   yandexDiskNotShowUpHintSetting: Setting,
   koofrAllowedToUsedDiv: HTMLDivElement,
-  koofrNotShowUpHintSetting: Setting
+  koofrNotShowUpHintSetting: Setting,
+  azureBlobStorageAllowedToUsedDiv: HTMLDivElement,
+  azureBlobStorageNotShowUpHintSetting: Setting
 ) => {
   proDiv
     .createEl("h2", { text: t("settings_pro") })
@@ -303,6 +307,27 @@ export const generateProSettingsPart = (
           })
         )
       );
+
+      const allowOnedriveFull =
+        plugin.settings.pro?.enabledProFeatures.filter(
+          (x) => x.featureName === "feature-box"
+        ).length === 1;
+      console.debug(
+        `allow to show up OnedriveFull settings? ${allowOnedriveFull}`
+      );
+      if (allowOnedriveFull) {
+        onedriveFullAllowedToUsedDiv.removeClass(
+          "onedrivefull-allow-to-use-hide"
+        );
+        onedriveFullNotShowUpHintSetting.settingEl.addClass(
+          "onedrivefull-allow-to-use-hide"
+        );
+      } else {
+        onedriveFullAllowedToUsedDiv.addClass("onedrivefull-allow-to-use-hide");
+        onedriveFullNotShowUpHintSetting.settingEl.removeClass(
+          "onedrivefull-allow-to-use-hide"
+        );
+      }
 
       const allowGoogleDrive =
         plugin.settings.pro?.enabledProFeatures.filter(
@@ -386,6 +411,29 @@ export const generateProSettingsPart = (
         koofrAllowedToUsedDiv.addClass("koofr-allow-to-use-hide");
         koofrNotShowUpHintSetting.settingEl.removeClass(
           "koofr-allow-to-use-hide"
+        );
+      }
+
+      const allowAzureBlobStorage =
+        plugin.settings.pro?.enabledProFeatures.filter(
+          (x) => x.featureName === "feature-azure_blob_storage"
+        ).length === 1;
+      console.debug(
+        `allow to show up AzureBlobStorage settings? ${allowAzureBlobStorage}`
+      );
+      if (allowAzureBlobStorage) {
+        azureBlobStorageAllowedToUsedDiv.removeClass(
+          "azureblobstorage-allow-to-use-hide"
+        );
+        azureBlobStorageNotShowUpHintSetting.settingEl.addClass(
+          "azureBlobStorage-allow-to-use-hide"
+        );
+      } else {
+        azureBlobStorageAllowedToUsedDiv.addClass(
+          "azureblobstorage-allow-to-use-hide"
+        );
+        azureBlobStorageNotShowUpHintSetting.settingEl.removeClass(
+          "azureblobstorage-allow-to-use-hide"
         );
       }
 

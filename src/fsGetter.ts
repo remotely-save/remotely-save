@@ -1,6 +1,8 @@
+import { FakeFsAzureBlobStorage } from "../pro/src/fsAzureBlobStorage";
 import { FakeFsBox } from "../pro/src/fsBox";
 import { FakeFsGoogleDrive } from "../pro/src/fsGoogleDrive";
 import { FakeFsKoofr } from "../pro/src/fsKoofr";
+import { FakeFsOnedriveFull } from "../pro/src/fsOnedriveFull";
 import { FakeFsPCloud } from "../pro/src/fsPCloud";
 import { FakeFsYandexDisk } from "../pro/src/fsYandexDisk";
 import type { RemotelySavePluginSettings } from "./baseTypes";
@@ -40,6 +42,12 @@ export function getClient(
         vaultName,
         saveUpdatedConfigFunc
       );
+    case "onedrivefull":
+      return new FakeFsOnedriveFull(
+        settings.onedrivefull,
+        vaultName,
+        saveUpdatedConfigFunc
+      );
     case "webdis":
       return new FakeFsWebdis(
         settings.webdis,
@@ -68,6 +76,8 @@ export function getClient(
       );
     case "koofr":
       return new FakeFsKoofr(settings.koofr, vaultName, saveUpdatedConfigFunc);
+    case "azureblobstorage":
+      return new FakeFsAzureBlobStorage(settings.azureblobstorage, vaultName);
     default:
       throw Error(`cannot init client for serviceType=${settings.serviceType}`);
   }

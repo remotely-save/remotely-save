@@ -17,6 +17,7 @@ The list is for information purposes only.
 | [filebase](https://filebase.com/) | Yes | Yes | | |
 | QingStor 青云 | ? | ? | | |
 | [MinIO](https://min.io/) | Yes | Yes | | |
+| Azure Blob Storage | Yes (PRO) | | | Yes (PRO) |
 | [WsgiDAV](https://github.com/mar10/wsgidav) | Yes | | Yes | |
 | [Nginx `ngx_http_dav_module`](http://nginx.org/en/docs/http/ngx_http_dav_module.html) | Yes | | Yes | |
 | NextCloud | Yes | | Yes | |

@@ -21,9 +21,11 @@ import type {
 } from "./baseTypes";
 
 import cloneDeep from "lodash/cloneDeep";
+import { generateAzureBlobStorageSettingsPart } from "../pro/src/settingsAzureBlobStorage";
 import { generateBoxSettingsPart } from "../pro/src/settingsBox";
 import { generateGoogleDriveSettingsPart } from "../pro/src/settingsGoogleDrive";
 import { generateKoofrSettingsPart } from "../pro/src/settingsKoofr";
+import { generateOnedriveFullSettingsPart } from "../pro/src/settingsOnedriveFull";
 import { generatePCloudSettingsPart } from "../pro/src/settingsPCloud";
 import { generateProSettingsPart } from "../pro/src/settingsPro";
 import { generateYandexDiskSettingsPart } from "../pro/src/settingsYandexDisk";
@@ -290,7 +292,7 @@ export class ChangeRemoteBaseDirModal extends Modal {
  * s3 is special and do not necessarily the same as others
  * thus a new Modal here
  */
-class ChangeRemotePrefixModal extends Modal {
+class ChangeS3RemotePrefixModal extends Modal {
   readonly plugin: RemotelySavePlugin;
   readonly newRemotePrefix: string;
   constructor(app: App, plugin: RemotelySavePlugin, newRemotePrefix: string) {
@@ -306,8 +308,8 @@ class ChangeRemotePrefixModal extends Modal {
       return this.plugin.i18n.t(x, vars);
     };
 
-    contentEl.createEl("h2", { text: t("modal_remoteprefix_title") });
-    t("modal_remoteprefix_shortdesc")
+    contentEl.createEl("h2", { text: t("modal_remoteprefix_s3_title") });
+    t("modal_remoteprefix_s3_shortdesc")
       .split("\n")
       .forEach((val, idx) => {
         contentEl.createEl("p", {
@@ -316,7 +318,7 @@ class ChangeRemotePrefixModal extends Modal {
       });
 
     contentEl.createEl("p", {
-      text: t("modal_remoteprefix_tosave", { prefix: this.newRemotePrefix }),
+      text: t("modal_remoteprefix_s3_tosave", { prefix: this.newRemotePrefix }),
     });
 
     if (
@@ -325,12 +327,12 @@ class ChangeRemotePrefixModal extends Modal {
     ) {
       new Setting(contentEl)
         .addButton((button) => {
-          button.setButtonText(t("modal_remoteprefix_secondconfirm_empty"));
+          button.setButtonText(t("modal_remoteprefix_s3_secondconfirm_empty"));
           button.onClick(async () => {
             // in the settings, the value is reset to the special case ""
             this.plugin.settings.s3.remotePrefix = "";
             await this.plugin.saveSettings();
-            new Notice(t("modal_remoteprefix_notice"));
+            new Notice(t("modal_remoteprefix_s3_notice"));
             this.close();
           });
           button.setClass("remoteprefix-second-confirm");
@@ -344,14 +346,14 @@ class ChangeRemotePrefixModal extends Modal {
     } else {
       new Setting(contentEl)
         .addButton((button) => {
-          button.setButtonText(t("modal_remoteprefix_secondconfirm_change"));
+          button.setButtonText(t("modal_remoteprefix_s3_secondconfirm_change"));
           button.onClick(async () => {
             this.plugin.settings.s3.remotePrefix = this.newRemotePrefix;
             await this.plugin.saveSettings();
-            new Notice(t("modal_remoteprefix_notice"));
+            new Notice(t("modal_remoteprefix_s3_notice"));
             this.close();
           });
-          button.setClass("remoteprefix-second-confirm");
+          button.setClass("remoteprefix-s3-second-confirm");
         })
         .addButton((button) => {
           button.setButtonText(t("goback"));
@@ -801,7 +803,7 @@ const getEyesElements = () => {
   };
 };
 
-const wrapTextWithPasswordHide = (text: TextComponent) => {
+export const wrapTextWithPasswordHide = (text: TextComponent) => {
   const { eye, eyeOff } = getEyesElements();
   const hider = text.inputEl.insertAdjacentElement("afterend", createSpan())!;
   // the init type of hider is "hidden" === eyeOff === password
@@ -1054,8 +1056,8 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
 
     let newS3RemotePrefix = this.plugin.settings.s3.remotePrefix || "";
     new Setting(s3Div)
-      .setName(t("settings_remoteprefix"))
-      .setDesc(t("settings_remoteprefix_desc"))
+      .setName(t("settings_remoteprefix_s3"))
+      .setDesc(t("settings_remoteprefix_s3_desc"))
       .addText((text) =>
         text
           .setPlaceholder("")
@@ -1067,7 +1069,7 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
       .addButton((button) => {
         button.setButtonText(t("confirm"));
         button.onClick(() => {
-          new ChangeRemotePrefixModal(
+          new ChangeS3RemotePrefixModal(
             this.app,
             this.plugin,
             simpleTransRemotePrefix(newS3RemotePrefix.trim())
@@ -1815,6 +1817,22 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
       });
 
     //////////////////////////////////////////////////
+    // below for Onedrive (Full)
+    //////////////////////////////////////////////////
+
+    const {
+      onedriveFullDiv,
+      onedriveFullAllowedToUsedDiv,
+      onedriveFullNotShowUpHintSetting,
+    } = generateOnedriveFullSettingsPart(
+      containerEl,
+      t,
+      this.app,
+      this.plugin,
+      () => this.plugin.saveSettings()
+    );
+
+    //////////////////////////////////////////////////
     // below for googledrive
     //////////////////////////////////////////////////
 
@@ -1874,6 +1892,22 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
       );
 
     //////////////////////////////////////////////////
+    // below for Azure Blob Storage
+    //////////////////////////////////////////////////
+
+    const {
+      azureBlobStorageDiv,
+      azureBlobStorageAllowedToUsedDiv,
+      azureBlobStorageNotShowUpHintSetting,
+    } = generateAzureBlobStorageSettingsPart(
+      containerEl,
+      t,
+      this.app,
+      this.plugin,
+      () => this.plugin.saveSettings()
+    );
+
+    //////////////////////////////////////////////////
     // below for general chooser (part 2/2)
     //////////////////////////////////////////////////
 
@@ -1887,6 +1921,10 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
         dropdown.addOption("dropbox", t("settings_chooseservice_dropbox"));
         dropdown.addOption("webdav", t("settings_chooseservice_webdav"));
         dropdown.addOption("onedrive", t("settings_chooseservice_onedrive"));
+        dropdown.addOption(
+          "onedrivefull",
+          t("settings_chooseservice_onedrivefull")
+        );
         dropdown.addOption("webdis", t("settings_chooseservice_webdis"));
         dropdown.addOption(
           "googledrive",
@@ -1899,6 +1937,10 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
           t("settings_chooseservice_yandexdisk")
         );
         dropdown.addOption("koofr", t("settings_chooseservice_koofr"));
+        dropdown.addOption(
+          "azureblobstorage",
+          t("settings_chooseservice_azureblobstorage")
+        );
 
         dropdown
           .setValue(this.plugin.settings.serviceType)
@@ -1915,6 +1957,10 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
             onedriveDiv.toggleClass(
               "onedrive-hide",
               this.plugin.settings.serviceType !== "onedrive"
+            );
+            onedriveFullDiv.toggleClass(
+              "onedrivefull-hide",
+              this.plugin.settings.serviceType !== "onedrivefull"
             );
             webdavDiv.toggleClass(
               "webdav-hide",
@@ -1944,6 +1990,11 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
               "koofr-hide",
               this.plugin.settings.serviceType !== "koofr"
             );
+            azureBlobStorageDiv.toggleClass(
+              "azureblobstorage-hide",
+              this.plugin.settings.serviceType !== "azureblobstorage"
+            );
+
             await this.plugin.saveSettings();
           });
       });
@@ -2140,7 +2191,7 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
               this.plugin.vaultRandomID,
               -1
             );
-            this.plugin.updateLastSyncMsg(undefined, null, null);
+            this.plugin.updateLastSyncMsg(undefined, "not_syncing", null, null);
             new Notice(t("settings_resetstatusbar_notice"));
           });
         });
@@ -2494,6 +2545,16 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
         });
       })
       .addButton(async (button) => {
+        button.setButtonText(t("settings_export_onedrivefull_button"));
+        button.onClick(async () => {
+          new ExportSettingsQrCodeModal(
+            this.app,
+            this.plugin,
+            "onedrivefull"
+          ).open();
+        });
+      })
+      .addButton(async (button) => {
         button.setButtonText(t("settings_export_webdav_button"));
         button.onClick(async () => {
           new ExportSettingsQrCodeModal(this.app, this.plugin, "webdav").open();
@@ -2541,6 +2602,16 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
         button.setButtonText(t("settings_export_koofr_button"));
         button.onClick(async () => {
           new ExportSettingsQrCodeModal(this.app, this.plugin, "koofr").open();
+        });
+      })
+      .addButton(async (button) => {
+        button.setButtonText(t("settings_export_azureblobstorage_button"));
+        button.onClick(async () => {
+          new ExportSettingsQrCodeModal(
+            this.app,
+            this.plugin,
+            "azureblobstorage"
+          ).open();
         });
       });
 
@@ -2607,6 +2678,8 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
       this.app,
       this.plugin,
       () => this.plugin.saveSettings(),
+      onedriveFullAllowedToUsedDiv,
+      onedriveFullNotShowUpHintSetting,
       googleDriveAllowedToUsedDiv,
       googleDriveNotShowUpHintSetting,
       boxAllowedToUsedDiv,
@@ -2616,7 +2689,9 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
       yandexDiskAllowedToUsedDiv,
       yandexDiskNotShowUpHintSetting,
       koofrAllowedToUsedDiv,
-      koofrNotShowUpHintSetting
+      koofrNotShowUpHintSetting,
+      azureBlobStorageAllowedToUsedDiv,
+      azureBlobStorageNotShowUpHintSetting
     );
 
     //////////////////////////////////////////////////
