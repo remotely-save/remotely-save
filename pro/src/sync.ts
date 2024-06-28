@@ -296,7 +296,8 @@ const getSyncPlanInplace = async (
   syncDirection: SyncDirectionType,
   profiler: Profiler | undefined,
   settings: RemotelySavePluginSettings,
-  triggerSource: SyncTriggerSourceType
+  triggerSource: SyncTriggerSourceType,
+  configDir: string
 ) => {
   profiler?.addIndent();
   profiler?.insert("getSyncPlanInplace: enter");
@@ -582,7 +583,11 @@ const getSyncPlanInplace = async (
             if (prevSync === undefined) {
               // Didn't exist means both are new
               if (syncDirection === "bidirectional") {
-                if (conflictAction === "keep_newer") {
+                if (
+                  conflictAction === "keep_newer" ||
+                  (conflictAction === "smart_conflict" &&
+                    key.startsWith(`${configDir}/`))
+                ) {
                   if (
                     (local.mtimeCli ?? local.mtimeSvr ?? 0) >=
                     (remote.mtimeCli ?? remote.mtimeSvr ?? 0)
@@ -640,7 +645,11 @@ const getSyncPlanInplace = async (
             } else {
               // Both exist but don't compare means both are modified
               if (syncDirection === "bidirectional") {
-                if (conflictAction === "keep_newer") {
+                if (
+                  conflictAction === "keep_newer" ||
+                  (conflictAction === "smart_conflict" &&
+                    key.startsWith(`${configDir}/`))
+                ) {
                   if (
                     (local.mtimeCli ?? local.mtimeSvr ?? 0) >=
                     (remote.mtimeCli ?? remote.mtimeSvr ?? 0)
@@ -1712,7 +1721,8 @@ export async function syncer(
       settings.syncDirection ?? "bidirectional",
       profiler,
       settings,
-      triggerSource
+      triggerSource,
+      configDir
     );
     console.debug(`mixedEntityMappings:`);
     console.debug(mixedEntityMappings); // for debugging
