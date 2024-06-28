@@ -264,6 +264,9 @@ const fromDriveItemToEntity = (x: DriveItem, remoteBaseDir: string): Entity => {
   // another possibile prefix
   const FOURTH_COMMON_PREFIX_RAW = `/drive/items/`;
 
+  // when to use decode?
+  const remoteBaseDirEncoded = encodeURIComponent(remoteBaseDir);
+
   if (
     x.parentReference === undefined ||
     x.parentReference === null ||
@@ -279,6 +282,8 @@ const fromDriveItemToEntity = (x: DriveItem, remoteBaseDir: string): Entity => {
     SECOND_COMMON_PREFIX_REGEX
   );
   const matchThirdPrefixRes = fullPathOriginal.match(THIRD_COMMON_PREFIX_REGEX);
+
+  // first
   if (
     matchFirstPrefixRes !== null &&
     fullPathOriginal.startsWith(`${matchFirstPrefixRes[0]}${remoteBaseDir}`)
@@ -286,24 +291,68 @@ const fromDriveItemToEntity = (x: DriveItem, remoteBaseDir: string): Entity => {
     const foundPrefix = `${matchFirstPrefixRes[0]}${remoteBaseDir}`;
     key = fullPathOriginal.substring(foundPrefix.length + 1);
   } else if (
+    matchFirstPrefixRes !== null &&
+    fullPathOriginal.startsWith(
+      `${matchFirstPrefixRes[0]}${remoteBaseDirEncoded}`
+    )
+  ) {
+    const foundPrefix = `${matchFirstPrefixRes[0]}${remoteBaseDirEncoded}`;
+    key = fullPathOriginal.substring(foundPrefix.length + 1);
+  }
+
+  // fifth
+  else if (
     matchFifthPrefixRes !== null &&
     fullPathOriginal.startsWith(`${matchFifthPrefixRes[0]}${remoteBaseDir}`)
   ) {
     const foundPrefix = `${matchFifthPrefixRes[0]}${remoteBaseDir}`;
     key = fullPathOriginal.substring(foundPrefix.length + 1);
   } else if (
+    matchFifthPrefixRes !== null &&
+    fullPathOriginal.startsWith(
+      `${matchFifthPrefixRes[0]}${remoteBaseDirEncoded}`
+    )
+  ) {
+    const foundPrefix = `${matchFifthPrefixRes[0]}${remoteBaseDirEncoded}`;
+    key = fullPathOriginal.substring(foundPrefix.length + 1);
+  }
+
+  // second
+  else if (
     matchSecondPrefixRes !== null &&
     fullPathOriginal.startsWith(`${matchSecondPrefixRes[0]}${remoteBaseDir}`)
   ) {
     const foundPrefix = `${matchSecondPrefixRes[0]}${remoteBaseDir}`;
     key = fullPathOriginal.substring(foundPrefix.length + 1);
   } else if (
+    matchSecondPrefixRes !== null &&
+    fullPathOriginal.startsWith(
+      `${matchSecondPrefixRes[0]}${remoteBaseDirEncoded}`
+    )
+  ) {
+    const foundPrefix = `${matchSecondPrefixRes[0]}${remoteBaseDirEncoded}`;
+    key = fullPathOriginal.substring(foundPrefix.length + 1);
+  }
+
+  // third
+  else if (
     matchThirdPrefixRes !== null &&
     fullPathOriginal.startsWith(`${matchThirdPrefixRes[0]}${remoteBaseDir}`)
   ) {
     const foundPrefix = `${matchThirdPrefixRes[0]}${remoteBaseDir}`;
     key = fullPathOriginal.substring(foundPrefix.length + 1);
-  } else if (x.parentReference.path.startsWith(FOURTH_COMMON_PREFIX_RAW)) {
+  } else if (
+    matchThirdPrefixRes !== null &&
+    fullPathOriginal.startsWith(
+      `${matchThirdPrefixRes[0]}${remoteBaseDirEncoded}`
+    )
+  ) {
+    const foundPrefix = `${matchThirdPrefixRes[0]}${remoteBaseDirEncoded}`;
+    key = fullPathOriginal.substring(foundPrefix.length + 1);
+  }
+
+  // fourth
+  else if (x.parentReference.path.startsWith(FOURTH_COMMON_PREFIX_RAW)) {
     // it's something like
     // /drive/items/<some_id>!<another_id>:/${remoteBaseDir}/<subfolder>
     // with uri encoded!
@@ -321,16 +370,27 @@ const fromDriveItemToEntity = (x: DriveItem, remoteBaseDir: string): Entity => {
       key = x.name;
     } else {
       throw Error(
-        `we meet file/folder and do not know how to deal with it:\n${constructFromDriveItemToEntityError(
-          x
-        )}`
+        `file/folder with /drive/items/, no idea how to deal with it:
+fullPathOriginal=${fullPathOriginal}
+matchFirstPrefixRes=${matchFirstPrefixRes}
+matchFifthPrefixRes=${matchFifthPrefixRes}
+matchSecondPrefixRes=${matchSecondPrefixRes}
+matchThirdPrefixRes=${matchThirdPrefixRes}
+${constructFromDriveItemToEntityError(x)}`
       );
     }
-  } else {
+  }
+
+  // others
+  else {
     throw Error(
-      `we meet file/folder and do not know how to deal with it:\n${constructFromDriveItemToEntityError(
-        x
-      )}`
+      `file/folder, no idea how to deal with it without known prefix:
+fullPathOriginal=${fullPathOriginal}
+matchFirstPrefixRes=${matchFirstPrefixRes}
+matchFifthPrefixRes=${matchFifthPrefixRes}
+matchSecondPrefixRes=${matchSecondPrefixRes}
+matchThirdPrefixRes=${matchThirdPrefixRes}
+${constructFromDriveItemToEntityError(x)}`
     );
   }
 
