@@ -986,11 +986,24 @@ export class FakeFsOnedrive extends FakeFs {
       ).arrayBuffer;
       return content;
     } else {
-      // cannot set no-cache here, will have cors error
-      const content = await (
-        await fetch(downloadUrl, { cache: "no-store" })
-      ).arrayBuffer();
-      return content;
+      // so strange, sometimes (!!!) 
+      // we cannot download the file because of CORS
+      try {
+        // cannot set no-cache here, will have cors error
+        const content = await (
+          await fetch(downloadUrl, { cache: "no-store" })
+        ).arrayBuffer();
+        return content;
+      } catch (e) {
+        // let's try again to bypass the CORS
+        const content = (
+          await requestUrl({
+            url: downloadUrl,
+            headers: { "Cache-Control": "no-cache" },
+          })
+        ).arrayBuffer;
+        return content;
+      }
     }
   }
 
