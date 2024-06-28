@@ -58,7 +58,7 @@
   "statusbar_time_days": "{{time}} 天前",
   "statusbar_time_hours": "{{time}} 小时前",
   "statusbar_time_minutes": "{{time}} 分钟前",
-  "statusbar_time_lessminute": "1 分钟之内",
+  "statusbar_time_lessminute": "1 分钟内",
   "statusbar_time_now": "刚刚",
   "statusbar_syncing": "正在同步",
   "statusbar_lastsync_label": "日期：{{date}}",
