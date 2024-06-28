@@ -36,7 +36,7 @@ import {
 } from "../../src/misc";
 import type { Profiler } from "../../src/profiler";
 import { checkProRunnableAndFixInplace } from "./account";
-import { duplicateFile, isMergable, mergeFile } from "./conflictLogic";
+import { isMergable, mergeFile, tryDuplicateFile } from "./conflictLogic";
 import {
   clearFileContentHistoryByVaultAndProfile,
   getFileContentHistoryByVaultAndProfile,
@@ -1351,27 +1351,31 @@ const dispatchOperationToActualV3 = async (
         r.key
       );
       const mtimeCli = (await fsLocal.stat(r.key)).mtimeCli!;
-      const { upload, download } = await duplicateFile(
+      await tryDuplicateFile(
         r.key,
         fsLocal,
         fsEncrypt,
         async (upload) => {
-          // TODO: abstract away the dirty hack
-          fullfillMTimeOfRemoteEntityInplace(upload, mtimeCli);
-          await upsertPrevSyncRecordByVaultAndProfile(
-            db,
-            vaultRandomID,
-            profileID,
-            upload
-          );
+          if (upload !== undefined) {
+            // TODO: abstract away the dirty hack
+            fullfillMTimeOfRemoteEntityInplace(upload, mtimeCli);
+            await upsertPrevSyncRecordByVaultAndProfile(
+              db,
+              vaultRandomID,
+              profileID,
+              upload
+            );
+          }
         },
         async (download) => {
-          await upsertPrevSyncRecordByVaultAndProfile(
-            db,
-            vaultRandomID,
-            profileID,
-            download
-          );
+          if (download !== undefined) {
+            await upsertPrevSyncRecordByVaultAndProfile(
+              db,
+              vaultRandomID,
+              profileID,
+              download
+            );
+          }
         }
       );
     }
