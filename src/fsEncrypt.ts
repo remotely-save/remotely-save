@@ -91,7 +91,8 @@ export class FakeFsEncrypt extends FakeFs {
       this.password !== "" ? method : "no password"
     })`;
 
-    if (method === "rclone-base64") {
+    if (this.password !== "" && method === "rclone-base64") {
+      // no need to init if no password or not rclone
       this.cipherRClone = new rclone.CipherRclone(password, 5);
     }
   }
@@ -137,6 +138,8 @@ export class FakeFsEncrypt extends FakeFs {
         };
       }
     } else {
+      // the config has a password
+
       if (this.method === "unknown") {
         return {
           ok: false,
