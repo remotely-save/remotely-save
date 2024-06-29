@@ -267,7 +267,7 @@
   "settings_chooseservice_s3": "S3 或相容 S3 的服務",
   "settings_chooseservice_dropbox": "Dropbox",
   "settings_chooseservice_webdav": "Webdav",
-  "settings_chooseservice_onedrive": "OneDrive（個人版）（App Folder）",
+  "settings_chooseservice_onedrive": "OneDrive（個人版）",
   "settings_chooseservice_webdis": "Webdis (an HTTP interface for Redis®)",
   "settings_adv": "進階設定",
   "settings_concurrency": "並行度",

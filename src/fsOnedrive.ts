@@ -986,7 +986,7 @@ export class FakeFsOnedrive extends FakeFs {
       ).arrayBuffer;
       return content;
     } else {
-      // so strange, sometimes (!!!) 
+      // so strange, sometimes (!!!)
       // we cannot download the file because of CORS
       try {
         // cannot set no-cache here, will have cors error

@@ -1921,14 +1921,21 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
         dropdown.addOption("dropbox", t("settings_chooseservice_dropbox"));
         dropdown.addOption("webdav", t("settings_chooseservice_webdav"));
         dropdown.addOption("onedrive", t("settings_chooseservice_onedrive"));
-        dropdown.addOption(
-          "onedrivefull",
-          t("settings_chooseservice_onedrivefull")
-        );
         dropdown.addOption("webdis", t("settings_chooseservice_webdis"));
+
+        dropdown.addOption("separator line", "-----");
+        (dropdown.selectEl.lastChild as HTMLElement).setAttribute(
+          "disabled",
+          "disabled"
+        );
+
         dropdown.addOption(
           "googledrive",
           t("settings_chooseservice_googledrive")
+        );
+        dropdown.addOption(
+          "onedrivefull",
+          t("settings_chooseservice_onedrivefull")
         );
         dropdown.addOption("box", t("settings_chooseservice_box"));
         dropdown.addOption("pcloud", t("settings_chooseservice_pcloud"));
