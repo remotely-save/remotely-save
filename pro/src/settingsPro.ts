@@ -310,7 +310,7 @@ export const generateProSettingsPart = (
 
       const allowOnedriveFull =
         plugin.settings.pro?.enabledProFeatures.filter(
-          (x) => x.featureName === "feature-box"
+          (x) => x.featureName === "feature-onedrive_full"
         ).length === 1;
       console.debug(
         `allow to show up OnedriveFull settings? ${allowOnedriveFull}`
