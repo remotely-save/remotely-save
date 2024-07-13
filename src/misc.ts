@@ -467,6 +467,21 @@ export const isSpecialFolderNameToSkip = (
       return true;
     }
   }
+
+  // microsoft tmp files...
+  const p = x.split("/");
+  if (p.length > 0) {
+    const f = p[p.length - 1]; // file name
+    if (f.startsWith("~$")) {
+      const suffixList = ["doc", "docx", "ppt", "pptx", "xls", "xlsx"];
+      for (const suffix of suffixList) {
+        if (f.endsWith(`.${suffix}`)) {
+          return true;
+        }
+      }
+    }
+  }
+
   return false;
 };
 
