@@ -42,5 +42,5 @@ filename_encoding = base64 # don't forget this!!!
 You can use the `mount` command to view and see the files in file explorer! On Windows, the command should like this (the remote vault is mounted to drive `X:`):
 
 ```bash
-rclone mount webdav1crypt: X: --network-mode
+rclone mount webdav1crypt: X: --network-mode --vfs-cache-mode writes
 ```
