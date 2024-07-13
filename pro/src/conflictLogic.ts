@@ -73,6 +73,18 @@ function getLCSText(a: string, b: string) {
  * @returns
  */
 function twoWayMerge(a: string, b: string): string {
+  const aa = a.trim();
+  const bb = b.trim();
+  if (aa === "" && bb === "") {
+    return aa.length >= bb.length ? a : b;
+  }
+  if (bb === "") {
+    return a;
+  }
+  if (aa === "") {
+    return b;
+  }
+
   // const c = getLCSText(a, b);
   // const patches = makePatches(c, a);
   // const [d] = applyPatches(patches, b);
