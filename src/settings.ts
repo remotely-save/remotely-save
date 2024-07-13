@@ -2785,6 +2785,19 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
         });
       })
       .addButton(async (button) => {
+        button.setButtonText(t("settings_syncplans_button_5_only_change"));
+        button.onClick(async () => {
+          await exportVaultSyncPlansToFiles(
+            this.plugin.db,
+            this.app.vault,
+            this.plugin.vaultRandomID,
+            5,
+            true
+          );
+          new Notice(t("settings_syncplans_notice"));
+        });
+      })
+      .addButton(async (button) => {
         button.setButtonText(t("settings_syncplans_button_1"));
         button.onClick(async () => {
           await exportVaultSyncPlansToFiles(

@@ -335,6 +335,7 @@
   "settings_syncplans": "导出同步计划",
   "settings_syncplans_desc": "每次您启动同步，并在实际上传下载前，插件会生成同步计划。它可以使您知道每次同步发生了什么。点击按钮可以导出同步计划。",
   "settings_syncplans_button_1_only_change": "导出最近 1 次（仅修改部分）",
+  "settings_syncplans_button_5_only_change": "导出最近 5 次（仅修改部分）",
   "settings_syncplans_button_1": "导出最近 1 次",
   "settings_syncplans_button_5": "导出最近 5 次",
   "settings_syncplans_button_all": "导出所有",
