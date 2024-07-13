@@ -140,6 +140,10 @@
   "modal_proauth_maualinput_notice": "正在连接，请稍候......",
   "modal_proauth_maualinput_conn_fail": "连接失败",
 
+  "modal_cleardupfiles_warning": "警告：插件只是简单地扫描所有文件名含有 .dup 的作为重复文件。另外，本操作只删除本地文件，因此您需要触发同步来删除远端文件。",
+  "modal_cleardupfiles_warning_confirm": "确认删除",
+  "modal_cleardupfiles_warning_finished": "所有检测到的重复文件已被删除！",
+
   "settings_onedrivefull": "Onedrive（个人版）（Full）设置",
   "settings_chooseservice_onedrivefull": "OneDrive（个人版）（Full）（PRO）",
   "settings_onedrivefull_disclaimer1": "声明：此插件不是微软或 OneDrive 的官方产品。",
@@ -284,6 +288,10 @@
   "settings_export_yandexdisk_button": "导出 Yandex Disk 部分",
   "settings_export_koofr_button": "导出 Koofr 部分",
   "settings_export_azureblobstorage_button": "导出 Azure Blob Storage 部分",
+
+  "settings_cleardupfiles": "删除智能处理冲突生成的重复文件",
+  "settings_cleardupfiles_desc": "如果用过智能处理冲突 (PRO) 功能，插件可能会生成重复文件。<strong>如果您真的确认了所有重复文件都不需要了，</strong>那么可以删除本地的<strong>所有</strong>这些文件。",
+  "settings_cleardupfiles_button": "开始扫描",
 
   "settings_pro": "账号（PRO 付费功能）",
   "settings_pro_tutorial": "<p>使用 Remotely Save 的<stong>基本</strong>功能是<strong>免费的</strong>，而且<strong>不</strong>需要注册对应账号。</p><p>但是，您<strong>需要</strong>注册账号和对<strong>PRO</strong>功能<strong>付费</strong>使用，如智能处理冲突功能。</p><p>第一步：点击按钮从而注册和登录网站：<a href=\"https://remotelysave.com\">https://remotelysave.com</a>。注意：这和 Obsidian 官方账号无关，是不同的账号。</p><p>第二部：点击“连接”按钮，从而连接本设备和在线账号。",

@@ -23,6 +23,7 @@ import type {
 import cloneDeep from "lodash/cloneDeep";
 import { generateAzureBlobStorageSettingsPart } from "../pro/src/settingsAzureBlobStorage";
 import { generateBoxSettingsPart } from "../pro/src/settingsBox";
+import { generateClearDupFilesSettingsPart } from "../pro/src/settingsClearDupFiles";
 import { generateGoogleDriveSettingsPart } from "../pro/src/settingsGoogleDrive";
 import { generateKoofrSettingsPart } from "../pro/src/settingsKoofr";
 import { generateOnedriveFullSettingsPart } from "../pro/src/settingsOnedriveFull";
@@ -2358,6 +2359,8 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
           );
         });
     });
+
+    generateClearDupFilesSettingsPart(advDiv, t, this.app, this.plugin);
 
     const percentage1 = new Setting(advDiv)
       .setName(t("settings_protectmodifypercentage"))

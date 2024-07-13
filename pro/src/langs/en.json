@@ -129,6 +129,10 @@
   "modal_proauth_maualinput_notice": "Trying to connect, wait...",
   "modal_proauth_maualinput_conn_fail": "Failed to connect",
 
+  "modal_cleardupfiles_warning": "Warning: The plugin just stupidly finds all the file names that looks like duplicated files (.dup in file names). Also, this only deletes local files, so you need to trigger a sync to delete remote files.",
+  "modal_cleardupfiles_warning_confirm": "Confirm to delete",
+  "modal_cleardupfiles_warning_finished": "All the detected duplicated files are removed!",
+
   "settings_onedrivefull": "Remote For Onedrive (for personal) (Full)",
   "settings_chooseservice_onedrivefull": "OneDrive for personal (Full) (PRO)",
   "settings_onedrivefull_disclaimer1": "Disclaimer: This app is NOT an official Microsoft / OneDrive product.",
@@ -277,6 +281,10 @@
   "settings_export_yandexdisk_button": "Export Yandex Disk Part",
   "settings_export_koofr_button": "Export Koofr Part",
   "settings_export_azureblobstorage_button": "Export Azure Blob Storage Part",
+
+  "settings_cleardupfiles": "Clear Duplicated Files By Smart Conflict",
+  "settings_cleardupfiles_desc": "If you have ever used Smart Conflict (PRO) feature, the plugin may generate duplicated files. <strong>IF YOU ARE SURE THE DUPLICATED FILES ARE NO LONGER NEEDED</strong>, you can clear <strong>ALL</strong> of them locally here.",
+  "settings_cleardupfiles_button": "Start Scanning",
 
   "settings_pro": "Account (for PRO features)",
   "settings_pro_tutorial": "<p>Using <stong>basic</strong> features of Remotely Save is <strong>FREE</strong> and do <strong>NOT</strong> need an account.</p><p>However, you will <strong>need</strong> an online account and <strong>PAY</strong> for the <strong>PRO</strong> features such as smart conflict.</p><p>Firstly please click the button to sign up and sign in to the website: <a href=\"https://remotelysave.com\">https://remotelysave.com</a>. Notice: It's different from, and NOT affiliated with Obsidian account.</p><p>Secondly please \"connect\" your local device to your online account.",

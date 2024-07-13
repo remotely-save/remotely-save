@@ -173,7 +173,7 @@ export async function mergeFile(
   };
 }
 
-export function getFileRename(key: string) {
+export function getFileRenameForDup(key: string) {
   if (
     key === "" ||
     key === "." ||
@@ -344,7 +344,7 @@ export async function tryDuplicateFile(
   uploadCallback: (entity: Entity | undefined) => Promise<any>,
   downloadCallback: (entity: Entity | undefined) => Promise<any>
 ) {
-  let key2 = getFileRename(key);
+  let key2 = getFileRenameForDup(key);
   let usable = false;
   do {
     try {
@@ -353,7 +353,7 @@ export async function tryDuplicateFile(
         throw Error(`not exist $${key2}`);
       }
       console.debug(`key2=${key2} exists, cannot use for new file`);
-      key2 = getFileRename(key2);
+      key2 = getFileRenameForDup(key2);
       console.debug(`key2=${key2} is prepared for next try`);
     } catch (e) {
       // not exists, exactly what we want
