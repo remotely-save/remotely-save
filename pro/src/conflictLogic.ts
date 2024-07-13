@@ -1,4 +1,3 @@
-import cloneDeep from "lodash/cloneDeep";
 import isEqual from "lodash/isEqual";
 // import {
 //   makePatches,
@@ -145,20 +144,7 @@ export async function mergeFile(
   // left (local) must wait for the right
   // because the mtime might be different after upload
   // upload firstly
-  // hack:
-  // writing to remote with encryption will move the arraybuffer to worker
-  // so the newArrayBuffer is not usable later
-  // we have to copy here
-  // because mergable files should not be too large
-  // so the performance should not be too bad
-  // TODO: optimize for non-encryption mode?
-  const newArrayBufferCopied = cloneDeep(newArrayBuffer);
-  const rightEntity = await right.writeFile(
-    key,
-    newArrayBufferCopied,
-    mtime,
-    mtime
-  );
+  const rightEntity = await right.writeFile(key, newArrayBuffer, mtime, mtime);
   // write local secondly
   const leftEntity = await left.writeFile(
     key,
