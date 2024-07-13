@@ -1,3 +1,4 @@
+import cloneDeep from "lodash/cloneDeep";
 import isEqual from "lodash/isEqual";
 // import {
 //   makePatches,
@@ -20,14 +21,14 @@ import type { FakeFs } from "../../src/fsAll";
 import { MERGABLE_SIZE } from "./baseTypesPro";
 
 export function isMergable(a: Entity, b?: Entity) {
-  if (b !== undefined && a.keyRaw !== b.keyRaw) {
+  if (b !== undefined && a.key !== b.key) {
     return false;
   }
 
   return (
-    !a.keyRaw.endsWith("/") &&
+    !a.key!.endsWith("/") &&
     a.sizeRaw <= MERGABLE_SIZE &&
-    (a.keyRaw.endsWith(".md") || a.keyRaw.endsWith(".markdown"))
+    (a.key!.endsWith(".md") || a.key!.endsWith(".markdown"))
   );
 }
 
@@ -144,7 +145,20 @@ export async function mergeFile(
   // left (local) must wait for the right
   // because the mtime might be different after upload
   // upload firstly
-  const rightEntity = await right.writeFile(key, newArrayBuffer, mtime, mtime);
+  // hack:
+  // writing to remote with encryption will move the arraybuffer to worker
+  // so the newArrayBuffer is not usable later
+  // we have to copy here
+  // because mergable files should not be too large
+  // so the performance should not be too bad
+  // TODO: optimize for non-encryption mode?
+  const newArrayBufferCopied = cloneDeep(newArrayBuffer);
+  const rightEntity = await right.writeFile(
+    key,
+    newArrayBufferCopied,
+    mtime,
+    mtime
+  );
   // write local secondly
   const leftEntity = await left.writeFile(
     key,
