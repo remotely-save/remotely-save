@@ -1381,6 +1381,9 @@ export default class RemotelySavePlugin extends Plugin {
     if (this.settings.webdav.remoteBaseDir === undefined) {
       this.settings.webdav.remoteBaseDir = "";
     }
+    if (this.settings.webdav.customHeaders === undefined) {
+      this.settings.webdav.customHeaders = "";
+    }
     if (this.settings.s3.partsConcurrency === undefined) {
       this.settings.s3.partsConcurrency = 20;
     }

@@ -232,6 +232,7 @@
   "settings_onedrive_emptyfile_desc": "OneDrive doesn't allow uploading empty file (even in its official website). Do you want to show up errors or silently skip the empty files?",
   "settings_onedrive_emptyfile_skip": "Skip",
   "settings_onedrive_emptyfile_error": "Error and abort",
+
   "settings_webdav": "Remote For Webdav",
   "settings_webdav_disclaimer1": "Disclaimer: The information is stored locally. Other malicious/harmful/faulty plugins may read the info. If you see any unintentional access to your webdav server, please immediately change the username and password.",
   "settings_webdav_cors_os": "Obsidian desktop>=0.13.25 or iOS>=1.1.1 or Android>=1.2.1 supports bypassing CORS locally. But you are using an old version, and you're suggested to upgrade Obsidian.",
@@ -249,9 +250,12 @@
   "settings_webdav_depth_desc": "Webdav servers should be configured to allow requests with header Depth being '1' or 'Infinity'. If you are not sure what's this, choose \"depth='1'\". If you are sure your server supports depth='infinity', please choose that to get way better performance.",
   "settings_webdav_depth_1": "only supports depth='1'",
   "settings_webdav_depth_inf": "supports depth='infinity'",
+  "settings_webdav_customheaders": "Custom Headers Sent To Servers",
+  "settings_webdav_customheaders_desc": "Some users may want to set custom headers. If you don't know what it is, just leave it empty. Input them like: <code>X-Header1:value1</code> in each line. All spaces around header keys and values will be removed.",
   "settings_webdav_connect_succ": "Great! The webdav server can be accessed.",
   "settings_webdav_connect_fail": "The webdav server cannot be reached (possible to be any of address/username/password/authtype errors).",
   "settings_webdav_connect_fail_withcors": "The webdav server cannot be reached (possible to be any of address/username/password/authtype/CORS errors).",
+
   "settings_webdis": "Remote For Webdis",
   "settings_webdis_disclaimer1": "Disclaimer: This app is NOT an official Redis® Ltd / Redis® OSS / Webdis product. Redis is a registered trademark of Redis Ltd.",
   "settings_webdis_disclaimer2": "Disclaimer: The information is stored locally. Other malicious/harmful/faulty plugins may read the info. If you see any unintentional access to your Webdis server, please immediately change the username and password.",

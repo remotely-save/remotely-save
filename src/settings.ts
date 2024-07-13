@@ -1638,6 +1638,27 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
           });
       });
 
+    new Setting(webdavDiv)
+      .setName(t("settings_webdav_customheaders"))
+      .setDesc(stringToFragment(t("settings_webdav_customheaders_desc")))
+      .addTextArea((textArea) => {
+        textArea
+          .setPlaceholder(`X-Header1: Value1\nX-Header2: Value2`)
+          .setValue(`${this.plugin.settings.webdav.customHeaders ?? ""}`)
+          .onChange(async (value) => {
+            this.plugin.settings.webdav.customHeaders = value
+              .trim()
+              .split("\n")
+              .filter((x) => x.trim() !== "")
+              .join("\n");
+            await this.plugin.saveSettings();
+          });
+        textArea.inputEl.rows = 10;
+        textArea.inputEl.cols = 30;
+
+        textArea.inputEl.addClass("webdav-customheaders-textarea");
+      });
+
     let newWebdavRemoteBaseDir =
       this.plugin.settings.webdav.remoteBaseDir || "";
     new Setting(webdavDiv)

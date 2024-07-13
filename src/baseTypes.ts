@@ -98,6 +98,8 @@ export interface WebdavConfig {
   depth?: WebdavDepthType;
   remoteBaseDir?: string;
 
+  customHeaders?: string;
+
   /**
    * @deprecated
    */

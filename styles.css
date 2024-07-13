@@ -88,6 +88,10 @@
   display: none;
 }
 
+.webdav-customheaders-textarea {
+  font-family: monospace;
+}
+
 .webdis-disclaimer {
   font-weight: bold;
 }

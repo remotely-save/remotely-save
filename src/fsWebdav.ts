@@ -209,6 +209,29 @@ const tryEncodeURI = (x: string) => {
   return encodeURI(x);
 };
 
+const parseCustomHeaders = (x: string): Record<string, string> => {
+  const y = x.trim();
+  if (y === "") {
+    return {};
+  }
+  const z = y.split("\n");
+
+  const res: Record<string, string> = {};
+
+  for (const kv of z) {
+    if (!kv.includes(":")) {
+      continue;
+    }
+
+    const [keyRaw, ...valueArr] = kv.split(":");
+    const key = keyRaw.trim();
+    const value = valueArr.join(":").trim();
+    res[key] = value;
+  }
+
+  return res;
+};
+
 export class FakeFsWebdav extends FakeFs {
   kind: "webdav";
 
@@ -246,9 +269,14 @@ export class FakeFsWebdav extends FakeFs {
       return;
     }
 
-    const headers = {
+    const cacheHeader = {
       "Cache-Control": "no-cache",
     };
+    const customHeaders = parseCustomHeaders(
+      this.webdavConfig.customHeaders ?? ""
+    );
+    const headers = { ...cacheHeader, ...customHeaders };
+
     if (
       this.webdavConfig.username !== "" &&
       this.webdavConfig.password !== ""

@@ -231,6 +231,7 @@
   "settings_onedrive_emptyfile_desc": "OneDrive 不允许上传空文件（即使官网也是不允许的）。那么你想跳过空文件还是返回错误？",
   "settings_onedrive_emptyfile_skip": "跳过",
   "settings_onedrive_emptyfile_error": "返回错误和中断",
+
   "settings_webdav": "Webdav 设置",
   "settings_webdav_disclaimer1": "声明：您所输入的信息存储于本地。其它有害的或者出错的插件，是有可能读取到这些信息的。如果您发现了 Webdav 服务器有不符合预期的访问，请立刻修改用户名和密码。",
   "settings_webdav_cors_os": "Obsidian 桌面版>=0.13.25 或 iOS>=1.1.1 或 Android>=1.2.1 支持跳过 CORS 设置。但您正在使用旧版，建议升级。",
@@ -248,9 +249,12 @@
   "settings_webdav_depth_desc": "Webdav 服务器会被设为接收 Depth header 为“1”或“Infinity”请求。如果您不清楚如何设置，可以选择 depth='1'。如果那你确认服务器支持 depth='infinity'，请选择它，会获得更加好的性能。",
   "settings_webdav_depth_1": "只支持 depth='1'",
   "settings_webdav_depth_inf": "支持 depth='infinity'",
+  "settings_webdav_customheaders": "发送到服务器的自定义 Header",
+  "settings_webdav_customheaders_desc": "有些用户需要设置自定义 header。如果您不知道是什么，可以直接留空不填。输入格式：每行形如 <code>X-Header1:value1</code>。header 的 key 和 value 之间的空格会被删除。",
   "settings_webdav_connect_succ": "很好！可以连接上 Webdav 服务器。",
   "settings_webdav_connect_fail": "无法连接上 Webdav 服务器。（可能是地址/账号/密码/鉴权类型等错误。）",
   "settings_webdav_connect_fail_withcors": "无法连接上 Webdav 服务器。（可能是地址/账号/密码/鉴权类型/CORS 等错误。）",
+
   "settings_webdis": "Webdis 设置",
   "settings_webdis_disclaimer1": "声明：此插件不是 Redis® Ltd 或 Redis® 软件或 Wedis 的官方产品。Redis 是 Redis Ltd 的注册商标。",
   "settings_webdis_disclaimer2": "声明：您所输入的信息存储于本地。其它有害的或者出错的插件，是有可能读取到这些信息的。如果您发现了 Webdis 服务器有不符合预期的访问，请立刻修改用户名和密码。",
