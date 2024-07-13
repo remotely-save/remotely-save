@@ -371,7 +371,9 @@ export class FakeFsWebdav extends FakeFs {
       compliance.compliance.includes("sabredav-partialupdate")
     ) {
       this.supportNativePartial = true;
-      console.debug(`supportNativePartial=true`);
+      console.debug(
+        `supportNativePartial=true, compliance=${JSON.stringify(compliance)}`
+      );
       return true;
     }
 
