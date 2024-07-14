@@ -9,6 +9,7 @@ import type { Profiler } from "./profiler";
 export class FakeFsLocal extends FakeFs {
   vault: Vault;
   syncConfigDir: boolean;
+  syncBookmarks: boolean;
   configDir: string;
   pluginID: string;
   profiler: Profiler | undefined;
@@ -17,6 +18,7 @@ export class FakeFsLocal extends FakeFs {
   constructor(
     vault: Vault,
     syncConfigDir: boolean,
+    syncBookmarks: boolean,
     configDir: string,
     pluginID: string,
     profiler: Profiler | undefined,
@@ -26,6 +28,7 @@ export class FakeFsLocal extends FakeFs {
 
     this.vault = vault;
     this.syncConfigDir = syncConfigDir;
+    this.syncBookmarks = syncBookmarks;
     this.configDir = configDir;
     this.pluginID = pluginID;
     this.profiler = profiler;
@@ -96,13 +99,16 @@ export class FakeFsLocal extends FakeFs {
 
     this.profiler?.insert("finish transforming walk for local");
 
-    if (this.syncConfigDir) {
-      this.profiler?.insert("into syncConfigDir");
+    if (this.syncConfigDir || this.syncBookmarks) {
+      this.profiler?.insert("into syncConfigDir or syncBookmarks");
+      const bookmarksOnly = !this.syncConfigDir;
       const syncFiles = await listFilesInObsFolder(
         this.configDir,
         this.vault,
-        this.pluginID
+        this.pluginID,
+        bookmarksOnly
       );
+      // console.debug(`syncFiles in obs: ${JSON.stringify(syncFiles, null, 2)}`);
       for (const f of syncFiles) {
         local.push(f);
       }

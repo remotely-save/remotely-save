@@ -167,6 +167,7 @@ export interface RemotelySavePluginSettings {
 
   concurrency?: number;
   syncConfigDir?: boolean;
+  syncBookmarks?: boolean;
   syncUnderscoreItems?: boolean;
   lang?: LangTypeAndAuto;
   agreeToUseSyncV3?: boolean;

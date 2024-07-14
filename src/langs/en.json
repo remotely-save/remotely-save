@@ -282,6 +282,8 @@
   "settings_syncunderscore_desc": "Sync files or folders starting with _ (\"underscore\") or not",
   "settings_configdir": "Sync Config Dir (experimental)",
   "settings_configdir_desc": "Sync config dir {{configDir}} or not (inner folder .git and node_modules would be ignored). Please be aware that this may impact all your plugins' or Obsidian's settings, and may require you restart Obsidian after sync. Enable this at your own risk.",
+  "settings_bookmarks": "Sync Bookmarks (experimental)",
+  "settings_bookmarks_desc": "Sync {{configDir}}/bookmarks.json or not. If you sync config dir, this option will be ignore and treated as \"enabled\".",
   "settings_deletetowhere": "Deletion Destination",
   "settings_deletetowhere_desc": "Which trash should the plugin put the files into while deleting?",
   "settings_deletetowhere_system_trash": "system trash (default)",

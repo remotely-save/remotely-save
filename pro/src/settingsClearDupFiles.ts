@@ -74,6 +74,7 @@ export const generateClearDupFilesSettingsPart = (
         const fsLocal = new FakeFsLocal(
           app.vault,
           plugin.settings.syncConfigDir ?? false,
+          plugin.settings.syncBookmarks ?? false,
           app.vault.configDir,
           plugin.manifest.id,
           undefined,

@@ -34,11 +34,15 @@ const isLikelyPluginSubFiles = (x: string) => {
 export const listFilesInObsFolder = async (
   configDir: string,
   vault: Vault,
-  pluginId: string
+  pluginId: string,
+  bookmarksOnly: boolean
 ): Promise<Entity[]> => {
   const q = new Queue([configDir]);
   const CHUNK_SIZE = 10;
-  const contents: Entity[] = [];
+  let contents: Entity[] = [];
+
+  let iterRound = 0;
+
   while (q.length > 0) {
     const itemsToFetch: string[] = [];
     while (q.length > 0) {
@@ -115,6 +119,23 @@ export const listFilesInObsFolder = async (
         }
       }
     }
+
+    if (bookmarksOnly && iterRound > 1) {
+      // list until bookmarks.json is found or next level is arrived.
+      break;
+    }
+
+    iterRound += 1;
   }
+
+  // console.debug(`contents in obs config: ${JSON.stringify(contents)}`);
+
+  if (bookmarksOnly) {
+    contents = contents.filter(
+      (e) =>
+        e.key === `${configDir}/` || e.key === `${configDir}/bookmarks.json`
+    );
+  }
+
   return contents;
 };

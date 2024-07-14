@@ -116,9 +116,21 @@ const isInsideObsFolder = (x: string, configDir: string) => {
   return x === configDir || x.startsWith(`${configDir}/`);
 };
 
+const isBookmarksFile = (x: string, configDir: string) => {
+  if (!configDir.startsWith(".")) {
+    throw Error(`configDir should starts with . but we get ${configDir}`);
+  }
+  return (
+    x === configDir ||
+    x === `${configDir}/` ||
+    x === `${configDir}/bookmarks.json`
+  );
+};
+
 const isSkipItemByName = (
   key: string,
   syncConfigDir: boolean,
+  syncBookmarks: boolean,
   syncUnderscoreItems: boolean,
   configDir: string,
   ignorePaths: string[]
@@ -136,6 +148,11 @@ const isSkipItemByName = (
   if (syncConfigDir && isInsideObsFolder(key, configDir)) {
     return false;
   }
+
+  if (syncBookmarks && isBookmarksFile(key, configDir)) {
+    return false;
+  }
+
   if (isSpecialFolderNameToSkip(key, [])) {
     // some special dirs and files are always skipped
     return true;
@@ -157,6 +174,7 @@ const ensembleMixedEnties = async (
   remoteEntityList: Entity[],
 
   syncConfigDir: boolean,
+  syncBookmarks: boolean,
   configDir: string,
   syncUnderscoreItems: boolean,
   ignorePaths: string[],
@@ -184,6 +202,7 @@ const ensembleMixedEnties = async (
       isSkipItemByName(
         key,
         syncConfigDir,
+        syncBookmarks,
         syncUnderscoreItems,
         configDir,
         ignorePaths
@@ -216,6 +235,7 @@ const ensembleMixedEnties = async (
         isSkipItemByName(
           key,
           syncConfigDir,
+          syncBookmarks,
           syncUnderscoreItems,
           configDir,
           ignorePaths
@@ -251,6 +271,7 @@ const ensembleMixedEnties = async (
       isSkipItemByName(
         key,
         syncConfigDir,
+        syncBookmarks,
         syncUnderscoreItems,
         configDir,
         ignorePaths
@@ -911,13 +932,14 @@ const getSyncPlanInplace = async (
   mixedEntityMappings["/$@meta"] = {
     key: "/$@meta", // don't mess up with the types
     sideNotes: {
-      version: "20240616 fs version",
+      version: "20240714 fs version",
       generateTime: currTime,
       generateTimeFmt: currTimeFmt,
       service: settings.serviceType,
       concurrency: settings.concurrency,
       hasPassword: settings.password !== "",
       syncConfigDir: settings.syncConfigDir,
+      syncBookmarks: settings.syncBookmarks,
       syncUnderscoreItems: settings.syncUnderscoreItems,
       skipSizeLargerThan: settings.skipSizeLargerThan,
       protectModifyPercentage: settings.protectModifyPercentage,
@@ -1709,6 +1731,7 @@ export async function syncer(
       prevSyncEntityList,
       remoteEntityList,
       settings.syncConfigDir ?? false,
+      settings.syncBookmarks ?? false,
       configDir,
       settings.syncUnderscoreItems ?? false,
       settings.ignorePaths ?? [],

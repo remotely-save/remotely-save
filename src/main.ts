@@ -135,6 +135,7 @@ const DEFAULT_SETTINGS: RemotelySavePluginSettings = {
   agreeToUploadExtraMetadata: true, // as of 20240106, it's safe to assume every new user agrees with this
   concurrency: 5,
   syncConfigDir: false,
+  syncBookmarks: false,
   syncUnderscoreItems: false,
   lang: "auto",
   logToDB: false,
@@ -239,6 +240,7 @@ export default class RemotelySavePlugin extends Plugin {
     const fsLocal = new FakeFsLocal(
       this.app.vault,
       this.settings.syncConfigDir ?? false,
+      this.settings.syncBookmarks ?? false,
       this.app.vault.configDir,
       this.manifest.id,
       profiler,
@@ -1337,6 +1339,10 @@ export default class RemotelySavePlugin extends Plugin {
       messyConfigToNormal(await this.loadData())
     );
 
+    if (this.settings.syncBookmarks === undefined) {
+      this.settings.syncBookmarks = false;
+    }
+
     if (this.settings.dropbox.clientID === "") {
       this.settings.dropbox.clientID = DEFAULT_SETTINGS.dropbox.clientID;
     }
@@ -1879,6 +1885,7 @@ export default class RemotelySavePlugin extends Plugin {
                 const fsLocal = new FakeFsLocal(
                   this.app.vault,
                   this.settings.syncConfigDir ?? false,
+                  this.settings.syncBookmarks ?? false,
                   this.app.vault.configDir,
                   this.manifest.id,
                   undefined,
