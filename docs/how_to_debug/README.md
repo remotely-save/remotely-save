@@ -6,11 +6,17 @@ Ideally, users do not need to debug anything. But if something bad happened, we 
 
 See [here](./export_sync_plans.md).
 
-## Advanced: Check Console Output Directly
+## Medium: Desktop: Check Console Output Directly
 
 ...of desktop and Android.
 
 See [here](./check_console_output.md).
+
+## Medium: Mobile: Use `Obsidian vConsole` to Check Console Ouput Directly
+
+...of mobile (iOS and Android).
+
+See [here](./check_vconsole_output.md).
 
 ## Advanced: Use `Logstravaganza` to export logs
 
