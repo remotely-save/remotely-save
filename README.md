@@ -161,7 +161,7 @@ PRO (paid) feature "sync with Azure Blob Storage" allows users to to sync with A
 
 Basic (free) version can detect conflicts, but users have to choose to keep newer version or larger version of the files.
 
-PRO (paid) feature "Smart Conflict" gives users one more option: merge small markdown files, or duplicate large markdown files or non-markdown files.
+PRO (paid) feature "Smart Conflict" gives users one more option: merge small markdown files, or duplicate large markdown files or any-size non-markdown files.
 
 See documents [here](./docs/pro/README.md)
 
@@ -176,11 +176,19 @@ See documents [here](./docs/pro/README.md)
 - You can configure sync on save in settings.
 - In sync on save mode, if any error occurs, the plugin would **fail silently**.
 
-## How To Deal With Hidden Files Or Folders
+## Config Folder / Files and Bookmarks
+
+By default, the plugin doesn't sync config folder / files of obsidian (normally `.obsidian` folder) because it's one of the hidden files. 
+
+However, in the latest version, you can enable syncing config folder in settings. Please be aware that it's an experimental feature. Notably some config files' modified times are changed everytime when Obsidian is opened, and this destroys the assumptions of the plugin, so some information may not be synced properly.
+
+Moreover, the bookmarks of Obsidian are actually stored in `.obsidian/bookmarks.json` file. You can also set syncing this file (instead of the whole config folder) in settings. The plugin will keep the latest modified one across devices.
+
+## Hidden Files Or Folders
 
 **By default, all files or folder starting with `.` (dot) or `_` (underscore) are treated as hidden files, and would NOT be synced.** It's useful if you have some files just staying locally. But this strategy also means that themes / other plugins / settings of this plugin would neither be synced.
 
-In the latest version, you can change the settings to allow syncing `_` files or folders, as well as `.obsidian` special config folder (but not any other `.` files or folders).
+In the latest version, you can change the settings to allow syncing `_` files or folders, as well as `.obsidian` special config folder as described above (but not any other `.` files or folders).
 
 ## PRO Features
 
