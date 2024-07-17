@@ -46,6 +46,8 @@ This is yet another unofficial sync plugin for Obsidian. If you like it or find 
 - **You should protect your `data.json` file.** The file contains sensitive information.
   - It's strongly advised **NOT** to share your `data.json` file to anyone.
   - It's usually **NOT** a good idea to check the file into version control. By default, the plugin tries to create a `.gitignore` file inside the plugin directory if it doesn't exist, for ignoring `data.json` in the `git` version control. If you know exactly what it means and want to remove the setting, please modify the `.gitignore` file or set it to be empty.
+- **Obsidian API on Mobile has performance issues syncing large files (>= 50 MB).**
+  - Setting the "Skip Large Files" option can help resolve issues related to syncing large files.
 
 ## Questions, Suggestions, Or Bugs
 
