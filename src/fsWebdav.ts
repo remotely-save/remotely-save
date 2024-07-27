@@ -209,6 +209,13 @@ const tryEncodeURI = (x: string) => {
   return encodeURI(x);
 };
 
+const tryEncodeUsernamePassword = (x: string) => {
+  if (onlyAscii(x)) {
+    return x;
+  }
+  return unescape(encodeURIComponent(x));
+};
+
 const parseCustomHeaders = (x: string): Record<string, string> => {
   const y = x.trim();
   if (y === "") {
@@ -281,15 +288,17 @@ export class FakeFsWebdav extends FakeFs {
       this.webdavConfig.username !== "" &&
       this.webdavConfig.password !== ""
     ) {
+      console.debug("hey!");
       this.client = createClient(this.webdavConfig.address, {
-        username: this.webdavConfig.username,
-        password: this.webdavConfig.password,
+        username: tryEncodeUsernamePassword(this.webdavConfig.username),
+        password: tryEncodeUsernamePassword(this.webdavConfig.password),
         headers: headers,
         authType:
           this.webdavConfig.authType === "digest"
             ? AuthType.Digest
             : AuthType.Password,
       });
+      console.debug("fuck!");
     } else {
       console.info("no password");
       this.client = createClient(this.webdavConfig.address, {
@@ -678,8 +687,8 @@ export class FakeFsWebdav extends FakeFs {
     console.debug(`tmpFolderName=${tmpFolderName}`);
 
     const clientForUpload = createClient(uploadServerAddress, {
-      username: this.webdavConfig.username,
-      password: this.webdavConfig.password,
+      username: tryEncodeUsernamePassword(this.webdavConfig.username),
+      password: tryEncodeUsernamePassword(this.webdavConfig.password),
       headers: {
         "Cache-Control": "no-cache",
       },
