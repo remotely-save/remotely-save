@@ -916,12 +916,15 @@ export class FakeFsOnedriveFull extends FakeFs {
   async checkConnect(callbackFunc?: any): Promise<boolean> {
     try {
       const k = await this.getUserDisplayName();
-      return k !== "<unknown display name>";
+      if (k === "<unknown display name>") {
+        throw Error(`unknown display name!`);
+      }
     } catch (err) {
       console.debug(err);
       callbackFunc?.(err);
       return false;
     }
+    return await this.checkConnectCommonOps(callbackFunc);
   }
 
   async getUserDisplayName() {

@@ -831,14 +831,11 @@ export class FakeFsS3 extends FakeFs {
         results.$metadata === undefined ||
         results.$metadata.httpStatusCode === undefined
       ) {
-        const err = "results or $metadata or httStatusCode is undefined";
-        console.debug(err);
-        if (callbackFunc !== undefined) {
-          callbackFunc(err);
-        }
-        return false;
+        throw Error("results or $metadata or httStatusCode is undefined");
       }
-      return results.$metadata.httpStatusCode === 200;
+      if (results.$metadata.httpStatusCode !== 200) {
+        throw Error(`not 200 httpStatusCode`);
+      }
     } catch (err: any) {
       console.debug(err);
       if (callbackFunc !== undefined) {
@@ -854,9 +851,10 @@ export class FakeFsS3 extends FakeFs {
           callbackFunc(err);
         }
       }
-
       return false;
     }
+
+    return await this.checkConnectCommonOps(callbackFunc);
   }
 
   async getUserDisplayName(): Promise<string> {

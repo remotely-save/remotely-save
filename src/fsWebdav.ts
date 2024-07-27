@@ -4,8 +4,6 @@ import { getReasonPhrase } from "http-status-codes/build/cjs/utils-functions";
 import chunk from "lodash/chunk";
 import cloneDeep from "lodash/cloneDeep";
 import flatten from "lodash/flatten";
-import isString from "lodash/isString";
-import { nanoid } from "nanoid";
 import { Platform, type RequestUrlParam, requestUrl } from "obsidian";
 import type {
   FileStat,
@@ -140,10 +138,10 @@ if (VALID_REQURL) {
   );
 }
 
+import isEqual from "lodash/isEqual";
 // @ts-ignore
 // biome-ignore lint: we want to ts-ignore the next line
 import { AuthType, BufferLike, createClient } from "webdav/dist/web/index.js";
-import isEqual from "lodash/isEqual";
 
 export const DEFAULT_WEBDAV_CONFIG = {
   address: "",
@@ -925,17 +923,15 @@ export class FakeFsWebdav extends FakeFs {
       await this._init();
       const results = await this._statFromRoot(`/${this.remoteBaseDir}/`);
       if (results === undefined) {
-        const err = "results is undefined";
-        console.error(err);
-        callbackFunc?.(err);
-        return false;
+        throw Error("cannot stat root vault folder!");
       }
-      return true;
     } catch (err) {
       console.error(err);
       callbackFunc?.(err);
       return false;
     }
+
+    return await this.checkConnectCommonOps(callbackFunc);
   }
 
   async getUserDisplayName(): Promise<string> {

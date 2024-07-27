@@ -555,12 +555,12 @@ export class FakeFsKoofr extends FakeFs {
     // if we can init, we can connect
     try {
       await this._init();
-      return true;
     } catch (err) {
       console.debug(err);
       callbackFunc?.(err);
       return false;
     }
+    return await this.checkConnectCommonOps(callbackFunc);
   }
 
   async getUserDisplayName(): Promise<string> {

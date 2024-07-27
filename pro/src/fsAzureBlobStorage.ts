@@ -320,12 +320,12 @@ export class FakeFsAzureBlobStorage extends FakeFs {
     // if we can walk, we can connect
     try {
       await this.walkPartial();
-      return true;
     } catch (err) {
       console.debug(err);
       callbackFunc?.(err);
       return false;
     }
+    return await this.checkConnectCommonOps(callbackFunc);
   }
 
   async getUserDisplayName(): Promise<string> {

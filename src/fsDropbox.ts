@@ -741,14 +741,15 @@ export class FakeFsDropbox extends FakeFs {
       await this._init();
       const results = await this._statFromRoot(`/${this.remoteBaseDir}`);
       if (results === undefined) {
-        return false;
+        throw Error(`cannot check root vault folder!`);
       }
-      return true;
     } catch (err) {
       console.debug(err);
       callbackFunc?.(err);
       return false;
     }
+
+    return await this.checkConnectCommonOps(callbackFunc);
   }
 
   async getUserDisplayName() {

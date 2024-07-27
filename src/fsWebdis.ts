@@ -252,12 +252,16 @@ export class FakeFsWebdis extends FakeFs {
       const k = await (
         await this._fetchCommand("GET", "PING/helloworld")
       ).json();
-      return isEqual(k, { PING: "helloworld" });
+      if (!isEqual(k, { PING: "helloworld" })) {
+        throw Error(`no correct ping response`);
+      }
     } catch (err: any) {
       console.error(err);
       callbackFunc?.(err);
       return false;
     }
+    return await this.checkConnectCommonOps(callbackFunc);
+    // return true;
   }
 
   async getUserDisplayName(): Promise<string> {

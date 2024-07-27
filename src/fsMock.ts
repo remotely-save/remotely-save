@@ -47,7 +47,7 @@ export class FakeFsMock extends FakeFs {
   }
 
   async checkConnect(callbackFunc?: any): Promise<boolean> {
-    return true;
+    return await this.checkConnectCommonOps(callbackFunc);
   }
 
   async getUserDisplayName(): Promise<string> {
