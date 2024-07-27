@@ -417,7 +417,9 @@ export class FakeFsWebdav extends FakeFs {
       this.webdavConfig.depth === "auto_unknown" ||
       this.webdavConfig.depth === "auto_1" ||
       this.webdavConfig.depth === "auto_infinity" /* don't trust auto now */ ||
-      this.webdavConfig.depth === "manual_1"
+      this.webdavConfig.depth === "manual_1" ||
+      this.webdavConfig.address.includes("jianguoyun.com") ||
+      this.webdavConfig.address.includes("teracloud.jp")
     ) {
       // the remote doesn't support infinity propfind,
       // we need to do a bfs here
