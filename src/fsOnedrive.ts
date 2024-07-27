@@ -399,8 +399,12 @@ ${constructFromDriveItemToEntityError(x)}`
     key = `${key}/`;
   }
 
-  const mtimeSvr = Date.parse(x?.fileSystemInfo!.lastModifiedDateTime!);
-  const mtimeCli = Date.parse(x?.fileSystemInfo!.lastModifiedDateTime!);
+  const mtimeTry = x?.fileSystemInfo?.lastModifiedDateTime;
+  if (mtimeTry === undefined || mtimeTry === null) {
+    throw Error(`onedrive cannot parse mtime: ${JSON.stringify(x, null, 2)}`);
+  }
+  const mtimeSvr = Date.parse(mtimeTry);
+  const mtimeCli = Date.parse(mtimeTry);
   return {
     key: key,
     keyRaw: key,
