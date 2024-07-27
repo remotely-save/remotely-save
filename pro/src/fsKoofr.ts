@@ -263,7 +263,7 @@ const getAuthMiddleware = (
   saveUpdatedConfigFunc: any
 ) => {
   const authMiddleware: Middleware = {
-    async onRequest(req) {
+    async onRequest({ request }) {
       const getAccessToken = async () => {
         if (koofrConfig.refreshToken === "") {
           throw Error("The user has not manually auth yet.");
@@ -291,8 +291,8 @@ const getAuthMiddleware = (
       };
 
       const access = await getAccessToken();
-      req.headers.set("Authorization", `Bearer ${access}`);
-      return req;
+      request.headers.set("Authorization", `Bearer ${access}`);
+      return request;
     },
   };
   return authMiddleware;
