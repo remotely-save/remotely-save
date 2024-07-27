@@ -38,9 +38,11 @@ export function isMergable(a: Entity, b?: Entity) {
  * @param b
  */
 function mergeDigInModified(a: string, o: string, b: string) {
-  const { conflict, result } = mergeDigIn(a, o, b);
+  const { conflict, result } = mergeDigIn(a, o, b, {
+    stringSeparator: /\n/,
+  });
   for (let index = 0; index < result.length; ++index) {
-    if (["<<<<<<<", "=======", ">>>>>>>"].contains(result[index])) {
+    if (["<<<<<<<", "=======", ">>>>>>>"].includes(result[index])) {
       result[index] = "`" + result[index] + "`";
     }
   }
@@ -72,7 +74,7 @@ function getLCSText(a: string, b: string) {
  * @param b
  * @returns
  */
-function twoWayMerge(a: string, b: string): string {
+export function twoWayMerge(a: string, b: string): string {
   const aa = a.trim();
   const bb = b.trim();
   if (aa === "" && bb === "") {
@@ -88,7 +90,10 @@ function twoWayMerge(a: string, b: string): string {
   // const c = getLCSText(a, b);
   // const patches = makePatches(c, a);
   // const [d] = applyPatches(patches, b);
-  const c = getLCSText(a, b);
+  const c = getLCSText(a, b); //.trim();
+  // console.debug(`(start) LCS Text:`);
+  // console.debug(c);
+  // console.debug(`(end) LCS Text.`);
   const d = mergeDigInModified(a, c, b).result.join("\n");
   return d;
 }
@@ -100,7 +105,7 @@ function twoWayMerge(a: string, b: string): string {
  * @param orig
  * @returns
  */
-function threeWayMerge(a: string, b: string, orig: string) {
+export function threeWayMerge(a: string, b: string, orig: string) {
   return mergeDigInModified(a, orig, b).result.join("\n");
 }
 
