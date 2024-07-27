@@ -9,7 +9,7 @@
     "dev": "webpack --mode development --watch",
     "format": "npx @biomejs/biome check --write .",
     "clean": "npx rimraf main.js",
-    "test": "cross-env TS_NODE_COMPILER_OPTIONS={\\\"module\\\":\\\"commonjs\\\"} mocha -r ts-node/register 'tests/**/*.ts' 'pro/tests/**/*.ts'"
+    "test": "mocha --import=tsx 'tests/**/*.ts' 'pro/tests/**/*.ts'"
   },
   "browser": {
     "path": "path-browserify",
@@ -47,8 +47,8 @@
     "obsidian": "^1.5.7",
     "openapi-typescript": "^7.1.0",
     "ts-loader": "^9.5.1",
-    "ts-node": "^10.9.2",
     "tslib": "^2.6.3",
+    "tsx": "^4.16.2",
     "typescript": "^5.5.4",
     "webdav-server": "^2.6.2",
     "webpack": "^5.93.0",
