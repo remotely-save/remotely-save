@@ -143,6 +143,7 @@ if (VALID_REQURL) {
 // @ts-ignore
 // biome-ignore lint: we want to ts-ignore the next line
 import { AuthType, BufferLike, createClient } from "webdav/dist/web/index.js";
+import isEqual from "lodash/isEqual";
 
 export const DEFAULT_WEBDAV_CONFIG = {
   address: "",
@@ -290,7 +291,6 @@ export class FakeFsWebdav extends FakeFs {
       this.webdavConfig.username !== "" &&
       this.webdavConfig.password !== ""
     ) {
-      console.debug("hey!");
       this.client = createClient(this.webdavConfig.address, {
         username: tryEncodeUsernamePassword(this.webdavConfig.username),
         password: tryEncodeUsernamePassword(this.webdavConfig.password),
@@ -300,7 +300,6 @@ export class FakeFsWebdav extends FakeFs {
             ? AuthType.Digest
             : AuthType.Password,
       });
-      console.debug("fuck!");
     } else {
       console.info("no password");
       this.client = createClient(this.webdavConfig.address, {
