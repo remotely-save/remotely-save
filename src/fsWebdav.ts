@@ -248,7 +248,8 @@ export class FakeFsWebdav extends FakeFs {
   vaultFolderExists: boolean;
   saveUpdatedConfigFunc: () => Promise<any>;
 
-  supportNativePartial: boolean;
+  supportApachePartial: boolean;
+  supportSabrePartial: boolean;
   isNextcloud: boolean;
   nextcloudUploadServerAddress: string;
 
@@ -265,7 +266,8 @@ export class FakeFsWebdav extends FakeFs {
     this.vaultFolderExists = false;
     this.saveUpdatedConfigFunc = saveUpdatedConfigFunc;
 
-    this.supportNativePartial = false;
+    this.supportApachePartial = false;
+    this.supportSabrePartial = false;
     this.isNextcloud = false;
     this.nextcloudUploadServerAddress = "";
   }
@@ -401,15 +403,20 @@ export class FakeFsWebdav extends FakeFs {
     // taken from https://github.com/perry-mitchell/webdav-client/blob/master/source/operations/partialUpdateFileContents.ts
     // which is under MIT license
     if (
-      (compliance.server.includes("Apache") &&
-        compliance.compliance.includes(
-          "<http://apache.org/dav/propset/fs/1>"
-        )) ||
-      compliance.compliance.includes("sabredav-partialupdate")
+      compliance.server.includes("Apache") &&
+      compliance.compliance.includes("<http://apache.org/dav/propset/fs/1>")
     ) {
-      this.supportNativePartial = true;
+      this.supportApachePartial = true;
       console.debug(
-        `supportNativePartial=true, compliance=${JSON.stringify(compliance)}`
+        `supportApachePartial=true, compliance=${JSON.stringify(compliance)}`
+      );
+      return true;
+    }
+
+    if (compliance.compliance.includes("sabredav-partialupdate")) {
+      this.supportSabrePartial = true;
+      console.debug(
+        `supportSabrePartial=true, compliance=${JSON.stringify(compliance)}`
       );
       return true;
     }
@@ -581,7 +588,11 @@ export class FakeFsWebdav extends FakeFs {
     }
 
     // larger than 10 MB
-    if (!this.isNextcloud && !this.supportNativePartial) {
+    if (
+      !this.isNextcloud &&
+      !this.supportApachePartial &&
+      !this.supportSabrePartial
+    ) {
       // give up and upload by whole, and directly return
       return await this._writeFileFromRootFull(
         key,
@@ -602,8 +613,16 @@ export class FakeFsWebdav extends FakeFs {
           ctime,
           origKey
         );
-      } else if (this.supportNativePartial) {
-        return await this._writeFileFromRootNativePartial(
+      } else if (this.supportApachePartial) {
+        return await this._writeFileFromRootApachePartial(
+          key,
+          content,
+          mtime,
+          ctime,
+          origKey
+        );
+      } else if (this.supportSabrePartial) {
+        return await this._writeFileFromRootSabrePartial(
           key,
           content,
           mtime,
@@ -619,7 +638,7 @@ export class FakeFsWebdav extends FakeFs {
       console.error(e);
       throw e;
       // this.isNextcloud = false;
-      // this.supportNativePartial = false;
+      // this.supportApachePartial = false;
       // return await this._writeFileFromRootFull(
       //   key,
       //   content,
@@ -764,7 +783,7 @@ export class FakeFsWebdav extends FakeFs {
     return k;
   }
 
-  async _writeFileFromRootNativePartial(
+  async _writeFileFromRootApachePartial(
     key: string,
     content: ArrayBuffer,
     mtime: number,
@@ -786,6 +805,8 @@ export class FakeFsWebdav extends FakeFs {
       content.byteLength,
       sizePerChunk
     );
+
+    // TODO: parallel
     for (let i = 0; i < chunkRanges.length; ++i) {
       const { start, end } = chunkRanges[i];
       await this.client.partialUpdateFileContents(
@@ -794,6 +815,47 @@ export class FakeFsWebdav extends FakeFs {
         end,
         content.slice(start, end + 1)
       );
+    }
+
+    // lastly return
+    return await this.stat(origKey);
+  }
+
+  async _writeFileFromRootSabrePartial(
+    key: string,
+    content: ArrayBuffer,
+    mtime: number,
+    ctime: number,
+    origKey: string
+  ): Promise<Entity> {
+    // firstly upload a 0-byte data
+    await this._writeFileFromRootFull(
+      key,
+      new ArrayBuffer(0),
+      mtime,
+      ctime,
+      origKey
+    );
+
+    // then "update" by chunks
+    const sizePerChunk = 5 * 1024 * 1024; // 5 mb
+    const chunkRanges = splitFileSizeToChunkRanges(
+      content.byteLength,
+      sizePerChunk
+    );
+
+    // diff from apachePartial: we use "append" header here for dufs...
+    // we cannot parallel here
+    for (let i = 0; i < chunkRanges.length; ++i) {
+      const { start, end } = chunkRanges[i];
+      await this.client.customRequest(key, {
+        method: "PATCH",
+        headers: {
+          "X-Update-Range": "append",
+          "Content-Type": "application/x-sabredav-partialupdate",
+        },
+        data: content.slice(start, end + 1),
+      });
     }
 
     // lastly return
