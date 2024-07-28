@@ -117,7 +117,7 @@ export class FakeFsWebdis extends FakeFs {
     let cursor = "0";
     const res: Entity[] = [];
     do {
-      const command = `SCAN/${cursor}/MATCH/rs:fs:v1:*:meta/COUNT/1000`;
+      const command = `SCAN/${cursor}/MATCH/rs:fs:v1:${encodeURIComponent(this.remoteBaseDir + "/")}*:meta/COUNT/1000`;
       const rsp = (await (await this._fetchCommand("GET", command)).json())[
         "SCAN"
       ];
@@ -136,7 +136,7 @@ export class FakeFsWebdis extends FakeFs {
   async walkPartial(): Promise<Entity[]> {
     let cursor = "0";
     const res: Entity[] = [];
-    const command = `SCAN/${cursor}/MATCH/rs:fs:v1:*:meta/COUNT/10`; // fewer keys
+    const command = `SCAN/${cursor}/MATCH/rs:fs:v1:${encodeURIComponent(this.remoteBaseDir + "/")}*:meta/COUNT/10`; // fewer keys
     const rsp = (await (await this._fetchCommand("GET", command)).json())[
       "SCAN"
     ];
