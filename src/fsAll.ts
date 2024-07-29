@@ -26,7 +26,7 @@ export abstract class FakeFs {
       // await delay(3000);
 
       console.info(`check connect: upload file`);
-      const filename = `${folderName}/rs-test-file-${nanoid()}`;
+      const filename = `${folderName}rs-test-file-${nanoid()}`;
       const ctime = Date.now();
       const mtime1 = Date.now();
       const content1 = new ArrayBuffer(100);
