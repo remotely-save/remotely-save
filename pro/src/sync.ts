@@ -134,13 +134,44 @@ const isSkipItemByName = (
   syncBookmarks: boolean,
   syncUnderscoreItems: boolean,
   configDir: string,
-  ignorePaths: string[]
+  ignorePaths: string[],
+  onlyAllowPaths: string[]
 ) => {
   if (key === undefined) {
     throw Error(`isSkipItemByName meets undefinded key!`);
   }
+
+  let enableAllowMode = false;
+  let isInAllowList = false;
+  if (onlyAllowPaths !== undefined && onlyAllowPaths.length > 0) {
+    for (const r of onlyAllowPaths) {
+      if (r.trim() === "") {
+        // ignore empty lines
+        continue;
+      }
+      enableAllowMode = true; // we really want to check the allow list
+
+      if (XRegExp(r, "A").test(key)) {
+        isInAllowList = true;
+      }
+    }
+  }
+  // we want to determine "is skippable or not".
+  // if the key meets the allow list,
+  //     it may or may not be skippable,
+  //     and is deferred to next checking steps
+  // if the key doesn't meet the allow list,
+  //     it must be skippable.
+  if (enableAllowMode && !isInAllowList) {
+    return true; // must be skippable
+  }
+
   if (ignorePaths !== undefined && ignorePaths.length > 0) {
     for (const r of ignorePaths) {
+      if (r.trim() === "") {
+        // ignore empty lines
+        continue;
+      }
       if (XRegExp(r, "A").test(key)) {
         return true;
       }
@@ -179,6 +210,7 @@ const ensembleMixedEnties = async (
   configDir: string,
   syncUnderscoreItems: boolean,
   ignorePaths: string[],
+  onlyAllowPaths: string[],
   fsEncrypt: FakeFsEncrypt,
   serviceType: SUPPORTED_SERVICES_TYPE,
 
@@ -206,7 +238,8 @@ const ensembleMixedEnties = async (
         syncBookmarks,
         syncUnderscoreItems,
         configDir,
-        ignorePaths
+        ignorePaths,
+        onlyAllowPaths
       )
     ) {
       continue;
@@ -246,7 +279,8 @@ const ensembleMixedEnties = async (
           syncBookmarks,
           syncUnderscoreItems,
           configDir,
-          ignorePaths
+          ignorePaths,
+          onlyAllowPaths
         )
       ) {
         continue;
@@ -282,7 +316,8 @@ const ensembleMixedEnties = async (
         syncBookmarks,
         syncUnderscoreItems,
         configDir,
-        ignorePaths
+        ignorePaths,
+        onlyAllowPaths
       )
     ) {
       continue;
@@ -1752,6 +1787,7 @@ export async function syncer(
       configDir,
       settings.syncUnderscoreItems ?? false,
       settings.ignorePaths ?? [],
+      settings.onlyAllowPaths ?? [],
       fsEncrypt,
       settings.serviceType,
       profiler

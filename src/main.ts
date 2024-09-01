@@ -141,6 +141,7 @@ const DEFAULT_SETTINGS: RemotelySavePluginSettings = {
   logToDB: false,
   skipSizeLargerThan: -1,
   ignorePaths: [],
+  onlyAllowPaths: [],
   enableStatusBarInfo: true,
   deleteToWhere: "system",
   agreeToUseSyncV3: false,
@@ -1408,6 +1409,9 @@ export default class RemotelySavePlugin extends Plugin {
     }
     if (this.settings.ignorePaths === undefined) {
       this.settings.ignorePaths = [];
+    }
+    if (this.settings.onlyAllowPaths === undefined) {
+      this.settings.onlyAllowPaths = [];
     }
     if (this.settings.enableStatusBarInfo === undefined) {
       this.settings.enableStatusBarInfo = true;

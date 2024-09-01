@@ -2247,6 +2247,27 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
         textArea.inputEl.addClass("ignorepaths-textarea");
       });
 
+    new Setting(basicDiv)
+      .setName(t("settings_onlyallowpaths"))
+      .setDesc(t("settings_onlyallowpaths_desc"))
+      .setClass("onlyallowpaths-settings")
+
+      .addTextArea((textArea) => {
+        textArea
+          .setValue(`${(this.plugin.settings.onlyAllowPaths ?? []).join("\n")}`)
+          .onChange(async (value) => {
+            this.plugin.settings.onlyAllowPaths = value
+              .trim()
+              .split("\n")
+              .filter((x) => x.trim() !== "");
+            await this.plugin.saveSettings();
+          });
+        textArea.inputEl.rows = 10;
+        textArea.inputEl.cols = 30;
+
+        textArea.inputEl.addClass("onlyallowpaths-textarea");
+      });
+
     //////////////////////////////////////////////////
     // below for advanced settings
     //////////////////////////////////////////////////

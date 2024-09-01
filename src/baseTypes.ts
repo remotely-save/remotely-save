@@ -173,6 +173,7 @@ export interface RemotelySavePluginSettings {
   agreeToUseSyncV3?: boolean;
   skipSizeLargerThan?: number;
   ignorePaths?: string[];
+  onlyAllowPaths?: string[];
   enableStatusBarInfo?: boolean;
   deleteToWhere?: "system" | "obsidian";
   conflictAction?: ConflictActionType;
