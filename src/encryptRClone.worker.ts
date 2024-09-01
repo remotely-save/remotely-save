@@ -141,7 +141,7 @@ ctx.addEventListener("message", async (event: any) => {
           status: "ok",
           outputContent: outputContent,
         },
-        [outputContent]
+        [outputContent] // on worker side, we don't reuse anything so it's safe to transfer
       );
     } catch (error) {
       console.error(error);
@@ -166,7 +166,7 @@ ctx.addEventListener("message", async (event: any) => {
           status: "ok",
           outputContent: outputContent,
         },
-        [outputContent]
+        [outputContent] // on worker side, we don't reuse anything so it's safe to transfer
       );
     } catch (error) {
       console.error(error);

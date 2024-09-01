@@ -202,7 +202,7 @@ export class CipherRclone {
         },
         [
           channel.port1,
-          // input // the array buffer might be re-used later, so we CANNOT transform here
+          // input // the array buffer might be re-used later, so we CANNOT transfer here
         ]
       );
     });
@@ -247,8 +247,10 @@ export class CipherRclone {
           action: "decryptContent",
           inputContent: input,
         },
-        // the decrypted result is not used later in worker, so it's save to transfer
-        [channel.port1, input]
+        [
+          channel.port1,
+          input, // not transfer for safety
+        ]
       );
     });
   }
