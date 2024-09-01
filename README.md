@@ -203,7 +203,7 @@ See [PRO](./docs/pro/README.md) for more details.
 
 If you see any errors, please check the doc [here](./docs/how_to_debug/README.md) for more details.
 
-Moreover, sometimes the program runs but slowly, you want to check the performance by [enabling the profiler](./docs/check_performance/README).
+Moreover, sometimes the program runs but slowly, you want to check the performance by [enabling the profiler](./docs/check_performance/README.md).
 
 ## Bonus: Import And Export Not-Oauth2 Plugin Settings By QR Code
 
