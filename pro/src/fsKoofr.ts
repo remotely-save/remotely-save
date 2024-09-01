@@ -140,7 +140,7 @@ export const setConfigBySuccessfullAuthInplace = async (
 ) => {
   if (authRes.access_token === undefined || authRes.access_token === "") {
     throw Error(
-      `you should not save the setting for ${JSON.stringify(authRes)}`
+      `remotely save account auth failed, please auth again: ${JSON.stringify(authRes)}`
     );
   }
 

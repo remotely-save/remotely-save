@@ -99,7 +99,9 @@ export const setConfigBySuccessfullAuthInplace = async (
   saveUpdatedConfigFunc: () => Promise<any> | undefined
 ) => {
   if (authRes === undefined) {
-    throw Error(`you should not save the setting for undefined result`);
+    throw Error(
+      `remotely save account auth failed, please auth again: undefined result`
+    );
   }
 
   config.accessToken = authRes.access_token;
