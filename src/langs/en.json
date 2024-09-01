@@ -340,7 +340,7 @@
   "settings_obfuscatesettingfile": "Obfuscate The Setting File Or Not",
   "settings_obfuscatesettingfile_desc": "The setting file (data.json) has some sensitive information. It's strongly recommended to obfuscate it to avoid unexpected read and modification. If you are sure to view and edit it manually, you can disable the obfuscation.",
   "settings_viewconsolelog": "View Console Log",
-  "settings_viewconsolelog_desc": "On desktop, please press \"ctrl+shift+i\" or \"cmd+shift+i\" to view the log. On mobile, please install the third-party plugin <a href='https://obsidian.md/plugins?search=Logstravaganza'>Logstravaganza</a> to export the console log to a note.",
+  "settings_viewconsolelog_desc": "On desktop, please press \"ctrl+shift+i\" or \"cmd+option+i\" to view the log. On mobile, please install the third-party plugin <a href='https://obsidian.md/plugins?search=Logstravaganza'>Logstravaganza</a> to export the console log to a note.",
   "settings_syncplans": "Export Sync Plans",
   "settings_syncplans_desc": "Sync plans are created every time after you trigger sync and before the actual sync. Useful to know what would actually happen in those sync. Click the button to export sync plans.",
   "settings_syncplans_button_1_only_change": "Export latest 1 (change part)",
