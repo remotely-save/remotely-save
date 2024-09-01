@@ -60,6 +60,17 @@ const copyEntityAndFixTimeFormat = (
       result.mtimeCliFmt = unixTimeToStr(result.mtimeCli);
     }
   }
+  if (result.ctimeCli !== undefined) {
+    if (result.ctimeCli === 0) {
+      result.ctimeCli = undefined;
+    } else {
+      if (serviceType === "s3" || serviceType === "dropbox") {
+        // round to second instead of millisecond
+        result.ctimeCli = Math.floor(result.ctimeCli / 1000.0) * 1000;
+      }
+      result.ctimeCliFmt = unixTimeToStr(result.ctimeCli);
+    }
+  }
   if (result.mtimeSvr !== undefined) {
     if (result.mtimeSvr === 0) {
       result.mtimeSvr = undefined;

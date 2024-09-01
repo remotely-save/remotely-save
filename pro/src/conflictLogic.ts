@@ -167,7 +167,7 @@ export async function mergeFile(
     key,
     newArrayBuffer,
     rightEntity.mtimeCli ?? mtime,
-    rightEntity.mtimeCli ?? mtime
+    rightEntity.ctimeCli ?? rightEntity.mtimeCli ?? mtime
   );
 
   return {

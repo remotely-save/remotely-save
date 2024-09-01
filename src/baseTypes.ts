@@ -271,6 +271,8 @@ export interface Entity {
   keyRaw: string;
   mtimeCli?: number;
   mtimeCliFmt?: string;
+  ctimeCli?: number;
+  ctimeCliFmt?: string;
   mtimeSvr?: number;
   mtimeSvrFmt?: string;
   prevSyncTime?: number;

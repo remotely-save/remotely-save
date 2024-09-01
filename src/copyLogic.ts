@@ -41,7 +41,7 @@ export async function copyFile(key: string, left: FakeFs, right: FakeFs) {
       key,
       content,
       statsLeft.mtimeCli,
-      statsLeft.mtimeCli /* TODO */
+      statsLeft.ctimeCli ?? statsLeft.mtimeCli
     ),
     content: content,
   };

@@ -403,13 +403,23 @@ ${constructFromDriveItemToEntityError(x)}`
   if (mtimeTry === undefined || mtimeTry === null) {
     throw Error(`onedrive cannot parse mtime: ${JSON.stringify(x, null, 2)}`);
   }
+
+  let ctimeTry = x?.fileSystemInfo?.createdDateTime;
+  if (ctimeTry === undefined || ctimeTry === null) {
+    // throw Error(`onedrive cannot parse ctime: ${JSON.stringify(x, null, 2)}`);
+    // it doesn't hurt, we just use mtimeTry to fullfill
+    ctimeTry = mtimeTry;
+  }
+
   const mtimeSvr = Date.parse(mtimeTry);
   const mtimeCli = Date.parse(mtimeTry);
+  const ctimeCli = Date.parse(ctimeTry);
   return {
     key: key,
     keyRaw: key,
     mtimeSvr: mtimeSvr,
     mtimeCli: mtimeCli,
+    ctimeCli: ctimeCli,
     size: isFolder ? 0 : x.size!,
     sizeRaw: isFolder ? 0 : x.size!,
     synthesizedFile: false,
@@ -878,6 +888,7 @@ export class FakeFsOnedrive extends FakeFs {
           keyRaw: origKey,
           mtimeSvr: mtime,
           mtimeCli: mtime,
+          ctimeCli: ctime,
           size: 0,
           sizeRaw: 0,
           synthesizedFile: true,

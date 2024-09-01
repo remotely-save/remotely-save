@@ -133,8 +133,10 @@ export class FakeFsLocal extends FakeFs {
     return {
       key: isFolder ? `${key}/` : key, // local always unencrypted
       keyRaw: isFolder ? `${key}/` : key,
+      ctimeCli: statRes.ctime,
       mtimeCli: statRes.mtime,
       mtimeSvr: statRes.mtime,
+      ctimeCliFmt: unixTimeToStr(statRes.ctime),
       mtimeCliFmt: unixTimeToStr(statRes.mtime),
       mtimeSvrFmt: unixTimeToStr(statRes.mtime),
       size: statRes.size, // local always unencrypted
