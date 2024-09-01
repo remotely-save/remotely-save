@@ -208,3 +208,13 @@ Moreover, sometimes the program runs but slowly, you want to check the performan
 ## Bonus: Import And Export Not-Oauth2 Plugin Settings By QR Code
 
 See [here](./docs/import_export_some_settings.md) for more details.
+
+## Download History
+
+Download history can be viewed on the unofficial [Obsidian Stats](https://www.moritzjung.dev/obsidian-stats/plugins/remotely-save/#downloads) (NOT affiliated with official Obsidian and GitHub and Remotely Save).
+
+## Star History 
+
+(NOT affiliated with official Obsidian and GitHub and Remotely Save.)
+
+[![Star History Chart](https://api.star-history.com/svg?repos=remotely-save/remotely-save&type=Date)](https://star-history.com/#remotely-save/remotely-save&Date)

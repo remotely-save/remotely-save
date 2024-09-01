@@ -209,3 +209,12 @@ PRO（付费）功能“智能冲突”为用户提供了另一个选项：合�
 
 详见[这里](./docs/import_export_some_settings.md)了解更多详情。
 
+## 下载历史
+
+下载历史可以从非官方的 [Obsidian Stats](https://www.moritzjung.dev/obsidian-stats/plugins/remotely-save/#downloads) 查阅。（和官方 Obsidian，GitHub，Remotely Save 均无利益关系。）
+
+## 星星历史 
+
+（和官方 Obsidian，GitHub，Remotely Save 均无利益关系。）
+
+[![星星历史 曲线图](https://api.star-history.com/svg?repos=remotely-save/remotely-save&type=Date)](https://star-history.com/#remotely-save/remotely-save&Date)
