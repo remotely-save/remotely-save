@@ -28,6 +28,7 @@ import {
 } from "../../src/metadataOnRemote";
 import {
   atWhichLevel,
+  checkValidName,
   getParentFolder,
   isHiddenPath,
   isSpecialFolderNameToSkip,
@@ -211,6 +212,13 @@ const ensembleMixedEnties = async (
       continue;
     }
 
+    const checkValidNameResult = checkValidName(key);
+    if (!checkValidNameResult.result) {
+      throw Error(
+        `your remote folder/file name is invalid: ${checkValidNameResult.reason}`
+      );
+    }
+
     finalMappings[key] = {
       key: key,
       remote: remoteCopied,
@@ -278,6 +286,13 @@ const ensembleMixedEnties = async (
       )
     ) {
       continue;
+    }
+
+    const checkValidNameResult = checkValidName(key);
+    if (!checkValidNameResult.result) {
+      throw Error(
+        `your local folder/file name is invalid: ${checkValidNameResult.reason}`
+      );
     }
 
     // TODO: abstraction leaking?
@@ -920,6 +935,8 @@ const getSyncPlanInplace = async (
   keptFolder.delete("/");
   keptFolder.delete("");
   if (keptFolder.size > 0) {
+    console.error(sortedKeys);
+    console.error(mixedEntityMappings);
     throw Error(`unexpectedly keptFolder no decisions: ${[...keptFolder]}`);
   }
 

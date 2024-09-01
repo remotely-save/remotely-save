@@ -363,6 +363,82 @@ describe("Misc: split chunk ranges", () => {
   });
 });
 
+describe("Misc: check valid file names", () => {
+  it("should be ok for normal file nmes", () => {
+    let item = "what/.hidden/what/what/what";
+    assert.ok(misc.checkValidName(item).result);
+
+    item = "ssss/%%%^^^$xxxx.md";
+    assert.ok(misc.checkValidName(item).result);
+  });
+
+  it("should be not ok for reserved characters", () => {
+    let item = "a**";
+    assert.ok(!misc.checkValidName(item).result);
+
+    item = "a?*";
+    assert.ok(!misc.checkValidName(item).result);
+
+    item = "<>:";
+    assert.ok(!misc.checkValidName(item).result);
+
+    item = "<>:/ssss";
+    assert.ok(!misc.checkValidName(item).result);
+  });
+
+  it("should be not ok for reserved names", () => {
+    let item = "CON";
+    assert.ok(!misc.checkValidName(item).result);
+
+    item = "CON.txt";
+    assert.ok(!misc.checkValidName(item).result);
+
+    item = "CON.md";
+    assert.ok(!misc.checkValidName(item).result);
+
+    item = "con"; // lower case is ok
+    assert.ok(misc.checkValidName(item).result);
+
+    item = "CON/";
+    assert.ok(!misc.checkValidName(item).result);
+
+    item = "CON.dir/";
+    assert.ok(!misc.checkValidName(item).result);
+
+    item = "CON.dir.folder/";
+    assert.ok(!misc.checkValidName(item).result);
+
+    item = "xxx/CON";
+    assert.ok(!misc.checkValidName(item).result);
+
+    item = "xxx/CON.txt";
+    assert.ok(!misc.checkValidName(item).result);
+
+    item = "xxx/CON.txt.md";
+    assert.ok(!misc.checkValidName(item).result);
+  });
+
+  it("should be not ok for invalid endings", () => {
+    let item = "xxx ";
+    assert.ok(!misc.checkValidName(item).result);
+
+    item = "/xxx ";
+    assert.ok(!misc.checkValidName(item).result);
+
+    item = "xxx.yyy.";
+    assert.ok(!misc.checkValidName(item).result);
+
+    item = "xxx.yyy.";
+    assert.ok(!misc.checkValidName(item).result);
+
+    item = "xxx /";
+    assert.ok(!misc.checkValidName(item).result);
+
+    item = "xxx.yyy./";
+    assert.ok(!misc.checkValidName(item).result);
+  });
+});
+
 describe("Misc: Dropbox: should fix the folder name cases", () => {
   it("should do nothing on empty folders", () => {
     const input: any[] = [];

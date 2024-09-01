@@ -742,3 +742,110 @@ export const getSha1 = async (x: ArrayBuffer, stringify: "base64" | "hex") => {
   }
   throw Error(`not supported stringify option = ${stringify}`);
 };
+
+/**
+ * https://learn.microsoft.com/en-us/windows/win32/fileio/naming-a-file#naming-conventions
+ * https://support.microsoft.com/en-us/office/restrictions-and-limitations-in-onedrive-and-sharepoint-64883a5d-228e-48f5-b3d2-eb39e07630fa#invalidcharacters
+ */
+export const checkValidName = (x: string) => {
+  if (x === undefined || x === "") {
+    // what??
+    return {
+      reason: "empty",
+      result: false,
+    };
+  }
+
+  // The following reserved characters:
+  const invalidChars = '*"<>:|?'.split("");
+  for (const c of invalidChars) {
+    if (x.includes(c)) {
+      return {
+        reason: `reserved character: ${c}`,
+        result: false,
+      };
+    }
+  }
+
+  // directory component
+  for (const c of [".", ".."]) {
+    if (
+      x === c ||
+      x.endsWith(`/${c}`) ||
+      x.startsWith(`${c}/`) ||
+      x.includes(`/${c}/`)
+    ) {
+      return {
+        reason: `directory being ${c}`,
+        result: false,
+      };
+    }
+  }
+
+  // reserved file names
+  const reservedNames = [
+    "CON",
+    "PRN",
+    "AUX",
+    "NUL",
+    "COM0",
+    "COM1",
+    "COM2",
+    "COM3",
+    "COM4",
+    "COM5",
+    "COM6",
+    "COM7",
+    "COM8",
+    "COM9",
+    "COM¹",
+    "COM²",
+    "COM³",
+    "LPT0",
+    "LPT1",
+    "LPT2",
+    "LPT3",
+    "LPT4",
+    "LPT5",
+    "LPT6",
+    "LPT7",
+    "LPT8",
+    "LPT9",
+    "LPT¹",
+    "LPT²",
+    "LPT³",
+  ];
+  for (const f of reservedNames) {
+    if (
+      x === f ||
+      x.startsWith(`${f}.`) ||
+      x.startsWith(`${f}/`) ||
+      x.includes(`/${f}/`) ||
+      x.endsWith(`/${f}`) ||
+      x.includes(`/${f}.`)
+    ) {
+      return {
+        reason: `reserved folder/file name: ${f}`,
+        result: false,
+      };
+    }
+  }
+
+  // Do not end a file or directory name with a space or a period.
+  if (
+    x.endsWith(" ") ||
+    x.endsWith(".") ||
+    x.includes(" /") ||
+    x.includes("./")
+  ) {
+    return {
+      reason: `folder/file name ending with a space or a period`,
+      result: false,
+    };
+  }
+
+  return {
+    reason: "ok",
+    result: true,
+  };
+};
