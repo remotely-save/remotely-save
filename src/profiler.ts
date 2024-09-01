@@ -10,6 +10,7 @@ interface BreakPoint {
 }
 
 export const DEFAULT_PROFILER_CONFIG: ProfilerConfig = {
+  enable: false,
   enablePrinting: false,
   recordSize: false,
 };

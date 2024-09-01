@@ -2941,6 +2941,25 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
       });
 
     new Setting(debugDiv)
+      .setName(t("settings_profiler_enableprofiler"))
+      .setDesc(t("settings_profiler_enableprofiler_desc"))
+      .addDropdown((dropdown) => {
+        dropdown.addOption("enable", t("enable"));
+        dropdown.addOption("disable", t("disable"));
+        dropdown
+          .setValue(
+            this.plugin.settings.profiler?.enable ? "enable" : "disable"
+          )
+          .onChange(async (val: string) => {
+            if (this.plugin.settings.profiler === undefined) {
+              this.plugin.settings.profiler = DEFAULT_PROFILER_CONFIG;
+            }
+            this.plugin.settings.profiler.enable = val === "enable";
+            await this.plugin.saveSettings();
+          });
+      });
+
+    new Setting(debugDiv)
       .setName(t("settings_profiler_enabledebugprint"))
       .setDesc(t("settings_profiler_enabledebugprint_desc"))
       .addDropdown((dropdown) => {

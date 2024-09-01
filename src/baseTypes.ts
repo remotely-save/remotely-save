@@ -140,6 +140,7 @@ export type CipherMethodType = "rclone-base64" | "openssl-base64" | "unknown";
 export type QRExportType = "basic_and_advanced" | SUPPORTED_SERVICES_TYPE;
 
 export interface ProfilerConfig {
+  enable?: boolean;
   enablePrinting?: boolean;
   recordSize?: boolean;
 }

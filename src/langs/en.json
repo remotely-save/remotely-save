@@ -361,6 +361,8 @@
   "settings_profiler_results_desc": "The plugin records the time cost of each steps. Here you can export them to know which step is slow.",
   "settings_profiler_results_notice": "Profiler results exported.",
   "settings_profiler_results_button_all": "Export All",
+  "settings_profiler_enableprofiler": "Enable Profiler",
+  "settings_profiler_enableprofiler_desc": "Collect performance data or not?",
   "settings_profiler_enabledebugprint": "Enable Profiler Printing",
   "settings_profiler_enabledebugprint_desc": "Print profiler result in each insertion to console or not?",
   "settings_profiler_recordsize": "Enable Profiler Recording Size",

@@ -199,9 +199,11 @@ PRO（付费）功能“智能冲突”为用户提供了另一个选项：合�
 
 详见[PRO](./docs/pro/README.md)了解更多详情。
 
-## 如何调试
+## 如何调试（debug）
 
-详见[这里](./docs/how_to_debug/README.md)了解更多详情。
+如发生错误，查看[这里文档](./docs/how_to_debug/README.md)了解调试方式。
+
+如果没有发生错误，但是运行起来很慢，你需要[开启“性能收集”](./docs/check_performance/README)来看看有没有哪一步特别慢。
 
 ## 额外功能：通过 QR 码导入和导出非 OAuth2 插件设置
 

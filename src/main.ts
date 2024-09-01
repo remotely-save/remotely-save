@@ -108,7 +108,7 @@ import {
   upsertPluginVersionByVault,
 } from "./localdb";
 import { changeMobileStatusBar } from "./misc";
-import { DEFAULT_PROFILER_CONFIG, type Profiler } from "./profiler";
+import { DEFAULT_PROFILER_CONFIG, Profiler } from "./profiler";
 import { RemotelySaveSettingTab } from "./settings";
 import { SyncAlgoV3Modal } from "./syncAlgoV3Notice";
 
@@ -232,12 +232,14 @@ export default class RemotelySavePlugin extends Plugin {
   appContainerObserver?: MutationObserver;
 
   async syncRun(triggerSource: SyncTriggerSourceType = "manual") {
-    // const profiler = new Profiler(
-    //   undefined,
-    //   this.settings.profiler?.enablePrinting ?? false,
-    //   this.settings.profiler?.recordSize ?? false
-    // );
-    const profiler: Profiler | undefined = undefined;
+    let profiler: Profiler | undefined = undefined;
+    if (this.settings.profiler?.enable ?? false) {
+      profiler = new Profiler(
+        undefined,
+        this.settings.profiler?.enablePrinting ?? false,
+        this.settings.profiler?.recordSize ?? false
+      );
+    }
     const fsLocal = new FakeFsLocal(
       this.app.vault,
       this.settings.syncConfigDir ?? false,
@@ -1470,6 +1472,9 @@ export default class RemotelySavePlugin extends Plugin {
 
     if (this.settings.profiler === undefined) {
       this.settings.profiler = DEFAULT_PROFILER_CONFIG;
+    }
+    if (this.settings.profiler.enable === undefined) {
+      this.settings.profiler.enable = false;
     }
     if (this.settings.profiler.enablePrinting === undefined) {
       this.settings.profiler.enablePrinting = false;
