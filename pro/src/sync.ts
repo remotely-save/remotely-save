@@ -256,12 +256,14 @@ const ensembleMixedEnties = async (
       continue;
     }
 
-    const checkValidNameResult = checkValidName(key);
-    if (!checkValidNameResult.result) {
-      throw Error(
-        `your remote folder/file name is invalid: ${checkValidNameResult.reason}`
-      );
-    }
+    // 20240907: users (not on windows) doesn't like it. revert back now.
+    // TODO: platform specific but not introducing obsidian dependency into sync.ts
+    // const checkValidNameResult = checkValidName(key);
+    // if (!checkValidNameResult.result) {
+    //   throw Error(
+    //     `your remote folder/file name is invalid: ${checkValidNameResult.reason}`
+    //   );
+    // }
 
     finalMappings[key] = {
       key: key,
@@ -334,12 +336,14 @@ const ensembleMixedEnties = async (
       continue;
     }
 
-    const checkValidNameResult = checkValidName(key);
-    if (!checkValidNameResult.result) {
-      throw Error(
-        `your local folder/file name is invalid: ${checkValidNameResult.reason}`
-      );
-    }
+    // 20240907: users (not on windows) doesn't like it. revert back now.
+    // TODO: platform specific but not introducing obsidian dependency into sync.ts
+    // const checkValidNameResult = checkValidName(key);
+    // if (!checkValidNameResult.result) {
+    //   throw Error(
+    //     `your local folder/file name is invalid: ${checkValidNameResult.reason}`
+    //   );
+    // }
 
     // TODO: abstraction leaking?
     const localCopied = await fsEncrypt.encryptEntity(
