@@ -761,7 +761,7 @@ export const checkValidName = (x: string) => {
   for (const c of invalidChars) {
     if (x.includes(c)) {
       return {
-        reason: `reserved character: ${c}`,
+        reason: `reserved character: ${c},name: ${x}`,
         result: false,
       };
     }
