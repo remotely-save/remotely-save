@@ -29,6 +29,7 @@ import {
 import {
   atWhichLevel,
   checkValidName,
+  getFolderLevels,
   getParentFolder,
   isHiddenPath,
   isSpecialFolderNameToSkip,
@@ -139,7 +140,14 @@ const isBookmarksFile = (x: string, configDir: string) => {
   );
 };
 
-const isSkipItemByName = (
+interface IsSkipResult {
+  enableAllowMode: boolean;
+  isExplictlyAllowed: boolean;
+  isExplictlyIgnored: boolean;
+  finalIsIgnored: boolean;
+}
+
+export const checkIsSkipItemOrNotByName = (
   key: string,
   syncConfigDir: boolean,
   syncBookmarks: boolean,
@@ -147,13 +155,15 @@ const isSkipItemByName = (
   configDir: string,
   ignorePaths: string[],
   onlyAllowPaths: string[]
-) => {
+): IsSkipResult => {
   if (key === undefined) {
-    throw Error(`isSkipItemByName meets undefinded key!`);
+    throw Error(`checkIsSkipItemOrNotByName meets undefinded key!`);
   }
 
+  let finalIsIgnored: boolean | undefined = undefined;
+
   let enableAllowMode = false;
-  let isInAllowList = false;
+  let isExplictlyAllowed = false;
   if (onlyAllowPaths !== undefined && onlyAllowPaths.length > 0) {
     for (const r of onlyAllowPaths) {
       if (r.trim() === "") {
@@ -163,7 +173,7 @@ const isSkipItemByName = (
       enableAllowMode = true; // we really want to check the allow list
 
       if (XRegExp(r, "A").test(key)) {
-        isInAllowList = true;
+        isExplictlyAllowed = true;
       }
     }
   }
@@ -173,10 +183,11 @@ const isSkipItemByName = (
   //     and is deferred to next checking steps
   // if the key doesn't meet the allow list,
   //     it must be skippable.
-  if (enableAllowMode && !isInAllowList) {
-    return true; // must be skippable
+  if (enableAllowMode && !isExplictlyAllowed) {
+    finalIsIgnored = true; // must be skippable
   }
 
+  let isExplictlyIgnored = false;
   if (ignorePaths !== undefined && ignorePaths.length > 0) {
     for (const r of ignorePaths) {
       if (r.trim() === "") {
@@ -184,29 +195,141 @@ const isSkipItemByName = (
         continue;
       }
       if (XRegExp(r, "A").test(key)) {
-        return true;
+        if (finalIsIgnored === undefined) {
+          isExplictlyIgnored = true;
+          finalIsIgnored = true;
+        }
       }
     }
   }
   if (syncConfigDir && isInsideObsFolder(key, configDir)) {
-    return false;
+    if (finalIsIgnored === undefined) {
+      finalIsIgnored = false;
+    }
   }
 
   if (syncBookmarks && isBookmarksFile(key, configDir)) {
-    return false;
+    if (finalIsIgnored === undefined) {
+      finalIsIgnored = false;
+    }
   }
 
   if (isSpecialFolderNameToSkip(key, [])) {
     // some special dirs and files are always skipped
-    return true;
+    if (finalIsIgnored === undefined) {
+      isExplictlyIgnored = true;
+      finalIsIgnored = true;
+    }
   }
-  return (
+
+  const checkIsHidden =
     isHiddenPath(key, true, false) ||
     (!syncUnderscoreItems && isHiddenPath(key, false, true)) ||
     key === "/" ||
     key === DEFAULT_FILE_NAME_FOR_METADATAONREMOTE ||
-    key === DEFAULT_FILE_NAME_FOR_METADATAONREMOTE2
-  );
+    key === DEFAULT_FILE_NAME_FOR_METADATAONREMOTE2;
+  if (finalIsIgnored === undefined) {
+    isExplictlyIgnored = checkIsHidden;
+    finalIsIgnored = checkIsHidden;
+  }
+
+  if (finalIsIgnored === undefined) {
+    throw Error(`no finalIsIgnored in checkIsSkipItemOrNotByName for ${key}`);
+  }
+
+  return {
+    enableAllowMode: enableAllowMode,
+    isExplictlyAllowed: isExplictlyAllowed,
+    isExplictlyIgnored: isExplictlyIgnored,
+    finalIsIgnored: finalIsIgnored,
+  };
+};
+
+/**
+ * | finalIgnored                    | reason                                       | explictlyIgnored | allowMode | explictlyAllowed |
+ * | ------------------------------- | -------------------------------------------- | ---------------- | --------- | ---------------- |
+ * | no                              | nothing blocking                             | no               | no        | no               |
+ * | yes, MAY be changed by children | allow mode not allowed, inexplicitly ignored | no               | yes       | no               |
+ * | no, MAY apply to parents        | allow mode allowed                           | no               | yes       | yes              |
+ * | yes, also apply to children     | explictly ignored                            | yes              | no        | no               |
+ * | yes, also apply to children     | explictly ignored                            | yes              | yes       | no               |
+ * | yes, also apply to children     | explictly ignored                            | yes              | yes       | yes              |
+ */
+export const getSkipItemsByList = (
+  skipOrNotResults: Record<string, IsSkipResult>,
+  ignorePaths: string[],
+  onlyAllowPaths: string[]
+): string[] => {
+  const allPotentialKeys = Object.keys(skipOrNotResults);
+  if (
+    allPotentialKeys.length === 0 ||
+    (ignorePaths.length === 0 && onlyAllowPaths.length === 0)
+  ) {
+    return [];
+  }
+
+  // from short(shadow) to long(deep) , ascending
+  const sortedKeys = allPotentialKeys.sort((k1, k2) => k1.length - k2.length);
+
+  // we deal with explicty ignored list firstly, apply them to children
+  const explictlyIgnoredSet = new Set<string>();
+  for (const key of sortedKeys) {
+    if (skipOrNotResults[key].isExplictlyIgnored) {
+      skipOrNotResults[key].finalIsIgnored = true;
+      explictlyIgnoredSet.add(key);
+    } else {
+      const parents = getFolderLevels(key, true).reverse();
+      for (const key2 of parents) {
+        if (explictlyIgnoredSet.has(key2)) {
+          skipOrNotResults[key].isExplictlyIgnored = true;
+          skipOrNotResults[key].finalIsIgnored = true;
+          explictlyIgnoredSet.add(key);
+          break;
+        }
+      }
+    }
+  }
+
+  // we deal with explictly allow list secondly, apply them to PARENTS if possible
+  const enableAllowMode = skipOrNotResults[allPotentialKeys[0]].enableAllowMode;
+  if (enableAllowMode) {
+    for (let index = 0; index < sortedKeys.length; index++) {
+      // reverse order, long(deep) to short(shadow), ascending
+      const key = sortedKeys[sortedKeys.length - index - 1];
+      if (
+        !skipOrNotResults[key].isExplictlyIgnored &&
+        skipOrNotResults[key].isExplictlyAllowed
+      ) {
+        // the file is explictly allowed, and not explictly ignored by anywhere
+        // we allow all its parents!
+        const parents = getFolderLevels(key, true).reverse();
+
+        for (const key2 of parents) {
+          if (
+            key2 in skipOrNotResults &&
+            !skipOrNotResults[key2].isExplictlyIgnored &&
+            !explictlyIgnoredSet.has(key2)
+          ) {
+            skipOrNotResults[key2].isExplictlyAllowed = true;
+            skipOrNotResults[key2].finalIsIgnored = false; // from ignored to allowed
+          } else {
+            throw Error(
+              `${key}'s parent ${key2} in abnormal state: ${JSON.stringify(skipOrNotResults[key2])}`
+            );
+          }
+        }
+      }
+    }
+  }
+
+  // get all finalIsIgnored
+  const result: string[] = [];
+  for (const key of sortedKeys) {
+    if (skipOrNotResults[key].finalIsIgnored) {
+      result.push(key);
+    }
+  }
+  return result;
 };
 
 export type SyncPlanType = Record<string, MixedEntity>;
@@ -235,25 +358,29 @@ const ensembleMixedEnties = async (
 
   const finalMappings: SyncPlanType = {};
 
+  const skipOrNotResults: Record<string, IsSkipResult> = {};
+
   // remote has to be first
+  let remoteMaySkipCount = 0;
   for (const remote of remoteEntityList) {
     const remoteCopied = ensureMTimeOfRemoteEntityValid(
       copyEntityAndFixTimeFormat(remote, serviceType)
     );
 
     const key = remoteCopied.key!;
-    if (
-      isSkipItemByName(
-        key,
-        syncConfigDir,
-        syncBookmarks,
-        syncUnderscoreItems,
-        configDir,
-        ignorePaths,
-        onlyAllowPaths
-      )
-    ) {
-      continue;
+
+    const skipOrNot = checkIsSkipItemOrNotByName(
+      key,
+      syncConfigDir,
+      syncBookmarks,
+      syncUnderscoreItems,
+      configDir,
+      ignorePaths,
+      onlyAllowPaths
+    );
+    skipOrNotResults[key] = skipOrNot;
+    if (skipOrNot.finalIsIgnored) {
+      remoteMaySkipCount += 1;
     }
 
     // 20240907: users (not on windows) doesn't like it. revert back now.
@@ -274,19 +401,23 @@ const ensembleMixedEnties = async (
   profiler?.insert("ensembleMixedEnties: finish remote");
   profiler?.insertSize("sizeof finalMappings", finalMappings);
 
-  if (Object.keys(finalMappings).length === 0 || localEntityList.length === 0) {
+  if (
+    Object.keys(finalMappings).length - remoteMaySkipCount === 0 ||
+    localEntityList.length === 0
+  ) {
     // Special checking:
     // if one side is totally empty,
     // usually that's a hard rest.
     // So we need to ignore everything of prevSyncEntityList to avoid deletions!
     // TODO: acutally erase everything of prevSyncEntityList?
-    // TODO: local should also go through a isSkipItemByName checking beforehand
+    // TODO: local should also go through a checkIsSkipItemOrNotByName checking beforehand
   } else {
     // normally go through the prevSyncEntityList
     for (const prevSync of prevSyncEntityList) {
       const key = prevSync.key!;
-      if (
-        isSkipItemByName(
+
+      if (!(key in skipOrNotResults)) {
+        const skipOrNot = checkIsSkipItemOrNotByName(
           key,
           syncConfigDir,
           syncBookmarks,
@@ -294,9 +425,8 @@ const ensembleMixedEnties = async (
           configDir,
           ignorePaths,
           onlyAllowPaths
-        )
-      ) {
-        continue;
+        );
+        skipOrNotResults[key] = skipOrNot;
       }
 
       // TODO: abstraction leaking?
@@ -322,8 +452,9 @@ const ensembleMixedEnties = async (
   // (we don't consume prevSync here because it gains no benefit)
   for (const local of localEntityList) {
     const key = local.key!;
-    if (
-      isSkipItemByName(
+
+    if (!(key in skipOrNotResults)) {
+      const skipOrNot = checkIsSkipItemOrNotByName(
         key,
         syncConfigDir,
         syncBookmarks,
@@ -331,9 +462,8 @@ const ensembleMixedEnties = async (
         configDir,
         ignorePaths,
         onlyAllowPaths
-      )
-    ) {
-      continue;
+      );
+      skipOrNotResults[key] = skipOrNot;
     }
 
     // 20240907: users (not on windows) doesn't like it. revert back now.
@@ -362,6 +492,19 @@ const ensembleMixedEnties = async (
   profiler?.insert("ensembleMixedEnties: finish local");
   profiler?.insertSize("sizeof finalMappings", finalMappings);
 
+  // we check the skipOrNotResults again! in case we adjust some paths!
+  const allReallySkipKeys = getSkipItemsByList(
+    skipOrNotResults,
+    ignorePaths,
+    onlyAllowPaths
+  );
+  for (const key of allReallySkipKeys) {
+    delete finalMappings[key];
+  }
+
+  profiler?.insert("ensembleMixedEnties: finish parsing all skip items");
+  profiler?.insertSize("sizeof finalMappings", finalMappings);
+
   // console.debug("in the end of ensembleMixedEnties, finalMappings is:");
   // console.debug(finalMappings);
 
@@ -387,7 +530,7 @@ const getSyncPlanInplace = async (
 ) => {
   profiler?.addIndent();
   profiler?.insert("getSyncPlanInplace: enter");
-  // from long(deep) to short(shadow)
+  // from long(deep) to short(shadow), descending
   const sortedKeys = Object.keys(mixedEntityMappings).sort(
     (k1, k2) => k2.length - k1.length
   );
