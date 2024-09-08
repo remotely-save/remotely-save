@@ -361,7 +361,7 @@ const ensembleMixedEnties = async (
   const skipOrNotResults: Record<string, IsSkipResult> = {};
 
   // remote has to be first
-  let remoteMaySkipCount = 0;
+  let remoteMaySkipCountAndNotConfig = 0;
   for (const remote of remoteEntityList) {
     const remoteCopied = ensureMTimeOfRemoteEntityValid(
       copyEntityAndFixTimeFormat(remote, serviceType)
@@ -379,8 +379,8 @@ const ensembleMixedEnties = async (
       onlyAllowPaths
     );
     skipOrNotResults[key] = skipOrNot;
-    if (skipOrNot.finalIsIgnored) {
-      remoteMaySkipCount += 1;
+    if (skipOrNot.finalIsIgnored && !key.startsWith(configDir)) {
+      remoteMaySkipCountAndNotConfig += 1;
     }
 
     // 20240907: users (not on windows) doesn't like it. revert back now.
@@ -402,8 +402,10 @@ const ensembleMixedEnties = async (
   profiler?.insertSize("sizeof finalMappings", finalMappings);
 
   if (
-    Object.keys(finalMappings).length - remoteMaySkipCount === 0 ||
-    localEntityList.length === 0
+    Object.keys(finalMappings).filter((k) => !k.startsWith(configDir)).length -
+      remoteMaySkipCountAndNotConfig ===
+      0 ||
+    localEntityList.filter((e) => !e.key?.startsWith(configDir)).length === 0
   ) {
     // Special checking:
     // if one side is totally empty,
