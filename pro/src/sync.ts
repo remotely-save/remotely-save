@@ -202,16 +202,19 @@ export const checkIsSkipItemOrNotByName = (
       }
     }
   }
-  if (isInsideObsFolder(key, configDir) && finalIsIgnored === undefined) {
-    if (syncConfigDir) {
+
+  // we have to check bookmarks.json firstly then check the whole .obsidian folder later
+  if (isBookmarksFile(key, configDir) && finalIsIgnored === undefined) {
+    if (syncBookmarks) {
       finalIsIgnored = false;
     } else {
       finalIsIgnored = true;
     }
   }
 
-  if (isBookmarksFile(key, configDir) && finalIsIgnored === undefined) {
-    if (syncBookmarks) {
+  // we have to check bookmarks.json firstly then check the whole .obsidian folder later
+  if (isInsideObsFolder(key, configDir) && finalIsIgnored === undefined) {
+    if (syncConfigDir) {
       finalIsIgnored = false;
     } else {
       finalIsIgnored = true;
@@ -260,17 +263,9 @@ export const checkIsSkipItemOrNotByName = (
  * | yes, also apply to children     | explictly ignored                            | yes              | yes       | yes              |
  */
 export const getSkipItemsByList = (
-  skipOrNotResults: Record<string, IsSkipResult>,
-  ignorePaths: string[],
-  onlyAllowPaths: string[]
+  skipOrNotResults: Record<string, IsSkipResult>
 ): string[] => {
   const allPotentialKeys = Object.keys(skipOrNotResults);
-  if (
-    allPotentialKeys.length === 0 ||
-    (ignorePaths.length === 0 && onlyAllowPaths.length === 0)
-  ) {
-    return [];
-  }
 
   // from short(shadow) to long(deep) , ascending
   const sortedKeys = allPotentialKeys.sort((k1, k2) => k1.length - k2.length);
@@ -333,6 +328,7 @@ export const getSkipItemsByList = (
       result.push(key);
     }
   }
+  console.debug(`finalIsIgnored list= ${JSON.stringify(result)}`);
   return result;
 };
 
@@ -499,11 +495,7 @@ const ensembleMixedEnties = async (
   profiler?.insertSize("sizeof finalMappings", finalMappings);
 
   // we check the skipOrNotResults again! in case we adjust some paths!
-  const allReallySkipKeys = getSkipItemsByList(
-    skipOrNotResults,
-    ignorePaths,
-    onlyAllowPaths
-  );
+  const allReallySkipKeys = getSkipItemsByList(skipOrNotResults);
   for (const key of allReallySkipKeys) {
     delete finalMappings[key];
   }
