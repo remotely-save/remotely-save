@@ -202,15 +202,19 @@ export const checkIsSkipItemOrNotByName = (
       }
     }
   }
-  if (syncConfigDir && isInsideObsFolder(key, configDir)) {
-    if (finalIsIgnored === undefined) {
+  if (isInsideObsFolder(key, configDir) && finalIsIgnored === undefined) {
+    if(syncConfigDir){
       finalIsIgnored = false;
+    } else{
+      finalIsIgnored = true;
     }
   }
 
-  if (syncBookmarks && isBookmarksFile(key, configDir)) {
-    if (finalIsIgnored === undefined) {
+  if (isBookmarksFile(key, configDir) && finalIsIgnored === undefined) {
+    if(syncBookmarks){
       finalIsIgnored = false;
+    } else{
+      finalIsIgnored = true;
     }
   }
 
