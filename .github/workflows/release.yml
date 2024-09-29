@@ -69,7 +69,7 @@ jobs:
           files: |
             main.js
             manifest.json
-            style.css
+            styles.css
           token: ${{ secrets.GITHUB_TOKEN }}
           draft: false
           prerelease: false
