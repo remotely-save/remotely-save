@@ -1560,6 +1560,7 @@ export default class RemotelySavePlugin extends Plugin {
       this.settings.dropbox.refreshToken !== "" &&
       current >= this.settings!.dropbox!.credentialsShouldBeDeletedAtTime!
     ) {
+      console.warn(`dropbox expired`);
       dropboxExpired = true;
       this.settings.dropbox = cloneDeep(DEFAULT_DROPBOX_CONFIG);
       needSave = true;
@@ -1570,6 +1571,7 @@ export default class RemotelySavePlugin extends Plugin {
       this.settings.onedrive.refreshToken !== "" &&
       current >= this.settings!.onedrive!.credentialsShouldBeDeletedAtTime!
     ) {
+      console.warn(`onedrive expired`);
       onedriveExpired = true;
       this.settings.onedrive = cloneDeep(DEFAULT_ONEDRIVE_CONFIG);
       needSave = true;
@@ -1580,6 +1582,7 @@ export default class RemotelySavePlugin extends Plugin {
       this.settings.onedrivefull.refreshToken !== "" &&
       current >= this.settings!.onedrivefull!.credentialsShouldBeDeletedAtTime!
     ) {
+      console.warn(`onedrive full expired`);
       onedriveFullExpired = true;
       this.settings.onedrivefull = cloneDeep(DEFAULT_ONEDRIVEFULL_CONFIG);
       needSave = true;
@@ -1590,6 +1593,7 @@ export default class RemotelySavePlugin extends Plugin {
       this.settings.googledrive.refreshToken !== "" &&
       current >= this.settings!.googledrive!.credentialsShouldBeDeletedAtTimeMs!
     ) {
+      console.warn(`google drive expired`);
       googleDriveExpired = true;
       this.settings.googledrive = cloneDeep(DEFAULT_GOOGLEDRIVE_CONFIG);
       needSave = true;
@@ -1600,6 +1604,7 @@ export default class RemotelySavePlugin extends Plugin {
       this.settings.box.refreshToken !== "" &&
       current >= this.settings!.box!.credentialsShouldBeDeletedAtTimeMs!
     ) {
+      console.warn(`box expired`);
       boxExpired = true;
       this.settings.box = cloneDeep(DEFAULT_BOX_CONFIG);
       needSave = true;
@@ -1610,6 +1615,7 @@ export default class RemotelySavePlugin extends Plugin {
       this.settings.pcloud.accessToken !== "" &&
       current >= this.settings!.pcloud!.credentialsShouldBeDeletedAtTimeMs!
     ) {
+      console.warn(`pcloud expired`);
       pCloudExpired = true;
       this.settings.pcloud = cloneDeep(DEFAULT_PCLOUD_CONFIG);
       needSave = true;
@@ -1620,6 +1626,7 @@ export default class RemotelySavePlugin extends Plugin {
       this.settings.yandexdisk.refreshToken !== "" &&
       current >= this.settings!.yandexdisk!.credentialsShouldBeDeletedAtTimeMs!
     ) {
+      console.warn(`yandex disk expired`);
       yandexDiskExpired = true;
       this.settings.yandexdisk = cloneDeep(DEFAULT_YANDEXDISK_CONFIG);
       needSave = true;
@@ -1630,6 +1637,7 @@ export default class RemotelySavePlugin extends Plugin {
       this.settings.koofr.refreshToken !== "" &&
       current >= this.settings!.koofr!.credentialsShouldBeDeletedAtTimeMs!
     ) {
+      console.warn(`koofr expired`);
       koofrExpired = true;
       this.settings.koofr = cloneDeep(DEFAULT_KOOFR_CONFIG);
       needSave = true;
