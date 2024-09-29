@@ -95,6 +95,10 @@ class GoogleDriveAuthModal extends Modal {
               k.expires_in * 1000;
             this.plugin.settings.googledrive.accessTokenExpiresAtTimeMs =
               ts + k.expires_in * 1000 - 60 * 2 * 1000;
+
+            // manually set it expired after 60 days;
+            this.plugin.settings.googledrive.credentialsShouldBeDeletedAtTimeMs =
+              Date.now() + 1000 * 60 * 60 * 24 * 59;
             await this.plugin.saveSettings();
 
             // try to remove data in clipboard
