@@ -203,17 +203,17 @@ export const checkIsSkipItemOrNotByName = (
     }
   }
   if (isInsideObsFolder(key, configDir) && finalIsIgnored === undefined) {
-    if(syncConfigDir){
+    if (syncConfigDir) {
       finalIsIgnored = false;
-    } else{
+    } else {
       finalIsIgnored = true;
     }
   }
 
   if (isBookmarksFile(key, configDir) && finalIsIgnored === undefined) {
-    if(syncBookmarks){
+    if (syncBookmarks) {
       finalIsIgnored = false;
-    } else{
+    } else {
       finalIsIgnored = true;
     }
   }
@@ -629,14 +629,36 @@ const getSyncPlanInplace = async (
               mixedEntry.change = false;
               keptFolder.add(getParentFolder(key));
             } else if (syncDirection === "incremental_pull_and_delete_only") {
-              mixedEntry.decisionBranch = 135;
-              mixedEntry.decision = "folder_to_be_deleted_on_local";
-              mixedEntry.change = true;
+              if (
+                key === `${configDir}/` ||
+                key === `${configDir}/bookmarks.json`
+              ) {
+                // special: never delete .obsidian folder!
+                mixedEntry.decisionBranch = 137;
+                mixedEntry.decision = "folder_existed_both_then_do_nothing";
+                mixedEntry.change = false;
+                keptFolder.add(getParentFolder(key));
+              } else {
+                mixedEntry.decisionBranch = 135;
+                mixedEntry.decision = "folder_to_be_deleted_on_local";
+                mixedEntry.change = true;
+              }
             } else {
               // bidirectional
-              mixedEntry.decisionBranch = 124;
-              mixedEntry.decision = "folder_to_be_deleted_on_local";
-              mixedEntry.change = true;
+              if (
+                key === `${configDir}/` ||
+                key === `${configDir}/bookmarks.json`
+              ) {
+                // special: never delete .obsidian folder!
+                mixedEntry.decisionBranch = 138;
+                mixedEntry.decision = "folder_existed_both_then_do_nothing";
+                mixedEntry.change = false;
+                keptFolder.add(getParentFolder(key));
+              } else {
+                mixedEntry.decisionBranch = 124;
+                mixedEntry.decision = "folder_to_be_deleted_on_local";
+                mixedEntry.change = true;
+              }
             }
           } else {
             // then the folder is created on local
@@ -1078,13 +1100,35 @@ const getSyncPlanInplace = async (
             mixedEntry.decision = "conflict_created_then_do_nothing";
             mixedEntry.change = false;
           } else if (syncDirection === "incremental_pull_and_delete_only") {
-            mixedEntry.decisionBranch = 39;
-            mixedEntry.decision = "remote_is_deleted_thus_also_delete_local";
-            mixedEntry.change = true;
+            if (
+              key === `${configDir}/` ||
+              key === `${configDir}/bookmarks.json`
+            ) {
+              // special: never delete .obsidian/bookmarks.json file!
+              mixedEntry.decisionBranch = 139;
+              mixedEntry.decision = "conflict_created_then_keep_local";
+              mixedEntry.change = true;
+              keptFolder.add(getParentFolder(key));
+            } else {
+              mixedEntry.decisionBranch = 39;
+              mixedEntry.decision = "remote_is_deleted_thus_also_delete_local";
+              mixedEntry.change = true;
+            }
           } else {
-            mixedEntry.decisionBranch = 7;
-            mixedEntry.decision = "remote_is_deleted_thus_also_delete_local";
-            mixedEntry.change = true;
+            if (
+              key === `${configDir}/` ||
+              key === `${configDir}/bookmarks.json`
+            ) {
+              // special: never delete .obsidian/bookmarks.json file!
+              mixedEntry.decisionBranch = 140;
+              mixedEntry.decision = "conflict_created_then_keep_local";
+              mixedEntry.change = true;
+              keptFolder.add(getParentFolder(key));
+            } else {
+              mixedEntry.decisionBranch = 7;
+              mixedEntry.decision = "remote_is_deleted_thus_also_delete_local";
+              mixedEntry.change = true;
+            }
           }
         } else {
           // if A is in the previous list and MODIFIED, A has been deleted by B but modified by A
