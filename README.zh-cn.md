@@ -122,6 +122,7 @@
   - [Open Media Vault](./docs/remote_services/webdav_openmediavault/README.md)
   - [Nginx (`ngx_http_dav_module`, `nginx-dav-ext-module`, with Docker)](./docs/remote_services/webdav_nginx/README.md)
   - [Apache (with Docker)](./docs/remote_services/webdav_apache/README.md)
+  - [Caddy with `http.handlers.webdav` module](./docs/remote_services/webdav_caddy/README.md)
 - 非常旧版本的Obsidian需要[配置 CORS](./docs/remote_services/webdav_general/webav_cors.md)。
 - 你的数据会同步到你的webdav服务器上的 `${vaultName}` 子文件夹。
 - 基于密码的端到端加密也是可以的。但请注意，**vault 名称本身未加密**。

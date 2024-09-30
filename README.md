@@ -122,6 +122,7 @@ Additionally, the plugin author may occasionally visit Obsidian official forum a
   - [Open Media Vault](./docs/remote_services/webdav_openmediavault/README.md)
   - [Nginx (`ngx_http_dav_module`, `nginx-dav-ext-module`, with Docker)](./docs/remote_services/webdav_nginx/README.md)
   - [Apache (with Docker)](./docs/remote_services/webdav_apache/README.md)
+  - [Caddy with `http.handlers.webdav` module](./docs/remote_services/webdav_caddy/README.md)
 - Very old version of Obsidian needs [configuring CORS](./docs/remote_services/webdav_general/webav_cors.md).
 - Your data would be synced to a `${vaultName}` sub folder on your webdav server.
 - Password-based end-to-end encryption is also supported. But please be aware that **the vault name itself is not encrypted**.
