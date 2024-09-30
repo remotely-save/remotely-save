@@ -138,7 +138,6 @@ if (VALID_REQURL) {
   );
 }
 
-import isEqual from "lodash/isEqual";
 // @ts-ignore
 // biome-ignore lint: we want to ts-ignore the next line
 import { AuthType, BufferLike, createClient } from "webdav/dist/web/index.js";
@@ -169,23 +168,37 @@ const getWebdavPath = (fileOrFolderPath: string, remoteBaseDir: string) => {
   return key;
 };
 
+/**
+ * sometimes the path startswith /../../......
+ * we want to make sure the path is compatible
+ */
+const stripLeadingPath = (x: string) => {
+  let y = x;
+  while (y.startsWith("/..")) {
+    y = y.slice("/..".length);
+  }
+  return y;
+};
+
 const getNormPath = (fileOrFolderPath: string, remoteBaseDir: string) => {
+  const strippedFileOrFolderPath = stripLeadingPath(fileOrFolderPath);
   if (
     !(
-      fileOrFolderPath === `/${remoteBaseDir}` ||
-      fileOrFolderPath.startsWith(`/${remoteBaseDir}/`)
+      strippedFileOrFolderPath === `/${remoteBaseDir}` ||
+      strippedFileOrFolderPath.startsWith(`/${remoteBaseDir}/`)
     )
   ) {
     throw Error(
-      `"${fileOrFolderPath}" doesn't starts with "/${remoteBaseDir}/"`
+      `"${fileOrFolderPath}" after stripping doesn't starts with "/${remoteBaseDir}/"`
     );
   }
-
-  return fileOrFolderPath.slice(`/${remoteBaseDir}/`.length);
+  const result = strippedFileOrFolderPath.slice(`/${remoteBaseDir}/`.length);
+  return result;
 };
 
 const fromWebdavItemToEntity = (x: FileStat, remoteBaseDir: string): Entity => {
   let key = getNormPath(x.filename, remoteBaseDir);
+
   if (x.type === "directory" && !key.endsWith("/")) {
     key = `${key}/`;
   }
@@ -447,15 +460,17 @@ export class FakeFsWebdav extends FakeFs {
         // console.debug(itemsToFetchChunks);
         const subContents = [] as FileStat[];
         for (const singleChunk of itemsToFetchChunks) {
-          const r = singleChunk.map((x) => {
-            return this.client.getDirectoryContents(x, {
+          const r = singleChunk.map(async (x) => {
+            let k = (await this.client.getDirectoryContents(x, {
               deep: false,
               details: false /* no need for verbose details here */,
               // TODO: to support .obsidian,
               // we need to load all files including dot,
               // anyway to reduce the resources?
               // glob: "/**" /* avoid dot files by using glob */,
-            }) as Promise<FileStat[]>;
+            })) as FileStat[];
+            k = k.filter((sub) => stripLeadingPath(sub.filename) !== x);
+            return k;
           });
           const r3 = await Promise.all(r);
           for (const r4 of r3) {
@@ -477,7 +492,7 @@ export class FakeFsWebdav extends FakeFs {
           const f = subContents[i];
           contents.push(f);
           if (f.type === "directory") {
-            q.push(f.filename);
+            q.push(stripLeadingPath(f.filename));
           }
         }
       }
@@ -495,7 +510,11 @@ export class FakeFsWebdav extends FakeFs {
         }
       )) as FileStat[];
     }
-    return contents.map((x) => fromWebdavItemToEntity(x, this.remoteBaseDir));
+
+    const result = contents
+      .map((x) => fromWebdavItemToEntity(x, this.remoteBaseDir))
+      .filter((x) => x.keyRaw !== "/");
+    return result;
   }
 
   async walkPartial(): Promise<Entity[]> {
@@ -508,7 +527,9 @@ export class FakeFsWebdav extends FakeFs {
         details: false /* no need for verbose details here */,
       }
     )) as FileStat[];
-    return contents.map((x) => fromWebdavItemToEntity(x, this.remoteBaseDir));
+    return contents
+      .map((x) => fromWebdavItemToEntity(x, this.remoteBaseDir))
+      .filter((x) => x.keyRaw !== "/");
   }
 
   async stat(key: string): Promise<Entity> {
