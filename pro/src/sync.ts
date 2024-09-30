@@ -203,21 +203,36 @@ export const checkIsSkipItemOrNotByName = (
     }
   }
 
-  // we have to check bookmarks.json firstly then check the whole .obsidian folder later
-  if (isBookmarksFile(key, configDir) && finalIsIgnored === undefined) {
-    if (syncBookmarks) {
-      finalIsIgnored = false;
-    } else {
-      finalIsIgnored = true;
-    }
-  }
-
-  // we have to check bookmarks.json firstly then check the whole .obsidian folder later
-  if (isInsideObsFolder(key, configDir) && finalIsIgnored === undefined) {
+  // sync config, not sync bookmarks: sync config and **force syncing bookmarks as well**
+  // not sync config, sync bookmarks: sync bookmars, not other config
+  // not sync config, not sync bookmarks: not sync config
+  if (finalIsIgnored === undefined) {
     if (syncConfigDir) {
-      finalIsIgnored = false;
+      if (isInsideObsFolder(key, configDir)) {
+        // force sync everything
+        finalIsIgnored = false;
+      } else {
+        // not config files, do not judge now, do nothing
+      }
+    } else if (syncBookmarks) {
+      // not sync config, sync bookmarks
+      if (isBookmarksFile(key, configDir)) {
+        // sync everything of bookmarks
+        finalIsIgnored = false;
+      } else if (isInsideObsFolder(key, configDir)) {
+        // not sync any other thing in config
+        finalIsIgnored = true;
+      } else {
+        // not config files, do not judge now, do nothing
+      }
     } else {
-      finalIsIgnored = true;
+      // not sync config, and not sync bookmarks
+      if (isInsideObsFolder(key, configDir)) {
+        // not sync any thing in config
+        finalIsIgnored = true;
+      } else {
+        // not config files, do not judge now, do nothing
+      }
     }
   }
 
