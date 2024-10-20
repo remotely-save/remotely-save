@@ -305,7 +305,14 @@ export const getSkipItemsByList = (
   }
 
   // we deal with explictly allow list secondly, apply them to PARENTS if possible
-  const enableAllowMode = skipOrNotResults[allPotentialKeys[0]].enableAllowMode;
+  let enableAllowMode = false;
+  if (
+    allPotentialKeys.length > 0 &&
+    allPotentialKeys[0] !== undefined &&
+    skipOrNotResults[allPotentialKeys[0]] !== undefined
+  ) {
+    enableAllowMode = skipOrNotResults[allPotentialKeys[0]].enableAllowMode;
+  }
   if (enableAllowMode) {
     for (let index = 0; index < sortedKeys.length; index++) {
       // reverse order, long(deep) to short(shadow), ascending
