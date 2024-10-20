@@ -252,6 +252,10 @@ const fromDriveItemToEntity = (x: DriveItem, remoteBaseDir: string): Entity => {
   // why?? /drive/root:/Apps/Graph
   const FIFTH_COMMON_PREFIX_REGEX = /^\/drive\/root:\/[^\/]+\/Graph\//g;
 
+  // why again?? /drive/root:/Apps/Graph 1
+  const SIXTH_COMMON_PREFIX_REGEX = /^\/drive\/root:\/[^\/]+\/Graph 1\//g;
+  const SIXTH_COMMON_PREFIX_REGEX_V2 = /^\/drive\/root:\/[^\/]+\/Graph%201\//g;
+
   // or the root is absolute path /Livefolders,
   // e.g.: /Livefolders/应用/remotely-save/${remoteBaseDir}
   const SECOND_COMMON_PREFIX_REGEX = /^\/Livefolders\/[^\/]+\/remotely-save\//g;
@@ -278,6 +282,11 @@ const fromDriveItemToEntity = (x: DriveItem, remoteBaseDir: string): Entity => {
   const fullPathOriginal = `${x.parentReference.path}/${x.name}`;
   const matchFirstPrefixRes = fullPathOriginal.match(FIRST_COMMON_PREFIX_REGEX);
   const matchFifthPrefixRes = fullPathOriginal.match(FIFTH_COMMON_PREFIX_REGEX);
+  const matchSixthPrefixRes = fullPathOriginal.match(SIXTH_COMMON_PREFIX_REGEX);
+  const matchSixthV2PrefixRes = fullPathOriginal.match(
+    SIXTH_COMMON_PREFIX_REGEX_V2
+  );
+
   const matchSecondPrefixRes = fullPathOriginal.match(
     SECOND_COMMON_PREFIX_REGEX
   );
@@ -314,6 +323,40 @@ const fromDriveItemToEntity = (x: DriveItem, remoteBaseDir: string): Entity => {
     )
   ) {
     const foundPrefix = `${matchFifthPrefixRes[0]}${remoteBaseDirEncoded}`;
+    key = fullPathOriginal.substring(foundPrefix.length + 1);
+  }
+
+  // sixth
+  else if (
+    matchSixthPrefixRes !== null &&
+    fullPathOriginal.startsWith(`${matchSixthPrefixRes[0]}${remoteBaseDir}`)
+  ) {
+    const foundPrefix = `${matchSixthPrefixRes[0]}${remoteBaseDir}`;
+    key = fullPathOriginal.substring(foundPrefix.length + 1);
+  } else if (
+    matchSixthPrefixRes !== null &&
+    fullPathOriginal.startsWith(
+      `${matchSixthPrefixRes[0]}${remoteBaseDirEncoded}`
+    )
+  ) {
+    const foundPrefix = `${matchSixthPrefixRes[0]}${remoteBaseDirEncoded}`;
+    key = fullPathOriginal.substring(foundPrefix.length + 1);
+  }
+
+  // sixth v2
+  else if (
+    matchSixthV2PrefixRes !== null &&
+    fullPathOriginal.startsWith(`${matchSixthV2PrefixRes[0]}${remoteBaseDir}`)
+  ) {
+    const foundPrefix = `${matchSixthV2PrefixRes[0]}${remoteBaseDir}`;
+    key = fullPathOriginal.substring(foundPrefix.length + 1);
+  } else if (
+    matchSixthV2PrefixRes !== null &&
+    fullPathOriginal.startsWith(
+      `${matchSixthV2PrefixRes[0]}${remoteBaseDirEncoded}`
+    )
+  ) {
+    const foundPrefix = `${matchSixthV2PrefixRes[0]}${remoteBaseDirEncoded}`;
     key = fullPathOriginal.substring(foundPrefix.length + 1);
   }
 
@@ -374,6 +417,8 @@ const fromDriveItemToEntity = (x: DriveItem, remoteBaseDir: string): Entity => {
 fullPathOriginal=${fullPathOriginal}
 matchFirstPrefixRes=${matchFirstPrefixRes}
 matchFifthPrefixRes=${matchFifthPrefixRes}
+matchSixthPrefixRes=${matchSixthPrefixRes}
+matchSixthV2PrefixRes=${matchSixthV2PrefixRes}
 matchSecondPrefixRes=${matchSecondPrefixRes}
 matchThirdPrefixRes=${matchThirdPrefixRes}
 ${constructFromDriveItemToEntityError(x)}`
@@ -388,6 +433,8 @@ ${constructFromDriveItemToEntityError(x)}`
 fullPathOriginal=${fullPathOriginal}
 matchFirstPrefixRes=${matchFirstPrefixRes}
 matchFifthPrefixRes=${matchFifthPrefixRes}
+matchSixthPrefixRes=${matchSixthPrefixRes}
+matchSixthV2PrefixRes=${matchSixthV2PrefixRes}
 matchSecondPrefixRes=${matchSecondPrefixRes}
 matchThirdPrefixRes=${matchThirdPrefixRes}
 ${constructFromDriveItemToEntityError(x)}`
