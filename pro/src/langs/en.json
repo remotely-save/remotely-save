@@ -268,7 +268,7 @@
   "settings_azureblobstorage_parts": "Parts Concurrency",
   "settings_azureblobstorage_parts_desc": "Large files are split into small parts to upload. How many parts do you want to upload in parallel at most?",
   "settings_azureblobstorage_generatefolderobject": "Generate Folder Object Or Not",
-  "settings_azureblobstorage_generatefolderobject_desc": "Azure Blob Storage doesn't have \"real\" folder. If you set \"Generate\" here, the plugin will upload a zero-byte object endding with \"/\" to represent the folder. By default, the plugin skips generating folder object.",
+  "settings_azureblobstorage_generatefolderobject_desc": "Azure Blob Storage doesn't have \"real\" folder. If you set \"Generate\" here, the plugin will upload a zero-byte object ending with \"/\" to represent the folder. By default, the plugin skips generating folder object.",
   "settings_azureblobstorage_generatefolderobject_notgenerate": "Not generate (default)",
   "settings_azureblobstorage_generatefolderobject_generate": "Generate",
   "settings_azureblobstorage_connect_succ": "Great! We can connect to Azure Blob Storage!",
