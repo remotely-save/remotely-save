@@ -1930,7 +1930,7 @@ export async function syncer(
   ) => any,
   callbackSyncProcess?: any
 ) {
-  console.info(`startting sync.`);
+  console.info(`starting sync.`);
   markIsSyncingFunc(true);
 
   let everythingOk = true;
