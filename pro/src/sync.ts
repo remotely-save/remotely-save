@@ -2089,6 +2089,6 @@ export async function syncer(
   await ribboonFunc?.(triggerSource, step);
   await statusBarFunc?.(triggerSource, step, everythingOk);
 
-  console.info(`endding sync.`);
+  console.info(`ending sync.`);
   markIsSyncingFunc(false);
 }
