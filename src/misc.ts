@@ -279,7 +279,7 @@ export const reverseString = (x: string) => {
 };
 
 export interface SplitRange {
-  partNum: number; // startting from 1
+  partNum: number; // starting from 1
   start: number;
   end: number; // exclusive
 }
@@ -316,7 +316,7 @@ export const getTypeName = (obj: any) => {
 };
 
 /**
- * Startting from 1
+ * starting from 1
  * @param x
  * @returns
  */
