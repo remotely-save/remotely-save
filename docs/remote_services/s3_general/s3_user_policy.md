@@ -32,22 +32,14 @@ Using the principle of least privilege is crucial for security when allowing a t
             "Sid": "ObsidianObjects",
             "Effect": "Allow",
             "Action": [
-                "s3:HeadObject",
                 "s3:ListBucket",
                 "s3:PutObject",
-                "s3:CopyObject",
-                "s3:UploadPart",
-                "s3:UploadPartCopy",
-                "s3:ListMultipartUploads",
+                "s3:ListBucketMultipartUploads",
                 "s3:AbortMultipartUpload",
-                "s3:CompleteMultipartUpload",
-                "s3:ListObjects",
-                "s3:ListObjectsV2",
-                "s3:ListParts",
+                "s3:ListMultipartUploadParts",
                 "s3:GetObject",
                 "s3:GetObjectAttributes",
-                "s3:DeleteObject",
-                "s3:DeleteObjects"
+                "s3:DeleteObject"
             ],
             "Resource": [
                 "arn:aws:s3:::my-bucket",
