@@ -284,6 +284,19 @@ export class FakeFsWebdav extends FakeFs {
     this.nextcloudUploadServerAddress = "";
   }
 
+  private async withRetry<T>(fn: () => Promise<T>, retries = 5, delay = 1000): Promise<T> {
+    try {
+      return await fn();
+    } catch (error: any) {
+      if (error.status === 429 && retries > 0) {
+        console.warn(`Rate limit exceeded, retrying in ${delay}ms...`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+        return this.withRetry(fn, retries - 1, Math.min(delay * 2, 30000));
+      }
+      throw error;
+    }
+  }
+
   async _init() {
     // init client if not inited
     if (this.client !== undefined) {
@@ -461,16 +474,14 @@ export class FakeFsWebdav extends FakeFs {
         const subContents = [] as FileStat[];
         for (const singleChunk of itemsToFetchChunks) {
           const r = singleChunk.map(async (x) => {
-            let k = (await this.client.getDirectoryContents(x, {
-              deep: false,
-              details: false /* no need for verbose details here */,
-              // TODO: to support .obsidian,
-              // we need to load all files including dot,
-              // anyway to reduce the resources?
-              // glob: "/**" /* avoid dot files by using glob */,
-            })) as FileStat[];
-            k = k.filter((sub) => stripLeadingPath(sub.filename) !== x);
-            return k;
+            return this.withRetry(async () => {
+              let k = (await this.client.getDirectoryContents(x, {
+                deep: false,
+                details: false /* no need for verbose details here */,
+              })) as FileStat[];
+              k = k.filter((sub) => stripLeadingPath(sub.filename) !== x);
+              return k;
+            });
           });
           const r3 = await Promise.all(r);
           for (const r4 of r3) {
@@ -498,17 +509,15 @@ export class FakeFsWebdav extends FakeFs {
       }
     } else {
       // the remote supports infinity propfind
-      contents = (await this.client.getDirectoryContents(
-        `/${this.remoteBaseDir}`,
-        {
-          deep: true,
-          details: false /* no need for verbose details here */,
-          // TODO: to support .obsidian,
-          // we need to load all files including dot,
-          // anyway to reduce the resources?
-          // glob: "/**" /* avoid dot files by using glob */,
-        }
-      )) as FileStat[];
+      contents = await this.withRetry(async () => {
+        return (await this.client.getDirectoryContents(
+          `/${this.remoteBaseDir}`,
+          {
+            deep: true,
+            details: false /* no need for verbose details here */,
+          }
+        )) as FileStat[];
+      });
     }
 
     const result = contents
@@ -520,13 +529,15 @@ export class FakeFsWebdav extends FakeFs {
   async walkPartial(): Promise<Entity[]> {
     await this._init();
 
-    const contents = (await this.client.getDirectoryContents(
-      `/${this.remoteBaseDir}`,
-      {
-        deep: false, // partial, no need to recursive here
-        details: false /* no need for verbose details here */,
-      }
-    )) as FileStat[];
+    const contents = await this.withRetry(async () => {
+      return (await this.client.getDirectoryContents(
+        `/${this.remoteBaseDir}`,
+        {
+          deep: false, // partial, no need to recursive here
+          details: false /* no need for verbose details here */,
+        }
+      )) as FileStat[];
+    });
     return contents
       .map((x) => fromWebdavItemToEntity(x, this.remoteBaseDir))
       .filter((x) => x.keyRaw !== "/");
@@ -539,9 +550,11 @@ export class FakeFsWebdav extends FakeFs {
   }
 
   async _statFromRoot(key: string): Promise<Entity> {
-    const res = (await this.client.stat(key, {
-      details: false,
-    })) as FileStat;
+    const res = await this.withRetry(async () => {
+      return (await this.client.stat(key, {
+        details: false,
+      })) as FileStat;
+    });
     return fromWebdavItemToEntity(res, this.remoteBaseDir);
   }
 
@@ -561,8 +574,10 @@ export class FakeFsWebdav extends FakeFs {
   ): Promise<Entity> {
     // the sync algorithm should do recursive manually already.
     // if we set recursive: true here, Digest auth will return some error inside the PROPFIND
-    await this.client.createDirectory(key, {
-      recursive: false,
+    await this.withRetry(async () => {
+      await this.client.createDirectory(key, {
+        recursive: false,
+      });
     });
     return await this._statFromRoot(key);
   }
@@ -675,11 +690,13 @@ export class FakeFsWebdav extends FakeFs {
     origKey: string
   ): Promise<Entity> {
     // console.debug(`start _writeFileFromRootFull`);
-    await this.client.putFileContents(key, content, {
-      overwrite: true,
-      onUploadProgress: (progress: any) => {
-        console.info(`Uploaded ${progress.loaded} bytes of ${progress.total}`);
-      },
+    await this.withRetry(async () => {
+      await this.client.putFileContents(key, content, {
+        overwrite: true,
+        onUploadProgress: (progress: any) => {
+          console.info(`Uploaded ${progress.loaded} bytes of ${progress.total}`);
+        },
+      });
     });
     const k = await this._statFromRoot(key);
     // console.debug(`end _writeFileFromRootFull`);
@@ -890,7 +907,9 @@ export class FakeFsWebdav extends FakeFs {
   }
 
   async _readFileFromRoot(key: string): Promise<ArrayBuffer> {
-    const buff = (await this.client.getFileContents(key)) as BufferLike;
+    const buff = await this.withRetry(async () => {
+      return (await this.client.getFileContents(key)) as BufferLike;
+    });
     if (buff instanceof ArrayBuffer) {
       return buff;
     } else if (buff instanceof Buffer) {
@@ -906,7 +925,9 @@ export class FakeFsWebdav extends FakeFs {
     const remoteFileName1 = getWebdavPath(key1, this.remoteBaseDir);
     const remoteFileName2 = getWebdavPath(key2, this.remoteBaseDir);
     await this._init();
-    await this.client.moveFile(remoteFileName1, remoteFileName2);
+    await this.withRetry(async () => {
+      await this.client.moveFile(remoteFileName1, remoteFileName2);
+    });
   }
 
   async rm(key: string): Promise<void> {
@@ -916,7 +937,9 @@ export class FakeFsWebdav extends FakeFs {
     await this._init();
     try {
       const remoteFileName = getWebdavPath(key, this.remoteBaseDir);
-      await this.client.deleteFile(remoteFileName);
+      await this.withRetry(async () => {
+        await this.client.deleteFile(remoteFileName);
+      });
       // console.info(`delete ${remoteFileName} succeeded`);
     } catch (err) {
       console.error("some error while deleting");
@@ -942,7 +965,9 @@ export class FakeFsWebdav extends FakeFs {
 
     try {
       await this._init();
-      const results = await this._statFromRoot(`/${this.remoteBaseDir}/`);
+      const results = await this.withRetry(async () => {
+        return await this._statFromRoot(`/${this.remoteBaseDir}/`);
+      });
       if (results === undefined) {
         throw Error("cannot stat root vault folder!");
       }

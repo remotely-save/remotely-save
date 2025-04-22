@@ -16,6 +16,10 @@ import {
   YandexApi,
 } from "./yandexApi";
 
+const MAX_RETRIES = 5;
+const INITIAL_RETRY_DELAY = 1000; // 1 second
+const MAX_RETRY_DELAY = 30000; // 30 seconds
+
 export const DEFAULT_YANDEXDISK_CONFIG: YandexDiskConfig = {
   accessToken: "",
   accessTokenExpiresInMs: 0,
@@ -372,11 +376,8 @@ export class FakeFsYandexDisk extends FakeFs {
     let total = 100;
     // TODO: once we know the total in the first loop, we can run the list in parallel
     do {
-      const k = await client.diskResources(
-        p,
-        FIELDS_FOR_RESOURCE,
-        limit,
-        offset
+      const k = await this.withRetry(() => 
+        client.diskResources(p, FIELDS_FOR_RESOURCE, limit, offset)
       );
       entities.push(
         ...(k._embedded?.items ?? []).map((x) =>
@@ -393,7 +394,9 @@ export class FakeFsYandexDisk extends FakeFs {
     await this._init();
     const client = new YandexApi(await this._getAccessToken());
     const p = getYandexDiskPath(key, this.remoteBaseDir);
-    const r = await client.diskResources(p, FIELDS_FOR_RESOURCE);
+    const r = await this.withRetry(() => 
+      client.diskResources(p, FIELDS_FOR_RESOURCE)
+    );
     const entity = fromResourceToEntity(r, this.remoteBaseDir);
     return entity;
   }
@@ -408,7 +411,9 @@ export class FakeFsYandexDisk extends FakeFs {
     const client = new YandexApi(await this._getAccessToken());
     const p = getYandexDiskPath(key, this.remoteBaseDir);
     // create
-    await client.diskResourcesPut(p, FIELDS_FOR_RESOURCE);
+    await this.withRetry(() => 
+      client.diskResourcesPut(p, FIELDS_FOR_RESOURCE)
+    );
     // patch?
     const custom: Record<string, string> = {};
     if (mtime !== undefined) {
@@ -418,7 +423,9 @@ export class FakeFsYandexDisk extends FakeFs {
       custom["rclone_created"] = unixTimeToStr(ctime, true);
     }
     if (Object.keys(custom).length > 0) {
-      await client.diskResourcesPatch(p, custom);
+      await this.withRetry(() => 
+        client.diskResourcesPatch(p, custom)
+      );
     }
     const entity = await this.stat(key);
     // console.debug(`mkdir ${key} finish, ${JSON.stringify(entity)}`)
@@ -435,7 +442,9 @@ export class FakeFsYandexDisk extends FakeFs {
     await this._init();
     const client = new YandexApi(await this._getAccessToken());
     const p = getYandexDiskPath(key, this.remoteBaseDir);
-    await client.diskResoucesUpload(p, content, true);
+    await this.withRetry(() => 
+      client.diskResoucesUpload(p, content, true)
+    );
     // console.debug(`writeFile ${key} upload succ`)
     // patch?
     const custom: Record<string, string> = {};
@@ -446,7 +455,9 @@ export class FakeFsYandexDisk extends FakeFs {
       custom["rclone_created"] = unixTimeToStr(ctime, true);
     }
     if (Object.keys(custom).length > 0) {
-      await client.diskResourcesPatch(p, custom);
+      await this.withRetry(() => 
+        client.diskResourcesPatch(p, custom)
+      );
     }
     // console.debug(`writeFile ${key} patch succ`)
     const entity = await this.stat(key);
@@ -459,7 +470,9 @@ export class FakeFsYandexDisk extends FakeFs {
     await this._init();
     const client = new YandexApi(await this._getAccessToken());
     const p = getYandexDiskPath(key, this.remoteBaseDir);
-    const content = await client.diskResoucesDownload(p);
+    const content = await this.withRetry(() => 
+      client.diskResoucesDownload(p)
+    );
     // console.debug(`readFile ${key} finish, length=${content.byteLength}`)
     return content;
   }
@@ -473,7 +486,9 @@ export class FakeFsYandexDisk extends FakeFs {
     await this._init();
     const client = new YandexApi(await this._getAccessToken());
     const p = getYandexDiskPath(key, this.remoteBaseDir);
-    await client.diskResourcesDelete(p, false);
+    await this.withRetry(() => 
+      client.diskResourcesDelete(p, false)
+    );
   }
 
   async checkConnect(callbackFunc?: any): Promise<boolean> {
@@ -512,5 +527,18 @@ export class FakeFsYandexDisk extends FakeFs {
 
   allowEmptyFile(): boolean {
     return true;
+  }
+
+  private async withRetry<T>(fn: () => Promise<T>, retries = MAX_RETRIES, delay = INITIAL_RETRY_DELAY): Promise<T> {
+    try {
+      return await fn();
+    } catch (error: any) {
+      if (error.status === 429 && retries > 0) {
+        console.warn(`Rate limit exceeded, retrying in ${delay}ms...`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+        return this.withRetry(fn, retries - 1, Math.min(delay * 2, MAX_RETRY_DELAY));
+      }
+      throw error;
+    }
   }
 }
