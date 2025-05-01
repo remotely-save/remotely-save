@@ -1291,6 +1291,66 @@ export default class RemotelySavePlugin extends Plugin {
       },
     });
 
+    this.addCommand({
+      id: "sync-bidirectional",
+      name: t("setting_syncdirection_bidirectional_desc"),
+      icon: iconNameSyncWait,
+      callback: async () => {
+        const originalDirection = this.settings.syncDirection;
+        this.settings.syncDirection = "bidirectional";
+        await this.syncRun("manual");
+        this.settings.syncDirection = originalDirection;
+      },
+    });
+
+    this.addCommand({
+      id: "sync-increment-push",
+      name: t("setting_syncdirection_incremental_push_only_desc"),
+      icon: iconNameSyncWait,
+      callback: async () => {
+        const originalDirection = this.settings.syncDirection;
+        this.settings.syncDirection = "incremental_push_only";
+        await this.syncRun("manual");
+        this.settings.syncDirection = originalDirection;
+      },
+    });
+
+    this.addCommand({
+      id: "sync-increment-pull",
+      name: t("setting_syncdirection_incremental_pull_only_desc"),
+      icon: iconNameSyncWait,
+      callback: async () => {
+        const originalDirection = this.settings.syncDirection;
+        this.settings.syncDirection = "incremental_pull_only";
+        await this.syncRun("manual");
+        this.settings.syncDirection = originalDirection;
+      },
+    });
+
+    this.addCommand({
+      id: "sync-increment-push-with-deletion",
+      name: t("setting_syncdirection_incremental_push_and_delete_only_desc"),
+      icon: iconNameSyncWait,
+      callback: async () => {
+        const originalDirection = this.settings.syncDirection;
+        this.settings.syncDirection = "incremental_push_and_delete_only";
+        await this.syncRun("manual");
+        this.settings.syncDirection = originalDirection;
+      },
+    });
+
+    this.addCommand({
+      id: "sync-increment-pull-with-deletion",
+      name: t("setting_syncdirection_incremental_pull_and_delete_only_desc"),
+      icon: iconNameSyncWait,
+      callback: async () => {
+        const originalDirection = this.settings.syncDirection;
+        this.settings.syncDirection = "incremental_pull_and_delete_only";
+        await this.syncRun("manual");
+        this.settings.syncDirection = originalDirection;
+      },
+    });
+
     this.addSettingTab(new RemotelySaveSettingTab(this.app, this));
 
     // this.registerDomEvent(document, "click", (evt: MouseEvent) => {
