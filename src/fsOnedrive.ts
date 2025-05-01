@@ -215,7 +215,7 @@ export const setConfigBySuccessfullAuthInplace = async (
 
 const getOnedrivePath = (fileOrFolderPath: string, remoteBaseDir: string) => {
   // https://docs.microsoft.com/en-us/onedrive/developer/rest-api/concepts/special-folders-appfolder?view=odsp-graph-online
-  const prefix = `/drive/special/approot:/${remoteBaseDir}`;
+  const prefix = `/me/drive/special/approot:/${remoteBaseDir}`;
 
   let key = fileOrFolderPath;
   if (fileOrFolderPath === "/" || fileOrFolderPath === "") {
@@ -578,14 +578,14 @@ export class FakeFsOnedrive extends FakeFs {
     if (this.vaultFolderExists) {
       // console.info(`already checked, /${this.remoteBaseDir} exist before`)
     } else {
-      const k = await this._getJson("/drive/special/approot/children");
+      const k = await this._getJson("/me/drive/special/approot/children");
       // console.debug(k);
       this.vaultFolderExists =
         (k.value as DriveItem[]).filter((x) => x.name === this.remoteBaseDir)
           .length > 0;
       if (!this.vaultFolderExists) {
         console.info(`remote does not have folder /${this.remoteBaseDir}`);
-        await this._postJson("/drive/special/approot/children", {
+        await this._postJson("/me/drive/special/approot/children", {
           name: `${this.remoteBaseDir}`,
           folder: {},
           "@microsoft.graph.conflictBehavior": "replace",
@@ -784,7 +784,7 @@ export class FakeFsOnedrive extends FakeFs {
     const DELTA_LINK_KEY = "@odata.deltaLink";
 
     let res = await this._getJson(
-      `/drive/special/approot:/${this.remoteBaseDir}:/delta`
+      `/me/drive/special/approot:/${this.remoteBaseDir}:/delta`
     );
     const driveItems = res.value as DriveItem[];
     // console.debug(driveItems);
@@ -814,7 +814,7 @@ export class FakeFsOnedrive extends FakeFs {
     const DELTA_LINK_KEY = "@odata.deltaLink";
 
     const res = await this._getJson(
-      `/drive/special/approot:/${this.remoteBaseDir}:/delta`
+      `/me/drive/special/approot:/${this.remoteBaseDir}:/delta`
     );
     const driveItems = res.value as DriveItem[];
     // console.debug(driveItems);
@@ -975,7 +975,7 @@ export class FakeFsOnedrive extends FakeFs {
       // ref: https://docs.microsoft.com/en-us/onedrive/developer/rest-api/api/driveitem_createuploadsession?view=odsp-graph-online
 
       // 1. create uploadSession
-      // uploadFile already starts with /drive/special/approot:/${remoteBaseDir}
+      // uploadFile already starts with /me/drive/special/approot:/${remoteBaseDir}
       let playload: any = {
         item: {
           "@microsoft.graph.conflictBehavior": "replace",

@@ -220,7 +220,7 @@ export const setConfigBySuccessfullAuthInplace = async (
  */
 const getOnedrivePath = (fileOrFolderPath: string, remoteBaseDir: string) => {
   // https://learn.microsoft.com/en-us/onedrive/developer/rest-api/concepts/addressing-driveitems?view=odsp-graph-online
-  const prefix = `/drive/root:/${remoteBaseDir}`;
+  const prefix = `/me/drive/root:/${remoteBaseDir}`;
 
   let key = fileOrFolderPath;
   if (fileOrFolderPath === "/" || fileOrFolderPath === "") {
@@ -424,14 +424,14 @@ export class FakeFsOnedriveFull extends FakeFs {
     if (this.vaultFolderExists) {
       // console.info(`already checked, /${this.remoteBaseDir} exist before`)
     } else {
-      const k = await this._getJson("/drive/root/children");
+      const k = await this._getJson("/me/drive/root/children");
       // console.debug(k);
       this.vaultFolderExists =
         (k.value as DriveItem[]).filter((x) => x.name === this.remoteBaseDir)
           .length > 0;
       if (!this.vaultFolderExists) {
         console.info(`remote does not have folder /${this.remoteBaseDir}`);
-        await this._postJson("/drive/root/children", {
+        await this._postJson("/me/drive/root/children", {
           name: `${this.remoteBaseDir}`,
           folder: {},
           "@microsoft.graph.conflictBehavior": "replace",
@@ -629,7 +629,7 @@ export class FakeFsOnedriveFull extends FakeFs {
     const NEXT_LINK_KEY = "@odata.nextLink";
     const DELTA_LINK_KEY = "@odata.deltaLink";
 
-    let res = await this._getJson(`/drive/root:/${this.remoteBaseDir}:/delta`);
+    let res = await this._getJson(`/me/drive/root:/${this.remoteBaseDir}:/delta`);
     const driveItems = res.value as DriveItem[];
     // console.debug(driveItems);
 
@@ -658,7 +658,7 @@ export class FakeFsOnedriveFull extends FakeFs {
     const DELTA_LINK_KEY = "@odata.deltaLink";
 
     const res = await this._getJson(
-      `/drive/root:/${this.remoteBaseDir}:/delta`
+      `/me/drive/root:/${this.remoteBaseDir}:/delta`
     );
     const driveItems = res.value as DriveItem[];
     // console.debug(driveItems);
