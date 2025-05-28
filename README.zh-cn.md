@@ -73,7 +73,7 @@
 ### S3
 
 - 教程/示例：
-  - [Cloudflare R2](./docs/remote_services/s3_cloudflare_r2/README.md)
+  - [Cloudflare R2 English](./docs/remote_services/s3_cloudflare_r2/README.md) | [Cloudflare R2 中文](./docs/remote_services/s3_cloudflare_r2/README.zh-cn.md)
   - [BackBlaze B2](./docs/remote_services/s3_backblaze_b2/README.md)
   - [Storj](./docs/remote_services/s3_storj_io/README.md)
   - [腾讯云 COS](./docs/remote_services/s3_tencent_cloud_cos/README.zh-cn.md) | [Tencent Cloud COS](./docs/remote_services/s3_tencent_cloud_cos/README.md)

@@ -73,7 +73,7 @@ Additionally, the plugin author may occasionally visit Obsidian official forum a
 ### S3
 
 - Tutorials / Examples:
-  - [Cloudflare R2](./docs/remote_services/s3_cloudflare_r2/README.md)
+  - [Cloudflare R2 Engilsh](./docs/remote_services/s3_cloudflare_r2/README.md) | [Cloudflare R2 Chinses](./docs/remote_services/s3_cloudflare_r2/README.zh-cn.md)
   - [BackBlaze B2](./docs/remote_services/s3_backblaze_b2/README.md)
   - [Storj](./docs/remote_services/s3_storj_io/README.md)
   - [腾讯云 COS](./docs/remote_services/s3_tencent_cloud_cos/README.zh-cn.md) | [Tencent Cloud COS](./docs/remote_services/s3_tencent_cloud_cos/README.md)
