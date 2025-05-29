@@ -111,7 +111,7 @@ GB-月的计算方式为：按计费周期（30天）内每天的**峰值存储�
 	- ![生成 API 访问密钥](./s3_cloudflare_r2_05.png)
 
 2. 选择 **创建User API 令牌**。
-	- ![png](./s3_cloudflare_r2_06.png)
+	- ![创建User API 令牌](./s3_cloudflare_r2_06.png)
 
 3. 配置权限：
    - 授予 **对象读和写** 权限。
