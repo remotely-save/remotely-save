@@ -303,8 +303,8 @@ export class FakeFsWebdav extends FakeFs {
       this.webdavConfig.password !== ""
     ) {
       this.client = createClient(this.webdavConfig.address, {
-        username: tryEncodeUsernamePassword(this.webdavConfig.username),
-        password: tryEncodeUsernamePassword(this.webdavConfig.password),
+        username: this.webdavConfig.username,
+        password: this.webdavConfig.password,
         headers: headers,
         authType:
           this.webdavConfig.authType === "digest"
@@ -724,8 +724,8 @@ export class FakeFsWebdav extends FakeFs {
     console.debug(`tmpFolderName=${tmpFolderName}`);
 
     const clientForUpload = createClient(uploadServerAddress, {
-      username: tryEncodeUsernamePassword(this.webdavConfig.username),
-      password: tryEncodeUsernamePassword(this.webdavConfig.password),
+      username: this.webdavConfig.username,
+      password: this.webdavConfig.password,
       headers: {
         "Cache-Control": "no-cache",
       },
