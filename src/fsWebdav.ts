@@ -70,7 +70,12 @@ if (VALID_REQURL) {
         throw: false,
       };
 
-      let r = await requestUrl(p);
+      // Add timeout wrapper to prevent hanging requests
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        setTimeout(() => reject(new Error(`WebDAV request timeout after 30s: ${options.url}`)), 30000);
+      });
+
+      let r = await Promise.race([requestUrl(p), timeoutPromise]);
 
       if (
         r.status === 401 &&
@@ -85,7 +90,7 @@ if (VALID_REQURL) {
         // here is a dirty hack that works
         console.debug(`so we have 401, try appending request url with slash`);
         p.url = `${options.url}/`;
-        r = await requestUrl(p);
+        r = await Promise.race([requestUrl(p), timeoutPromise]);
       }
 
       // console.debug(`after request:`);
@@ -450,30 +455,50 @@ export class FakeFsWebdav extends FakeFs {
       // the remote doesn't support infinity propfind,
       // we need to do a bfs here
       const q = new Queue([`/${this.remoteBaseDir}`]);
-      const CHUNK_SIZE = 10;
+      const CHUNK_SIZE = 5; // Reduced from 10 to 5 for better responsiveness
       while (q.length > 0) {
         const itemsToFetch: string[] = [];
         while (q.length > 0) {
           itemsToFetch.push(q.pop()!);
         }
+        
+        // Yield to UI thread before processing chunks
+        await new Promise(resolve => setTimeout(resolve, 0));
+        
         const itemsToFetchChunks = chunk(itemsToFetch, CHUNK_SIZE);
         // console.debug(itemsToFetchChunks);
         const subContents = [] as FileStat[];
+        
         for (const singleChunk of itemsToFetchChunks) {
-          const r = singleChunk.map(async (x) => {
-            let k = (await this.client.getDirectoryContents(x, {
-              deep: false,
-              details: false /* no need for verbose details here */,
-              // TODO: to support .obsidian,
-              // we need to load all files including dot,
-              // anyway to reduce the resources?
-              // glob: "/**" /* avoid dot files by using glob */,
-            })) as FileStat[];
-            k = k.filter((sub) => stripLeadingPath(sub.filename) !== x);
-            return k;
-          });
-          const r3 = await Promise.all(r);
-          for (const r4 of r3) {
+          // Use concurrency-limited Promise.all instead of unlimited parallel requests
+          const concurrencyLimit = Math.min(singleChunk.length, 3);
+          const r = [];
+          
+          for (let i = 0; i < singleChunk.length; i += concurrencyLimit) {
+            const batch = singleChunk.slice(i, i + concurrencyLimit);
+            const batchPromises = batch.map(async (x) => {
+              let k = (await this.client.getDirectoryContents(x, {
+                deep: false,
+                details: false /* no need for verbose details here */,
+                // TODO: to support .obsidian,
+                // we need to load all files including dot,
+                // anyway to reduce the resources?
+                // glob: "/**" /* avoid dot files by using glob */,
+              })) as FileStat[];
+              k = k.filter((sub) => stripLeadingPath(sub.filename) !== x);
+              return k;
+            });
+            
+            const batchResults = await Promise.all(batchPromises);
+            r.push(...batchResults);
+            
+            // Yield to UI thread between batches
+            if (i + concurrencyLimit < singleChunk.length) {
+              await new Promise(resolve => setTimeout(resolve, 0));
+            }
+          }
+          
+          for (const r4 of r) {
             if (
               this.webdavConfig.address.includes("jianguoyun.com") &&
               r4.length >= 749
@@ -485,14 +510,24 @@ export class FakeFsWebdav extends FakeFs {
               );
             }
           }
-          const r2 = flatten(r3);
+          const r2 = flatten(r);
           subContents.push(...r2);
+          
+          // Yield to UI thread between chunks
+          await new Promise(resolve => setTimeout(resolve, 0));
         }
+        
+        // Process subContents with yield points
         for (let i = 0; i < subContents.length; ++i) {
           const f = subContents[i];
           contents.push(f);
           if (f.type === "directory") {
             q.push(stripLeadingPath(f.filename));
+          }
+          
+          // Yield to UI thread every 50 items to prevent blocking
+          if (i > 0 && i % 50 === 0) {
+            await new Promise(resolve => setTimeout(resolve, 0));
           }
         }
       }
@@ -744,31 +779,47 @@ export class FakeFsWebdav extends FakeFs {
     });
     console.debug(`finish creating folder`);
 
-    // upload by chunks
+    // upload by chunks with parallel processing and yield points
     const sizePerChunk = 5 * 1024 * 1024; // 5 mb
     const chunkRanges = splitFileSizeToChunkRanges(
       content.byteLength,
       sizePerChunk
     );
-    for (let i = 0; i < chunkRanges.length; ++i) {
-      const { start, end } = chunkRanges[i];
-      const tmpFileName = `${i + 1}`.padStart(5, "0");
-      const tmpFileNameWithFolder = `${tmpFolderName}/${tmpFileName}`;
-      console.debug(
-        `start to upload chunk ${
-          i + 1
-        } to ${tmpFileNameWithFolder} with startInclusive=${start}, endInclusive=${end}`
-      );
-      await clientForUpload.putFileContents(
-        tmpFileNameWithFolder,
-        content.slice(start, end + 1),
-        {
-          headers: {
-            Destination: destUrl,
-            "OC-Total-Length": `${content.byteLength}`,
-          },
-        }
-      );
+    
+    // Use parallel chunk uploads with concurrency limit
+    const concurrencyLimit = 3;
+    for (let i = 0; i < chunkRanges.length; i += concurrencyLimit) {
+      const batch = chunkRanges.slice(i, i + concurrencyLimit);
+      
+      const chunkPromises = batch.map(async (chunkRange, batchIndex) => {
+        const chunkIndex = i + batchIndex;
+        const { start, end } = chunkRange;
+        const tmpFileName = `${chunkIndex + 1}`.padStart(5, "0");
+        const tmpFileNameWithFolder = `${tmpFolderName}/${tmpFileName}`;
+        console.debug(
+          `start to upload chunk ${
+            chunkIndex + 1
+          } to ${tmpFileNameWithFolder} with startInclusive=${start}, endInclusive=${end}`
+        );
+        
+        return await clientForUpload.putFileContents(
+          tmpFileNameWithFolder,
+          content.slice(start, end + 1),
+          {
+            headers: {
+              Destination: destUrl,
+              "OC-Total-Length": `${content.byteLength}`,
+            },
+          }
+        );
+      });
+      
+      await Promise.all(chunkPromises);
+      
+      // Yield to UI thread between batches
+      if (i + concurrencyLimit < chunkRanges.length) {
+        await new Promise(resolve => setTimeout(resolve, 0));
+      }
     }
     console.debug(`finish upload all chunks`);
 
@@ -817,22 +868,35 @@ export class FakeFsWebdav extends FakeFs {
       origKey
     );
 
-    // then "update" by chunks
+    // then "update" by chunks with parallel processing
     const sizePerChunk = 5 * 1024 * 1024; // 5 mb
     const chunkRanges = splitFileSizeToChunkRanges(
       content.byteLength,
       sizePerChunk
     );
 
-    // TODO: parallel
-    for (let i = 0; i < chunkRanges.length; ++i) {
-      const { start, end } = chunkRanges[i];
-      await this.client.partialUpdateFileContents(
-        key,
-        start,
-        end,
-        content.slice(start, end + 1)
-      );
+    // Use parallel chunk uploads with concurrency limit
+    const concurrencyLimit = 3;
+    for (let i = 0; i < chunkRanges.length; i += concurrencyLimit) {
+      const batch = chunkRanges.slice(i, i + concurrencyLimit);
+      
+      const chunkPromises = batch.map(async (chunkRange, batchIndex) => {
+        const chunkIndex = i + batchIndex;
+        const { start, end } = chunkRange;
+        return await this.client.partialUpdateFileContents(
+          key,
+          start,
+          end,
+          content.slice(start, end + 1)
+        );
+      });
+      
+      await Promise.all(chunkPromises);
+      
+      // Yield to UI thread between batches
+      if (i + concurrencyLimit < chunkRanges.length) {
+        await new Promise(resolve => setTimeout(resolve, 0));
+      }
     }
 
     // lastly return
@@ -863,7 +927,7 @@ export class FakeFsWebdav extends FakeFs {
     );
 
     // diff from apachePartial: we use "append" header here for dufs...
-    // we cannot parallel here
+    // we cannot parallel here due to append nature, but add yield points
     for (let i = 0; i < chunkRanges.length; ++i) {
       const { start, end } = chunkRanges[i];
       await this.client.customRequest(key, {
@@ -874,6 +938,11 @@ export class FakeFsWebdav extends FakeFs {
         },
         data: content.slice(start, end + 1),
       });
+      
+      // Yield to UI thread after each chunk (cannot parallel due to append)
+      if (i < chunkRanges.length - 1) {
+        await new Promise(resolve => setTimeout(resolve, 0));
+      }
     }
 
     // lastly return

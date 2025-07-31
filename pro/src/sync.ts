@@ -565,6 +565,8 @@ const getSyncPlanInplace = async (
         `sizeof sortedKeys in the beginning of i=${i}`,
         mixedEntityMappings
       );
+      // Yield to UI thread every 100 items to prevent blocking
+      await new Promise(resolve => setTimeout(resolve, 0));
     }
     const key = sortedKeys[i];
     const mixedEntry = mixedEntityMappings[key];
@@ -1234,7 +1236,7 @@ const getSyncPlanInplace = async (
   return mixedEntityMappings;
 };
 
-const splitFourStepsOnEntityMappings = (
+const splitFourStepsOnEntityMappings = async (
   mixedEntityMappings: Record<string, MixedEntity>
 ) => {
   type StepArrayType = MixedEntity[] | undefined | null;
@@ -1257,6 +1259,11 @@ const splitFourStepsOnEntityMappings = (
 
     if (key === "/$@meta") {
       continue; // special
+    }
+
+    // Yield to UI thread every 50 items to prevent blocking during sync planning
+    if (i > 0 && i % 50 === 0) {
+      await new Promise(resolve => setTimeout(resolve, 0));
     }
 
     const val = mixedEntityMappings[key];
@@ -1740,7 +1747,7 @@ export const doActualSync = async (
     allFilesCount,
     realModifyDeleteCount,
     realTotalCount,
-  } = splitFourStepsOnEntityMappings(mixedEntityMappings);
+  } = await splitFourStepsOnEntityMappings(mixedEntityMappings);
   // console.debug(`onlyMarkSyncedOps: ${JSON.stringify(onlyMarkSyncedOps)}`);
   // console.debug(`folderCreationOps: ${JSON.stringify(folderCreationOps)}`);
   // console.debug(`deletionOps: ${JSON.stringify(deletionOps)}`);
@@ -1818,6 +1825,11 @@ export const doActualSync = async (
       // );
       if (singleLevelOps === undefined || singleLevelOps === null) {
         continue;
+      }
+
+      // Yield to UI thread between operation levels
+      if (j > 0) {
+        await new Promise(resolve => setTimeout(resolve, 0));
       }
 
       const queue = new PQueue({ concurrency: concurrency, autoStart: true });
