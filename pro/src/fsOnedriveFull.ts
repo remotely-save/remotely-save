@@ -575,7 +575,7 @@ export class FakeFsOnedriveFull extends FakeFs {
    */
   async _putUint8ArrayByRange(
     pathFragOrig: string,
-    payload: Uint8Array,
+    payload: Uint8Array<ArrayBuffer>,
     rangeStart: number,
     rangeEnd: number,
     size: number

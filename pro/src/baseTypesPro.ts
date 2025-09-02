@@ -37,8 +37,8 @@ export type PRO_FEATURE_TYPE =
 
 export interface FeatureInfo {
   featureName: PRO_FEATURE_TYPE;
-  enableAtTimeMs: bigint;
-  expireAtTimeMs: bigint;
+  enableAtTimeMs: number;
+  expireAtTimeMs: number;
 }
 
 export interface ProConfig {

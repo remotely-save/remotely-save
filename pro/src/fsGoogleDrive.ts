@@ -2,7 +2,6 @@
 // https://developers.google.com/identity/protocols/oauth2/javascript-implicit-flow
 // https://developers.google.com/identity/protocols/oauth2/web-server
 
-import { entries } from "lodash";
 import * as mime from "mime-types";
 import { requestUrl } from "obsidian";
 import PQueue from "p-queue";
@@ -177,6 +176,7 @@ export class FakeFsGoogleDrive extends FakeFs {
   keyToGDEntity: Record<string, GDEntity>;
 
   baseDirID: string;
+  ready = false;
 
   constructor(
     googleDriveConfig: GoogleDriveConfig,
@@ -199,13 +199,17 @@ export class FakeFsGoogleDrive extends FakeFs {
     await this._getAccessToken();
 
     // check vault folder exists
-    if (this.vaultFolderExists) {
-      // pass
-    } else {
-      const q = encodeURIComponent(
-        `name='${this.remoteBaseDir}' and mimeType='application/vnd.google-apps.folder' and trashed=false`
+    if (!this.vaultFolderExists) {
+      const q = `name='${this.remoteBaseDir}' and mimeType='application/vnd.google-apps.folder' and trashed=false`;
+      const url = new URL("https://www.googleapis.com/drive/v3/files");
+      url.searchParams.set("q", q);
+      url.searchParams.set("pageSize", "1000");
+      url.searchParams.set(
+        "fields",
+        "kind,nextPageToken," +
+          "files(kind,fileExtension,md5Checksum,mimeType,parents,size,spaces,id,name,trashed,createdTime,modifiedTime,quotaBytesUsed,originalFilename,fullFileExtension,sha1Checksum,sha256Checksum)"
       );
-      const url: string = `https://www.googleapis.com/drive/v3/files?q=${q}&pageSize=1000&fields=kind,nextPageToken,files(kind,fileExtension,md5Checksum,mimeType,parents,size,spaces,id,name,trashed,createdTime,modifiedTime,quotaBytesUsed,originalFilename,fullFileExtension,sha1Checksum,sha256Checksum)`;
+      url.searchParams.set("orderBy", "modifiedTime desc");
       const k = await fetch(url, {
         method: "GET",
         headers: {
@@ -274,8 +278,16 @@ export class FakeFsGoogleDrive extends FakeFs {
   /**
    * https://developers.google.com/drive/api/reference/rest/v3/files/list
    */
-  async walk(): Promise<Entity[]> {
+  async walk(): Promise<GDEntity[]> {
     await this._init();
+
+    // const allFiles = await this._listAllFiles();
+    // this.keyToGDEntity = allFiles.reduce((p, c) => {
+    //   p[c.keyRaw] = c;
+    //   return p;
+    // }, {} as Record<string, GDEntity>); // rebuild cache
+
+    // return allFiles;
     const allFiles: GDEntity[] = [];
 
     // bfs
@@ -289,39 +301,23 @@ export class FakeFsGoogleDrive extends FakeFs {
       throw error;
     });
 
-    let parents = [
-      {
-        id: this.baseDirID, // special init, from already created root folder ID
-        folderPath: "",
-      },
-    ];
-    while (parents.length !== 0) {
-      const children: typeof parents = [];
-      for (const { id, folderPath } of parents) {
-        queue.add(async () => {
-          const filesUnderFolder = await this._walkFolder(id, folderPath);
-          for (const f of filesUnderFolder) {
-            allFiles.push(f);
-            if (f.isFolder) {
-              // keyRaw itself already has a tailing slash, no more slash here
-              // keyRaw itself also already has full path
-              const child = {
-                id: f.id,
-                folderPath: f.keyRaw,
-              };
-              // console.debug(
-              //   `looping result of _walkFolder(${id},${folderPath}), adding child=${JSON.stringify(
-              //     child
-              //   )}`
-              // );
-              children.push(child);
-            }
+    const newWalkTask = (id: string, folderPath: string) => {
+      return async () => {
+        const filesUnderFolder = await this._listFolder(id, folderPath);
+        for (const f of filesUnderFolder) {
+          allFiles.push(f);
+          if (f.isFolder) {
+            // keyRaw itself already has a tailing slash, no more slash here
+            // keyRaw itself also already has full path
+            queue.add(newWalkTask(f.id, f.keyRaw));
           }
-        });
-      }
-      await queue.onIdle();
-      parents = children;
-    }
+        }
+      };
+    };
+
+    queue.add(newWalkTask(this.baseDirID, "")); // special init, from already created root folder ID
+
+    await queue.onIdle();
 
     // console.debug(`in the end of walk:`);
     // console.debug(allFiles);
@@ -329,25 +325,97 @@ export class FakeFsGoogleDrive extends FakeFs {
     return allFiles;
   }
 
-  async _walkFolder(parentID: string, parentFolderPath: string) {
+  async _listAllFiles(): Promise<GDEntity[]> {
+    const allFileRes: File[] = [];
+    let nextPageToken = "";
+
+    do {
+      const q = `'${this.baseDirID}' in parents and trashed=false`;
+      const url = new URL("https://www.googleapis.com/drive/v3/files");
+      url.searchParams.set("q", q);
+      url.searchParams.set("pageSize", "1000");
+      url.searchParams.set(
+        "fields",
+        "kind,nextPageToken,files(kind,fileExtension,md5Checksum,mimeType,parents,size,spaces,id,name,trashed,createdTime,modifiedTime,quotaBytesUsed,originalFilename,fullFileExtension,sha1Checksum,sha256Checksum)"
+      );
+      url.searchParams.set("orderBy", "modifiedTime");
+      url.searchParams.set("pageToken", nextPageToken);
+
+      const res = await fetch(url, {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${await this._getAccessToken()}`,
+        },
+      });
+      if (res.status !== 200) {
+        throw Error(`Error on list all files`);
+      }
+
+      const fileRes = await res.json();
+      (fileRes.files as File[]).forEach((i) => allFileRes.push(i));
+
+      nextPageToken = fileRes.nextPageToken;
+    } while (nextPageToken !== undefined);
+
+    const allFolderRes = allFileRes.filter(
+      (i) => i.mimeType == FOLDER_MIME_TYPE
+    );
+
+    const allFolders = [
+      {
+        id: this.baseDirID, // special init, from already created root folder ID
+        folderPath: "",
+      },
+    ];
+
+    for (let targetFolder of allFolders) {
+      allFolderRes
+        .filter((i) => i.parents?.includes(targetFolder.id))
+        .forEach((i) => {
+          allFolders.push({
+            id: i.id!,
+            folderPath: `${targetFolder}${i.name!}/`,
+          });
+        });
+    }
+
+    const allFiles: GDEntity[] = [];
+
+    for (const file of allFileRes) {
+      if (!file.parents) continue;
+      file.parents.forEach((parent) => {
+        const folder = allFolders.find((folder) => folder.id == parent);
+        if (!folder) return;
+        const entity = fromFileToGDEntity(file, folder.id, folder.folderPath);
+        allFiles.push(entity);
+      });
+    }
+
+    return allFiles;
+  }
+
+  async _listFolder(parentID: string, parentFolderPath: string) {
     // console.debug(
     //   `input of single level: parentID=${parentID}, parentFolderPath=${parentFolderPath}`
     // );
     const filesOneLevel: GDEntity[] = [];
-    let nextPageToken: string | undefined = undefined;
+    let nextPageToken = "";
     if (parentID === undefined || parentID === "" || parentID === "root") {
       // we should never start from root
       // because we encapsulate the vault inside a folder
       throw Error(`something goes wrong walking folder`);
     }
     do {
-      const q = encodeURIComponent(
-        `'${parentID}' in parents and trashed=false`
+      const q = `'${parentID}' in parents and trashed=false`;
+      const url = new URL("https://www.googleapis.com/drive/v3/files");
+      url.searchParams.set("q", q);
+      url.searchParams.set("pageSize", "1000");
+      url.searchParams.set(
+        "fields",
+        "kind,nextPageToken,files(kind,fileExtension,md5Checksum,mimeType,parents,size,spaces,id,name,trashed,createdTime,modifiedTime,quotaBytesUsed,originalFilename,fullFileExtension,sha1Checksum,sha256Checksum)"
       );
-      const pageToken =
-        nextPageToken !== undefined ? `&pageToken=${nextPageToken}` : "";
-
-      const url: string = `https://www.googleapis.com/drive/v3/files?q=${q}&pageSize=1000&fields=kind,nextPageToken,files(kind,fileExtension,md5Checksum,mimeType,parents,size,spaces,id,name,trashed,createdTime,modifiedTime,quotaBytesUsed,originalFilename,fullFileExtension,sha1Checksum,sha256Checksum)${pageToken}`;
+      url.searchParams.set("orderBy", "modifiedTime");
+      url.searchParams.set("pageToken", nextPageToken);
 
       const k = await fetch(url, {
         method: "GET",
@@ -377,7 +445,7 @@ export class FakeFsGoogleDrive extends FakeFs {
 
   async walkPartial(): Promise<Entity[]> {
     await this._init();
-    const filesInLevel = await this._walkFolder(this.baseDirID, "");
+    const filesInLevel = await this._listFolder(this.baseDirID, "");
     return filesInLevel;
   }
 
@@ -508,6 +576,8 @@ export class FakeFsGoogleDrive extends FakeFs {
     // "xxx" => []
     // "xxx/yyy/zzz.md" => ["xxx", "xxx/yyy"]
     const folderLevels = getFolderLevels(key);
+    console.log(key);
+    console.log(folderLevels);
     if (folderLevels.length === 0) {
       // root
       parentID = this.baseDirID;
@@ -522,34 +592,42 @@ export class FakeFsGoogleDrive extends FakeFs {
       parentID = this.keyToGDEntity[parentFolderPath].id;
     }
 
+    const targetFileId = this.keyToGDEntity[key]?.id;
+
     const fileItself = key.split("/").pop()!;
+    const meta: any = {
+      name: fileItself,
+      modifiedTime: unixTimeToStr(mtime, true),
+      createdTime: unixTimeToStr(ctime, true),
+    };
+    if(!targetFileId) meta.parents = [parentID]
 
     if (content.byteLength <= 5 * 1024 * 1024) {
       const formData = new FormData();
-      const meta: any = {
-        name: fileItself,
-        modifiedTime: unixTimeToStr(mtime, true),
-        createdTime: unixTimeToStr(ctime, true),
-        parents: [parentID],
-      };
       formData.append(
         "metadata",
-        new Blob([JSON.stringify(meta)], {
+        new Blob(targetFileId ? [] : [JSON.stringify(meta)], {
           type: "application/json; charset=UTF-8",
         })
       );
+
       formData.append("media", new Blob([content], { type: contentType }));
 
-      const res = await fetch(
-        "https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=kind,fileExtension,md5Checksum,mimeType,parents,size,spaces,id,name,trashed,createdTime,modifiedTime,quotaBytesUsed,originalFilename,fullFileExtension,sha1Checksum,sha256Checksum",
-        {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${await this._getAccessToken()}`,
-          },
-          body: formData,
-        }
+      const url = new URL("https://www.googleapis.com/upload/drive/v3/files");
+      if (targetFileId) url.pathname += `/${targetFileId}`;
+      url.searchParams.set("uploadType", "multipart");
+      url.searchParams.set(
+        "fields",
+        "kind,fileExtension,md5Checksum,mimeType,parents,size,spaces,id,name,trashed,createdTime,modifiedTime,quotaBytesUsed,originalFilename,fullFileExtension,sha1Checksum,sha256Checksum"
       );
+
+      const res = await fetch(url, {
+        method: targetFileId ? "PATCH" : "POST",
+        headers: {
+          Authorization: `Bearer ${await this._getAccessToken()}`,
+        },
+        body: formData,
+      });
       if (res.status !== 200 && res.status !== 201) {
         throw Error(`create file ${key} failed! meta=${JSON.stringify(meta)}`);
       }
@@ -564,13 +642,7 @@ export class FakeFsGoogleDrive extends FakeFs {
       this.keyToGDEntity[key] = entity;
       return entity;
     } else {
-      const meta: any = {
-        name: fileItself,
-        modifiedTime: unixTimeToStr(mtime, true),
-        createdTime: unixTimeToStr(ctime, true),
-        parents: [parentID],
-      };
-      const bodyStr = JSON.stringify(meta);
+      const bodyStr = targetFileId ? "" : JSON.stringify(meta);
       const headers: HeadersInit = {
         Authorization: `Bearer ${await this._getAccessToken()}`,
         "Content-Type": "application/json",
@@ -578,14 +650,18 @@ export class FakeFsGoogleDrive extends FakeFs {
         "X-Upload-Content-Type": contentType,
         "X-Upload-Content-Length": `${content.byteLength}`,
       };
-      const res = await fetch(
-        "https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable&fields=kind,fileExtension,md5Checksum,mimeType,parents,size,spaces,id,name,trashed,createdTime,modifiedTime,quotaBytesUsed,originalFilename,fullFileExtension,sha1Checksum,sha256Checksum",
-        {
-          method: "POST",
-          headers: headers,
-          body: bodyStr,
-        }
+      const url = new URL("https://www.googleapis.com/upload/drive/v3/files");
+      if (targetFileId) url.pathname += `/${targetFileId}`;
+      url.searchParams.set("uploadType", "resumable");
+      url.searchParams.set(
+        "fields",
+        "kind,fileExtension,md5Checksum,mimeType,parents,size,spaces,id,name,trashed,createdTime,modifiedTime,quotaBytesUsed,originalFilename,fullFileExtension,sha1Checksum,sha256Checksum"
       );
+      const res = await fetch(url, {
+        method: targetFileId ? "PATCH" : "POST",
+        headers: headers,
+        body: bodyStr,
+      });
       if (res.status !== 200) {
         throw Error(
           `create resumable file ${key} failed! meta=${JSON.stringify(

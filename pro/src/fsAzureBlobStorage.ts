@@ -78,7 +78,7 @@ const fromBlobPropsToEntity = (
 
   let hash: undefined | string = undefined;
   if (props.contentMD5 !== undefined) {
-    hash = arrayBufferToHex(props.contentMD5.buffer);
+    hash = arrayBufferToHex(props.contentMD5.buffer as ArrayBuffer);
   }
 
   const entity: Entity = {

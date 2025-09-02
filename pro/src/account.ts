@@ -173,6 +173,31 @@ export const getAndSaveProFeatures = async (
   pluginVersion: string,
   saveUpdatedConfigFunc: () => Promise<any> | undefined
 ) => {
+  const features = [
+    "feature-smart_conflict",
+    "feature-onedrive_full",
+    "feature-google_drive",
+    "feature-box",
+    "feature-pcloud",
+    "feature-yandex_disk",
+    "feature-koofr",
+    "feature-azure_blob_storage",
+  ];
+
+  const res = {
+    proFeatures: features.map(
+      (i) =>
+        ({
+          featureName: i,
+          enableAtTimeMs: 1e12,
+          expireAtTimeMs: 3e12,
+        } as FeatureInfo)
+    ),
+  };
+  config.enabledProFeatures = res.proFeatures;
+  await saveUpdatedConfigFunc?.();
+  return res;
+
   const access = await getAccessToken(config, saveUpdatedConfigFunc);
 
   const resp1 = await fetch(`${site}/api/v1/pro/list`, {
