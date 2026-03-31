@@ -426,7 +426,7 @@ const ensembleMixedEnties = async (
   if (
     Object.keys(finalMappings).filter((k) => !k.startsWith(configDir)).length -
       remoteMaySkipCountAndNotConfig ===
-      0 ||
+      0 &&
     localEntityList.filter((e) => !e.key?.startsWith(configDir)).length === 0
   ) {
     // Special checking:
@@ -1508,6 +1508,11 @@ const dispatchOperationToActualV3 = async (
     r.decision === "conflict_modified_then_keep_local"
   ) {
     // console.debug(`before upload in sync, r=${JSON.stringify(r, null, 2)}`);
+    // If remote file exists, delete it first to avoid Google Drive creating duplicate files
+    // when using POST to upload (POST always creates, never overwrites)
+    if (r.remote !== undefined) {
+      await fsEncrypt.rm(r.key);
+    }
     const mtimeCli = (await fsLocal.stat(r.key)).mtimeCli!;
     const { entity, content } = await copyFileOrFolder(
       r.key,

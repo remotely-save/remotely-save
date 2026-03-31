@@ -710,18 +710,16 @@ export class FakeFsGoogleDrive extends FakeFs {
     const res1 = await fetch(
       `https://www.googleapis.com/drive/v3/files/${fileID}`,
       {
-        method: "PATCH",
+        method: "DELETE",
         headers: {
           Authorization: `Bearer ${await this._getAccessToken()}`,
         },
-        body: JSON.stringify({
-          trashed: true,
-        }),
       }
     );
-    if (res1.status !== 200) {
+    if (res1.status !== 204) {
       throw Error(`cannot rm ${key} using fileID=${fileID}`);
     }
+    delete this.keyToGDEntity[key];
   }
 
   async checkConnect(callbackFunc?: any): Promise<boolean> {
