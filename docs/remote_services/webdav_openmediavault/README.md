@@ -10,7 +10,7 @@ https://www.openmediavault.org
 2. Create a new Shared Folder
    * Storage → Shared Folders → Create
 3. Enable WebDAV server
-   * Services → WedDAV → Enable → Select previously created Shared Folder
+   * Services → WebDAV → Enable → Select previously created Shared Folder
 4. Make sure Group is "webdav-users"
 5. Add {your username} to "webdav-users" group
    * Users → Groups → webdav-users → Edit → Members
