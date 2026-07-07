@@ -324,18 +324,18 @@ export class FakeFsYandexDisk extends FakeFs {
       concurrency: 5, // TODO: make it configurable?
       autoStart: true,
     });
-    queue.on("error", (error) => {
-      queue.pause();
-      queue.clear();
-      throw error;
-    });
 
     const entities: Entity[] = [];
 
     let parents = ["/"];
     while (parents.length !== 0) {
       const children: typeof parents = [];
-      for (const p of parents) {
+      // NOTE: we MUST collect and await the queue.add() promises. A throw inside
+      // a p-queue "error" listener does NOT propagate to queue.onIdle(), so a
+      // failed subfolder listing would be swallowed and walk() would return a
+      // partial remote list -> the sync engine deletes local files that only
+      // "look" remotely deleted (data loss).
+      const tasks = parents.map((p) =>
         queue.add(async () => {
           const entitiesOfALevel = await this._walkFolder(p);
           for (const entity of entitiesOfALevel) {
@@ -344,9 +344,9 @@ export class FakeFsYandexDisk extends FakeFs {
               children.push(entity.keyRaw);
             }
           }
-        });
-      }
-      await queue.onIdle();
+        })
+      );
+      await Promise.all(tasks);
       parents = children;
     }
 

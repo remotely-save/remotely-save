@@ -349,18 +349,31 @@ export async function tryDuplicateFile(
 ) {
   let key2 = getFileRenameForDup(key);
   let usable = false;
-  do {
+  // the dedup target must be free on BOTH sides: the duplicate is written to
+  // local AND remote, so checking only local can silently overwrite an
+  // unrelated file that already exists at key2 on the remote.
+  const existsOn = async (fs: FakeFs, k: string) => {
     try {
-      const s = await fsLocal.stat(key2);
-      if (s === null || s === undefined) {
-        throw Error(`not exist $${key2}`);
-      }
-      console.debug(`key2=${key2} exists, cannot use for new file`);
+      const s = await fs.stat(k);
+      return s !== null && s !== undefined;
+    } catch (e) {
+      // stat throwing means "not exist", exactly what we want
+      return false;
+    }
+  };
+  do {
+    const [onLocal, onRemote] = await Promise.all([
+      existsOn(fsLocal, key2),
+      existsOn(fsRemote, key2),
+    ]);
+    if (onLocal || onRemote) {
+      console.debug(
+        `key2=${key2} exists (local=${onLocal}, remote=${onRemote}), cannot use`
+      );
       key2 = getFileRenameForDup(key2);
       console.debug(`key2=${key2} is prepared for next try`);
-    } catch (e) {
-      // not exists, exactly what we want
-      console.debug(`key2=${key2} doesn't exist, usable for new file`);
+    } else {
+      console.debug(`key2=${key2} doesn't exist on either side, usable`);
       usable = true;
     }
   } while (!usable);

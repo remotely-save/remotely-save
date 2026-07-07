@@ -730,9 +730,23 @@ export class FakeFsDropbox extends FakeFs {
           }),
         key // just a hint here
       );
-    } catch (err) {
+    } catch (err: any) {
+      // An already-absent remote file is fine: delete is idempotent.
+      // But EVERY other failure (network / 429-exhausted / permission) MUST
+      // propagate. Otherwise the caller treats the delete as successful and
+      // clears the prevSync record, so the still-present remote file is seen
+      // as "new" and re-downloaded on the next sync (deleted file resurrected).
+      const summary: string =
+        (err?.error?.error_summary as string) ?? `${err?.message ?? ""}`;
+      if (summary.includes("not_found")) {
+        console.warn(
+          `rm: remote ${remoteFileName} already absent, treating as deleted`
+        );
+        return;
+      }
       console.error("some error while deleting");
       console.error(err);
+      throw err;
     }
   }
 

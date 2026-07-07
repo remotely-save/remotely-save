@@ -1453,7 +1453,9 @@ const dispatchOperationToActualV3 = async (
 
       // but we might need to update content, because it's a new feature
       if (conflictAction === "smart_conflict") {
-        if (isMergable(r.local!)) {
+        // r.local can be undefined here (e.g. a remote-only, previously-synced
+        // file under push-only direction); isMergable(undefined) would throw
+        if (r.local !== undefined && isMergable(r.local)) {
           const k = await getFileContentHistoryByVaultAndProfile(
             db,
             vaultRandomID,

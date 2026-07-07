@@ -449,11 +449,6 @@ export class FakeFsS3 extends FakeFs {
       concurrency: partsConcurrency,
       autoStart: true,
     });
-    queueHead.on("error", (error) => {
-      queueHead.pause();
-      queueHead.clear();
-      throw error;
-    });
 
     let isTruncated = true;
     do {
@@ -471,27 +466,41 @@ export class FakeFsS3 extends FakeFs {
         // head requests of all objects, love it
         for (const content of rsp.Contents) {
           queueHead.add(async () => {
-            const rspHead = await this.s3Client.send(
-              new HeadObjectCommand({
-                Bucket: this.s3Config.s3BucketName,
-                Key: content.Key,
-              })
-            );
-            if (rspHead.$metadata.httpStatusCode !== 200) {
-              throw Error("some thing bad while heading single object!");
-            }
-            if (rspHead.Metadata === undefined) {
-              // pass
-            } else {
-              mtimeRecords[content.Key!] = Math.floor(
-                Number.parseFloat(
-                  rspHead.Metadata.mtime || rspHead.Metadata.MTime || "0"
-                )
+            try {
+              const rspHead = await this.s3Client.send(
+                new HeadObjectCommand({
+                  Bucket: this.s3Config.s3BucketName,
+                  Key: content.Key,
+                })
               );
-              ctimeRecords[content.Key!] = Math.floor(
-                Number.parseFloat(
-                  rspHead.Metadata.ctime || rspHead.Metadata.CTime || "0"
-                )
+              if (rspHead.$metadata.httpStatusCode !== 200) {
+                throw Error("some thing bad while heading single object!");
+              }
+              if (rspHead.Metadata === undefined) {
+                // pass
+              } else {
+                mtimeRecords[content.Key!] = Math.floor(
+                  Number.parseFloat(
+                    rspHead.Metadata.mtime || rspHead.Metadata.MTime || "0"
+                  )
+                );
+                ctimeRecords[content.Key!] = Math.floor(
+                  Number.parseFloat(
+                    rspHead.Metadata.ctime || rspHead.Metadata.CTime || "0"
+                  )
+                );
+              }
+            } catch (e) {
+              // A single failed HEAD only costs the accurate mtime for THIS
+              // object (it falls back to the coarser server LastModified).
+              // It must NOT abort the whole walk nor poison every other object:
+              // the previous code paused()+cleared() the queue and re-threw from
+              // the "error" listener, which p-queue swallows, silently degrading
+              // the mtime of all remaining objects.
+              console.warn(
+                `failed to HEAD ${content.Key} for accurate mtime, ` +
+                  `falling back to server mtime`,
+                e
               );
             }
           });

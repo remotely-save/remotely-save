@@ -450,7 +450,7 @@ export const isSpecialFolderNameToSkip = (
     ".svn",
     "node_modules",
     ".DS_Store",
-    "__MACOSX ",
+    "__MACOSX",
     "Icon\r", // https://superuser.com/questions/298785/icon-file-on-os-x-desktop
     "desktop.ini",
     "Desktop.ini",

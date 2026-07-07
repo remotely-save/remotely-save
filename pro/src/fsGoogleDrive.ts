@@ -283,11 +283,6 @@ export class FakeFsGoogleDrive extends FakeFs {
       concurrency: 5, // TODO: make it configurable?
       autoStart: true,
     });
-    queue.on("error", (error) => {
-      queue.pause();
-      queue.clear();
-      throw error;
-    });
 
     let parents = [
       {
@@ -297,7 +292,12 @@ export class FakeFsGoogleDrive extends FakeFs {
     ];
     while (parents.length !== 0) {
       const children: typeof parents = [];
-      for (const { id, folderPath } of parents) {
+      // NOTE: we MUST collect the promises returned by queue.add() and await
+      // them. A throw inside a p-queue "error" listener does NOT propagate to
+      // queue.onIdle(), so a failed folder listing would be silently swallowed
+      // and walk() would return a partial/empty remote list -> the sync engine
+      // then deletes local files that only "look" remotely deleted (data loss).
+      const tasks = parents.map(({ id, folderPath }) =>
         queue.add(async () => {
           const filesUnderFolder = await this._walkFolder(id, folderPath);
           for (const f of filesUnderFolder) {
@@ -309,17 +309,12 @@ export class FakeFsGoogleDrive extends FakeFs {
                 id: f.id,
                 folderPath: f.keyRaw,
               };
-              // console.debug(
-              //   `looping result of _walkFolder(${id},${folderPath}), adding child=${JSON.stringify(
-              //     child
-              //   )}`
-              // );
               children.push(child);
             }
           }
-        });
-      }
-      await queue.onIdle();
+        })
+      );
+      await Promise.all(tasks);
       parents = children;
     }
 
