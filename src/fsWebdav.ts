@@ -919,8 +919,12 @@ export class FakeFsWebdav extends FakeFs {
       await this.client.deleteFile(remoteFileName);
       // console.info(`delete ${remoteFileName} succeeded`);
     } catch (err) {
+      // a swallowed failure here makes sync.ts clear the prevSync record for
+      // a file that still exists remotely, so the next sync "resurrects" it;
+      // rethrow so the sync layer keeps prevSync and retries next time
       console.error("some error while deleting");
       console.error(err);
+      throw err;
     }
   }
 
