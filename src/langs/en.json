@@ -36,15 +36,14 @@
   "protocol_onedrive_connect_succ_revoke": "You've connected as user {{username}}. If you want to disconnect, click this button.",
   "protocol_onedrive_connect_fail": "Something went wrong from response from OneDrive. Maybe you rejected the auth?",
   "protocol_onedrive_connect_unknown": "Do not know how to deal with the callback: {{params}}",
+  "protocol_onedrive_no_pending_auth": "Received a OneDrive sign-in callback, but no OneDrive sign-in is pending in this vault ({{vaultName}}). Forwarding it to your other open vaults. If nothing happens, switch to the vault window where you clicked Auth, keep it focused, and try again.",
   "command_startsync": "start sync",
   "command_drynrun": "start sync (dry run only)",
   "command_exportsyncplans_1_only_change": "export sync plans (latest 1) (change part)",
   "command_exportsyncplans_1": "export sync plans (latest 1)",
   "command_exportsyncplans_5": "export sync plans (latest 5)",
   "command_exportsyncplans_all": "export sync plans (all)",
-
   "command_exportlogsindb": "export logs saved in db",
-
   "statusbar_sync_source_manual": "Manual: ",
   "statusbar_sync_source_dry": "Dry: ",
   "statusbar_sync_source_auto": "Auto: ",
@@ -64,7 +63,6 @@
   "statusbar_lastsync_label": "on {{date}}",
   "statusbar_lastsync_never": "Never Synced",
   "statusbar_lastsync_never_label": "Never Synced before",
-
   "modal_password_title": "Hold on and PLEASE READ ON...",
   "modal_password_shortdesc": "If the field is not empty, files would be encrypted locally before being uploaded.\nIf the field is empty, then files would be uploaded without encryption.",
   "modal_password_attn1": "Attention 1/5: The vault name is NOT encrypted. The plugin creates a folder with the vault name on some remote services.",
@@ -127,7 +125,6 @@
   "settings_encryptionmethod_desc": "Encryption method for E2E encryption. The RClone Crypt format is recommended, although it does not encrypt the path structure. OpenSSL enc is the legacy format of this plugin. <b>Both are not affliated with the official RClone and OpenSSL products or communities.</b> Attention: After switching encryption methods, you need to manually delete all original files from the remote location and re-sync to upload the encrypted files again. More info is available in the <a href='https://github.com/remotely-save/remotely-save/tree/master/docs/encryption'>online doc</a>.",
   "settings_encryptionmethod_rclone": "RClone Crypt (recommended)",
   "settings_encryptionmethod_openssl": "OpenSSL enc (legacy)",
-
   "settings_autorun": "Schedule For Auto Run",
   "settings_autorun_desc": "The plugin tries to schedule the running after every interval. Battery may be impacted.",
   "settings_autorun_notset": "(not set)",
@@ -234,7 +231,6 @@
   "settings_onedrive_emptyfile_desc": "OneDrive doesn't allow uploading empty file (even in its official website). Do you want to show up errors or silently skip the empty files?",
   "settings_onedrive_emptyfile_skip": "Skip",
   "settings_onedrive_emptyfile_error": "Error and abort",
-
   "settings_webdav": "Remote For Webdav",
   "settings_webdav_disclaimer1": "Disclaimer: The information is stored locally. Other malicious/harmful/faulty plugins may read the info. If you see any unintentional access to your webdav server, please immediately change the username and password.",
   "settings_webdav_cors_os": "Obsidian desktop>=0.13.25 or iOS>=1.1.1 or Android>=1.2.1 supports bypassing CORS locally. But you are using an old version, and you're suggested to upgrade Obsidian.",
@@ -257,7 +253,6 @@
   "settings_webdav_connect_succ": "Great! The webdav server can be accessed.",
   "settings_webdav_connect_fail": "The webdav server cannot be reached (possible to be any of address/username/password/authtype errors).",
   "settings_webdav_connect_fail_withcors": "The webdav server cannot be reached (possible to be any of address/username/password/authtype/CORS errors).",
-
   "settings_webdis": "Remote For Webdis",
   "settings_webdis_disclaimer1": "Disclaimer: This app is NOT an official Redis® Ltd / Redis® OSS / Webdis product. Redis is a registered trademark of Redis Ltd.",
   "settings_webdis_disclaimer2": "Disclaimer: The information is stored locally. Other malicious/harmful/faulty plugins may read the info. If you see any unintentional access to your Webdis server, please immediately change the username and password.",
@@ -306,7 +301,6 @@
   "settings_protectmodifypercentage_custom_desc": "custom",
   "settings_protectmodifypercentage_customfield": "Custom Abort Sync If Modification Above Percentage",
   "settings_protectmodifypercentage_customfield_desc": "You need to enter a number between 0 (inclusive) and 100 (inclusive). Float number is also allowed.",
-
   "setting_syncdirection": "Sync Direction (experimental)",
   "setting_syncdirection_desc": "<p>Which direction should the plugin sync to? Please be aware that only CHANGED files (based on time and size) are synced regardless any option.</p><ol><li>Bidirectional: Changes on both side are synced to the other side.</li><li>Incremental Push: Locally created or modifed files are copied to remote.</li><li>Incremental Pull: Remotely created or modifed files are copied to local.</li><li>Incremental Push And Delete: Locally created or modifed files are copied to remote, <strong>and local deletion operations are run on remote too.</strong></li><li>Incremental Pull And Delete: Remotely created or modifed files are copied to local, <strong>and remote deletion operations are run on local too.</strong></li></ol>",
   "setting_syncdirection_bidirectional_desc": "Bidirectional (default)",
@@ -314,7 +308,6 @@
   "setting_syncdirection_incremental_pull_only_desc": "Incremental Pull",
   "setting_syncdirection_incremental_push_and_delete_only_desc": "Incremental Push And Delete",
   "setting_syncdirection_incremental_pull_and_delete_only_desc": "Incremental Pull And Delete",
-
   "settings_enablemobilestatusbar": "Mobile Status Bar (experimental)",
   "settings_enablemobilestatusbar_desc": "By default Obsidian mobile hides status bar. But some users want to show it up. So here is a hack.",
   "settings_importexport": "Import and Export Partial Settings",
@@ -374,13 +367,11 @@
   "settings_resetcache_desc": "Reset local internal caches/databases (for debugging purposes). You would want to reload the plugin after resetting this. This option will not empty the {s3, password...} settings.",
   "settings_resetcache_button": "Reset",
   "settings_resetcache_notice": "Local internal cache/databases deleted. Please manually reload the plugin.",
-
   "syncalgov3_title": "Remotely Save has HUGE updates on the sync algorithm",
   "syncalgov3_texts": "Welcome to use Remotely Save!\nFrom this version, a new algorithm has been developed:\n<ul><li>More robust deletion sync,</li><li>minimal conflict handling,</li><li>no meta data uploaded any more,</li><li>deletion / modification protection,</li><li>backup mode</li><li>new encryption method</li><li>...</li></ul>\nStay tune for more! A full introduction is in the <a href='https://github.com/remotely-save/remotely-save/tree/master/docs/sync_algorithm/v3/intro.md'>doc website</a>.\nIf you agree to use this, please read and check two checkboxes then click the \"Agree\" button, and enjoy the plugin!\nIf you do not agree, please click the \"Do Not Agree\" button, the plugin will unload itself.\nAlso, please consider <a href='https://github.com/remotely-save/remotely-save'>visit the GitHub repo and star ⭐ it</a>! Or even <a href='https://github.com/remotely-save/donation'>buy me a coffee</a>. Your support is very important to me! Thanks!",
   "syncalgov3_checkbox_manual_backup": "I will backup my vault manually firstly.",
   "syncalgov3_checkbox_requiremultidevupdate": "I understand I need to update the plugin ACROSS ALL DEVICES to make them work properly.",
   "syncalgov3_button_agree": "Agree",
   "syncalgov3_button_disagree": "Do Not Agree",
-
   "menu_check_file_stat": "Check file stats"
 }

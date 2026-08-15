@@ -20,6 +20,7 @@ import {
 import { VALID_REQURL } from "./baseTypesObs";
 import { FakeFs } from "./fsAll";
 import { bufferToArrayBuffer } from "./misc";
+import { computeAccessTokenExpiresAtTime } from "./oauthLogic";
 
 const SCOPES = ["User.Read", "Files.ReadWrite.AppFolder", "offline_access"];
 const REDIRECT_URI = `obsidian://${COMMAND_CALLBACK_ONEDRIVE}`;
@@ -193,8 +194,11 @@ export const setConfigBySuccessfullAuthInplace = async (
 ) => {
   console.info("start updating local info of OneDrive token");
   config.accessToken = authRes.access_token;
-  config.accessTokenExpiresAtTime =
-    Date.now() + authRes.expires_in - 5 * 60 * 1000;
+  // expires_in is in seconds
+  config.accessTokenExpiresAtTime = computeAccessTokenExpiresAtTime(
+    Date.now(),
+    authRes.expires_in
+  );
   config.accessTokenExpiresInSeconds = authRes.expires_in;
   config.refreshToken = authRes.refresh_token!;
 
@@ -519,7 +523,11 @@ class MyAuthProvider implements AuthenticationProvider {
       this.onedriveConfig.refreshToken = r2.refresh_token!;
       this.onedriveConfig.accessTokenExpiresInSeconds = r2.expires_in;
       this.onedriveConfig.accessTokenExpiresAtTime =
-        currentTs + r2.expires_in * 1000 - 60 * 2 * 1000;
+        computeAccessTokenExpiresAtTime(currentTs, r2.expires_in);
+      // a successful refresh proves the credentials are alive;
+      // push the forced re-auth deadline out again
+      this.onedriveConfig.credentialsShouldBeDeletedAtTime =
+        currentTs + OAUTH2_FORCE_EXPIRE_MILLISECONDS;
       await this.saveUpdatedConfigFunc();
       console.info("Onedrive accessToken updated");
       return this.onedriveConfig.accessToken;
@@ -585,11 +593,27 @@ export class FakeFsOnedrive extends FakeFs {
           .length > 0;
       if (!this.vaultFolderExists) {
         console.info(`remote does not have folder /${this.remoteBaseDir}`);
-        await this._postJson("/drive/special/approot/children", {
-          name: `${this.remoteBaseDir}`,
-          folder: {},
-          "@microsoft.graph.conflictBehavior": "replace",
-        });
+        // POST /drive/special/approot/children returns 400 invalidRequest
+        // nowadays (also, "replace" was never valid for folders); create by
+        // item id instead. See upstream issue #1185.
+        const approot = await this._getJson("/drive/special/approot");
+        try {
+          await this._postJson(`/me/drive/items/${approot.id}/children`, {
+            name: `${this.remoteBaseDir}`,
+            folder: {},
+            "@microsoft.graph.conflictBehavior": "fail",
+          });
+        } catch (e) {
+          // "fail" errors if the folder appeared meanwhile; re-check
+          // before giving up
+          const k2 = await this._getJson("/drive/special/approot/children");
+          const exists = (k2.value as DriveItem[]).some(
+            (x) => x.name === this.remoteBaseDir
+          );
+          if (!exists) {
+            throw e;
+          }
+        }
         console.info(`remote folder /${this.remoteBaseDir} created`);
         this.vaultFolderExists = true;
       } else {

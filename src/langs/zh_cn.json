@@ -36,6 +36,7 @@
   "protocol_onedrive_connect_succ_revoke": "您已作为用户 {{username}} 连接上了。如果您想取消连接，请点击此按钮。",
   "protocol_onedrive_connect_fail": "OneDrive 的回调请求有点异常。您是否拒绝了鉴权？",
   "protocol_onedrive_connect_unknown": "不知道如何处理此 callback：{{params}}",
+  "protocol_onedrive_no_pending_auth": "收到了 OneDrive 登录回调，但当前库（{{vaultName}}）没有正在进行的 OneDrive 登录。已尝试转发给其他打开的库。如果没有反应，请切换到点击了授权按钮的库窗口并保持其为活动窗口，然后重试。",
   "command_startsync": "开始同步（start sync）",
   "command_drynrun": "开始同步（空跑模式）（start sync (dry run only)）",
   "command_exportsyncplans_json": "导出同步计划为 json 格式（export sync plans in json format）",
@@ -44,7 +45,6 @@
   "command_exportsyncplans_5": "导出同步计划（最近 5 次）（export sync plans (latest 5)）",
   "command_exportsyncplans_all": "导出同步计划（所有）（export sync plans (all)）",
   "command_exportlogsindb": "从数据库导出终端日志（export logs saved in db）",
-
   "statusbar_sync_source_manual": "手动：",
   "statusbar_sync_source_dry": "空跑：",
   "statusbar_sync_source_auto": "自动：",
@@ -64,7 +64,6 @@
   "statusbar_lastsync_label": "日期：{{date}}",
   "statusbar_lastsync_never": "没触发过同步",
   "statusbar_lastsync_never_label": "没触发过同步",
-
   "modal_password_title": "稍等一下，请阅读下文：",
   "modal_password_shortdesc": "如果密码不是空的，那么文件会在上传之前，在本地先用此密码加密。\n如果密码是空的，那么文件会被非加密地上传。",
   "modal_password_attn1": "注意 1/5：库（Vault）名字是不会加密的！本插件会在一些远程存储里创建一个和库名字有着同名的文件夹。",
@@ -233,7 +232,6 @@
   "settings_onedrive_emptyfile_desc": "OneDrive 不允许上传空文件（即使官网也是不允许的）。那么你想跳过空文件还是返回错误？",
   "settings_onedrive_emptyfile_skip": "跳过",
   "settings_onedrive_emptyfile_error": "返回错误和中断",
-
   "settings_webdav": "Webdav 设置",
   "settings_webdav_disclaimer1": "声明：您所输入的信息存储于本地。其它有害的或者出错的插件，是有可能读取到这些信息的。如果您发现了 Webdav 服务器有不符合预期的访问，请立刻修改用户名和密码。",
   "settings_webdav_cors_os": "Obsidian 桌面版>=0.13.25 或 iOS>=1.1.1 或 Android>=1.2.1 支持跳过 CORS 设置。但您正在使用旧版，建议升级。",
@@ -256,7 +254,6 @@
   "settings_webdav_connect_succ": "很好！可以连接上 Webdav 服务器。",
   "settings_webdav_connect_fail": "无法连接上 Webdav 服务器。（可能是地址/账号/密码/鉴权类型等错误。）",
   "settings_webdav_connect_fail_withcors": "无法连接上 Webdav 服务器。（可能是地址/账号/密码/鉴权类型/CORS 等错误。）",
-
   "settings_webdis": "Webdis 设置",
   "settings_webdis_disclaimer1": "声明：此插件不是 Redis® Ltd 或 Redis® 软件或 Wedis 的官方产品。Redis 是 Redis Ltd 的注册商标。",
   "settings_webdis_disclaimer2": "声明：您所输入的信息存储于本地。其它有害的或者出错的插件，是有可能读取到这些信息的。如果您发现了 Webdis 服务器有不符合预期的访问，请立刻修改用户名和密码。",
@@ -305,7 +302,6 @@
   "settings_protectmodifypercentage_custom_desc": "自定义",
   "settings_protectmodifypercentage_customfield": "如果修改超过自定义百分比则中止同步",
   "settings_protectmodifypercentage_customfield_desc": "您需要输入 0（含）~ 100（含）的数字。小数也是可以的。",
-
   "setting_syncdirection": "同步方向（实验性质）",
   "setting_syncdirection_desc": "<p>W插件应该向哪里同步？注意每个选项都是只有修改了的文件（基于修改时间和大小判断）才会触发同步动作。</p><ol><li>双向同步：一边的变动会同步到另一边。</li><li>增量推送：本地创建或修改的文件会复制到远端。</li><li>增量拉取：远端创建或修改的文件会复制到本地。</li><li>增量推送带删除：本地创建或修改的文件会复制到远端，<strong>本地的删除也会在远端运行。</strong></li><li>增量拉取带删除：远端创建或修改的文件会复制到本地，<strong>远端的删除也会在本地运行。</strong></li></ol>",
   "setting_syncdirection_bidirectional_desc": "双向同步（默认）",
@@ -313,7 +309,6 @@
   "setting_syncdirection_incremental_pull_only_desc": "增量拉取",
   "setting_syncdirection_incremental_push_and_delete_only_desc": "增量推送带删除",
   "setting_syncdirection_incremental_pull_and_delete_only_desc": "增量拉取带删除",
-
   "settings_enablemobilestatusbar": "手机的状态栏（实验性质）",
   "settings_enablemobilestatusbar_desc": "Obsidian 手机版默认隐藏了状态栏。有些用户希望展示它。这里提供了设置选项。",
   "settings_importexport": "导入导出部分设置",
@@ -373,13 +368,11 @@
   "settings_resetcache_desc": "（出于调试原因）重设本地缓存和数据库。您需要在重设之后重新载入此插件。本重设不会删除 s3，密码……等设定。",
   "settings_resetcache_button": "重设",
   "settings_resetcache_notice": "本地同步缓存和数据库已被删除。请手动重新载入此插件。",
-
   "syncalgov3_title": "Remotely Save 的同步算法有重大更新",
   "syncalgov3_texts": "欢迎使用 Remotely Save！\n从这个版本开始，插件更新了同步算法：\n<ul><li>更稳健的删除同步</li><li>引入冲突处理</li><li>避免上传元数据</li><li>修改删除保护</li><li>备份模式</li><li>新的加密方式</li><li>……</li></ul>\n敬请期待更多更新！详细介绍请参阅<a href='https://github.com/remotely-save/remotely-save/tree/master/docs/sync_algorithm/v3/intro.md'>文档网站</a>。\n如果您同意使用新版本，请阅读和勾选两个勾选框，然后点击“同意”按钮，开始使用插件吧！\n如果您不同意，请点击“不同意”按钮，插件将自动停止运行（unload）。\n此外，请考虑<a href='https://github.com/remotely-save/remotely-save'>访问 GitHub 页面然后点赞 ⭐</a>！您的支持对我十分重要！谢谢！",
   "syncalgov3_checkbox_manual_backup": "我将会首先手动备份我的库（Vault）。",
   "syncalgov3_checkbox_requiremultidevupdate": "我理解，我需要在所有设备上都更新此插件使之正常运行。",
   "syncalgov3_button_agree": "同意",
   "syncalgov3_button_disagree": "不同意",
-
   "menu_check_file_stat": "查看文件属性"
 }

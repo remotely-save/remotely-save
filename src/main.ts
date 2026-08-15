@@ -87,7 +87,9 @@ import { FakeFsLocal } from "./fsLocal";
 import {
   type AccessCodeResponseSuccessfulType as AccessCodeResponseSuccessfulTypeOnedrive,
   DEFAULT_ONEDRIVE_CONFIG,
+  FakeFsOnedrive,
   sendAuthReq as sendAuthReqOnedrive,
+  sendRefreshTokenReq as sendRefreshTokenReqOnedrive,
   setConfigBySuccessfullAuthInplace as setConfigBySuccessfullAuthInplaceOnedrive,
 } from "./fsOnedrive";
 import { DEFAULT_S3_CONFIG } from "./fsS3";
@@ -108,6 +110,10 @@ import {
   upsertPluginVersionByVault,
 } from "./localdb";
 import { changeMobileStatusBar } from "./misc";
+import {
+  decideCredentialAction,
+  decideOnedriveCallbackAction,
+} from "./oauthLogic";
 import { DEFAULT_PROFILER_CONFIG, Profiler } from "./profiler";
 import { RemotelySaveSettingTab } from "./settings";
 import { SyncAlgoV3Modal } from "./syncAlgoV3Notice";
@@ -220,6 +226,7 @@ export default class RemotelySavePlugin extends Plugin {
   hasPendingSyncOnSave!: boolean;
   statusBarElement!: HTMLSpanElement;
   oauth2Info!: OAuth2Info;
+  oauthOnedriveChannel?: BroadcastChannel;
   currLogLevel!: string;
   currSyncMsg?: string;
   syncRibbon?: HTMLElement;
@@ -703,86 +710,29 @@ export default class RemotelySavePlugin extends Plugin {
     this.registerObsidianProtocolHandler(
       COMMAND_CALLBACK_ONEDRIVE,
       async (inputParams) => {
-        if (
-          inputParams.code !== undefined &&
-          this.oauth2Info?.verifier !== undefined
-        ) {
-          if (this.oauth2Info.helperModal !== undefined) {
-            const k = this.oauth2Info.helperModal.contentEl;
-            k.empty();
-
-            t("protocol_onedrive_connecting")
-              .split("\n")
-              .forEach((val) => {
-                k.createEl("p", {
-                  text: val,
-                });
-              });
-          }
-
-          const rsp = await sendAuthReqOnedrive(
-            this.settings.onedrive.clientID,
-            this.settings.onedrive.authority,
-            inputParams.code,
-            this.oauth2Info.verifier,
-            async (e: any) => {
-              new Notice(t("protocol_onedrive_connect_fail"));
-              new Notice(`${e}`);
-              return; // throw?
-            }
-          );
-
-          if ((rsp as any).error !== undefined) {
-            new Notice(`${JSON.stringify(rsp)}`);
-            throw Error(`${JSON.stringify(rsp)}`);
-          }
-
-          const self = this;
-          setConfigBySuccessfullAuthInplaceOnedrive(
-            this.settings.onedrive,
-            rsp as AccessCodeResponseSuccessfulTypeOnedrive,
-            () => self.saveSettings()
-          );
-
-          const client = getClient(
-            this.settings,
-            this.app.vault.getName(),
-            () => self.saveSettings()
-          );
-          this.settings.onedrive.username = await client.getUserDisplayName();
-          await this.saveSettings();
-
-          this.oauth2Info.verifier = ""; // reset it
-          this.oauth2Info.helperModal?.close(); // close it
-          this.oauth2Info.helperModal = undefined;
-
-          this.oauth2Info.authDiv?.toggleClass(
-            "onedrive-auth-button-hide",
-            this.settings.onedrive.username !== ""
-          );
-          this.oauth2Info.authDiv = undefined;
-
-          this.oauth2Info.revokeAuthSetting?.setDesc(
-            t("protocol_onedrive_connect_succ_revoke", {
-              username: this.settings.onedrive.username,
-            })
-          );
-          this.oauth2Info.revokeAuthSetting = undefined;
-          this.oauth2Info.revokeDiv?.toggleClass(
-            "onedrive-revoke-auth-button-hide",
-            this.settings.onedrive.username === ""
-          );
-          this.oauth2Info.revokeDiv = undefined;
-        } else {
-          new Notice(t("protocol_onedrive_connect_fail"));
-          throw Error(
-            t("protocol_onedrive_connect_unknown", {
-              params: JSON.stringify(inputParams),
-            })
-          );
-        }
+        await this.handleOnedriveAuthCallback(inputParams, t);
       }
     );
+
+    // obsidian:// callbacks are delivered to only one window. With several
+    // vault windows open, the auth code can land in a window that never
+    // started an auth; that window forwards the params here so the window
+    // that IS waiting can complete the exchange.
+    if (typeof BroadcastChannel !== "undefined") {
+      this.oauthOnedriveChannel = new BroadcastChannel(
+        "remotely-save-oauth-onedrive"
+      );
+      this.oauthOnedriveChannel.onmessage = async (ev: MessageEvent) => {
+        const params = ev?.data?.params;
+        if (params?.code !== undefined && !!this.oauth2Info?.verifier) {
+          await this.handleOnedriveAuthCallback(params, t);
+        }
+      };
+      this.register(() => {
+        this.oauthOnedriveChannel?.close();
+        this.oauthOnedriveChannel = undefined;
+      });
+    }
 
     this.registerObsidianProtocolHandler(
       COMMAND_CALLBACK_ONEDRIVEFULL,
@@ -1529,6 +1479,129 @@ export default class RemotelySavePlugin extends Plugin {
     }
   }
 
+  async handleOnedriveAuthCallback(
+    inputParams: Record<string, string>,
+    t: (x: TransItemType, vars?: any) => string
+  ) {
+    const decision = decideOnedriveCallbackAction(
+      inputParams,
+      this.oauth2Info?.verifier
+    );
+
+    if (decision.kind === "forward") {
+      // no auth is pending in this vault's window -- consuming the one-time
+      // code here would burn it; hand it to the other open windows instead
+      this.oauthOnedriveChannel?.postMessage({ params: { ...inputParams } });
+      new Notice(
+        t("protocol_onedrive_no_pending_auth", {
+          vaultName: this.app.vault.getName(),
+        }),
+        10000
+      );
+      return;
+    }
+
+    if (decision.kind === "denied") {
+      new Notice(t("protocol_onedrive_connect_fail"));
+      new Notice(decision.errorDescription);
+      return;
+    }
+
+    if (decision.kind === "invalid") {
+      new Notice(t("protocol_onedrive_connect_fail"));
+      throw Error(
+        t("protocol_onedrive_connect_unknown", {
+          params: JSON.stringify(inputParams),
+        })
+      );
+    }
+
+    try {
+      if (this.oauth2Info.helperModal !== undefined) {
+        const k = this.oauth2Info.helperModal.contentEl;
+        k.empty();
+
+        t("protocol_onedrive_connecting")
+          .split("\n")
+          .forEach((val) => {
+            k.createEl("p", {
+              text: val,
+            });
+          });
+      }
+
+      let authError: any = undefined;
+      const rsp = await sendAuthReqOnedrive(
+        this.settings.onedrive.clientID,
+        this.settings.onedrive.authority,
+        inputParams.code,
+        this.oauth2Info.verifier!,
+        async (e: any) => {
+          authError = e;
+          console.error(e);
+        }
+      );
+
+      if (rsp === undefined || (rsp as any).error !== undefined) {
+        throw Error(
+          `OneDrive token exchange failed: ${
+            (rsp as any)?.error_description ??
+            (rsp as any)?.error ??
+            authError ??
+            "unknown error"
+          }`
+        );
+      }
+      await setConfigBySuccessfullAuthInplaceOnedrive(
+        this.settings.onedrive,
+        rsp as AccessCodeResponseSuccessfulTypeOnedrive,
+        () => this.saveSettings()
+      );
+
+      // always use a OneDrive client here: the currently selected service
+      // type may be a different remote entirely
+      const client = new FakeFsOnedrive(
+        this.settings.onedrive,
+        this.app.vault.getName(),
+        () => this.saveSettings()
+      );
+      this.settings.onedrive.username = await client.getUserDisplayName();
+      await this.saveSettings();
+
+      this.oauth2Info.verifier = ""; // reset it
+      this.oauth2Info.helperModal?.close(); // close it
+      this.oauth2Info.helperModal = undefined;
+
+      this.oauth2Info.authDiv?.toggleClass(
+        "onedrive-auth-button-hide",
+        this.settings.onedrive.username !== ""
+      );
+      this.oauth2Info.authDiv = undefined;
+
+      this.oauth2Info.revokeAuthSetting?.setDesc(
+        t("protocol_onedrive_connect_succ_revoke", {
+          username: this.settings.onedrive.username,
+        })
+      );
+      this.oauth2Info.revokeAuthSetting = undefined;
+      this.oauth2Info.revokeDiv?.toggleClass(
+        "onedrive-revoke-auth-button-hide",
+        this.settings.onedrive.username === ""
+      );
+      this.oauth2Info.revokeDiv = undefined;
+    } catch (e: any) {
+      // surface the error instead of hanging the "connecting" modal forever
+      console.error(e);
+      new Notice(t("protocol_onedrive_connect_fail"));
+      new Notice(`${e}`, 10000);
+      const k = this.oauth2Info?.helperModal?.contentEl;
+      if (k !== undefined) {
+        k.empty();
+        k.createEl("p", { text: `${e}` });
+      }
+    }
+  }
+
   async checkIfOauthExpires() {
     let needSave = false;
     const current = Date.now();
@@ -1568,13 +1641,45 @@ export default class RemotelySavePlugin extends Plugin {
 
     let onedriveExpired = false;
     if (
-      this.settings.onedrive.refreshToken !== "" &&
-      current >= this.settings!.onedrive!.credentialsShouldBeDeletedAtTime!
+      decideCredentialAction({
+        hasRefreshToken: this.settings.onedrive.refreshToken !== "",
+        deleteAtTimeMs:
+          this.settings.onedrive.credentialsShouldBeDeletedAtTime ?? 0,
+        nowMs: current,
+      }) === "refresh-or-prompt"
     ) {
-      console.warn(`onedrive expired`);
-      onedriveExpired = true;
-      this.settings.onedrive = cloneDeep(DEFAULT_ONEDRIVE_CONFIG);
-      needSave = true;
+      // the deadline passed, but the refresh token may well still be valid;
+      // try it before bothering the user -- never wipe on a timer
+      try {
+        const r = await sendRefreshTokenReqOnedrive(
+          this.settings.onedrive.clientID,
+          this.settings.onedrive.authority,
+          this.settings.onedrive.refreshToken
+        );
+        if ((r as any).error !== undefined) {
+          throw Error(`${(r as any).error_description ?? (r as any).error}`);
+        }
+        await setConfigBySuccessfullAuthInplaceOnedrive(
+          this.settings.onedrive,
+          r as AccessCodeResponseSuccessfulTypeOnedrive,
+          () => undefined
+        );
+        console.info(
+          "onedrive: refresh succeeded after the deadline, credentials kept"
+        );
+        needSave = true;
+      } catch (e) {
+        console.warn(`onedrive: token refresh failed, re-auth needed: ${e}`);
+        onedriveExpired = true;
+        // clear only the auth fields; keep the user's other OneDrive settings
+        this.settings.onedrive.accessToken = "";
+        this.settings.onedrive.refreshToken = "";
+        this.settings.onedrive.accessTokenExpiresInSeconds = 0;
+        this.settings.onedrive.accessTokenExpiresAtTime = 0;
+        this.settings.onedrive.credentialsShouldBeDeletedAtTime = 0;
+        this.settings.onedrive.username = "";
+        needSave = true;
+      }
     }
 
     let onedriveFullExpired = false;

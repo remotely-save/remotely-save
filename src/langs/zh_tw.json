@@ -36,6 +36,7 @@
   "protocol_onedrive_connect_succ_revoke": "您已作為使用者 {{username}} 連線上了。如果您想取消連線，請點選此按鈕。",
   "protocol_onedrive_connect_fail": "OneDrive 的回撥請求有點異常。您是否拒絕了鑑權？",
   "protocol_onedrive_connect_unknown": "不知道如何處理此 callback：{{params}}",
+  "protocol_onedrive_no_pending_auth": "收到了 OneDrive 登入回調，但目前的儲存庫（{{vaultName}}）沒有正在進行的 OneDrive 登入。已嘗試轉發給其他開啟的儲存庫。如果沒有反應，請切換到點擊了授權按鈕的儲存庫視窗並保持其為使用中視窗，然後重試。",
   "command_startsync": "開始同步（start sync）",
   "command_drynrun": "開始同步（空跑模式）（start sync (dry run only)）",
   "command_exportsyncplans_1_only_change": "匯出同步計劃（最近 1 次）（僅修改部分）（export sync plans (latest 1) (change part)）",
@@ -43,7 +44,6 @@
   "command_exportsyncplans_5": "匯出同步計劃（最近 5 次）（export sync plans (latest 5)）",
   "command_exportsyncplans_all": "匯出同步計劃（所有）（export sync plans (all)）",
   "command_exportlogsindb": "從資料庫匯出終端日誌（export logs saved in db）",
-
   "statusbar_sync_source_manual": "手動：",
   "statusbar_sync_source_dry": "空跑：",
   "statusbar_sync_source_auto": "自動：",
@@ -63,7 +63,6 @@
   "statusbar_lastsync_label": "日期：{{date}}",
   "statusbar_lastsync_never": "沒觸發過同步",
   "statusbar_lastsync_never_label": "沒觸發過同步",
-
   "modal_password_title": "稍等一下，請閱讀下文：",
   "modal_password_shortdesc": "如果密碼不是空的，那麼檔案會在上傳之前，在本地先用此密碼加密。\n如果密碼是空的，那麼檔案會被非加密地上傳。",
   "modal_password_attn1": "注意 1/5：儲存庫（Vault）名字是不會加密的！本外掛會在一些遠端儲存裡建立一個和庫名字有著同名的資料夾。",
@@ -232,7 +231,6 @@
   "settings_onedrive_emptyfile_desc": "OneDrive 不允許上傳空檔案（即使官網也是不允許的）。那麼你想跳過空檔案還是返回錯誤？",
   "settings_onedrive_emptyfile_skip": "跳過",
   "settings_onedrive_emptyfile_error": "返回錯誤和中斷",
-
   "settings_webdav": "Webdav 設定",
   "settings_webdav_disclaimer1": "宣告：您所輸入的資訊儲存於本地。其它有害的或者出錯的外掛，是有可能讀取到這些資訊的。如果您發現了 Webdav 伺服器有不符合預期的訪問，請立刻修改使用者名稱和密碼。",
   "settings_webdav_cors_os": "Obsidian 桌面版>=0.13.25 或 iOS>=1.1.1 或 Android>=1.1.1 支援跳過 CORS 設定。但您正在使用舊版，建議升級。",
@@ -255,7 +253,6 @@
   "settings_webdav_connect_succ": "很好！可以連線上 Webdav 伺服器。",
   "settings_webdav_connect_fail": "無法連線上 Webdav 伺服器。（可能是地址/賬號/密碼/鑑權型別等錯誤。）",
   "settings_webdav_connect_fail_withcors": "無法連線上 Webdav 伺服器。（可能是地址/賬號/密碼/鑑權型別/CORS 等錯誤。）",
-
   "settings_webdis": "Webdis 設置",
   "settings_webdis_disclaimer1": "聲明：此插件不是 Redis® Ltd 或 Redis® 軟件或 Wedis 的官方產品。Redis 是 Redis Ltd 的註冊商標。",
   "settings_webdis_disclaimer2": "聲明：您所輸入的信息存儲於本地。其它有害的或者出錯的插件，是有可能讀取到這些信息的。如果您發現了 Webdis 服務器有不符合預期的訪問，請立刻修改用戶名和密碼。",
@@ -304,7 +301,6 @@
   "settings_protectmodifypercentage_custom_desc": "自定義",
   "settings_protectmodifypercentage_customfield": "如果修改超過自定義百分比則中止同步",
   "settings_protectmodifypercentage_customfield_desc": "您需要輸入 0（含）~ 100（含）的數字。小數也是可以的。",
-
   "setting_syncdirection": "同步方向（實驗性質）",
   "setting_syncdirection_desc": "<p>W外掛應該向哪裡同步？注意每個選項都是隻有修改了的檔案（基於修改時間和大小判斷）才會觸發同步動作。</p><ol><li>雙向同步：一邊的變動會同步到另一邊。</li><li>增量推送：本地建立或修改的檔案會複製到遠端。</li><li>增量拉取：遠端建立或修改的檔案會複製到本地。</li><li>增量推送帶刪除：本地建立或修改的檔案會複製到遠端，<strong>本地的刪除也會在遠端執行。</strong></li><li>增量拉取帶刪除：遠端建立或修改的檔案會複製到本地，<strong>遠端的刪除也會在本地執行。</strong></li></ol>",
   "setting_syncdirection_bidirectional_desc": "雙向同步（預設）",
@@ -312,7 +308,6 @@
   "setting_syncdirection_incremental_pull_only_desc": "增量拉取",
   "setting_syncdirection_incremental_push_and_delete_only_desc": "增量推送帶刪除",
   "setting_syncdirection_incremental_pull_and_delete_only_desc": "增量拉取帶刪除",
-
   "settings_enablemobilestatusbar": "手機的狀態列（實驗性質）",
   "settings_enablemobilestatusbar_desc": "Obsidian 手機版預設隱藏了狀態列。有些使用者希望展示它。這裡提供了設定選項。",
   "settings_importexport": "匯入匯出部分設定",
@@ -372,13 +367,11 @@
   "settings_resetcache_desc": "（出於除錯原因）重設本地快取和資料庫。您需要在重設之後重新載入此外掛。本重設不會刪除 s3，密碼……等設定。",
   "settings_resetcache_button": "重設",
   "settings_resetcache_notice": "本地同步快取和資料庫已被刪除。請手動重新載入此外掛。",
-
   "syncalgov3_title": "Remotely Save 的同步演算法有重大更新",
   "syncalgov3_texts": "歡迎使用 Remotely Save！\n從這個版本開始，外掛更新了同步演算法：\n<ul><li>更穩健的刪除同步</li><li>引入衝突處理</li><li>避免上傳元資料</li><li>修改刪除保護</li><li>備份模式</li><li>新的加密方式</li><li>……</li></ul>\n敬請期待更多更新！詳細介紹請參閱<a href='https://github.com/remotely-save/remotely-save/tree/master/docs/sync_algorithm/v3/intro.md'>文件網站</a>。\n如果您同意使用新版本，請閱讀和勾選兩個勾選框，然後點選“同意”按鈕，開始使用外掛吧！\n如果您不同意，請點選“不同意”按鈕，外掛將自動停止執行（unload）。\n此外，請考慮<a href='https://github.com/remotely-save/remotely-save'>訪問 GitHub 頁面然後點贊 ⭐</a>！您的支援對我十分重要！謝謝！",
   "syncalgov3_checkbox_manual_backup": "我將會首先手動備份我的庫（Vault）。",
   "syncalgov3_checkbox_requiremultidevupdate": "我理解，我需要在所有裝置上都更新此外掛使之正常執行。",
   "syncalgov3_button_agree": "同意",
   "syncalgov3_button_disagree": "不同意",
-
   "menu_check_file_stat": "檢視檔案屬性"
 }
