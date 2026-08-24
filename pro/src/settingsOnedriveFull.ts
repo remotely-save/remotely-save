@@ -286,7 +286,7 @@ export const generateOnedriveFullSettingsPart = (
     plugin.settings.onedrivefull.remoteBaseDir || "";
   new Setting(onedriveFullAllowedToUsedDiv)
     .setName(t("settings_remotebasedir"))
-    .setDesc(t("settings_remotebasedir_desc"))
+    .setDesc(t("settings_remotebasedir_desc_nested"))
     .addText((text) =>
       text
         .setPlaceholder(app.vault.getName())

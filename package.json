@@ -46,10 +46,11 @@
     "npm-check-updates": "^16.14.20",
     "obsidian": "^1.5.7",
     "openapi-typescript": "^7.1.0",
+    "terser-webpack-plugin": "^5.3.10",
     "ts-loader": "^9.5.1",
     "tslib": "^2.6.3",
     "tsx": "^4.16.2",
-    "typescript": "^5.5.4",
+    "typescript": "~5.6.3",
     "webdav-server": "^2.6.2",
     "webpack": "^5.93.0",
     "webpack-cli": "^5.1.4",
@@ -87,7 +88,7 @@
     "mime-types": "^2.1.35",
     "mustache": "^4.2.0",
     "nanoid": "^5.0.7",
-    "node-diff3": "^3.1.2",
+    "node-diff3": "~3.1.2",
     "openapi-fetch": "^0.10.2",
     "p-queue": "^8.0.1",
     "path-browserify": "^1.0.1",
@@ -101,5 +102,8 @@
     "util": "^0.12.5",
     "webdav": "^5.6.0",
     "xregexp": "^5.1.1"
+  },
+  "overrides": {
+    "clean-stack": "5.2.0"
   }
 }

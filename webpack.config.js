@@ -57,6 +57,8 @@ module.exports = {
       // https://github.com/Azure/azure-sdk-for-js/blob/main/sdk/core/core-util/src/checkEnvironment.ts
       "globalThis.process.versions": `undefined`,
     }),
+    new webpack.optimize.LimitChunkCountPlugin({ maxChunks: 1 }),
+
     // Work around for Buffer is undefined:
     // https://github.com/webpack/changelog-v5/issues/10
     new webpack.ProvidePlugin({
@@ -134,5 +136,11 @@ module.exports = {
   optimization: {
     minimize: true,
     minimizer: [new TerserPlugin({ extractComments: false })],
+    // An Obsidian plugin is loaded as a single main.js, so nothing can be
+    // fetched lazily at runtime. Newer @aws-sdk versions dynamically import
+    // their event stream serde, which would otherwise be split out into a
+    // second chunk that never ships. Force everything into one bundle.
+    splitChunks: false,
+    runtimeChunk: false,
   },
 };
