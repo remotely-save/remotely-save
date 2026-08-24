@@ -341,6 +341,35 @@ export const checkHasSpecialCharForDir = (x: string) => {
   return /[?/\\]/.test(x);
 };
 
+/**
+ * Some services (currently only OneDrive (Full Access)) allow the remote base
+ * dir to be a nested path, e.g. "Documents/SomeVault". There the "/" is a
+ * separator instead of an invalid char, so only "?" and "\\" stay forbidden,
+ * and every segment should be a sane dir name.
+ * @param x should be normalized by normalizeRemoteBaseDirPath firstly
+ */
+export const checkHasSpecialCharForDirPath = (x: string) => {
+  if (/[?\\]/.test(x)) {
+    return true;
+  }
+  if (x === "") {
+    return false;
+  }
+  return x.split("/").some((y) => y === "" || y === "." || y === "..");
+};
+
+/**
+ * Trim every segment of a (possibly nested) remote base dir, and drop the
+ * empty ones, so that "/Documents//Some Vault/" becomes "Documents/Some Vault".
+ */
+export const normalizeRemoteBaseDirPath = (x: string) => {
+  return x
+    .split("/")
+    .map((y) => y.trim())
+    .filter((y) => y !== "")
+    .join("/");
+};
+
 export const unixTimeToStr = (x: number | undefined | null, hasMs = false) => {
   if (x === undefined || x === null || Number.isNaN(x)) {
     return undefined;

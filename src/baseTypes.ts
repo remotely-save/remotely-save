@@ -46,6 +46,14 @@ export type SUPPORTED_SERVICES_TYPE_WITH_REMOTE_BASE_DIR = Exclude<
   "s3" | "azureblobstorage"
 >;
 
+/**
+ * Most services expect the remote base dir to be a single folder sitting in the
+ * root of the remote, but some of them can also sync into a sub folder, e.g.
+ * "Documents/SomeVault" on OneDrive.
+ */
+export const SERVICES_ALLOWING_NESTED_REMOTE_BASE_DIR: Set<SUPPORTED_SERVICES_TYPE_WITH_REMOTE_BASE_DIR> =
+  new Set(["onedrivefull"]);
+
 export interface S3Config {
   s3Endpoint: string;
   s3Region: string;

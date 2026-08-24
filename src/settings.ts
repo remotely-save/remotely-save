@@ -19,6 +19,7 @@ import type {
   SyncDirectionType,
   WebdavAuthType,
 } from "./baseTypes";
+import { SERVICES_ALLOWING_NESTED_REMOTE_BASE_DIR } from "./baseTypes";
 
 import cloneDeep from "lodash/cloneDeep";
 import { generateAzureBlobStorageSettingsPart } from "../pro/src/settingsAzureBlobStorage";
@@ -65,6 +66,8 @@ import type RemotelySavePlugin from "./main"; // unavoidable
 import {
   changeMobileStatusBar,
   checkHasSpecialCharForDir,
+  checkHasSpecialCharForDirPath,
+  normalizeRemoteBaseDirPath,
   stringToFragment,
 } from "./misc";
 import { DEFAULT_PROFILER_CONFIG } from "./profiler";
@@ -199,6 +202,7 @@ export class ChangeRemoteBaseDirModal extends Modal {
   readonly plugin: RemotelySavePlugin;
   readonly newRemoteBaseDir: string;
   readonly service: SUPPORTED_SERVICES_TYPE_WITH_REMOTE_BASE_DIR;
+  readonly allowNested: boolean;
   constructor(
     app: App,
     plugin: RemotelySavePlugin,
@@ -207,8 +211,13 @@ export class ChangeRemoteBaseDirModal extends Modal {
   ) {
     super(app);
     this.plugin = plugin;
-    this.newRemoteBaseDir = newRemoteBaseDir;
     this.service = service;
+    this.allowNested = SERVICES_ALLOWING_NESTED_REMOTE_BASE_DIR.has(service);
+    // for the services allowing a nested dir, "/Documents//Some Vault/"
+    // and "Documents/Some Vault" should be treated as the same input
+    this.newRemoteBaseDir = this.allowNested
+      ? normalizeRemoteBaseDirPath(newRemoteBaseDir)
+      : newRemoteBaseDir;
   }
 
   onOpen() {
@@ -219,7 +228,11 @@ export class ChangeRemoteBaseDirModal extends Modal {
     };
 
     contentEl.createEl("h2", { text: t("modal_remotebasedir_title") });
-    t("modal_remotebasedir_shortdesc")
+    t(
+      this.allowNested
+        ? "modal_remotebasedir_shortdesc_nested"
+        : "modal_remotebasedir_shortdesc"
+    )
       .split("\n")
       .forEach((val, idx) => {
         contentEl.createEl("p", {
@@ -251,9 +264,17 @@ export class ChangeRemoteBaseDirModal extends Modal {
             this.close();
           });
         });
-    } else if (checkHasSpecialCharForDir(this.newRemoteBaseDir)) {
+    } else if (
+      this.allowNested
+        ? checkHasSpecialCharForDirPath(this.newRemoteBaseDir)
+        : checkHasSpecialCharForDir(this.newRemoteBaseDir)
+    ) {
       contentEl.createEl("p", {
-        text: t("modal_remotebasedir_invaliddirhint"),
+        text: t(
+          this.allowNested
+            ? "modal_remotebasedir_invaliddirhint_nested"
+            : "modal_remotebasedir_invaliddirhint"
+        ),
       });
       new Setting(contentEl).addButton((button) => {
         button.setButtonText(t("goback"));

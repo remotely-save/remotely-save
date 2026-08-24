@@ -17,7 +17,10 @@ import {
 } from "../../src/baseTypes";
 import { VALID_REQURL } from "../../src/baseTypesObs";
 import { FakeFs } from "../../src/fsAll";
-import { bufferToArrayBuffer } from "../../src/misc";
+import {
+  bufferToArrayBuffer,
+  normalizeRemoteBaseDirPath,
+} from "../../src/misc";
 import {
   COMMAND_CALLBACK_ONEDRIVEFULL,
   type OnedriveFullConfig,
@@ -217,6 +220,7 @@ export const setConfigBySuccessfullAuthInplace = async (
 
 /**
  * This is different from Onedrive (App Folder)
+ * @param remoteBaseDir may be nested, e.g. "Documents/SomeVault"
  */
 const getOnedrivePath = (fileOrFolderPath: string, remoteBaseDir: string) => {
   // https://learn.microsoft.com/en-us/onedrive/developer/rest-api/concepts/addressing-driveitems?view=odsp-graph-online
@@ -253,9 +257,12 @@ const fromDriveItemToEntity = (x: DriveItem, remoteBaseDir: string): Entity => {
   // possible prefix:
   // pure english: /drive/root:${remoteBaseDir}
   const FIRST_COMMON_PREFIX_RAW = `/drive/root:/${remoteBaseDir}`;
-  const SECOND_COMMON_PREFIX_RAW = `/drive/root:/${encodeURIComponent(
-    remoteBaseDir
-  )}`;
+  // the remote base dir may be nested, e.g. "Documents/SomeVault",
+  // and the server encodes every level separately while keeping the "/"
+  const SECOND_COMMON_PREFIX_RAW = `/drive/root:/${remoteBaseDir
+    .split("/")
+    .map((y) => encodeURIComponent(y))
+    .join("/")}`;
 
   if (
     x.parentReference === undefined ||
@@ -399,8 +406,11 @@ export class FakeFsOnedriveFull extends FakeFs {
     super();
     this.kind = "onedrivefull";
     this.onedriveFullConfig = onedriveFullConfig;
-    this.remoteBaseDir =
-      this.onedriveFullConfig.remoteBaseDir || vaultName || "";
+    // may be nested, e.g. "Documents/SomeVault",
+    // and we want no leading, trailing or duplicated "/"
+    this.remoteBaseDir = normalizeRemoteBaseDirPath(
+      this.onedriveFullConfig.remoteBaseDir || vaultName || ""
+    );
     this.vaultFolderExists = false;
     this.saveUpdatedConfigFunc = saveUpdatedConfigFunc;
     this.authGetter = new MyAuthProvider(
@@ -423,25 +433,26 @@ export class FakeFsOnedriveFull extends FakeFs {
     // console.info(`checking remote has folder /${this.remoteBaseDir}`);
     if (this.vaultFolderExists) {
       // console.info(`already checked, /${this.remoteBaseDir} exist before`)
-    } else {
-      const k = await this._getJson("/drive/root/children");
-      // console.debug(k);
-      this.vaultFolderExists =
-        (k.value as DriveItem[]).filter((x) => x.name === this.remoteBaseDir)
-          .length > 0;
-      if (!this.vaultFolderExists) {
-        console.info(`remote does not have folder /${this.remoteBaseDir}`);
-        await this._postJson("/drive/root/children", {
-          name: `${this.remoteBaseDir}`,
-          folder: {},
-          "@microsoft.graph.conflictBehavior": "replace",
-        });
-        console.info(`remote folder /${this.remoteBaseDir} created`);
-        this.vaultFolderExists = true;
-      } else {
-        // console.info(`remote folder /${this.remoteBaseDir} exists`);
-      }
+      return;
     }
+
+    // the remote base dir may be nested, e.g. "Documents/SomeVault",
+    // so we address it by its path instead of scanning the children of the root
+    const baseDirPath = getOnedrivePath("", this.remoteBaseDir);
+    try {
+      await this._getJson(`${baseDirPath}?$select=id,name,folder`);
+      // console.info(`remote folder /${this.remoteBaseDir} exists`);
+    } catch (e) {
+      console.info(`remote does not have folder /${this.remoteBaseDir}`);
+      // https://stackoverflow.com/questions/56479865
+      // PATCH creates every missing level in one go
+      await this._patchJson(baseDirPath, {
+        folder: {},
+        "@microsoft.graph.conflictBehavior": "replace",
+      });
+      console.info(`remote folder /${this.remoteBaseDir} created`);
+    }
+    this.vaultFolderExists = true;
   }
 
   _buildUrl(pathFragOrig: string) {

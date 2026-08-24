@@ -286,6 +286,54 @@ describe("Misc: special char for dir", () => {
   });
 });
 
+describe("Misc: special char for nested dir path", () => {
+  it("should allow the slash as the separator", () => {
+    assert.ok(!misc.checkHasSpecialCharForDirPath(""));
+    assert.ok(!misc.checkHasSpecialCharForDirPath("xxx"));
+    assert.ok(!misc.checkHasSpecialCharForDirPath("Documents/xxx"));
+    assert.ok(!misc.checkHasSpecialCharForDirPath("a/b/c"));
+    assert.ok(!misc.checkHasSpecialCharForDirPath("Documents/yyy.xxx"));
+    assert.ok(!misc.checkHasSpecialCharForDirPath("Documents/some vault"));
+  });
+
+  it("should return true for special cases", () => {
+    assert.ok(misc.checkHasSpecialCharForDirPath("?"));
+    assert.ok(misc.checkHasSpecialCharForDirPath("\\"));
+    assert.ok(misc.checkHasSpecialCharForDirPath("xxx\\yyy"));
+    assert.ok(misc.checkHasSpecialCharForDirPath("xxx?yyy"));
+    assert.ok(misc.checkHasSpecialCharForDirPath("/"));
+    assert.ok(misc.checkHasSpecialCharForDirPath("/xxx"));
+    assert.ok(misc.checkHasSpecialCharForDirPath("xxx/"));
+    assert.ok(misc.checkHasSpecialCharForDirPath("xxx//yyy"));
+    assert.ok(misc.checkHasSpecialCharForDirPath("xxx/./yyy"));
+    assert.ok(misc.checkHasSpecialCharForDirPath("xxx/../yyy"));
+  });
+});
+
+describe("Misc: normalize remote base dir path", () => {
+  it("should keep a sane input as is", () => {
+    assert.equal(misc.normalizeRemoteBaseDirPath(""), "");
+    assert.equal(misc.normalizeRemoteBaseDirPath("xxx"), "xxx");
+    assert.equal(
+      misc.normalizeRemoteBaseDirPath("Documents/xxx"),
+      "Documents/xxx"
+    );
+  });
+
+  it("should trim the levels and drop the empty ones", () => {
+    assert.equal(misc.normalizeRemoteBaseDirPath("/"), "");
+    assert.equal(misc.normalizeRemoteBaseDirPath("/xxx/"), "xxx");
+    assert.equal(
+      misc.normalizeRemoteBaseDirPath("/Documents//xxx/"),
+      "Documents/xxx"
+    );
+    assert.equal(
+      misc.normalizeRemoteBaseDirPath(" Documents / some vault "),
+      "Documents/some vault"
+    );
+  });
+});
+
 describe("Misc: split chunk ranges", () => {
   it("should fail on negative numner", () => {
     assert.throws(() => misc.splitFileSizeToChunkRanges(-1, 2));
