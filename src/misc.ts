@@ -338,7 +338,7 @@ export const atWhichLevel = (x: string | undefined) => {
 };
 
 export const checkHasSpecialCharForDir = (x: string) => {
-  return /[?/\\]/.test(x);
+  return /[?\\\\]/.test(x);
 };
 
 export const unixTimeToStr = (x: number | undefined | null, hasMs = false) => {

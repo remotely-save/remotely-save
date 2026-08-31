@@ -278,9 +278,9 @@ describe("Misc: special char for dir", () => {
 
   it("should return true for special cases", () => {
     assert.ok(misc.checkHasSpecialCharForDir("?"));
-    assert.ok(misc.checkHasSpecialCharForDir("/"));
+    assert.ok(!misc.checkHasSpecialCharForDir("/"));
     assert.ok(misc.checkHasSpecialCharForDir("\\"));
-    assert.ok(misc.checkHasSpecialCharForDir("xxx/yyy"));
+    assert.ok(!misc.checkHasSpecialCharForDir("xxx/yyy"));
     assert.ok(misc.checkHasSpecialCharForDir("xxx\\yyy"));
     assert.ok(misc.checkHasSpecialCharForDir("xxx?yyy"));
   });

@@ -1,7 +1,2 @@
-*.png filter=lfs diff=lfs merge=lfs -text
-*.jpg filter=lfs diff=lfs merge=lfs -text
-*.jpeg filter=lfs diff=lfs merge=lfs -text
-*.pdf filter=lfs diff=lfs merge=lfs -text
-*.enc filter=lfs diff=lfs merge=lfs -text
-*.svg filter=lfs diff=lfs merge=lfs -text
-*.excalidraw filter=lfs diff=lfs merge=lfs -text
+tests/static_assets/sometext.txt text eol=lf
+"tests/static_assets/sometext.txt text eol=lf" 
