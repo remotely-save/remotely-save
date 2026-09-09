@@ -731,8 +731,20 @@ export class FakeFsDropbox extends FakeFs {
         key // just a hint here
       );
     } catch (err) {
-      console.error("some error while deleting");
-      console.error(err);
+      const dropboxError = err as DropboxResponseError<{
+        error: files.DeleteError;
+      }>;
+      const deleteError = dropboxError.error?.error;
+      if (
+        dropboxError.status === 409 &&
+        deleteError?.[".tag"] === "path_lookup" &&
+        deleteError.path_lookup[".tag"] === "not_found"
+      ) {
+        // Another device (or a previous attempt) already deleted this item.
+        return;
+      }
+      // Do not clear sync history unless the remote deletion succeeded.
+      throw err;
     }
   }
 
