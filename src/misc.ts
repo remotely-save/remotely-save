@@ -94,6 +94,23 @@ export const bufferToArrayBuffer = (
 };
 
 /**
+ * The Graph `/me` profile endpoint occasionally fails server-side
+ * (e.g. `504 DSApiSdkException/ProfileException` or
+ * `500 ErrorStoreInternalServerError`) while the Drive API itself is
+ * healthy. The display name is cosmetic, so callers fall back to the
+ * owner info from the `/drive` response instead of failing.
+ */
+export const extractDisplayNameFromDriveInfo = (
+  drive: any
+): string | undefined => {
+  return (
+    drive?.lastModifiedBy?.user?.displayName ||
+    drive?.createdBy?.user?.displayName ||
+    undefined
+  );
+};
+
+/**
  * Simple func.
  * @param b
  * @returns

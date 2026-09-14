@@ -295,6 +295,7 @@ export const sendAuthReq = async (
     if (errorCallBack !== undefined) {
       await errorCallBack(e);
     }
+    throw e;
   }
 };
 

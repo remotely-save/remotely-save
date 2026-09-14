@@ -17,7 +17,10 @@ import {
 } from "../../src/baseTypes";
 import { VALID_REQURL } from "../../src/baseTypesObs";
 import { FakeFs } from "../../src/fsAll";
-import { bufferToArrayBuffer } from "../../src/misc";
+import {
+  bufferToArrayBuffer,
+  extractDisplayNameFromDriveInfo,
+} from "../../src/misc";
 import {
   COMMAND_CALLBACK_ONEDRIVEFULL,
   type OnedriveFullConfig,
@@ -151,6 +154,7 @@ export const sendAuthReq = async (
   } catch (e) {
     console.error(e);
     await errorCallBack(e);
+    throw e;
   }
 };
 
@@ -196,7 +200,7 @@ export const setConfigBySuccessfullAuthInplace = async (
   console.info("start updating local info of OneDrive token");
   config.accessToken = authRes.access_token;
   config.accessTokenExpiresAtTime =
-    Date.now() + authRes.expires_in - 5 * 60 * 1000;
+    Date.now() + authRes.expires_in * 1000 - 5 * 60 * 1000;
   config.accessTokenExpiresInSeconds = authRes.expires_in;
   config.refreshToken = authRes.refresh_token!;
 
@@ -431,13 +435,21 @@ export class FakeFsOnedriveFull extends FakeFs {
           .length > 0;
       if (!this.vaultFolderExists) {
         console.info(`remote does not have folder /${this.remoteBaseDir}`);
-        await this._postJson("/drive/root/children", {
-          name: `${this.remoteBaseDir}`,
-          folder: {},
-          "@microsoft.graph.conflictBehavior": "replace",
-        });
-        console.info(`remote folder /${this.remoteBaseDir} created`);
-        this.vaultFolderExists = true;
+        // NOTE: creating the folder via POST `/drive/root/children` is
+        // rejected by Graph with `400 invalidRequest` (same as the AppFolder
+        // variant, see upstream issue #1185). Creating it via PATCH on the
+        // item path works (same approach as `_mkdirFromRoot`).
+        if (this.remoteBaseDir === "") {
+          // drive root itself is the vault folder, nothing to create
+          this.vaultFolderExists = true;
+        } else {
+          await this._patchJson(`/drive/root:/${this.remoteBaseDir}`, {
+            folder: {},
+            "@microsoft.graph.conflictBehavior": "replace",
+          });
+          console.info(`remote folder /${this.remoteBaseDir} created`);
+          this.vaultFolderExists = true;
+        }
       } else {
         // console.info(`remote folder /${this.remoteBaseDir} exists`);
       }
@@ -930,16 +942,40 @@ export class FakeFsOnedriveFull extends FakeFs {
       }
     } catch (err) {
       console.debug(err);
-      callbackFunc?.(err);
-      return false;
+      // The `/me` profile endpoint may be down while Drive works fine
+      // (display name is cosmetic). Fall back to proving connectivity
+      // via `_init()` instead of reporting a failure.
+      try {
+        await this._init();
+        return await this.checkConnectCommonOps(callbackFunc);
+      } catch (err2) {
+        console.debug(err2);
+        callbackFunc?.(err2);
+        return false;
+      }
     }
     return await this.checkConnectCommonOps(callbackFunc);
   }
 
   async getUserDisplayName() {
     await this._init();
-    const res: User = await this._getJson("/me?$select=displayName");
-    return res.displayName || "<unknown display name>";
+    try {
+      const res: User = await this._getJson("/me?$select=displayName");
+      if (res.displayName) {
+        return res.displayName;
+      }
+    } catch (err) {
+      console.debug(`falling back to /drive for display name: ${err}`);
+    }
+    try {
+      const drive = await this._getJson(
+        "/drive?$select=createdBy,lastModifiedBy"
+      );
+      return extractDisplayNameFromDriveInfo(drive) || "<unknown display name>";
+    } catch (err) {
+      console.debug(err);
+      return "<unknown display name>";
+    }
   }
 
   /**
