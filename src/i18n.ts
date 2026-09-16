@@ -26,12 +26,46 @@ export class I18n {
     await this.saveSettingFunc(anotherLang);
   }
 
+  /**
+   * Detect the language set in Obsidian's settings.
+   *
+   * `moment.locale()` is a mutable global state: other plugins may change
+   * it, and it may not be ready yet when this plugin loads, so it can
+   * return "en" even when the user chose another language. Obsidian
+   * persists its language setting in localStorage under the "language"
+   * key, which has neither problem, so read it first and only fall back
+   * to `moment.locale()` if that fails.
+   *
+   * The raw value is normalized to match the keys in LANGS, e.g. both
+   * Obsidian's "zh" (Simplified Chinese) and moment's "zh-cn" map to
+   * "zh_cn", and "zh-TW" maps to "zh_tw".
+   */
+  private detectLang(): string {
+    let raw = "";
+    try {
+      raw = window.localStorage.getItem("language") ?? "";
+    } catch (e) {
+      // localStorage can be unavailable in some contexts; fall back below.
+    }
+    if (!raw) {
+      raw = moment.locale();
+    }
+    const normalized = raw.toLowerCase().replace("-", "_");
+    if (normalized === "zh" || normalized === "zh_hans") {
+      return "zh_cn";
+    }
+    return normalized;
+  }
+
   _get(key: TransItemType) {
-    let realLang = this.lang;
-    if (this.lang === "auto" && moment.locale().replace("-", "_") in LANGS) {
-      realLang = moment.locale().replace("-", "_") as LangType;
+    let realLang: LangType = "en";
+    if (this.lang === "auto") {
+      const detected = this.detectLang();
+      if (detected in LANGS) {
+        realLang = detected as LangType;
+      }
     } else {
-      realLang = "en";
+      realLang = this.lang;
     }
 
     const res: string =
