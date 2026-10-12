@@ -2,10 +2,7 @@
 // https://developers.google.com/identity/protocols/oauth2/javascript-implicit-flow
 // https://developers.google.com/identity/protocols/oauth2/web-server
 
-import { entries } from "lodash";
 import * as mime from "mime-types";
-import { requestUrl } from "obsidian";
-import PQueue from "p-queue";
 import { DEFAULT_CONTENT_TYPE, type Entity } from "../../src/baseTypes";
 import { FakeFs } from "../../src/fsAll";
 import {
@@ -163,6 +160,7 @@ const fromFileToGDEntity = (
     hash: isFolder ? undefined : file.md5Checksum!,
     id: file.id!,
     parentID: parentID,
+    parentIDPath: parentFolderPath,
     isFolder: isFolder,
   } as GDEntity;
 };
@@ -177,6 +175,117 @@ export class FakeFsGoogleDrive extends FakeFs {
   keyToGDEntity: Record<string, GDEntity>;
 
   baseDirID: string;
+  private initPromise?: Promise<void>;
+  private mutationQueues = new Map<string, Promise<unknown>>();
+
+  private async _withPathLock<T>(
+    key: string,
+    action: () => Promise<T>
+  ): Promise<T> {
+    const previous = this.mutationQueues.get(key) ?? Promise.resolve();
+    const current = previous.catch(() => undefined).then(action);
+    this.mutationQueues.set(key, current);
+    try {
+      return await current;
+    } finally {
+      if (this.mutationQueues.get(key) === current)
+        this.mutationQueues.delete(key);
+    }
+  }
+
+  private _escapeQuery(value: string): string {
+    return value.replace(/\\/g, "\\\\").replace(/'/g, "\\'");
+  }
+
+  private async _listFiles(query: string): Promise<File[]> {
+    const files: File[] = [];
+    let pageToken: string | undefined;
+    do {
+      const params = new URLSearchParams({
+        q: query,
+        pageSize: "1000",
+        fields:
+          "nextPageToken,incompleteSearch,files(id,name,mimeType,parents,size,md5Checksum,createdTime,modifiedTime,trashed)",
+      });
+      if (pageToken) params.set("pageToken", pageToken);
+      const response = await fetch(
+        `https://www.googleapis.com/drive/v3/files?${params}`,
+        {
+          method: "GET",
+          headers: { Authorization: `Bearer ${await this._getAccessToken()}` },
+        }
+      );
+      if (response.status !== 200)
+        throw Error(
+          `Google Drive listing failed (${response.status}); sync stopped.`
+        );
+      const result = await response.json();
+      if (!Array.isArray(result.files) || result.incompleteSearch) {
+        throw Error(
+          "Google Drive returned an incomplete file listing; sync stopped."
+        );
+      }
+      for (const file of result.files as File[]) {
+        if (!file.id || !file.name || !file.mimeType)
+          throw Error(
+            "Google Drive returned invalid file metadata; sync stopped."
+          );
+        files.push(file);
+      }
+      pageToken = result.nextPageToken;
+    } while (pageToken);
+    return files;
+  }
+
+  private _assertUnique(files: File[], path: string): void {
+    const names = new Set<string>();
+    for (const file of files) {
+      if (names.has(file.name!)) {
+        throw Error(
+          `Google Drive duplicate name: ${path}${file.name}. Sync stopped. Back up and resolve duplicate files or folders before retrying; no copy was selected or deleted.`
+        );
+      }
+      names.add(file.name!);
+    }
+  }
+
+  private async _findExisting(
+    key: string,
+    name: string,
+    parentID: string,
+    parentFolderPath: string,
+    isFolder: boolean
+  ): Promise<GDEntity | undefined> {
+    const files = await this._listFiles(
+      `'${this._escapeQuery(parentID)}' in parents and name='${this._escapeQuery(name)}' and trashed=false`
+    );
+    this._assertUnique(files, parentFolderPath);
+    const cached = this.keyToGDEntity[key];
+    if (files.length === 0) {
+      if (cached)
+        throw Error(
+          `Google Drive file disappeared: ${key}; sync again before writing.`
+        );
+      return undefined;
+    }
+    const entity = fromFileToGDEntity(files[0], parentID, parentFolderPath);
+    if (entity.isFolder !== isFolder)
+      throw Error(`Google Drive file/folder conflict: ${key}`);
+    if (cached && cached.id !== entity.id)
+      throw Error(
+        `Google Drive file identity changed: ${key}; sync again before writing.`
+      );
+    if (
+      cached &&
+      (cached.mtimeSvr !== entity.mtimeSvr || cached.hash !== entity.hash)
+    ) {
+      throw Error(
+        `Google Drive file changed during sync: ${key}; sync again before writing.`
+      );
+    }
+    this.keyToGDEntity[key] = entity;
+    return entity;
+  }
 
   constructor(
     googleDriveConfig: GoogleDriveConfig,
@@ -195,57 +304,48 @@ export class FakeFsGoogleDrive extends FakeFs {
   }
 
   async _init() {
-    // get accessToken
-    await this._getAccessToken();
-
-    // check vault folder exists
-    if (this.vaultFolderExists) {
-      // pass
-    } else {
-      const q = encodeURIComponent(
-        `name='${this.remoteBaseDir}' and mimeType='application/vnd.google-apps.folder' and trashed=false`
-      );
-      const url: string = `https://www.googleapis.com/drive/v3/files?q=${q}&pageSize=1000&fields=kind,nextPageToken,files(kind,fileExtension,md5Checksum,mimeType,parents,size,spaces,id,name,trashed,createdTime,modifiedTime,quotaBytesUsed,originalFilename,fullFileExtension,sha1Checksum,sha256Checksum)`;
-      const k = await fetch(url, {
-        method: "GET",
-        headers: {
-          Authorization: `Bearer ${await this._getAccessToken()}`,
-        },
+    if (this.vaultFolderExists) return;
+    if (!this.initPromise) {
+      this.initPromise = this._initOnce().finally(() => {
+        this.initPromise = undefined;
       });
+    }
+    await this.initPromise;
+  }
 
-      const k1: { files: File[] } = await k.json();
-      // console.debug(k1);
-      if (k1.files.length > 0) {
-        // yeah we find it
-        this.baseDirID = k1.files[0].id!;
-        this.vaultFolderExists = true;
-      } else {
-        // wait, we need to create the folder!
-        console.debug(`we need to create the base dir ${this.remoteBaseDir}`);
-        const meta: any = {
-          mimeType: FOLDER_MIME_TYPE,
-          name: this.remoteBaseDir,
-        };
-        const res = await fetch("https://www.googleapis.com/drive/v3/files", {
+  private async _initOnce() {
+    const files = await this._listFiles(
+      `'root' in parents and name='${this._escapeQuery(this.remoteBaseDir)}' and trashed=false`
+    );
+    this._assertUnique(files, "");
+    if (files.length) {
+      if (files[0].mimeType !== FOLDER_MIME_TYPE)
+        throw Error("Google Drive vault path is not a folder.");
+      this.baseDirID = files[0].id!;
+    } else {
+      const response = await fetch(
+        "https://www.googleapis.com/drive/v3/files?fields=id",
+        {
           method: "POST",
           headers: {
             Authorization: `Bearer ${await this._getAccessToken()}`,
             "Content-Type": "application/json",
           },
-          body: JSON.stringify(meta),
-        });
-        const res2: File = await res.json();
-        if (res.status === 200) {
-          console.debug(`succeed to create the base dir ${this.remoteBaseDir}`);
-          this.baseDirID = res2.id!;
-          this.vaultFolderExists = true;
-        } else {
-          throw Error(
-            `cannot create base dir ${this.remoteBaseDir} in init func.`
-          );
+          body: JSON.stringify({
+            name: this.remoteBaseDir,
+            mimeType: FOLDER_MIME_TYPE,
+            parents: ["root"],
+          }),
         }
-      }
+      );
+      if (response.status !== 200 && response.status !== 201)
+        throw Error("Cannot create Google Drive vault folder.");
+      const file: File = await response.json();
+      if (!file.id)
+        throw Error("Google Drive did not return a vault folder ID.");
+      this.baseDirID = file.id;
     }
+    this.vaultFolderExists = true;
   }
 
   async _getAccessToken() {
@@ -276,103 +376,49 @@ export class FakeFsGoogleDrive extends FakeFs {
    */
   async walk(): Promise<Entity[]> {
     await this._init();
+    this.keyToGDEntity = {};
     const allFiles: GDEntity[] = [];
-
-    // bfs
-    const queue = new PQueue({
-      concurrency: 5, // TODO: make it configurable?
-      autoStart: true,
-    });
-    queue.on("error", (error) => {
-      queue.pause();
-      queue.clear();
-      throw error;
-    });
-
-    let parents = [
-      {
-        id: this.baseDirID, // special init, from already created root folder ID
-        folderPath: "",
-      },
-    ];
-    while (parents.length !== 0) {
-      const children: typeof parents = [];
-      for (const { id, folderPath } of parents) {
-        queue.add(async () => {
-          const filesUnderFolder = await this._walkFolder(id, folderPath);
-          for (const f of filesUnderFolder) {
-            allFiles.push(f);
-            if (f.isFolder) {
-              // keyRaw itself already has a tailing slash, no more slash here
-              // keyRaw itself also already has full path
-              const child = {
-                id: f.id,
-                folderPath: f.keyRaw,
-              };
-              // console.debug(
-              //   `looping result of _walkFolder(${id},${folderPath}), adding child=${JSON.stringify(
-              //     child
-              //   )}`
-              // );
-              children.push(child);
+    let parents = [{ id: this.baseDirID, folderPath: "" }];
+    try {
+      while (parents.length) {
+        const children: typeof parents = [];
+        // Await every batch so listing errors reach the sync planner before any transfer.
+        for (let offset = 0; offset < parents.length; offset += 5) {
+          const results = await Promise.allSettled(
+            parents
+              .slice(offset, offset + 5)
+              .map(({ id, folderPath }) => this._walkFolder(id, folderPath))
+          );
+          for (const result of results) {
+            if (result.status === "rejected") throw result.reason;
+            for (const file of result.value) {
+              allFiles.push(file);
+              if (file.isFolder)
+                children.push({ id: file.id, folderPath: file.keyRaw });
             }
           }
-        });
+        }
+        parents = children;
       }
-      await queue.onIdle();
-      parents = children;
+      return allFiles;
+    } catch (error) {
+      this.keyToGDEntity = {};
+      throw error;
     }
-
-    // console.debug(`in the end of walk:`);
-    // console.debug(allFiles);
-    // console.debug(this.keyToGDEntity);
-    return allFiles;
   }
 
   async _walkFolder(parentID: string, parentFolderPath: string) {
-    // console.debug(
-    //   `input of single level: parentID=${parentID}, parentFolderPath=${parentFolderPath}`
-    // );
-    const filesOneLevel: GDEntity[] = [];
-    let nextPageToken: string | undefined = undefined;
-    if (parentID === undefined || parentID === "" || parentID === "root") {
-      // we should never start from root
-      // because we encapsulate the vault inside a folder
-      throw Error(`something goes wrong walking folder`);
-    }
-    do {
-      const q = encodeURIComponent(
-        `'${parentID}' in parents and trashed=false`
-      );
-      const pageToken =
-        nextPageToken !== undefined ? `&pageToken=${nextPageToken}` : "";
-
-      const url: string = `https://www.googleapis.com/drive/v3/files?q=${q}&pageSize=1000&fields=kind,nextPageToken,files(kind,fileExtension,md5Checksum,mimeType,parents,size,spaces,id,name,trashed,createdTime,modifiedTime,quotaBytesUsed,originalFilename,fullFileExtension,sha1Checksum,sha256Checksum)${pageToken}`;
-
-      const k = await fetch(url, {
-        method: "GET",
-        headers: {
-          Authorization: `Bearer ${await this._getAccessToken()}`,
-        },
-      });
-      if (k.status !== 200) {
-        throw Error(`cannot walk for parentID=${parentID}`);
-      }
-
-      const k1 = await k.json();
-      // console.debug(k1);
-      for (const file of k1.files as File[]) {
-        const entity = fromFileToGDEntity(file, parentID, parentFolderPath);
-        this.keyToGDEntity[entity.keyRaw] = entity; // build cache
-        filesOneLevel.push(entity);
-      }
-
-      nextPageToken = k1.nextPageToken;
-    } while (nextPageToken !== undefined);
-
-    // console.debug(filesOneLevel);
-
-    return filesOneLevel;
+    if (!parentID || parentID === "root")
+      throw Error("Invalid Google Drive parent folder.");
+    const files = await this._listFiles(
+      `'${this._escapeQuery(parentID)}' in parents and trashed=false`
+    );
+    this._assertUnique(files, parentFolderPath);
+    const entities = files.map((file) =>
+      fromFileToGDEntity(file, parentID, parentFolderPath)
+    );
+    for (const entity of entities) this.keyToGDEntity[entity.keyRaw] = entity;
+    return entities;
   }
 
   async walkPartial(): Promise<Entity[]> {
@@ -424,7 +470,15 @@ export class FakeFsGoogleDrive extends FakeFs {
     key: string,
     mtime: number | undefined,
     ctime: number | undefined
-  ): Promise<Entity> {
+  ): Promise<GDEntity> {
+    return this._withPathLock(key, () => this._mkdir(key, mtime, ctime));
+  }
+
+  private async _mkdir(
+    key: string,
+    mtime: number | undefined,
+    ctime: number | undefined
+  ): Promise<GDEntity> {
     if (!key.endsWith("/")) {
       throw Error(`you should not mkdir on key=${key}`);
     }
@@ -456,6 +510,15 @@ export class FakeFsGoogleDrive extends FakeFs {
     let folderItselfWithoutSlash = folderLevels[folderLevels.length - 1];
     folderItselfWithoutSlash = folderItselfWithoutSlash.split("/").pop()!;
 
+    const existing = await this._findExisting(
+      key,
+      folderItselfWithoutSlash,
+      parentID,
+      parentFolderPath!,
+      true
+    );
+    if (existing) return existing;
+
     const meta: any = {
       mimeType: FOLDER_MIME_TYPE,
       modifiedTime: unixTimeToStr(mtime, true),
@@ -463,18 +526,23 @@ export class FakeFsGoogleDrive extends FakeFs {
       name: folderItselfWithoutSlash,
       parents: [parentID],
     };
-    const res = await fetch("https://www.googleapis.com/drive/v3/files", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${await this._getAccessToken()}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(meta),
-    });
+    const res = await fetch(
+      "https://www.googleapis.com/drive/v3/files?fields=id,name,mimeType,size,md5Checksum,createdTime,modifiedTime",
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${await this._getAccessToken()}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(meta),
+      }
+    );
     if (res.status !== 200 && res.status !== 201) {
       throw Error(`create folder ${key} failed! meta=${JSON.stringify(meta)}`);
     }
     const res2: File = await res.json();
+    if (!res2.id)
+      throw Error(`Google Drive did not return a folder ID for ${key}`);
     // console.debug(res2);
     const entity = fromFileToGDEntity(res2, parentID, parentFolderPath);
     // insert into cache
@@ -491,7 +559,18 @@ export class FakeFsGoogleDrive extends FakeFs {
     content: ArrayBuffer,
     mtime: number,
     ctime: number
-  ): Promise<Entity> {
+  ): Promise<GDEntity> {
+    return this._withPathLock(key, () =>
+      this._writeFile(key, content, mtime, ctime)
+    );
+  }
+
+  private async _writeFile(
+    key: string,
+    content: ArrayBuffer,
+    mtime: number,
+    ctime: number
+  ): Promise<GDEntity> {
     if (key.endsWith("/")) {
       throw Error(`should not call writeFile on ${key}`);
     }
@@ -524,36 +603,58 @@ export class FakeFsGoogleDrive extends FakeFs {
 
     const fileItself = key.split("/").pop()!;
 
+    // Lookup is authoritative even on a cold/stale cache. Never POST after a failed PATCH.
+    const existing = await this._findExisting(
+      key,
+      fileItself,
+      parentID,
+      parentFolderPath!,
+      false
+    );
+    const method = existing ? "PATCH" : "POST";
+    const uploadURL =
+      "https://www.googleapis.com/upload/drive/v3/files" +
+      (existing ? `/${encodeURIComponent(existing.id)}` : "");
+    const meta: any = {
+      name: fileItself,
+      modifiedTime: unixTimeToStr(mtime, true),
+    };
+    if (!existing) {
+      meta.createdTime = unixTimeToStr(ctime, true);
+      meta.parents = [parentID];
+    }
+
     if (content.byteLength <= 5 * 1024 * 1024) {
-      const formData = new FormData();
-      const meta: any = {
-        name: fileItself,
-        modifiedTime: unixTimeToStr(mtime, true),
-        createdTime: unixTimeToStr(ctime, true),
-        parents: [parentID],
-      };
-      formData.append(
-        "metadata",
-        new Blob([JSON.stringify(meta)], {
-          type: "application/json; charset=UTF-8",
-        })
+      // Drive expects multipart/related, not browser FormData's multipart/form-data.
+      const boundary = `remotely_save_${Date.now()}_${Math.random().toString(16).slice(2)}`;
+      const multipartType = `multipart/related; boundary=${boundary}`;
+      const body = new Blob(
+        [
+          `--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify(meta)}\r\n`,
+          `--${boundary}\r\nContent-Type: ${contentType}\r\n\r\n`,
+          content,
+          `\r\n--${boundary}--\r\n`,
+        ],
+        { type: multipartType }
       );
-      formData.append("media", new Blob([content], { type: contentType }));
 
       const res = await fetch(
-        "https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=kind,fileExtension,md5Checksum,mimeType,parents,size,spaces,id,name,trashed,createdTime,modifiedTime,quotaBytesUsed,originalFilename,fullFileExtension,sha1Checksum,sha256Checksum",
+        `${uploadURL}?uploadType=multipart&fields=id,name,mimeType,parents,size,md5Checksum,createdTime,modifiedTime`,
         {
-          method: "POST",
+          method,
           headers: {
             Authorization: `Bearer ${await this._getAccessToken()}`,
+            "Content-Type": multipartType,
           },
-          body: formData,
+          body,
         }
       );
       if (res.status !== 200 && res.status !== 201) {
         throw Error(`create file ${key} failed! meta=${JSON.stringify(meta)}`);
       }
       const res2: File = await res.json();
+      if (!res2.id || (existing && res2.id !== existing.id))
+        throw Error(`Unexpected Google Drive file ID after writing ${key}`);
       console.debug(
         `upload ${key} with ${JSON.stringify(meta)}, res2=${JSON.stringify(
           res2
@@ -564,44 +665,35 @@ export class FakeFsGoogleDrive extends FakeFs {
       this.keyToGDEntity[key] = entity;
       return entity;
     } else {
-      const meta: any = {
-        name: fileItself,
-        modifiedTime: unixTimeToStr(mtime, true),
-        createdTime: unixTimeToStr(ctime, true),
-        parents: [parentID],
-      };
       const bodyStr = JSON.stringify(meta);
       const headers: HeadersInit = {
         Authorization: `Bearer ${await this._getAccessToken()}`,
         "Content-Type": "application/json",
-        "Content-Length": `${bodyStr.length}`,
         "X-Upload-Content-Type": contentType,
         "X-Upload-Content-Length": `${content.byteLength}`,
       };
       const res = await fetch(
-        "https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable&fields=kind,fileExtension,md5Checksum,mimeType,parents,size,spaces,id,name,trashed,createdTime,modifiedTime,quotaBytesUsed,originalFilename,fullFileExtension,sha1Checksum,sha256Checksum",
+        `${uploadURL}?uploadType=resumable&fields=id,name,mimeType,parents,size,md5Checksum,createdTime,modifiedTime`,
         {
-          method: "POST",
+          method,
           headers: headers,
           body: bodyStr,
         }
       );
       if (res.status !== 200) {
         throw Error(
-          `create resumable file ${key} failed! meta=${JSON.stringify(
-            meta
-          )}, header=${JSON.stringify(headers)}`
+          `create resumable file ${key} failed! meta=${JSON.stringify(meta)}`
         );
       }
       const uploadLocation = res.headers.get("Location");
-      if (uploadLocation === null || !uploadLocation.startsWith("http")) {
+      if (
+        uploadLocation === null ||
+        !uploadLocation.startsWith("https://www.googleapis.com/")
+      ) {
         throw Error(
-          `create resumable file ${key} failed! meta=${JSON.stringify(
-            meta
-          )}, header=${JSON.stringify(headers)}`
+          `create resumable file ${key} failed! meta=${JSON.stringify(meta)}`
         );
       }
-      console.debug(`key=${key}, uploadLocaltion=${uploadLocation}`);
 
       // multiples of 256 KB (256 x 1024 bytes) in size
       const sizePerChunk = 5 * 4 * 256 * 1024; // 5.24 mb
@@ -623,16 +715,13 @@ export class FakeFsGoogleDrive extends FakeFs {
           method: "PUT",
           headers: {
             Authorization: `Bearer ${await this._getAccessToken()}`,
-            "Content-Length": `${end - start + 1}`, // the number of bytes in the current chunk
             "Content-Range": `bytes ${start}-${end}/${content.byteLength}`,
           },
           body: content.slice(start, end + 1), // TODO: slice() is a copy, may be we can optimize it
         });
         if (res.status >= 400 && res.status <= 599) {
           throw Error(
-            `create resumable file ${key} failed! meta=${JSON.stringify(
-              meta
-            )}, header=${JSON.stringify(headers)}`
+            `create resumable file ${key} failed! meta=${JSON.stringify(meta)}`
           );
         }
 
@@ -643,8 +732,8 @@ export class FakeFsGoogleDrive extends FakeFs {
               res2
             )}`
           );
-          if (res2.id === undefined || res2.id === null || res2.id === "") {
-            // TODO: what's this??
+          if (!res2.id || (existing && res2.id !== existing.id)) {
+            throw Error(`Unexpected Google Drive file ID after writing ${key}`);
           } else {
             entity = fromFileToGDEntity(res2, parentID, parentFolderPath);
             // insert into cache
@@ -713,6 +802,7 @@ export class FakeFsGoogleDrive extends FakeFs {
         method: "PATCH",
         headers: {
           Authorization: `Bearer ${await this._getAccessToken()}`,
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({
           trashed: true,
@@ -722,6 +812,7 @@ export class FakeFsGoogleDrive extends FakeFs {
     if (res1.status !== 200) {
       throw Error(`cannot rm ${key} using fileID=${fileID}`);
     }
+    delete this.keyToGDEntity[key];
   }
 
   async checkConnect(callbackFunc?: any): Promise<boolean> {

@@ -56,4 +56,8 @@ But please be aware that the code is saved locally in your Obsidian. It works li
 
     Moreover, this scope is "not-sensitive", so that the plugin doesn't need to go through Google's complicated verification process while applying for it.
 
-* Google Drive, unlike other cloud storage, allows files of same name co-existing in the same folder! (hmmmmm...) It may or may not make the plugin stop working. Users might need to remove the duplicated file manually on Google's official website.
+* Google Drive allows multiple files or folders with the same name in the same parent folder. The plugin stops the sync when it finds duplicate names, rather than selecting a copy arbitrarily. Back up and compare the copies before resolving duplicates on Google's official website. Existing duplicates are not automatically merged or deleted.
+
+* Changes to existing files update their Drive file IDs in place, preserving the revision chain. Revision retention still follows [Google Drive's retention rules](https://developers.google.com/drive/api/guides/manage-revisions); the plugin does not mark every revision as "Keep Forever".
+
+* The plugin lists the vault before syncing and checks the name and parent folder again before each upload. This adds a metadata request for each upload. Writes to the same path are serialized within one backend instance, but simultaneous first-time creation on different devices can still produce duplicates because Drive does not enforce unique names.
