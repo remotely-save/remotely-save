@@ -491,3 +491,91 @@ describe("Misc: Dropbox: should fix the folder name cases", () => {
     assert.deepEqual(misc.fixEntityListCasesInplace(input), output);
   });
 });
+
+describe("Misc: rough size of object", () => {
+  it("should add up the sizes of strings, numbers and booleans", () => {
+    // Arrange
+    const noteEntity = {
+      key: "inbox/todo.md",
+      size: 1024,
+      synthesizedFolder: false,
+    };
+
+    // Act
+    const bytes = misc.roughSizeOfObject(noteEntity);
+
+    // Assert
+    // 13 chars * 2 + 8 for the number + 4 for the boolean
+    assert.equal(bytes, 38);
+  });
+
+  it("should count an object referenced twice only once", () => {
+    // Arrange
+    const noteEntity = { key: "inbox/todo.md", size: 1024 };
+    const planEntry = {
+      key: "inbox/todo.md",
+      prevSync: noteEntity,
+      remote: noteEntity,
+    };
+
+    // Act
+    const bytes = misc.roughSizeOfObject(planEntry);
+
+    // Assert
+    // 26 for the key of the entry + 34 for the entity, counted once
+    assert.equal(bytes, 60);
+  });
+
+  it("should stop on cyclic references", () => {
+    // Arrange
+    const folder: Record<string, unknown> = { key: "inbox/" };
+    const note = { key: "inbox/todo.md", parent: folder };
+    folder.newestNote = note;
+
+    // Act
+    const bytes = misc.roughSizeOfObject(folder);
+
+    // Assert
+    // 6 chars * 2 for the folder + 13 chars * 2 for the note
+    assert.equal(bytes, 38);
+  });
+
+  it("should stay fast for the sync plan of a large vault", function () {
+    // Arrange
+    this.timeout(120 * 1000);
+    const { syncPlan } = createTestContext({ fileCount: 100 * 1000 });
+
+    // Act
+    const startMs = performance.now();
+    misc.roughSizeOfObject(syncPlan);
+    const elapsedMs = performance.now() - startMs;
+
+    // Assert
+    assert.ok(
+      elapsedMs < 1000,
+      `expected less than 1000ms for 100000 files, but it took ${Math.round(elapsedMs)}ms`
+    );
+  });
+
+  function createTestContext({ fileCount }: { fileCount: number }) {
+    const syncPlan: Record<string, unknown> = {};
+    for (let i = 0; i < fileCount; ++i) {
+      const key = `projects/client-${i % 500}/meeting-notes-${i}.md`;
+      const entity = () => ({
+        key: key,
+        keyRaw: key,
+        mtimeCli: 1700000000000 + i,
+        size: 2048,
+      });
+      syncPlan[key] = {
+        key: key,
+        local: entity(),
+        prevSync: entity(),
+        remote: entity(),
+        decision: "equal",
+        change: false,
+      };
+    }
+    return { syncPlan };
+  }
+});
