@@ -669,7 +669,7 @@ export const fixEntityListCasesInplace = (entities: { keyRaw: string }[]) => {
  * @returns bytes
  */
 export const roughSizeOfObject = (object: any) => {
-  const objectList: any[] = [];
+  const seenObjects = new Set<any>();
   const stack = [object];
   let bytes = 0;
 
@@ -687,8 +687,8 @@ export const roughSizeOfObject = (object: any) => {
         bytes += 8;
         break;
       case "object":
-        if (!objectList.includes(value)) {
-          objectList.push(value);
+        if (!seenObjects.has(value)) {
+          seenObjects.add(value);
           for (const prop in value) {
             if (value.hasOwnProperty(prop)) {
               stack.push(value[prop]);
