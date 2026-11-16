@@ -130,6 +130,8 @@ module.exports = {
   },
   externals: {
     obsidian: "commonjs2 obsidian",
+    "node:child_process": "commonjs2 node:child_process",
+    "node:process": "commonjs2 node:process",
   },
   optimization: {
     minimize: true,

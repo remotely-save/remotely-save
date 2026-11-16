@@ -177,6 +177,8 @@
   "settings_s3_endpoint": "服务地址（Endpoint）",
   "settings_s3_region": "区域（Region）",
   "settings_s3_region_desc": "如果您不知道这个值填什么，可以尝试填写：us-east-1。",
+  "settings_s3_profile": "AWS 配置档案（仅桌面端）",
+  "settings_s3_profile_desc": "使用本机 AWS CLI v2 的 profile，支持 SSO 和 credential_process。留空则使用下方的访问密钥。临时凭证仅保存在内存中。使用 SSO 前，请在终端运行 aws sso login --profile <profile>。",
   "settings_s3_accesskeyid": "Access Key ID",
   "settings_s3_accesskeyid_desc": "Access key ID。注意：access key ID 和其它信息都会在本地保存。",
   "settings_s3_secretaccesskey": "Secret Access Key",
