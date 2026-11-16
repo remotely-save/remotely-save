@@ -178,6 +178,8 @@
   "settings_s3_endpoint": "Endpoint",
   "settings_s3_region": "Region",
   "settings_s3_region_desc": "If you are not sure what to enter, you could try the value: us-east-1 .",
+  "settings_s3_profile": "AWS profile (desktop only)",
+  "settings_s3_profile_desc": "Use a local AWS CLI v2 profile, including SSO and credential_process. Leave empty to use the access keys below. Temporary credentials stay in memory. For SSO, first run aws sso login --profile <profile> in your terminal.",
   "settings_s3_accesskeyid": "Access Key ID",
   "settings_s3_accesskeyid_desc": "Access key ID. Attention: Access key ID and other info are saved locally.",
   "settings_s3_secretaccesskey": "Secret Access Key",

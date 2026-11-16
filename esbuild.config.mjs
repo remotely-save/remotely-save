@@ -51,6 +51,8 @@ esbuild
       "http",
       "https",
       "vm",
+      "node:child_process",
+      "node:process",
       // "process",
       // ...builtins
     ],

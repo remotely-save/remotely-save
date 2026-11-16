@@ -51,6 +51,7 @@ export interface S3Config {
   s3Region: string;
   s3AccessKeyID: string;
   s3SecretAccessKey: string;
+  s3Profile?: string;
   s3BucketName: string;
 
   partsConcurrency?: number;

@@ -33,6 +33,7 @@ import { bufferToArrayBuffer, getFolderLevels } from "./misc";
 
 import type { Entity } from "./baseTypes";
 import { FakeFs } from "./fsAll";
+import { getS3Credentials } from "./s3Credentials";
 
 ////////////////////////////////////////////////////////////////////////////////
 // special handler using Obsidian requestUrl
@@ -221,6 +222,7 @@ const getObjectBodyToArrayBuffer = async (
 };
 
 const getS3Client = (s3Config: S3Config) => {
+  const credentials = getS3Credentials(s3Config, Platform.isDesktopApp);
   let endpoint = s3Config.s3Endpoint;
   if (!(endpoint.startsWith("http://") || endpoint.startsWith("https://"))) {
     endpoint = `https://${endpoint}`;
@@ -232,10 +234,7 @@ const getS3Client = (s3Config: S3Config) => {
       region: s3Config.s3Region,
       endpoint: endpoint,
       forcePathStyle: s3Config.forcePathStyle,
-      credentials: {
-        accessKeyId: s3Config.s3AccessKeyID,
-        secretAccessKey: s3Config.s3SecretAccessKey,
-      },
+      credentials,
       requestHandler: new ObsHttpHandler(
         undefined,
         s3Config.reverseProxyNoSignUrl
@@ -246,10 +245,7 @@ const getS3Client = (s3Config: S3Config) => {
       region: s3Config.s3Region,
       endpoint: endpoint,
       forcePathStyle: s3Config.forcePathStyle,
-      credentials: {
-        accessKeyId: s3Config.s3AccessKeyID,
-        secretAccessKey: s3Config.s3SecretAccessKey,
-      },
+      credentials,
     });
   }
 

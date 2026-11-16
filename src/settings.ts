@@ -925,6 +925,21 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
       );
 
     new Setting(s3Div)
+      .setName(t("settings_s3_profile"))
+      .setDesc(t("settings_s3_profile_desc"))
+      .addText((text) =>
+        text
+          .setPlaceholder("e.g. main")
+          .setValue(this.plugin.settings.s3.s3Profile ?? "")
+          .onChange(async (value) => {
+            this.plugin.settings.s3.s3Profile = value.trim();
+            accessKeySetting.settingEl.toggle(!value.trim());
+            secretKeySetting.settingEl.toggle(!value.trim());
+            await this.plugin.saveSettings();
+          })
+      );
+
+    const accessKeySetting = new Setting(s3Div)
       .setName(t("settings_s3_accesskeyid"))
       .setDesc(t("settings_s3_accesskeyid_desc"))
       .addText((text) => {
@@ -938,7 +953,7 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
           });
       });
 
-    new Setting(s3Div)
+    const secretKeySetting = new Setting(s3Div)
       .setName(t("settings_s3_secretaccesskey"))
       .setDesc(t("settings_s3_secretaccesskey_desc"))
       .addText((text) => {
@@ -951,6 +966,8 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
             await this.plugin.saveSettings();
           });
       });
+    accessKeySetting.settingEl.toggle(!this.plugin.settings.s3.s3Profile?.trim());
+    secretKeySetting.settingEl.toggle(!this.plugin.settings.s3.s3Profile?.trim());
 
     new Setting(s3Div)
       .setName(t("settings_s3_bucketname"))
