@@ -240,6 +240,8 @@
   "settings_webdav_cors_os": "Obsidian desktop>=0.13.25 or iOS>=1.1.1 or Android>=1.2.1 supports bypassing CORS locally. But you are using an old version, and you're suggested to upgrade Obsidian.",
   "settings_webdav_cors": "You need to configure CORS to allow requests from origin app://obsidian.md and capacitor://localhost and http://localhost",
   "settings_webdav_folder": "We will create and sync inside the folder /{{remoteBaseDir}} on your server.",
+  "settings_webdav_fallback": "Fallback server address",
+  "settings_webdav_fallback_desc": "Optional alternative URL for the same existing vault folder. Both addresses use the same credentials and custom headers. Leave blank to disable.",
   "settings_webdav_addr": "Server Address",
   "settings_webdav_addr_desc": "Server address.",
   "settings_webdav_user": "Username",

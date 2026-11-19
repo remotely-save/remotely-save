@@ -1547,6 +1547,18 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
       );
 
     new Setting(webdavDiv)
+      .setName(t("settings_webdav_fallback"))
+      .setDesc(t("settings_webdav_fallback_desc"))
+      .addText((text) =>
+        text
+          .setValue(this.plugin.settings.webdav.fallbackAddress ?? "")
+          .onChange(async (value) => {
+            this.plugin.settings.webdav.fallbackAddress = value.trim();
+            await this.plugin.saveSettings();
+          })
+      );
+
+    new Setting(webdavDiv)
       .setName(t("settings_webdav_user"))
       .setDesc(t("settings_webdav_user_desc"))
       .addText((text) => {

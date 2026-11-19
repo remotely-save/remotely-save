@@ -1,3 +1,4 @@
+import { chooseWebdavAddress } from "./webdavFallback";
 import { Buffer } from "buffer";
 import { Queue } from "@fyears/tsqueue";
 import { getReasonPhrase } from "http-status-codes/build/cjs/utils-functions";
@@ -284,12 +285,14 @@ export class FakeFsWebdav extends FakeFs {
     this.nextcloudUploadServerAddress = "";
   }
 
-  async _init() {
-    // init client if not inited
-    if (this.client !== undefined) {
-      return;
-    }
+  private initialization?: Promise<void>;
 
+  async _init() {
+    this.initialization ??= this.initializeClient();
+    await this.initialization;
+  }
+
+  private clientForAddress(address: string): WebDAVClient {
     const cacheHeader = {
       "Cache-Control": "no-cache",
     };
@@ -302,7 +305,7 @@ export class FakeFsWebdav extends FakeFs {
       this.webdavConfig.username !== "" &&
       this.webdavConfig.password !== ""
     ) {
-      this.client = createClient(this.webdavConfig.address, {
+      return createClient(address, {
         username: tryEncodeUsernamePassword(this.webdavConfig.username),
         password: tryEncodeUsernamePassword(this.webdavConfig.password),
         headers: headers,
@@ -313,10 +316,27 @@ export class FakeFsWebdav extends FakeFs {
       });
     } else {
       console.info("no password");
-      this.client = createClient(this.webdavConfig.address, {
+      return createClient(address, {
         headers: headers,
       });
     }
+  }
+
+  private async initializeClient() {
+    const address = await chooseWebdavAddress(
+      this.webdavConfig.address,
+      this.webdavConfig.fallbackAddress,
+      async (candidate) => {
+        const result = (await this.clientForAddress(candidate).stat(
+          `/${this.remoteBaseDir}/`,
+          { details: false }
+        )) as FileStat;
+        return result.type === "directory";
+      }
+    );
+    // webdavConfig is a per-instance clone. Persisted primary address stays unchanged.
+    this.webdavConfig.address = address;
+    this.client = this.clientForAddress(address);
 
     // check vault folder
     if (this.vaultFolderExists) {
