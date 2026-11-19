@@ -91,6 +91,7 @@ export type WebdavDepthType =
 
 export interface WebdavConfig {
   address: string;
+  fallbackAddress?: string;
   username: string;
   password: string;
   authType: WebdavAuthType;

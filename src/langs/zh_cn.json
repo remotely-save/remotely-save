@@ -239,6 +239,8 @@
   "settings_webdav_cors_os": "Obsidian 桌面版>=0.13.25 或 iOS>=1.1.1 或 Android>=1.2.1 支持跳过 CORS 设置。但您正在使用旧版，建议升级。",
   "settings_webdav_cors": "您需要设置 CORS，允许来自这些源的请求：app://obsidian.md 和 capacitor://localhost 和 http://localhost。",
   "settings_webdav_folder": "我们会在您的服务器上创建此文件夹并在里面同步：/{{remoteBaseDir}}",
+  "settings_webdav_fallback": "备用服务器地址",
+  "settings_webdav_fallback_desc": "同一远端仓库目录的备用地址，可选。两个地址共用账号、密码及自定义请求头。留空关闭。",
   "settings_webdav_addr": "服务器地址",
   "settings_webdav_addr_desc": "服务器地址。",
   "settings_webdav_user": "用户名",
