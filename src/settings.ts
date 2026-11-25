@@ -2094,32 +2094,17 @@ export class RemotelySaveSettingTab extends PluginSettingTab {
         dropdown.addOption(`${1000 * 60 * 5}`, t("settings_autorun_5min"));
         dropdown.addOption(`${1000 * 60 * 10}`, t("settings_autorun_10min"));
         dropdown.addOption(`${1000 * 60 * 30}`, t("settings_autorun_30min"));
+        dropdown.addOption(`${1000 * 60 * 60}`, t("settings_autorun_60min"));
+        dropdown.addOption(`${1000 * 60 * 90}`, t("settings_autorun_90min"));
+        dropdown.addOption(`${1000 * 60 * 120}`, t("settings_autorun_120min"));
 
         dropdown
           .setValue(`${this.plugin.settings.autoRunEveryMilliseconds}`)
           .onChange(async (val: string) => {
-            const realVal = Number.parseInt(val);
-            this.plugin.settings.autoRunEveryMilliseconds = realVal;
+            this.plugin.settings.autoRunEveryMilliseconds =
+              Number.parseInt(val);
             await this.plugin.saveSettings();
-            if (
-              (realVal === undefined || realVal === null || realVal <= 0) &&
-              this.plugin.autoRunIntervalID !== undefined
-            ) {
-              // clear
-              window.clearInterval(this.plugin.autoRunIntervalID);
-              this.plugin.autoRunIntervalID = undefined;
-            } else if (
-              realVal !== undefined &&
-              realVal !== null &&
-              realVal > 0
-            ) {
-              const intervalID = window.setInterval(() => {
-                console.info("auto run from settings.ts");
-                this.plugin.syncRun("auto");
-              }, realVal);
-              this.plugin.autoRunIntervalID = intervalID;
-              this.plugin.registerInterval(intervalID);
-            }
+            this.plugin.enableAutoSyncIfSet();
           });
       });
 
