@@ -1755,19 +1755,21 @@ export default class RemotelySavePlugin extends Plugin {
   }
 
   enableAutoSyncIfSet() {
-    if (
-      this.settings.autoRunEveryMilliseconds !== undefined &&
-      this.settings.autoRunEveryMilliseconds !== null &&
-      this.settings.autoRunEveryMilliseconds > 0
-    ) {
-      this.app.workspace.onLayoutReady(() => {
+    this.app.workspace.onLayoutReady(() => {
+      if (this.autoRunIntervalID !== undefined) {
+        window.clearInterval(this.autoRunIntervalID);
+        this.autoRunIntervalID = undefined;
+      }
+
+      const interval = this.settings.autoRunEveryMilliseconds ?? -1;
+      if (interval > 0) {
         const intervalID = window.setInterval(() => {
           this.syncRun("auto");
-        }, this.settings.autoRunEveryMilliseconds);
+        }, interval);
         this.autoRunIntervalID = intervalID;
         this.registerInterval(intervalID);
-      });
-    }
+      }
+    });
   }
 
   enableInitSyncIfSet() {
